@@ -25,3 +25,112 @@ subscriptions:
     stage: A
     diff_threshold_pct: 15
   keyword_recall_mode: or
+  intent_profiles:
+    - tag: AI-Materials
+      description: AI for Materials：重点追踪 GNN/等变网络、机器学习原子间势、MACE 及 AI 加速 DFT/MD 原子模拟。
+      enabled: true
+      paper_sources:
+        - arxiv
+      keywords:
+        - keyword: atomistic graph neural network
+          keyword_cn: ''
+          query: a
+        - keyword: geometric deep learning
+          keyword_cn: 几何深度学习
+          query: geometric deep learning for molecules and materials
+        - keyword: machine learning interatomic potentials
+          keyword_cn: 机器学习原子间势
+          query: machine learning interatomic potentials for molecular dynamics and DFT
+        - keyword: materials foundation models
+          keyword_cn: 材料基础模型
+          query: foundation models for materials and atomistic systems
+        - keyword: AI for materials
+          keyword_cn: AI 用于材料
+          query: artificial intelligence methods for materials discovery and simulation
+        - keyword: machine learning molecular dynamics
+          keyword_cn: 分子动力学
+          query: machine learning accelerated molecular dynamics simulations
+      intent_queries:
+        - query: machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics
+          query_cn: 利用机器学习原子间势加速原子尺度模拟和分子动力学
+          enabled: true
+          source: manual
+          note: ''
+        - query: equivariant graph neural networks for materials modeling, energy prediction, and force prediction
+          query_cn: 用于材料建模、能量和原子力预测的等变图神经网络
+          enabled: true
+          source: manual
+          note: ''
+        - query: MACE, NequIP, CHGNet and related machine learning potentials for materials simulation
+          query_cn: MACE、NequIP、CHGNet 等机器学习势在材料模拟中的方法和应用
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-09-16T18:46:45.935Z'
+    - tag: ar
+      description: 自动科研与 AI Scientist：追踪 Research Agent、自动假设生成、实验设计、代码执行、自主迭代和科学发现闭环。
+      enabled: true
+      paper_sources:
+        - arxiv
+      keywords:
+        - keyword: self-driving laboratory
+          keyword_cn: ''
+          query: self-driving laboratory
+        - keyword: autonomous experimentation
+          keyword_cn: ''
+          query: autonomous experimentation
+        - keyword: automated hypothesis generation
+          keyword_cn: ''
+          query: automated hypothesis generation
+        - keyword: research agent
+          keyword_cn: ''
+          query: research agent
+        - keyword: AI scientist
+          keyword_cn: ''
+          query: AI scientist
+        - keyword: autonomous scientific discovery
+          keyword_cn: ''
+          query: autonomous scientific discovery
+      intent_queries:
+        - query: >-
+            self driving laboratories and autonomous experimentation for materials science, chemistry, and scientific
+            discovery
+          query_cn: ''
+          enabled: true
+          source: manual
+          note: ''
+        - query: autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning
+          query_cn: ''
+          enabled: true
+          source: manual
+          note: ''
+        - query: >-
+            AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific
+            experiments
+          query_cn: ''
+          enabled: true
+          source: manual
+          note: ''
+        - query: >-
+            LLM agents that autonomously perform scientific research from literature review and hypothesis generation to
+            experimentation and result analysis
+          query_cn: ''
+          enabled: true
+          source: manual
+          note: ''
+      updated_at: '2026-09-16T18:49:08.120Z'
+source_backends:
+  arxiv:
+    papers_table: arxiv_papers
+    use_vector_rpc: true
+    vector_rpc: match_arxiv_papers
+    vector_rpc_exact: match_arxiv_papers_exact
+    use_bm25_rpc: true
+    bm25_rpc: match_arxiv_papers_bm25
+    sync_table: arxiv_sync_status
+    sync_success_value: success
+    schema: public
+    kind: supabase
+    enabled: true
+    url: https://lyucdwgefyfbmaiopjbk.supabase.co
+    anon_key: sb_publishable_lX-oi64Uxyd7SIVv3_w2Uw_MTOojeKq
