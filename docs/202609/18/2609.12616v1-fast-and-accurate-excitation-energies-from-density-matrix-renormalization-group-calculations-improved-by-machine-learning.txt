@@ -1,0 +1,511 @@
+Title: Fast and Accurate Excitation Energies from Density Matrix Renormalization Group Calculations Improved by Machine Learning
+
+URL Source: https://arxiv.org/pdf/2609.12616v1
+
+Published Time: Mon, 14 Sep 2026 01:02:31 GMT
+
+Number of Pages: 15
+
+Markdown Content:
+# Fast and Accurate Excitation Energies from Density Matrix Renormalization Group Calculations Improved by Machine Learning 
+
+## Pavlo Golub ∗ and Libor Veis ∗
+
+Department of Theoretical Chemistry, Heyrovsk´ y Institute of the Czech Academy of Sciences, Prague 18223, Czech Republic. 
+
+E-mail: pavlo.golub@jh-inst.cas.cz; libor.veis@jh-inst.cas.cz 
+
+# Abstract 
+
+An estimation of optoelectronic properties is a crucial necessity and an ongoing challenge in modern functional material science. This in-volves accurate accessing of ground and excited states in systems with complex electronic struc-ture that are often too computationally expen-sive for accurate many-body methods. Building on our previous work on ground states [J. Phys. Chem. Lett. 2025, 16, 3295-3301], we present an efficient and cost-effective approach for eval-uating electronic excitations in functional ma-terials, combining the density matrix renor-malization group method as a complete active space solver with machine learning techniques. We demonstrate its performance on π-electron-correlated systems, namely polycyclic aromatic compounds. The transferability and effective-ness of the derived machine learning model are demonstrated on a number of challenging ex-amples with up to 34 π-electrons. 
+
+# Introduction 
+
+Precise information on electron excitation pro-files of functional molecules is crucial for un-derstanding the underlying photochemical pro-cesses and for designing and exploring materi-als with desired optical properties. In this con-text, particular attention has been devoted to metal-free organic systems in which desirable chemical processes, such as catalysis, charge-transfer, and light-emitting, are triggered by photon absorption. 1–4 As such systems often ex-hibit an intricate electronic structure, accurate treatment of electron correlation becomes es-sential for a reliable description of their elec-tronic transitions. Not surprisingly, machine learning (ML) methods have been widely applied to mitigate the complexity of the task and consequently to allow a fast screening of the chemical compound space. The streamline of such ML approaches is to avoid in the process of prediction the use of expensive electronic structure methods. With this aim a lot of efforts have been devoted to establishing a correspondence between molecu-lar geometrical/structural parameters and their quantum properties. An atomic environment is represented with a number of descriptors de-rived from system internal coordinates, chemi-cal composition, presence of special constituent elements such as double/triple bonds, electron conjugated sub-parts, etc. 5–18 Sometimes in the learning model such structural descriptors are used with an admixture of quantum molec-ular parameters (so-called quantum-chemical descriptors) typically obtained at the level of density functional theory (DFT): oscilla-tor strength, dipole momentum, information on frontier molecular orbitals, etc. 19–21 
+
+Nevertheless, there are serious challenges to this approach. As the structural space is infi-1arXiv:2609.12616v1 [physics.chem-ph] 11 Sep 2026 nite, the number of possible geometrical varia-tions is countless, severely diminishing the pos-sibility of capturing all important structure-property dependencies. The databases in-clude tens to hundreds of thousands of sam-ples, molecular/atomic/structural descriptors form large multidimensional feature spaces, and there is still the problem of extrapolating model performance beyond the systems that are struc-turally similar to test/training samples. 22,23 
+
+In addition, since organic systems of inter-est are often characterized by strongly cor-related patterns arising mainly from the dis-tribution of π-electrons, the accuracy of the structure-property mapping might be question-able. Time-dependent density functional the-ory (TDDFT) 24 is widely used as a reference method as it offers an acceptable tradeoff be-tween quality and cost of calculations for thou-sands of samples. However, it heavily de-pends on the applied functional, often tends to overestimate transition energies, and expe-riences apparent accuracy problems in charge-transfer states. 25–27 Different variants of equa-tion of motion and linear response coupled clus-ters with singles and doubles (EOM-CCSD, CCSD-LR) 28–31 outperform TDDFT, however, they are still lacking systematicity, as the error can jump from 0.0 up to and above 0.2 eV with reference to highly accurate electronic structure methods or experiment. 27,32 There is no guar-anty that the potentially promising candidates selected by the model will actually have pre-dicted photochemical properties and that im-portant molecules will not be overlooked. Therefore, the use of advanced electronic structure methods for strong correlation ap-pears to be an important component of ML models. However, given their cost, a way to recover their high-level accuracy from low-level and cheaper calculations should be found, which brings one to the concept of ∆-ML. 33 In ∆-ML, a model is trained to predict the differ-ence (∆) between a target property obtained with a high-level method and its counterpart obtained with a computationally cheaper, low-level method. The predicted correction is then added to the low-level result, providing an ap-proximation to the high-level result at a sub-stantially reduced computational cost. A suc-cessful ∆-ML model could serve as a reliable reference to the aforementioned models based on molecular descriptors, or could be applied as an independent predictor utilizing electronic structure information from low-level input. Until now, there have been comparatively few studies in ∆-learning on excited states in organic photochemistry. 22,000 small or-ganic molecules have been subject to refinement of the TDDFT level to the second-order ap-proximate coupled-cluster (CC2) theory. 34 Re-lying on Coulomb-matrix molecular represen-tations 5,6 as learning inputs, the model pre-dicted S0 → S1 transition energies and the corresponding oscillator strengths, in general, improving DFT, but not always to a satisfac-tory level, possibly because of contradictions between CC2 and DFT, as both methods could yield a different order of states. Only an in-significant improvement in prediction of oscilla-tor strengths has been detected with increasing training set size. 34 There are also attempts to learn the TDDFT quality output from semiem-pirical 35 or less accurate DFT 36 approaches with mean absolute error mainly less than 0.5 eV. This, however, brings again the discus-sion regarding the performance of TDDFT, al-though the possibility to extend the learning protocol to more accurate correlated methods has been shown. 36 To the same category of ML might be classified the protocols for using molecular integrals from low-level theories as leaning components. 37,38 
+
+A potential use of the density matrix renor-malization group (DMRG), 39–45 theory in the context of ∆-ML is a promising alternative. Indeed, in this sense DMRG looks appeal-ing, as it provides systematically improvable approximations to low-energy eigenstates of a full configuration interaction (FCI) solution for a wave function in a chosen complete active space (CAS). The accuracy of the approxima-tion can be chosen arbitrarily and controlled by the truncation error (TRE) (will be discussed in section Theory). Recently, we have shown that the use of state-specific TRE and quantum information-based measures (orbital entropies and mutual information) allows for highly accu-2rate predictions of ground-state energies within a given spin sector, including singlet and triplet states, for out-of-model examples with local-ized π-active spaces. 46 Although the approach requires much more insight from the user as it depends on proper CAS selection and post-DMRG wave function analysis, it benefits from the possibility to make predictions in the FCI limit and very moderate requirements on the number of model samples and input parame-ters. The aim of this work is to significantly ex-tend the aforementioned development to ex-cited states, specifically to same-spin excita-tions within general π-active spaces, thus tar-geting singlet–singlet and triplet–triplet transi-tions. In what follows, we briefly review the theo-retical aspects of DMRG relevant to our devel-opments, describe the machine learning model, and assess its performance on selected poly-cyclic aromatic compounds. 
+
+# Theory 
+
+## Density Matrix Renormalization Group 
+
+Starting from the FCI wave function expansion in a given CAS, expressed in the occupation basis representation 
+
+|Ψ⟩ =
+
+> n
+
+X
+
+> σ
+
+cσ|σ⟩, (1) where |σ⟩ = |σ1σ2 . . . σ n⟩ represents an occupation-number basis state of the active-space orbitals, with each orbital having four possible occupation states |0⟩, | ↓⟩ , | ↑⟩ , | ↓↑⟩ ,DMRG in its matrix product state (MPS) for-mulation seeks a factorization of the coefficient tensor cσ.47,48 
+
+Briefly, the procedure starts by reshaping the coefficient tensor into a (4 × 4n−1) matrix, cσ =
+
+cσ1;σ2··· σn , to which singular value decomposition (SVD) is then applied. 
+
+cσ = cσ1;σ2··· σn = X
+
+> k1
+
+Uσ1;k1 Sk1;k1 Vk1;σ2··· σn (2) This yields a product of matrices with dimen-sions (4 × k1), ( k1 × k1), and ( k1 × 4n−1), respec-tively. For an SVD of an ( m × n) matrix, the number of singular values is min( m, n ). There-fore, in the present case, k1 = min(4 , 4n−1). Setting Aσ1 
+
+> k1
+
+= Uσ1;k1 Sk1;k1 , the remaining ten-sor Vk1;σ2··· σn is reshaped into a (4 k1 × 4n−2) ma-trix by combining the indices k1 and σ2. A sec-ond SVD is then performed, 
+
+cσ = X
+
+> k1
+
+Aσ1
+
+> k1
+
+"X
+
+> k2
+
+Uk1σ2;k2 Sk2;k2 Vk2;σ3··· σn
+
+#
+
+.
+
+(3) The three factors in the second SVD have di-mensions (4 k1 × k2), ( k2 × k2), and ( k2 × 4n−2), respectively, where k2 = min(4 k1, 4n−2). Ab-sorbing the singular values into the left factor, analogously to the first SVD, we define 
+
+Aσ2 
+
+> k1k2
+
+= Uk1σ2;k2 Sk2;k2 , (4) which gives 
+
+cσ = X
+
+> k1k2
+
+Aσ1 
+
+> k1
+
+Aσ2 
+
+> k1k2
+
+Vk2;σ3··· σn . (5) The procedure is repeated until the last, nth, orbital is reached. The resulting MPS represen-tation of the wave function takes the form 
+
+|Ψ⟩ = X
+
+> σ
+
+X
+
+> k1...k n−1
+
+Aσ1 
+
+> k1
+
+Aσ2 
+
+> k1k2
+
+Aσ3 
+
+> k2k3
+
+· · · Aσn 
+
+> kn−1
+
+|σ⟩.
+
+(6) The above factorization corresponds to a right-canonical construction, as the singular-value matrices are successively absorbed into the left factors. The particular canonical form is not unique and can be changed by gauge transfor-mations without altering the represented wave function. Each matrix Aσj , with the boundary matrices 
+
+Aσ1 and Aσn reducing to vectors, corresponds to a particular orbital j. As follows from the 3factorization described above, the bond dimen-sions are kj = min(4 j , 4n−j ) and therefore in-crease exponentially toward the middle of the chain before decreasing symmetrically there-after. Retaining the full bond dimensions would therefore result in an exact MPS representation of the FCI wave function but would preserve its prohibitive exponential complexity. The key feature of DMRG is that these dimensions can be truncated at a chosen maximum value, re-sulting in an approximate solution of the FCI problem. The accuracy of this approximation is controlled by the maximum retained bond dimension, commonly referred to as the bond dimension, D.The practical two-site DMRG algorithm 49 
+
+takes a pair of tensors and considers all tensors to the left of them as a single (left, L) block and all tensors to the right as another single (right, 
+
+R) block:  
+
+> Lblock
+
+Aσ1 
+
+> k1
+
+· · · Aσl−1  
+
+> kl−2kl−1
+
+· Aσl  
+
+> kl−1kl
+
+Aσl+1   
+
+> klkl+1
+
+· 
+
+> Rblock
+
+Aσl+2   
+
+> kl+1 kl+2
+
+· · · Aσn 
+
+> kn−1
+
+.
+
+(7) The optimization procedure is organized into sweeps, each consisting of a sequence of local optimization steps. At each step, two neighbor-ing MPS tensors (which together can be seen as two-site optimization window) are contracted to form a four-index two-site tensor, 
+
+Bσlσl+1  
+
+> kl−1kl+1
+
+= X
+
+> kl
+
+Aσl 
+
+> kl−1kl
+
+Aσl+1  
+
+> klkl+1
+
+, (8) which is subsequently optimized while the ten-sors associated with the L and R blocks are kept fixed. The optimization of the two-site tensor B is formulated as a projected Schr¨ odinger equation in the effective basis 
+
+|Lkl−1 ⟩| σl⟩| σl+1 ⟩| Rkl+1 ⟩, (9) formed by the renormalized states of the L and 
+
+R blocks and the local occupation states of the two optimized sites. Projection of the Hamil-tonian onto this basis yields the effective eigen-value problem 
+
+X
+
+> k′
+> l−1,k ′
+> l+1
+> σ′
+> l,σ ′
+> l+1
+
+(Heff )σlσl+1 , σ ′
+
+> lσ′
+> l+1
+> kl−1kl+1 , k ′
+> l−1k′
+> l+1
+
+Bσ′
+
+> lσ′
+> l+1
+> k′
+> l−1k′
+> l+1
+
+= EB σlσl+1  
+
+> kl−1kl+1
+
+,
+
+(10) where Heff is the Hamiltonian projected onto the renormalized two-site basis. Solving Eq. 10 yields the optimized two-site tensor B, cor-responding to the targeted eigenstate (or few eigenstates). After solving the effective eigenvalue problem, the optimized two-site tensor B is reshaped into a matrix and factorized by SVD: 
+
+Bσlσl+1  
+
+> kl−1kl+1
+
+= X
+
+> kl
+
+U σl 
+
+> kl−1kl
+
+Skl V σl+1  
+
+> klkl+1
+
+. (11) During the DMRG optimization, the canonical form is adapted to the direction of the sweep, such that the orthogonality center follows the two-site optimization window. During a for-ward sweep from left to right, U σl 
+
+> kl−1kl
+
+is assigned to the left tensor of the optimized pair, Aσl 
+
+> kl−1kl
+
+,while the product Skl V σl+1  
+
+> klkl+1
+
+is assigned to the right tensor, Aσl+1  
+
+> klkl+1
+
+. The L block is then en-larged by incorporating the optimized tensor at site l, whereas the R block is correspondingly reduced. The optimization window is shifted by one site, resulting in the next two-site pair 
+
+Aσl+1  
+
+> klkl+1
+
+Aσl+2  
+
+> kl+1 kl+2
+
+, (12) to which the same optimization procedure is ap-plied. A complete sweep proceeds through the chain from left to right and then reverses direction at the end of the chain. Forward and backward sweeps are repeated until the chosen conver-gence criterion is satisfied. At each local optimization step, the SVD of the optimized two-site tensor provides a natural way to truncate the MPS bond dimension. Ac-cording to the Eckart–Young theorem, the best rank-D approximation of a matrix in the least-squares sense is obtained by retaining only its D
+
+largest singular values. Thus, after the decom-position in Eq. 11, only the D largest singular values si and the corresponding columns of U
+
+4and rows of V are retained. For a normalized MPS in canonical form, the singular values satisfy 
+
+X
+
+> i
+
+s2 
+
+> i
+
+= 1 . (13) The error introduced by truncating the bond dimension to D is therefore quantified by the discarded weight, TRE = X
+
+> i>D
+
+s2 
+
+> i
+
+= 1 −
+
+> D
+
+X
+
+> i=1
+
+s2 
+
+> i
+
+. (14) This quantity defines the truncation error (TRE). Equivalently, the squared singular val-ues s2 
+
+> i
+
+are the eigenvalues of the reduced den-sity matrix associated with the corresponding bipartition of the MPS. Thus, truncation based on the SVD is equivalent to retaining the D
+
+most significant eigenstates of the reduced den-sity matrix. 41 
+
+TRE is particularly useful in the present ap-proach, as it can be employed in extrapolation schemes to recover accurate results from less precise but computationally less expensive cal-culations. 46,50 
+
+## Machine Learning Model 
+
+The Message Passing Graph Neural Network (MPGNN) model for π-active spaces, which we have recently presented, 46 treats each orbital in a given space as a node, while the single-orbital entanglement entropy, s(1) , is treated as a node-specific feature. The single-orbital en-tropy measures the entanglement between a sin-gle orbital and the remaining orbital space. It is defined by the general N -orbital von Neuman entropy: 51–53 
+
+s(N ) = − X
+
+> σ
+
+wσ;1 ...N ln( wσ;1 ...N ), (15) where wσ;1 ,...N represent the eigenvalues of the reduced N -orbital density matrix. The pres-ence of an edge between two nodes is deter-mined by a threshold value of mutual informa-tion: 
+
+Figure 1: The scheme of MPGNN on example of naphthalene. A) The π-active space (10e,10o) is represented as a graph. Each orbital is a node. Nodes are connected according to the value of mutual information Iij (Eq. 16) be-tween orbitals. In this example the threshold value of Iij is 0.02. B) For each node a vector of feature values υ is formed according to the message representation (Eq. 17). C) The final feature representation of the molecule, vector 
+
+V , is formed by applying aggregation function Θ on the vector node representations υ.
+
+Iij = s(1)  
+
+> i
+
++ s(1)  
+
+> j
+
+− s(2)  
+
+> ij
+
+. (16) where s(2)  
+
+> ij
+
+is the two-orbital entropy that mea-sures the entanglement between a pair of or-bitals {ij } and the remaining orbital space. Mutual information therefore measures the cor-relation between two specific orbitals. If an edge exists (i.e. Iij exceeds a predefined thresh-old), the corresponding mutual information is considered as an edge-specific feature (Fig. 1,A). The feature information on the connected nodes, together with the corresponding feature information on the edges, is used to build a fea-ture vector representation of each node that ac-counts for its environment: 
+
+υm+1  
+
+> i
+
+= M (υmi , υ mj , e ij ). (17) 5Figure 2: The scheme of learning workflow. In-put feature vectors V gs , V es , and V sf are pass-ing through multiperceptron networks (stage 
+
+MP1 ). Output vector V sf is concatenated to the output vectors V gs and V es (stage CON ). Concatenated vectors are passing through an-other multiperceptron networks (stage MP2 ) to learn against target energies Egs and Ees .Here M defines the process of message forma-tion, which involves the aggregation of node ( υ)and edge ( e) features of all nodes j connected to i, and the concatenation of the output vec-tor representations υmi , υmj and eij at step m to form a new representation (message) υm+1  
+
+> i
+
+(Fig. 1,B). Generally this message is updated by a function ( Fupd ) such as the multi-layer percep-tron to form a new state of the node i. However, it has been shown 46 that, regarding the type of considered systems, Fupd can be a simple iden-tity function without loss of learning accuracy. Combining vector representations υi of all nodes using an aggregation function Θ (such as the mean function) provides a vector repre-sentation of the system, V (Fig. 1,C). Further, this final representation, augmented with sys-tem specific features such as TRE, can be used for learning system properties. Our current model deals with two states per molecule simultaneously, the ground state and the excited state; therefore, for each state, a separate vector representation is built, V gs and 
+
+V es respectively. The learning is performed on two target energies, Egs and Ees , which results 
+
+Figure 3: The difference of singe-site entropy and mutual information between the ground and excited states; an example of naphthalene in (10e, 10o) π-valence active space. in basically two parallel learning paths for the ground state and the excited state per molecule (see the scheme in Fig. 2). In the process of learning, both vectors V gs and V es are aug-mented with a vector of system-dependent fea-tures, V sf . The last is passing through an addi-tional multi-layer perceptron unit prior to the augmentation. In the process of backpropaga-tion, the weights of this unit are updated de-pending on the gradients from both learning paths, thus allowing them to indirectly affect each other. In the present model, vector V sf includes state averaged TRE, taken as a mean value over state averaged TREs in the middle of the chain for the last sweep in the convergence pro-cedure, and a number of metrics for graph com-parison, applied to initial graph representations of ground and excited states. In our case, the problem of general graph comparison reduces to comparing graph structures with complete node correspondence, differing only in number of edges and the magnitude of features on nodes and edges. Indeed, the difference in the in-formational measure between the ground and 6excited states is generally manifested in higher values for s(1) and I for the excited state (Fig. 3). We found several relevant measures: 
+
+• The mean degree of nodes, that represents the average number of edges per node. 
+
+• The Szymkiewicz-Simpson coefficient 54 
+
+that, applied to our specific task, is the number of common edges between two graphs divided by the total number of edges in the smaller graph (generally the one that corresponds to the ground state). 
+
+• Frobenius distance between the corre-sponding adjacency matrices. Those measures provide a noticeable improve-ment to the learning procedure by lowering the mean error on training and validation sets si-multaneously. 
+
+# Results and discussion 
+
+## Test dataset 
+
+The test dataset has been selected with gen-eral motivation to evaluate transferability of the model on different types of hydrocarbons. Having in common π-electron states as driving force for strongly correlation effects, they signif-icantly differ in molecular topology and under-lying electronic structures. We mainly empha-size on peri-fused polycyclic aromatic hydrocar-bons (PAHs), where the constituent rings are fused through more than one face, in contract to laterally fused PAHs presented in the train dataset (Fig. 4). Octacene (Fig. 4, I) is the only non peri-fused example in the test dataset. It is structurally similar to the examples in the train dataset but is extended compared to them. It belongs to the family of oligoacenes and is predicted to have a singlet ground state with biradical char-acter. 55,56 
+
+Ovalene (Fig. 4, II) is a flat compound of ten peri-fused benzene rings featuring six zigzag edges and D2h symmetry. It is predicted to posses global aromaticity, as calculated ring 
+
+Figure 4: Test set of polycyclic hydrocarbons: 
+
+I – C 34 H20 , octacene; II – C 32 H14 , ovalene; III 
+
+– C 26 N7H11 , aza-analogue of [4]triangulene; IV 
+
+– C 24 N2H14 , 4,11-diazadibenzo[ g,p ]chrysene; V
+
+– C 32 H16 .current of participating outer π-electrons is di-atropic. Still the aromaticity of the inner part is predicted to be lower since the induced ring current of the inner part is weaker. 57 Recent re-search suggests that the S1 → S0 transition in ovalene is accidentally forbidden due to destruc-tive interference of the corresponding transition dipole moments. 58 
+
+Aza-analogue of [4]triangulene (Fig. 4, III) serves for the evaluation of the model per-formance on hetero-PAHs. Pure hydrocar-bon triangulenes are open-shell radicals that have higher and higher ground state spin num-bers with increasing size: thus, [3]triangulene is characterized by a triplet ( S = 1) ground state, while [4]triangulene has a quartet ( S =3/2) ground state. 59 However, substitution of carbon atoms with nitrogen atoms (or other heteroatoms such as boron) changes the elec-tronic structure of hydrocarbons and stabilizes in lower-spin or even closed-shell structures: 60 
+
+for example, substitution of the central carbon atom in [3]triangulene by a nitrogen changes the spin multiplicity in the ground state, mak-7ing it doublet according to theoretical calcula-tions. 61,62 
+
+4,11-Diazadibenzo[ g,p ]chrysene (Fig. 4, IV) is another example of hetero-PAH. It fea-tures a chrysenic core fused with two addi-tional aromatic rings, where nitrogen atoms re-place carbons at the 4 and 11 positions. Un-like previous examples and most of the model dataset members, it is an example of non-planar 
+
+π-conjugated system, where non-planarity is caused by the repulsion of hydrogen atoms. Generally, twisted geometry weakens π-bonds, since π-orbitals are no longer orthogonal to the molecular plane and hence to σ-orbitals, leading to enhancement of s-character in π-bonding. 63,64 This weakening is reflected by the single-orbital entropy values, since the s(1) value for the π-orbital localized on two central atoms is approximately in 2 .5 times smaller than the 
+
+s(1) values for all other π- and π∗-orbitals. The bis(phenalenyl) system linked by benzene (Fig. 4, V) is the last test example. It is seen as two phenalenyl radicals with delocalized un-paired electron partially stabilized by π-system, serving in the same time as connector. 65 The-oretical considerations based on natural orbital analysis suggest its significant biradical char-acter. 66 Similar to the previous system, it has non-planar geometry according to B3LYP DFT geometry optimization with cc-pVTZ basis, al-though much less pronounced. 
+
+## ML model performance 
+
+The best performance of the ML model is de-tected for octacene (Fig. 5). The ML refine-ment accuracy within 1 mHa is shown even for small bond dimensions, except for the very small, D < 200. This is expected since the general structure principle of the systems in the training dataset can be imagined as vari-ous combinations of acene and phenacene mo-tifs of different sizes. In the same time, the excellent performance on the acene which is larger than any example from the training set, proves that the model correctly captures the electronic structure/size dependence for acenes and phenacenes. The performance of the model for ovalene 
+
+Figure 5: S1 − S0 energy gap for octacene, C34 H20 . The reference energy gap (green line) is obtained with D = 3072, 71.0 mHa for cc-pVDZ, 70.2 mHa for cc-pVTZ. 
+
+Figure 6: S1 − S0 energy gap for ovalene, C32 H14 . The reference energy gap (green line) is obtained with D = 8192, 103.5 mHa for cc-pVDZ, 109.8 mHa for cc-pVTZ. (Fig. 6), aza-analogue of [4]triangulene (Fig. 7), and 4,11-diazadibenzo[ g,p ]chrysene (Fig. 8) is similarly good and comparable across the three systems. Although, at small D, the error in the energy refinement can reach up to 6 mHa, 8Figure 7: S1 −S0 energy gap for aza-analogue of [4]triangulene, C 26 N7H11 . The reference energy gap (green line) is obtained with D = 8192, 42.5 mHa for cc-pVDZ, 60.2 mHa for cc-pVTZ. 
+
+Figure 8: S1 − S0 energy gap for 4,11-diazadibenzo[ g,p ]chrysene, C 24 N2H14 . The ref-erence energy gap (green line) is obtained with 
+
+D = 3072, 146.0 mHa for cc-pVDZ, 171.1 mHa for cc-pVTZ. it generally decreases to approximately 1.6 mHa (≈ 1 kcal/mol) at larger D, corresponding to a TRE in the range of 3 .0–1 .0 × 10 −4. Depend-ing on the system, this TRE range corresponds 
+
+Figure 9: S1 −S0 energy gap for bis(phenalenyl) linked by benzene, C 32 H16 . The reference en-ergy gap (green line) is obtained with D =8192, 45.8 mHa for cc-pVDZ, 45.6 mHa for cc-pVTZ. to bond dimensions between approximately 200 and 500. The most challenging example is proved to be bis(phenalenyl) (Fig. 9). At some very small 
+
+D the prediction can even be worse than the actual DMRG result. It should be underlined that the correlation pattern of ground singlet state in this case is much different from the correlation patterns of the previous examples and compounds in the learning dataset. Indeed, the latter are characterized by a relatively even distribution, i.e. all split-localized π-orbitals have s(1) values close to each other – in the range 0 .2 − 0.3 or 0 .4 − 0.5. In contrast, in bis(phenalenyl) π- and π∗-orbitals localized on the connector and adjacent parts of phenalenyl radicals are characterized by very high values of s(1) – in the range 0 .6 − 1.0, while π-orbitals localized on distant parts of phenalenyl radicals have s(1) close to 0 .2. However, even for bis(phenalenyl) the ML model starts to improve S0 → S1 gaps at bond dimensions from 250 to 400. This corresponds to the TRE in the range 2 .2 − 1.2 × 10 −4, which normally for the case of ML unrefined DMRG 9calculations are deemed as an inaccurate out-come. Further, all predictions continue to stay within 1 kcal/mol, that is, within the general accuracy of the model. In general, the ML model allows to improve the S0 → S1 transition energies to within 1 mHa starting with moderately small values of 
+
+D and large values of TRE 2 × 10 −4 − 7 × 10 −5.This offers significant savings in computational costs, since comparable accuracy without ML refinement requires a set up of 3000 – 4000 D
+
+for systems I and IV, and even 7000 – 8000 
+
+D for systems II, III, and V. In the same time, seemingly it is unlikely to obtain systematically such performance on extremely small bond di-mensions, since for strongly-correlated systems an important part of correlation coupling might be truncated as well, rendering faulty numeri-cal results and as a consequence an inconsistent input for the ML model. The data are also available in the form of ta-bles in Supporting materials. 
+
+# Conclusions 
+
+We present a machine learning scheme for im-proving the energies of the ground and first ex-cited states of the same spin multiplicity, de-scribed within the CAS ansatz using DMRG as the active-space solver. The resulting ML model is trained on complete π-valence active spaces of aromatic hydrocarbons and tested to predict the corresponding S0 → S1 transi-tion energies. The model provides an improve-ment of low- and medium-quality DMRG cal-culations to a high-accuracy level with error within 1 kcal/mol, which tends systematically to decrease further with increasing of the qual-ity of DMRG calculations (i.e. with increasing of bond dimension). The model shows good performance on a wide range of hydrocarbons featuring different electronic structures: planar laterally and peri-fused systems, hetero- and chiral hydrocarbons, or diradicals. Although the model is applicable per se to polycyclic aromatic hydrocarbons, the princi-ples of its design matter no less, if not more. Indeed, the model design and the constituent components are not dependent on the specific compound class or excitation type, and the ML workflow (Figs. 1, 2) is invariant with respect to the size or type of system. It can be straightfor-wardly generalized and re-parametrized to mul-tiple states, non-vertical excitations, or other types of strongly correlated systems. However, with the latter, the problem of finding a proce-dure for reliable separation and localization of strongly-correlated components from generally delocalized canonical wave function should be addressed. The same quality performance of the ML model on both double and triple zeta basis sets makes it possible to use it as a component part of different approaches for complete basis set extrapolation. The model is available online through the GitHub repository. 67 
+
+# Computational and learning details 
+
+The training data set has been composed of elements from the publicly available database of polycyclic aromatic hydrocarbons COMPAS-1D. 68 100 molecules have been selected: all hydrocarbons with 5 and 6 benzene rings (49 molecules in total) and 51 hydrocarbons with 7 benzene rings and the smallest HOMO – LUMO gaps. The input orbitals for the DMRG calcula-tions have been computed at the DFT level using the B3LYP exchange-correlation func-tional 69,70 and the cc-PVDZ basis set. 71 The orbitals have been split-localized (separate lo-calization of occupied and virtual orbitals) with the Pipek-Mezey method. 72 Complete π-active spaces (22e, 22o), (26e, 26o), and (30e, 30o) have been selected for molecules with 5, 6, and 7 benzene rings (5C, 6C, and 7C) respectively. The ordering of the active orbitals mapped onto the 1D lattice of the DMRG sites has been obtained with the Fiedler method 73 ap-plied to the matrix of exchange integrals. 50 All DMRG calculations have been initialized with the CI-DEAS procedure 51 and performed with MOLMPS program. 74,75 
+
+DMRG calculations with bond dimensions 10 128, 192, 256, 384, 512, 640, 768, 896, 1024 for all molecules and with bond dimension 2048 for 6C and 7C molecules have been used as training points. This ensured the input data with the truncation error in the 5 ×10 −4 – 1 ×10 −5 range. The reference targets have been obtained with bond dimension 2048 for 5C molecules and with bond dimension 3072 for 6C and 7C molecules. The target energy values have been taken as the energy difference between the Hartree-Fock energy of the input orbitals and the correspond-ing DMRG optimized energy. The multi-layer perceptron unit at stage MP1 
+
+(Fig. 2) was fully-connected 3-layer neural network with 100 neurons in each layer, fea-turing sigmoid linear unit (SiLU) activation (f (z) = z(1 + e−z )−1) for each neuron. The multi-layer perceptron unit at stage MP2 (Fig. 2) was a single-layer fully-connected neural net-work with 40 neurons featuring SiLU activa-tion function for each neuron. An output neu-ron features leaky ReLU ( f (z) = max {0, z } +0.2 · min {0, z }) activation function. To avoid overfitting, the dropout regularization proce-dure 76,77 has been used with a dropout rate of 0.1. Each train procedure run over 2000 epochs. Test molecules have been subject to the same active space selection procedure, which resulted in the following π-active space configurations: I
+
+– C 34 H20 , (34e, 34o); II – C 32 H14 , (32e, 32o); 
+
+III – C 26 N7H11 , (36e, 33o); IV – C 24 N2H14 ,(26e, 26o); V – C 32 H16 , (32e, 32o). Their ge-ometries have been optimized at the DFT level using the B3LYP exchange-correlation func-tional and the cc-PVTZ basis set and are avail-able in the Supporting materials. 
+
+# Acknowledgement 
+
+This work was supported by the Czech Sci-ence Foundation (grant no. 25-18486S) and the Ministry of Education, Youth and Sports of the Czech Republic through the e-INFRA CZ (ID:90254). 
+
+# References 
+
+(1) Romero, N. A.; Nicewicz, D. A. Organic Photoredox Catalysis. Chem. Rev. 2016 ,
+
+116 , 10075 – 10166. (2) Dr. Liu, W.; Li, J.; Huang, C.-Y.; Dr. Li, C.-J. Aromatic Chemistry in the Ex-cited State: Facilitating Metal-Free Sub-stitutions and Cross-Couplings. Angew. Chem. Int. Ed. 2020 , 59 , 1786 – 1796. (3) Zhang, Z.; Wang, Y.; Sun, C.; Liu, Z.; Wang, H.; Xue, L.; Zhang, Z.-G. Re-cent Progress in Small-Molecule Donors for Non-Fullerene All-Small-Molecule Or-ganic Solar Cells. Nano Select 2022 , 3,233 – 247. (4) Cabanero, D. C.; Rovis, T. Low-Energy Photoredox Catalysis. Nat. Rev. Chem. 
+
+2025 , 9, 28 – 45. (5) Rupp, M.; Tkatchenko, A.; M¨ uller, K.-R.; von Lilienfeld, O. A. Fast and Accurate Modeling of Molecular Atomization En-ergies with Machine Learning. Phys. Rev. Lett. 2012 , 108 , 058301. (6) Hansen, K.; Biegler, F.; Ramakrish-nan, R.; Pronobis, W.; von Lilien-feld, O. A.; M¨ uller, K.-R.; Tkatchenko, A. Machine Learning Predictions of Molec-ular Properties: Accurate Many-Body Potentials and Nonlocality in Chemical Space. J. Phys. Chem. Lett. 2015 , 6, 2326 – 2331. (7) Faber, F. A.; Christensen, A. S.; Huang, B.; von Lilienfeld, O. A. Al-chemical and Structural Distribution Based Representation for Universal Quantum Machine Learning. J. Chem. Phys. 2018 , 148 , 241717. (8) Huang, B.; von Lilienfeld, O. A. Quan-tum Machine Learning Using Atom-in-Molecule-Based Fragments Selected on the Fly. Nat. Chem. 2020 , 12 , 945 – 951. 11 (9) Rogers, D.; Hahn, M. Extended-Connectivity Fingerprints. J. Chem. Inf. Model. 2010 , 50 , 742 – 754. (10) Behler, J. Atom-Centered Symme-try Functions for Constructing High-Dimensional Neural Network Potentials. 
+
+J. Chem. Phys. 2011 , 134 , 074106. (11) Bart´ ok, A. P.; Payne, M. C.; Kondor, R.; Cs´ anyi, G. Gaussian Approximation Po-tentials: The Accuracy of Quantum Me-chanics, without the Electrons. Phys. Rev. Lett. 2010 , 104 , 136403. (12) Bart´ ok, A. P.; Kondor, R.; Cs´ anyi, G. On Representing Chemical Environments. 
+
+Phys. Rev. B 2017 , 87 , 184115. (13) Willatt, M. J.; Musil, F.; Ceriotti, M. Atom-Density Representations for Ma-chine Learning. J. Chem. Phys. 2019 ,
+
+150 , 154110. (14) Gastegger, M.; Schwiedrzik, L.; Bitter-mann, M.; Berzsenyi, F.; Marquetand, P. wACSF—Weighted Atom-Centered Sym-metry Functions as Descriptors in Ma-chine Learning Potentials. J. Chem. Phys. 
+
+2018 , 148 , 241709. (15) Drautz, R. Atomic Cluster Expansion for Accurate and Transferable Interatomic Potentials. Phys. Rev. B 2019 , 99 ,014104. (16) Jaeger, S.; Fulle, S.; Turk, S. Mol2vec: Unsupervised Machine Learning Ap-proach with Chemical Intuition. J. Chem. Inf. Model. 2018 , 58 , 27 – 35. (17) Guha, R.; Velegol, D. Harnessing Shan-non Entropy-Based Descriptors in Ma-chine Learning Models to Enhance the Prediction Accuracy of Molecular Proper-ties. J. Cheminform. 2023 , 15 , 54. (18) Zalte, A. S.; Pang, H.-W.; Doner, A. C.; Green, W. H. RIGR: Resonance-Invariant Graph Representation for Molecular Prop-erty Prediction. J. Chem. Inf. Model. 
+
+2025 , 65 , 10832 – 10843. (19) Yap, C. W. PaDEL-Descriptor: An Open Source Software to Calculate Molecular Descriptors and Fingerprints. J. Comput. Chem. 2011 , 32 , 1466 – 1474. (20) Wang, J.-N.; Jin, J.-L.; Geng, Y.; Sun, S.-L.; Xu, H.-L.; Lu, Y.-H.; Su, Z.-M. An Ac-curate and Efficient Method to Predict the Electronic Excitation Energies of BOD-IPY Fluorescent Dyes. J. Comput. Chem. 
+
+2012 , 34 , 566 – 575. (21) Mao, Y.; Yao, X.; Yu, Z.; An, Z.; Ma, H. Ground-State Orbital Descriptors for Accelerated Development of Organic Room-Temperature Phosphorescent Ma-terials. Angew. Chem. Int. Ed. 2024 , 63 ,e202318836. (22) Gupta, A.; Chakraborty, S.; Ghosh, D.; Ramakrishnan, R. Data-Driven Modeling of S → S1 Excitation Energy in the BOD-IPY Chemical Space: High-Throughput Computation, Quantum Machine Learn-ing, and Inverse Design. J. Chem. Phys. 
+
+2021 , 155 , 244102. (23) Chen, Z.; Bononi, F. C.; Sievers, C. A.; Kong, W.-Y.; Donadio, D. UV–Visible Absorption Spectra of Solvated Molecules by Quantum Chemical Machine Learning. 
+
+J. Chem. Theoru Comput. 2022 , 18 , 4891 – 4902. (24) Runge, E.; Gross, E. K. U. Density-Functional Theory for Time-Dependent Systems. Phys. Rev. Lett. 1984 , 52 , 997 – 1000. (25) Peach, M. J. G.; Benfield, P.; Helgaker, T.; Tozer, D. J. Excitation Energies in Den-sity Functional Theory: An Evaluation and a Diagnostic Test. J. Chem. Phys. 
+
+2008 , 128 , 044118. (26) Laurent, A. D.; Jacquemin, D. TD-DFT Benchmarks: A review. Int. J. Quant. Chem. 2013 , 113 , 2019 – 2039. (27) Kang, S.; Kim, T. Comparative Study of TDDFT and TDDFT-based STEOM-DLPNO-CCSD Calculations for Predict-12 ing the Excited-State Properties of MR-TADF. Heliyon 2024 , 10 , e30926. (28) Sekino, H.; Bartlett, R. J. A Linear Re-sponse, Coupled-Cluster Theory for Ex-citation Energy. Int. J. Quantum Chem. 
+
+1984 , 26 , 255 – 265. (29) Koch, H.; J¨ orgensen, P. Coupled Clus-ter Response Functions. J. Chem. Phys. 
+
+1990 , 93 , 3333 – 3344. (30) Nooijen, M.; Bartlett, R. J. A New Method for Excited States: Similar-ity Transformed Equation-of-Motion Coupled-Cluster Theory. J. Chem. Phys. 
+
+1997 , 106 , 6441 – 6448. (31) Berraud-Pache, R.; Neese, F.; Bistoni, G.; Izs´ ak, R. Unveiling the Photophysical Properties of Boron-dipyrromethene Dyes Using a New Accurate Excited State Cou-pled Cluster Method. J. Chem. Theory Comput. 2020 , 16 , 564 – 575. (32) Kozma, B.; Tajti, A.; Demoulin, B.; Izs´ ak, R.; Nooijen, M.; Szalay, P. G. A New Benchmark Set for Excitation En-ergy of Charge Transfer States: Sys-tematic Investigation of Coupled Cluster Type Methods. J. Chem. Theory Comput. 
+
+2020 , 16 , 4213 – 4225. (33) Ramakrishnan, R.; Dral, P. O.; Rupp, M.; von Lilienfeld, O. A. Big Data Meets Quantum Chemistry Approximations: The ∆-Machine Learning Approach. 
+
+J. Chem. Theory Comput. 2015 , 11 ,2087–2096. (34) Ramakrishnan, R.; Hartmann, M.; Tapavicza, E.; von Lilienfeld, O. A. Electronic Spectra from TDDFT and Machine Learning in Chemical Space. J. Chem. Phys. 2015 , 143 , 084111. (35) Coxson, A.; Omar, O. H.; del Cueto, M.; Troisi, A. Predicting S1 TDDFT En-ergies from ZINDO Calculations Using Message-Passing ∆ML with Electronically Informed Descriptors. J. Chem. Theory Comput. 2026 , 22 , 1476 – 1490. (36) Verma, S.; Rivera, M.; Scanlon, D. O.; Walsh, A. Machine Learned Calibrations to High-Throughput Molecular Excited State Calculations. J. Chem. Phys. 2022 ,
+
+156 , 134116. (37) Welborn, M.; Cheng, L.; Miller III, T. F. Transferability in Machine Learning for Electronic Structure via the Molecular Or-bital Basis. J. Chem. Theory Comput. 
+
+2019 , 14 , 4772 – 4779. (38) Chen, Z.; Yam, V. W.-W. Machine-Learned Electronically Excited States with the MolOrbImage Generated from the Molecular Ground State. J. Phys. Chem. Lett. 2023 , 14 , 1955 – 1961. (39) White, S. R. Density Matrix Formulation for Quantum Renormalization Groups. 
+
+Phys. Rev. Lett. 1992 , 69 , 2863 – 2866. (40) White, S. R. Density-Matrix Algorithms for Quantum Renormalization Groups. 
+
+Phys. Rev. B 1993 , 48 , 10345 – 10356. (41) Schollw¨ ock, U. The Density-Matrix Renormalization Group. Rev. Mod. Phys. 
+
+2005 , 77 , 259 – 315. (42) Chan, G. K.-L.; Sharma, S. The Density Matrix Renormalization Group in Quan-tum Chemistry. Ann. Rev. Phys. Chem. 
+
+2011 , 62 , 465–481. (43) Yanai, T.; Kurashige, Y.; Mizukami, W.; Chalupsk` y, J.; Lan, T. N.; Saitow, M. Density Matrix Renormalization Group for Ab Initio Calculations and Associated Dynamic Correlation Methods: A Review of Theory and Applications. Int. J. Quant. Chem. 2015 , 115 , 283–299. (44) Szalay, S.; Pfeffer, M.; Murg, V.; Bar-cza, G.; Verstraete, F.; Schneider, R.; Legeza, ¨O. Tensor product methods and entanglement optimization for ab initio quantum chemistry. Int. J. Quant. Chem. 
+
+2015 , 115 , 1342–1391. (45) Baiardi, A.; Reiher, M. The Density Ma-trix Renormalization Group in Chemistry 13 and Molecular Physics: Recent Devel-opments and new Challenges. J. Chem. Phys. 2020 , 152 , 040903. (46) Golub, P.; Yang, C.; Vlˇ cek, V.; Veis, L. Quantum Chemical Density Matrix Renormalization Group Method Boosted by Machine Learning. J. Phys. Chem. Lett. 2025 , 16 , 3295 – 3301. (47) Schollw¨ ock, U. The density-matrix renor-malization group in the age of matrix product states. Ann. Phys. 2011 , 326 , 96 – 192. (48) Schollw¨ ock, U. The Density-Matrix Renormalization Group: A Short Intro-duction. Phil. Trans. R. Soc. A 2011 ,
+
+369 , 2643 – 2661. (49) Wouters, S.; Van Neck, D. The Density Matrix Renormalization Group for Ab Ini-tio Quantum Chemistry. Eur. Phys. J. D 
+
+2014 , 68 , 272. (50) Olivares-Amaya, R.; Hu, W.; Nakatani, N.; Sharma, S.; Yang, J.; Chan, G. K.-L. The Ab-Initio Den-sity Matrix Renormalization Group in Practice. J. Chem. Phys. 2015 , 142 ,034102. (51) Legeza, O.; S´ olyom, J. Optimizing the Density-Matrix Renormalization Group Method Using Quantum Information En-tropy. Phys. Rev. B 2003 , 68 , 195116. (52) Legeza, O.; S´ olyom, J. Quantum Data Compression, Quantum Information Generation, and the Density-Matrix Renormalization-Group Method. Phys. Rev. B 2004 , 70 , 205118. (53) Rissler, J.; Noack, R. M.; White, S. R. Measuring Orbital Interaction Using Quantum Information Theory. Chem. Phys. 2006 , 323 , 519 – 531. (54) Szymkiewicz, D. Une Contribution Statis-tique a la G´ eographie Floristique. Acta Soc. Bot. Pol. 1934 , 11 , 249 – 265. (55) Bendikov, M.; Duong, H. M.; Starkey, K.; Houk, K. N.; Carter, E. A.; Wudl, F. Oligoacenes: Theoretical Prediction of Open-Shell Singlet Diradical Ground States. J. Am. Chem. Soc. 2004 , 126 ,7416 – 7417. (56) Hachmann, J.; Dorando, J. J.; Avil´ es, M.; Chan, G. K.-L. The Radical Character of the Acenes: A Density Matrix Renor-malization Group Study. J. Chem. Phys. 
+
+2007 , 127 , 134309. (57) Chen, Q.; Schollmeyer, D.; M¨ ullen, K.; Narita, A. Synthesis of Circumpyrene by Alkyne Benzannulation of Brominated Dibenzo[ hi ,st ]ovalene. J. Am. Chem. Soc. 
+
+2019 , 141 , 19994 – 19999. (58) Wega, J.; Vauthey, E. Ovalene Pho-tophysics Revisited. J. Phys. Chem. A
+
+2026 , 130 , 2148 – 2157. (59) Zeng, W.; Wu, J. Open-Shell Graphene Fragments. Chem 2021 , 7, 358 – 386. (60) Bai, X.; Zhang, D.; Zhang, Y.; Wang, Y.; Cheng, Y.; Xie, Y.; Zhu, Z.; Jiang, S.-D.; Zhao, D. Solution-Synthesized Stable Tri-aza[4]triangulene Triradical with a Quar-tet Ground State. Nat. Commun. 2026 ,
+
+17 , 2297. (61) Sandoval-Salinas, M. E.; Carreras, A.; Casanova, D. Triangular Graphene Nanofragments: Open-Shell Character and Doping. Phys. Chem. Chem. Phys. 
+
+2019 , 21 , 9069 – 9076. (62) Wang, T.; Berdonces-Layunta, A.; Friedrich, N.; Vilas-Varela, M.; Calupi-tan, J. P.; Pascual, J. I.; Pe˜ na, D.; Casanova, D.; Corso, M.; de Oteyza, D. G. Aza-Triangulene: On-Surface Synthesis and Electronic and Magnetic Properties. 
+
+J. Am. Chem. Soc. 2022 , 144 , 4522 – 4529. (63) Haddon, R. Rehybridization and the Chemical Reaction: POAV and 3D-HMO Analysis. Tetrahedron 1988 , 44 , 7611 – 7620. 14 (64) Dr. Kumar, R.; Aggarwal, H.; Dr. Srivas-tava, A. Of Twists and Curves: Electron-ics, Photophysics, and Upcoming Applica-tions of Non-Planar Conjugated Organic Molecules. Chem Eur. J. 2020 , 26 , 10653 – 10675. (65) Sun, Z.; Wu, J. Open-Shell Polycyclic Aromatic Hydrocarbons. J. Mater. Chem. 
+
+2012 , 22 , 4151 – 4160. (66) Kubo, T.; Sakamoto, M.; Nakasuji, K. Biradicaloid Character of Phenalenyl-Based Aromatic Compounds with a Small HOMO–LUMO Gap. Polyhedron 2005 ,
+
+24 , 2522 – 2527. (67) https://github.com/golubp/QC_DMRG_ pred , accessed 2026-08-20. (68) Wahab, A.; Pfuderer, L.; Paenurk, E.; Gershoni-Poranne, R. The COMPAS Project: A Computational Database of Polycyclic Aromatic Systems. Phase 1: 
+
+cata -Condensed Polybenzenoid Hydrocar-bons. J. Chem. Inf. Model. 2022 , 62 ,3704–3713. (69) Lee, C.; Yang, W.; Parr, R. G. Devel-opment of the Colle-Salvetti Correlation-Energy Formula into a Functional of the Electron Density. Phys. Rev. B 1988 , 37 ,785–789. (70) Becke, A. D. Density-Functional Exchange-Energy Approximation with Correct Asymptotic Behavior. Phys. Rev. A 1988 , 38 , 3098–3100. (71) Dunning, T. H. Gaussian Basis Sets for use in Correlated Molecular Calculations. I. The Atoms Boron Through Neon and Hydrogen. J. Chem. Phys. 1989 , 90 ,1007–1023. (72) Pipek, J.; Mezey, P. G. A fast intrinsic localization procedure applicable for ab initio and semiempirical linear combina-tion of atomic orbital wave functions. The Journal of Chemical Physics 1989 , 90 ,4916–4926. (73) Barcza, G.; Legeza, O.; Marti, K. H.; Reiher, M. Quantum-information analy-sis of electronic states of different molec-ular structures. Phys. Rev. A 2011 , 83 ,012508. (74) Brabec, J.; Brandejs, J.; Kowalski, K.; Xantheas, S.; Legeza, O.; Veis, L. Mas-sively parallel quantum chemical density matrix renormalization group method. 
+
+2020 , 42 , 534–544. (75) Veis, L.; Brabec, J.; Matousek, M.; Leg-eza, O.; Antalik, A. MOLMPS program. 
+
+https://gitlab.com/molmps/scalable ,accessed 2026-08-20. (76) Hinton, G. E.; Srivastava, N.; Krizhevsky, A.; Sutskever, I.; Salakhut-dinov, R. R. Improving Neural Networks by Preventing Co-Adaptation of Feature Detectors. arXiv:1207.0580, 2012. (77) Srivastava, N.; Hinton, G.; Krizhevsky, A.; Sutskever, I.; Salakhutdinov, R. Dropout: A Simple Way to Prevent Neural Net-works from Overfitting. J. Mach. Learn. Res. 2014 , 15 , 1929 – 1958. 15

@@ -1,0 +1,625 @@
+Title: RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals
+
+URL Source: https://arxiv.org/pdf/2609.13139v1
+
+Published Time: Mon, 14 Sep 2026 01:23:46 GMT
+
+Number of Pages: 21
+
+Markdown Content:
+# RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals 
+
+## Zhuotao Jin 1,2,3 , Mohamed S. Abdallah 3, Boris Kozinsky 3,5 , and Kyle Bystrom 3,4 
+
+> 1
+
+Center for Computational Science and Engineering, Massachusetts Institute of Technology 
+
+> 2
+
+Department of Materials Science and Engineering, Massachusetts Institute of Technology 
+
+> 3
+
+John A. Paulson School of Engineering and Applied Sciences, Harvard University 
+
+> 4
+
+Initiative for Computational Catalysis, Flatiron Institute 
+
+> 5
+
+Robert Bosch LLC Research and Technology Center, Watertown 
+
+Screened hybrid functionals such as HSE06 improve the description of band gaps, charge localization, and redox energetics relative to semilocal approximations, but their explicit Hartree–Fock exchange term is computationally costly for large, periodic systems, especially in plane-wave basis set calculations. Here we present RS-CIDER, a machine-learned non-local exchange functional that approximates the short-range Hartree–Fock exchange term in HSE06 by explicitly fitting both ground-state energies and single-particle energy levels. RS-CIDER combines scale-invariant semilocal and non-local density descriptors and can be evaluated self-consistently without explicitly applying the short-range Hartree–Fock exchange operator. RS-CIDER shows close agreement with HSE06 for molecular reaction energies and solid-state band gaps. Further tests across distinct materials show agreement between RS-CIDER and HSE06 for local magnetism, Cu–O phase competition, polaron localization, and neutral-defect energetics. For an Fe olivine, chemistry-specific fine-tuning recovers the HSE06 Li intercalation voltage. A timing benchmark shows that RS-CIDER reduces the measured per-SCF-step wall time by more than an order of magnitude relative to HSE06. Together, these molecular and solid-state results establish RS-CIDER as an efficient self-consistent machine-learned surrogate for HSE06. 
+
+# 1 Introduction 
+
+Semilocal exchange–correlation (xc) approximations underpin large-scale electronic-structure calculations, but their delocalization error can lead to errors in predicted band gaps, charge localization, and redox energetics 1,2 . Screened hybrid functionals mitigate many of these errors by incorporating a fraction of short-range Hartree–Fock exchange. For a given inverse-length-scale screening parameter 𝜔 , the range-separation of the Coulomb operator is given by 1
+
+𝑟 = erfc (𝜔𝑟 )
+
+𝑟 + erf (𝜔𝑟 )
+
+𝑟 , (1) and the screened exchange is obtained by evaluating the exact exchange operator with the short-range part of the Coulomb interaction (the first term on the right-hand side of Eq 1). The most widely used screened hybrid is HSE06 3,4 ,which mixes 25% of the short-range exchange energy (at 𝜔 = 0.11 Bohr −1) into the PBE functional 5. In addition to its many other applications 6–8 , HSE06 has become the de facto standard for charged point defect calculations in solids 9–11 , largely due to its reasonable prediction of band gaps 12 . Despite substantial algorithmic advances 13 ,repeated evaluation of the non-local exchange operator remains a substantial computational cost in self-consistent hybrid-functional calculations, particularly for large or periodic systems. Machine-learned exchange functionals offer a route to emulate non-local exact exchange at lower cost. For example, the CIDER framework for machine learning density functionals 14,15 has been used to fit the unscreened, “full-range” exact exchange for both molecules and solids. It has also been extended to explicitly fit single-particle energies to improve the accuracy of ionization potentials, electron affinities, and band gaps 16 , but doing so required a more complex and computationally intensive set of input and was limited to molecular training data. Previous CIDER24X results suggested that the difficulty of fitting orbital energies partly reflects the limited representation of long-range exchange 1arXiv:2609.13139v1 [cond-mat.mtrl-sci] 11 Sep 2026 by its exponentially decaying SDMX descriptors 16 . By targeting short-range exchange, RS-CIDER need not represent this long-range contribution, providing a more tractable setting for incorporating occupation-response constraints with computationally efficient descriptors. However, at a fixed screening parameter 𝜔 , short-range exact exchange does not retain the simple homogeneous coordinate scaling of full-range exact exchange 17 . This introduces an additional scale not represented by the original scale-invariant CIDER descriptors 14,15 and motivates the local momentum-scale coordinate used in RS-CIDER. Here we introduce RS-CIDER, which adapts the CIDER framework to approximate the short-range Hartree–Fock exchange term in HSE06. At the standard HSE06 mixing fraction 𝛼 = 0.25, the learned short-range Hartree–Fock exchange is combined with the remaining PBE exchange and correlation terms according to the HSE06 mixing expression. To learn the behavior of screened exchange under uniform scaling, RS-CIDER augments the descriptor set from previous work 15 with a local inverse-length-scale descriptor derived from the density and kinetic energy density. The resulting functional can be evaluated self-consistently without the costly repeated calculation of the short-range Hartree–Fock exchange operator. RS-CIDER shows close agreement with HSE06 for molecular reaction energies and solid-state band gaps, es-tablishing fidelity to HSE06 in both molecular and periodic benchmarks. Distinct materials tests further probe the functional under self-consistent electronic-state selection and ionic relaxation, including CuO magnetism and Cu–O phase competition, electron and hole polarons, neutral defects in trigonal Se, and olivine intercalation voltages. Atiming benchmark on perfect and vacancy-containing diamond cells demonstrates a substantial reduction in per-SCF-step wall time relative to HSE06. Taken together, these results demonstrate RS-CIDER as a promising self-consistent machine-learned surrogate for HSE06 for molecular and solid-state applications. 
+
+# 2 Results 
+
+## 2.1 The RS-CIDER functional 
+
+Earlier CIDER functionals learned unscreened, full-range exact exchange from semilocal and non-local descriptors 15 .RS-CIDER instead targets 𝐸 HF ,SR x (𝜔 ), the short-range Hartree–Fock exchange defined using the standard HSE06 range-separation parameter 𝜔 = 0.11 Bohr −1, by learning a residual relative to PBE exchange, 
+
+Δ𝐸 SR x = 𝐸 HF ,SR x (𝜔 ) − 𝐸 PBE x , 𝐸 SRX-ML x = 𝐸 PBE x + Δ𝐸 SR ,ML x . (2) Here Δ𝐸 SR ,ML x approximates the target residual. At the standard HSE06 mixing fraction 𝛼 = 0.25, the learned short-range Hartree–Fock exchange is combined with the remaining PBE exchange and correlation terms according to the HSE06 mixing expression (Methods, Eq. (7)); if the residual is reproduced exactly, the resulting functional is algebraically identical to HSE06. The representation combines the scale-invariant semilocal and non-local CIDER descriptors with a bounded coordinate derived from a local electronic momentum scale (see Eqs. 4–6). RS-CIDER adapts the occupation-response training strategy used in earlier CIDER work to short-range exchange, combining short-range exchange energy residuals with occupation derivatives of the same contribution 16 . Figure 1 summarizes this learned exchange map and its use within the self-consistent Kohn–Sham cycle. Unless otherwise stated, all benchmarks below use the same general RS-CIDER model; chemistry-specific variants and calculations using a different exchange-mixing fraction are identified explicitly. Complete target definitions, training composition, and model hyperparameters are given in Methods and the Supplementary Information. 
+
+## 2.2 Molecular reaction energies 
+
+We first benchmarked RS-CIDER against HSE06 for molecular reaction energies using the GMTKN55 18 main-group chemistry benchmark database. Across the held-out test set of 1113 reactions in 52 subsets, RS-CIDER reproduced HSE06 reaction energies with a pooled mean absolute deviation (MAD) of 1.13 kcal mol −1.Figure 2 separates fidelity to the HSE06 target from accuracy relative to the GMTKN55 reference energies. The category-pooled MADs relative to HSE06 range from 0.19 kcal mol −1 for intramolecular noncovalent interactions to 1.99 kcal mol −1 for large-system reaction and isomerization energies. The reference-energy comparison uses the established WTMAD-2 weighting introduced for GMTKN55, which accounts for differences in characteristic reaction-energy scales among its constituent subsets 18 ; here, the same weighting is applied to the common held-out partition. All 2Features 
+
+𝑠, 𝜏, 𝐺, Ω 
+
+GPR enhancement 
+
+factor  𝐹 x
+
+Short-range exchange 
+
+energy  𝐸 x
+
+RS-CIDER 
+
+Model 
+
+SCF Calculations 
+
+RS-CIDER model 
+
+Mixing with remaining PBE terms 
+
+Construct Kohn- Kohn-Sham update Sham potential 
+
+Updated Electron Density 
+
+Electron Density Figure 1: RS-CIDER model and self-consistent evaluation. Density-derived features determine a Gaussian process regression (GPR) enhancement factor used to construct the learned short-range Hartree–Fock exchange. During self-consistent calculations, the trained exchange model is combined with the remaining PBE terms according to the HSE06 expression (Eq. (7)), and the resulting exchange–correlation functional enters the Kohn–Sham update. methods labeled “-D4” include DFT-D4 dispersion: RS-CIDER-D4 and HSE06-D4 use the HSE06 parameterization, whereas PBE-D4, r 2SCAN-D4, and PBE0-D4 use the parameterization of their parent functional. 𝜔 B97M-V instead includes VV10 non-local correlation. With this weighting on the common held-out test partition, RS-CIDER-D4 gives 7.27 kcal mol −1, comparable to PBE0-D4 (7.56 kcal mol −1) and HSE06-D4 (7.97 kcal mol −1), while outperforming PBE-D4 (12.32 kcal mol −1) and r 2SCAN-D4 (8.52 kcal mol −1). Thus, close agreement with HSE06 is accompanied by competitive accuracy against the molecular reference energies. Small systems Large systems Barrier heights Intermol. NCI Intramol. NCI  
+
+> 0.0 0.5 1.0 1.5 2.0 MAD from HSE06-D4 (kcal mol −1 )
+> overall 1.13 1.38 1.99 1.47 0.87 0.19
+> PBE-D4
+> r2SCAN-D4 PBE0-D4 HSE06-D4 RS-CIDER-D4
+> ωB97M-V
+> 0246810 12 14 WTMAD-2-weighted error (kcal mol −1 )
+> 12.32 8.52 7.56 7.97 7.27 3.53
+
+Figure 2: Molecular reaction-energy benchmark on the held-out GMTKN55 partition comprising 1113 reactions from 52 subsets. Left: reaction-pooled MAD of RS-CIDER-D4 relative to HSE06-D4 within each of the five GMTKN55 categories; the dashed line is the MAD pooled over all held-out reactions. Right: Test-set WTMAD-2-type errors relative to the GMTKN55 reference energies for the displayed functionals (see Supplementary Information for the explicit definition). The five categories span small-system thermochemistry, large-system reactions and isomerizations, barrier heights, and both inter- and intramolecular noncovalent interactions. The RS-CIDER–HSE06 MAD remains below 2 kcal mol −1
+
+in every category and below 1 kcal mol −1 for both noncovalent categories. The agreement therefore extends across distinct reaction-energy scales and interaction classes. Viewed together, the two panels establish complementary 3properties of the same general model: fidelity to HSE06 across chemically diverse reactions and competitive accuracy against the high-level reference energies. 
+
+## 2.3 Solid-state band gaps 
+
+We next evaluated solid-state band gaps with the same general RS-CIDER model for gapped solids in SOL62, with no solids band-gap data included in model training. RS-CIDER reproduced HSE06 with a mean absolute deviation of 0.20 eV. Against experiment, RS-CIDER approached HSE06-level agreement, with a mean absolute deviation of 0.92 eV compared with 0.76 eV for HSE06, while substantially outperforming PBE (1.93 eV) and r 2SCAN (1.42 eV). The benchmark spans covalent semiconductors, ionic insulators, and rare-gas Ar, with HSE06 gaps ranging from below 1 eV to above 11 eV. Across this range, the mean signed RS-CIDER–HSE06 difference is −0.10 eV, alongside the 0.20 eV mean absolute deviation. These two measures show both limited overall bias and close material-by-material tracking over a broad range of gap magnitudes. PBE r2SCAN CIDER23X RS-CIDER HSE06      
+
+> 0.0 0.5 1.0 1.5 2.0 Mean absolute deviation (eV)
+> 1.19 1.93 0.67 1.42 0.36 1.11 0.20 0.92 0.76
+> PBE r2SCAN CIDER23X RS-CIDER HSE06
+> 010 20 30 40 50 Mean absolute relative error (%)
+> 38.8 45.4 21.7 29.1 9.4 17.7 6.1 15.4 10.5
+> vs HSE06 vs experiment
+
+Figure 3: Mean absolute deviations (left, eV) and mean absolute relative errors (right, %) of calculated band gaps for gapped solids in SOL62 relative to HSE06 (hatched) and experiment (solid) 12 . The identically zero HSE06-to-HSE06 deviation is omitted. Per-material values and references are given in Supplementary Table 6. CIDER23X refers to the PBE0/NL-MGGA-DTR model from previous work 15 .RS-CIDER followed HSE06’s band gap underestimation for the widest-gap systems (CaO, NaCl, LiF, and Ar). The primary comparison is therefore the deviation from the HSE06 target, while experiment provides context for the accuracy of that reference. 
+
+## 2.4 Correlated oxide: CuO 
+
+Cupric oxide (CuO) is an antiferromagnetic insulator driven by super-exchange effects 19,20 . However, PBE collapses to a closed-shell, non-magnetic ground-state. RS-CIDER and HSE06 both correctly identify the antiferromagnetic ground state. The resulting Cu moment of 0.63 𝜇 𝐵 is close to the HSE06 value of 0.69 𝜇 𝐵 and the experimental ordered moment of approximately 0.68 𝜇 𝐵 21 .We then constructed the Cu–O grand-potential phase diagram (Fig. 4). RS-CIDER reproduced the HSE06 phase sequence among Cu, Cu 2O, and CuO, including the narrow intermediate Cu 2O stability region. Across most of the plotted pressure range, this stability window is shifted by roughly 100 K toward lower temperature relative to HSE06. 
+
+## 2.5 Polaron localization 
+
+We next turned to a distinct charge localization problem: small polarons, for which a localized carrier couples to an accompanying lattice distortion. We examined two complementary cases: an oxygen-vacancy electron polaron in rutile TiO 2 and a hole polaron in MgO. At the standard mixing fraction 𝛼 = 0.25, RS-CIDER and HSE06 both localized the excess electron in the 𝑞 = +1TiO 2 oxygen-vacancy cell on the same Ti site (left panel of Fig. 5). The localized-site moments were 0.53 and 0.74 𝜇 𝐵 ,respectively, whereas the excess charge in the PBE solution remained diffuse. Starting from the same structure in 4400 600 800 1000 1200 1400 Temperature (K) −6 −5 −4 −3 −2 −1 012log 10  (pO2/atm)       
+
+> Cu Cu 2OCuO
+> atmospheric pressure (a) HSE06 400 600 800 1000 1200 1400 Temperature (K) −6 −5 −4 −3 −2 −1 012log 10  (pO2/atm)
+> Cu Cu 2OCuO
+> atmospheric pressure (b) RS-CIDER
+
+Figure 4: Cu–O grand-potential phase diagrams. Filled regions identify the lowest-grand-potential phase among Cu, Cu 2O, and CuO at each temperature and oxygen partial pressure; the green dashed line marks the oxygen partial pressure of air. Energetic references and computational settings are given in the Supplementary Information. the same fixed cell, the independently relaxed HSE06 and RS-CIDER geometries differed by only 0.018 Å in the root-mean-square displacement over all 71 atoms. For MgO, we determined the exchange mixing fraction for each functional using the piecewise-linearity tuning protocol of Falletta and Pasquarello 22 . Specifically, 𝛼 was varied until the image-charge-corrected eigenvalue of the localized polaron level agreed between the charged and neutral systems, the endpoint condition associated with a piecewise-linear total energy through Janak’s theorem 23,24 . On the common PBE-relaxed lattice, this procedure gave 
+
+𝛼 𝑘 = 0.438 for HSE06 and 0 .574 for RS-CIDER, with both functionals localizing the hole (right panel of Fig. 5). After separately relaxing the MgO cell for each functional and refitting 𝛼 𝑘 on the resulting fixed cell, the RS-CIDER ΔSCF formation energy closely reproduced HSE06 ( −0.34 versus −0.38 eV). The complementary eigenvalue-based estimator showed a larger method dependence; the full values and correction details are reported in the “Polaron localization” section of Supplementary Information. Thus, across an electron and a hole polaron in distinct oxides, RS-CIDER followed HSE06 in selecting localized solutions and closely matched the MgO ΔSCF energetics. 
+
+## 2.6 Neutral native defects in trigonal Se 
+
+Neutral Se vacancies and interstitials probe the description of local coordination changes and structural relaxation in a solid. We evaluated the neutral Se vacancy ( 𝑉 0Se ) and Se interstitial (Int 0Se ), using the published HSE06+SOC calculations of Kavanagh et al. 25 as reference. In the own-bulk protocol, where the defect ions are relaxed at each functional’s independently optimized bulk lattice, RS-CIDER gives formation energies of 1.47 and 0.95 eV for the vacancy and interstitial, respectively, compared with 1.53 and 0.82 eV from HSE06+SOC. RS-CIDER therefore closely reproduces both HSE06+SOC formation energies. To separate electronic-energy differences from structural response, we compared the three geometry protocols summarized in Fig. 6. Across the relaxed protocols, RS-CIDER remains in good overall agreement with HSE06+SOC, although the reference-lattice vacancy shows a larger deviation. Because both defects are neutral, these comparisons require neither charged-supercell corrections nor cross-code band-edge alignment. The same D3 parameters were used throughout 26 , and adding spin–orbit coupling to HSE06 changes the vacancy and interstitial formation energies by only 0.019 and less than 0.001 eV, respectively. 51 5 9 13 17 21 24 Ti atom PBE PBE+U HSE06 RS-CIDER 
+
+> 0.00 0.75
+> |mTi |/ μB
+
+(a) 0.35 0.40 0.45 0.50 0.55 0.60 Exchange mixing α   
+
+> −1.5 −1.0 −0.5 0.0 0.5 Δε (eV)
+> αk= 0.438
+> HSE06
+> αk= 0.574
+> RS-CIDER
+
+(b) 
+
+Figure 5: Polaron tests in rutile TiO 2 and MgO. (a) Absolute local Ti magnetic moments in the 𝑞 = +1 oxygen-vacancy cell, with rows denoting methods and columns following a common Ti-atom index. Orange outlines mark the two apical sites in the PBE+U row and the common HSE06/RS-CIDER site; the outline color does not encode a method. (b) Corrected polaron-level difference Δ𝜀 versus exchange mixing 𝛼 for the MgO hole polaron on the common PBE-relaxed lattice. Symbols denote the endpoint calculations, solid lines their two-point fits, and crosses the fitted zero crossings 𝛼 𝑘 . Intermediate scan points and an additional RS-CIDER calculation at the fitted 𝛼 𝑘 are reported in the Supplementary Information. fixed geometry reference lattice own bulk lattice 
+
+> 0.0 0.5 1.0 1.5 Formation energy (eV)
+
+Se vacancy V0Se 
+
+> fixed geometry reference lattice own bulk lattice
+> −0.11 < 0
+
+Se interstitial Int 0Se   
+
+> PBE RS-CIDER HSE06
+
+Figure 6: Formation energies of the neutral Se vacancy (left) and interstitial (right) under three geometry protocols: all atoms fixed at the HSE06 reference geometry (“fixed geometry”), ions relaxed in the fixed reference cell (“reference lattice”), and ions relaxed at each functional’s independently optimized bulk lattice (“own bulk lattice”). Lines connect the discrete protocols as visual guides. Dashed horizontal lines show the published HSE06+SOC reference values from Kavanagh et al. 25 .
+
+## 2.7 Li intercalation voltages in olivine cathodes 
+
+One of the key properties of Li-ion cathode materials is the intercalation voltage of Li, which is predicted inaccurately by semilocal DFT due to a combination of self-interaction and strong correlation error 27 . Here we examine the 6intercalation voltage of Li in the olivines LiFePO 4 and LiMnPO 4, which requires an accurate description of transition-metal redox chemistry. We evaluated intercalation voltage by referencing the total-energy difference between the lithiated and delithiated phases of the olivine to bulk Li (Fig. 7). For LiFePO 4, the general RS-CIDER model gives 2.74 V, significantly underestimating the value of 3.22 V from HSE06. To investigate this discrepancy, we trained the chemistry-specific RS-CIDER-Fe model by assigning greater statistical weight to short-range exchange energy and occupation-response constraints for the charge-state transitions Li 0 →Li +, Fe 0 →Fe +, and Fe 2+ →Fe 3+ in isolated atoms and ions. The resulting RS-CIDER-Fe model gives an intercalation voltage of 3.25 V, illustrating the potential for information learned from isolated species to transfer to solid-state redox energetics. For LiMnPO 4, applying the analogous isolated-species fine-tuning changes the predicted voltage only from 3.22 to 3.23 V, compared with 3.78 V from HSE06. Bader charge analysis 28 showed that the fine-tuned model and HSE06 gave similar net Mn-centered redox charge transfer values (0.372 and 0.346 𝑒 , respectively). In the delithiated phase, the per-Mn charges from both the general and fine-tuned RS-CIDER models were within 0.05 𝑒 of HSE06. The voltage discrepancy therefore persists despite close agreement in the net Mn-centered redox charge transfer; we return to this contrast in the Discussion section. LiFePO 4 LiMnPO 4    
+
+> 01234Average Li intercalation voltage (V) PBE HSE06 RS-CIDER (general) RS-CIDER (fine-tuned) Expt
+
+Figure 7: Average Li intercalation voltages for LiFePO 4 and LiMnPO 4. Bars show PBE, HSE06, the general RS-CIDER model, and the corresponding chemistry-specific fine-tuned variant (RS-CIDER-Fe or RS-CIDER-Mn). Dashed horizontal lines mark the experimental voltages of 3.5 and 4.1 V, respectively 29,30 .
+
+## 2.8 Computational cost 
+
+Finally, an illustrative timing benchmark on an 8-atom conventional cubic diamond cell and its 7-atom single-vacancy counterpart, with the same numerical settings and 32 MPI ranks used for each calculation, shows that RS-CIDER reduces the average wall time per completed SCF step by more than an order of magnitude relative to HSE06 (Fig. 8). Plain PBE provides a semilocal cost reference in the figure. 
+
+# 3 Discussion 
+
+The same general RS-CIDER model shows close agreement with HSE06 for molecular reaction energies and solid-state band gaps. These complementary benchmarks span chemically diverse energy differences and self-consistent periodic electronic structure, showing that the CIDER density-functional construction can be extended from the full-range exact 70.05 0.1 1 10 100 Wall time per SCF step (s; log scale) Perfect cell C vacancy       
+
+> 0.060 0.330 59.0 0.057 0.334 48.0
+> PBE RS-CIDER HSE06
+
+Figure 8: Per-SCF-step wall times for the 8-atom conventional cubic diamond cell and the corresponding 7-atom C-vacancy cell, calculated with PBE, RS-CIDER, and HSE06 in GPAW using a 4 × 4 × 4 Γ-centered Monkhorst–Pack 
+
+𝑘 -point mesh and 32 MPI ranks. The horizontal axis is logarithmic. PBE and RS-CIDER points are medians of three paired calculations on the same physical node; HSE06 points are SCF-cycle averages from existing calculations with identical numerical settings on the same node type. Full timings and run metadata are reported in the Supplementary Information. exchange treated previously 15 to the short-range Hartree–Fock exchange term in HSE06 while avoiding explicit exact exchange evaluation. The materials applications extend the demonstrated agreement with HSE06 to electronic-state selection and struc-tural response. RS-CIDER maintains an antiferromagnetic CuO solution and reproduces the HSE06 Cu–O phase sequence, selects the same localized carrier states as HSE06 in TiO 2 and MgO, and remains in good overall agreement with HSE06 for relaxed Se defects at both reference and method-specific lattices. One area that requires further development is redox chemistry in battery materials. The RS-CIDER model did not initially match HSE06 for the intercalation voltages of Li in olivines. A modification of RS-CIDER fine-tuned to the ionization potentials and orbital energies of Fe and Li does recover the HSE06 Li intercalation voltage in LiFePO 4,illustrating that fine-tuning even on isolated species can potentially improve the description of redox in ionic materials. However, the analogous fine-tuning for Mn does not recover the HSE06 Li intercalation voltage in LiMnPO 4, indicating that further improvements are required beyond simple fine-tuning. The close agreement in Mn Bader charges indicates that the voltage discrepancy is not accompanied by a comparably large difference in net Mn-centered charge transfer. This suggests that net charge transfer alone is insufficient to recover the HSE06 voltage and points to aspects of the open-shell Mn exchange–correlation description not captured by this scalar charge measure. The Jahn–Teller-distorted Mn 3+ environment and its crystal-field-split 𝑑 manifold therefore provide an important regime for future model development 31,32 . More expressive descriptors could also potentially improve the accuracy of ML models for these systems 16 , though more work is required to develop efficient implementations of these features in plane-wave codes. The practical significance of the agreement between RS-CIDER and HSE06 lies in replacing repeated evaluation of short-range Fock exchange with a learned density functional. In the timing benchmark on perfect and vacancy-containing diamond cells, RS-CIDER lowers the average wall time per completed SCF step by more than an order of magnitude relative to HSE06, with 32 MPI ranks used for each calculation. Taken together, these results demonstrate that RS-CIDER can serve as an efficient self-consistent machine-learned approximation to HSE06 for molecular and solid-state applications. 84 Methods 
+
+## RS-CIDER functional 
+
+RS-CIDER represents the short-range Hartree–Fock exchange as a PBE baseline plus a learned correction (Eq. (2)). The correction is a density functional constructed from a short-range LDA exchange-energy-density baseline and a dimensionless Gaussian-process enhancement factor, 
+
+Δ𝐸 SR ,ML x =
+
+∫
+
+𝑑 3𝑟 𝑒 LDA x,SR 
+
+ 𝜔 ; 𝑛 (r) 𝐹 GPR x
+
+ x(r). (3) RS-CIDER uses six bounded descriptor coordinates, x = (𝑥 𝑠 , 𝑥 𝜏 , 𝑥 𝐺 1 , 𝑥 𝐺 2 , 𝑥 𝐺 3 , 𝑥 Ω). Two semilocal coordinates encode reduced-gradient and kinetic-energy-density information, 
+
+𝑠 = |∇ 𝑛 |
+
+2(3𝜋 2)1/3𝑛 4/3 , 𝑥 𝑠 = 𝛾 𝑠 𝑠 2
+
+1 + 𝛾 𝑠 𝑠 2 ,𝜏 0 = 310 (3𝜋 2)2/3𝑛 5/3, 𝑥 𝜏 = 𝜏 − 𝜏 0
+
+𝜏 + 𝜏 0
+
+.
+
+(4) Here 𝜏 = 12
+
+Í𝑝 𝑓 𝑝 |∇ 𝜙 𝑝 |2 is the kinetic energy density, where 𝜙 𝑝 and 𝑓 𝑝 are Kohn–Sham orbitals and occupations. Three non-local coordinates are obtained from Gaussian convolutions of the density, 
+
+𝐺 𝑖 (r) =
+
+∫
+
+𝑑 3𝑟 ′ 𝑛 (r′) exp − 𝑎 𝜃 (r′) + 𝑎 𝑖 (r) |r − r′ |2 , 𝑖 = 1, 2, 3,𝑎 𝜈 (r) = 𝐵 𝜈 𝑛 (r)2/3 + 𝐶 𝜈 
+
+𝜏 (r)
+
+𝑛 (r) , 𝜈 ∈ { 𝜃, 1, 2, 3},
+
+b𝐺 𝑖 = N𝑖 𝐺 𝑖 ,𝑥 𝐺 𝑖 = − 12 + b𝐺 𝑖 /21 + b𝐺 𝑖 /2 .
+
+(5) The normalization factors N𝑖 are chosen so that b𝐺 𝑖 = 2 for the uniform electron gas (see Supplementary Information). The sixth coordinate is a bounded transformation of a local electronic momentum scale, 
+
+Ω = 𝑛 1/3√︂ 12 + 12
+
+𝜏 𝜏 0
+
+, 𝑥 Ω = 𝑐 ΩΩ
+
+1 + 𝑐 ΩΩ . (6) The first five coordinates are invariant under uniform coordinate scaling. Here Ω combines the local density scale 
+
+𝑛 1/3 with the normalized kinetic-energy factor √︁ (1 + 𝜏 /𝜏 0)/ 2. It is a local electronic inverse-length scale with the same physical dimension as the range-separation parameter 𝜔 , and 𝑥 Ω is its bounded, monotonic transformation. Numerical mapping constants and Gaussian-exponent parameters are given in the Supplementary Information, together with the exchange-spin-scaling convention used for spin-polarized densities. Using the standard HSE06 parameters, 
+
+𝜔 = 0.11 bohr −1 and 𝛼 = 0.25, the HSE06 and RS-CIDER exchange–correlation energies can be written in parallel as 
+
+𝐸 HSE06 xc = (1 − 𝛼 ) 𝐸 PBE x,SR (𝜔 ) + 𝐸 PBE x,LR (𝜔 ) + 𝐸 PBE c + 𝛼 𝐸 HF ,SR x (𝜔 ),𝐸 RS-CIDER xc = (1 − 𝛼 ) 𝐸 PBE x,SR (𝜔 ) + 𝐸 PBE x,LR (𝜔 ) + 𝐸 PBE c + 𝛼 𝐸 SRX-ML x . (7) Here 𝐸 PBE x,SR (𝜔 ) and 𝐸 PBE x,LR (𝜔 ) are the short- and long-range components of PBE exchange under the same erfc/erf partition of the Coulomb kernel (Eq. (1)). RS-CIDER retains the HSE06 mixing expression and replaces the short-range Hartree–Fock exchange with the learned exchange defined in Eq. (2). The two expressions coincide when 
+
+𝐸 SRX-ML x = 𝐸 HF ,SR x (𝜔 ), and setting 𝛼 = 0 recovers PBE. The GPR derivation appears in the Supplementary Information. In the MgO polaron analysis, 𝛼 is treated as tunable, playing the same role as the exact-exchange fraction of a hybrid functional. For the MgO hole polaron, we evaluated the formation energy using two complementary expressions. The 
+
+ΔSCF expression uses the finite-size-corrected total-energy difference between the charged polaron and neutral bulk cells, with the removed electron referenced to the valence-band edge. The eigenvalue-based expression combines the finite-size-corrected total-energy difference between the neutral polaron and bulk cells with the corrected localized-polaron eigenvalue. The two expressions coincide in the piecewise-linear limit, and their difference measures residual nonlinearity. 9Training targets 
+
+The part of RS-CIDER that is machine-learned is the short-range exchange residual Δ𝐸 SR ,ML x of Eq. (2). Δ𝐸 SR ,ML x
+
+was trained to reproduce the exact Δ𝐸 SR x for linear combinations of short-range exchange energies and their derivatives with respect to selected frontier orbital occupations 16 . For system 𝑗 , let Δ𝐸 SR x, 𝑗 = 𝐸 HF ,SR x, 𝑗 (𝜔 ) − 𝐸 PBE x, 𝑗 . The two basic forms for a training target 𝑟 are 
+
+𝑦 (𝐸 ) 
+
+> 𝑟
+
+=∑︁ 
+
+> 𝑗
+
+𝑐 𝑟 𝑗 Δ𝐸 SR x, 𝑗 ,𝑦 (𝑑 ) 
+
+> 𝑟
+
+=∑︁ 
+
+> 𝑗, 𝑝
+
+𝑑 𝑟 𝑗 𝑝 
+
+𝜕 Δ𝐸 SR x, 𝑗 
+
+𝜕 𝑓 𝑗 𝑝 
+
+,
+
+(8) where 𝑐 𝑟 𝑗 and 𝑑 𝑟 𝑗 𝑝 specify the stoichiometric and occupation-response combinations, respectively, and 𝑓 𝑗 𝑝 is the occupation of a selected frontier orbital with index 𝑝 in system 𝑗 . Exchange energy targets like reaction energies and barrier heights use the first equation 𝑦 (𝐸 ) 
+
+> 𝑟
+
+, while orbital energy targets use the second form 𝑦 (𝑑 ) 
+
+> 𝑟
+
+. We also include so-called “piecewise quadraticity constraints” introduced in previous work 16 , which use a combination of 𝑦 (𝐸 ) 
+
+> 𝑟
+
+and 
+
+𝑦 (𝑑 ) 
+
+> 𝑟
+
+to target the physically correct behavior of exchange for a fractional number of electrons. Reference values for the uniform electron gas are included as additional training data, but are not enforced as exact constraints in this work. The explicit occupation-response combinations are given in the Supplementary Information. 
+
+## Training procedure 
+
+The model was fit by Gaussian-process regression (GPR) in a low-rank representation, with control points selected from training-system descriptor samples by pivoted Cholesky decomposition. The training systems span molecular and atomic chemistry, 3d-transition-metal ionization and spin states, and a small set of bulk-solid cohesive data. The training components and numbers of supervised constraints for the general RS-CIDER model are summarized in Table 1. Detailed dataset composition, target definitions, control-point selection, and noise settings are reported in the Supplementary Information. Table 1: Training components and numbers of supervised constraints used for RS-CIDER. The target column identifies the corresponding short-range exchange constraint. IP and EA denote ionization potential and electron affinity, respectively. The listed constraints exclude the separate uniform gas targets described in the text.                              
+
+> Training component #Target 3d-TM ionization stoichiometries 60 Exchange energy difference 3d-TM piecewise quadraticity 60 Residual combining energy and occupation derivatives 3d-TM generalized Koopmans 60 Occupation derivative residual G21 IP piecewise quadraticity 36 Residual combining energy and occupation derivatives G21 EA piecewise quadraticity 25 Residual combining energy and occupation derivatives G21 frontier generalized Koopmans 61 Occupation derivative residual G21 ionization stoichiometries 36 Exchange energy difference G21 electron-affinity stoichiometries 25 Exchange energy difference GMTKN55 reaction stoichiometries 225 Exchange energy differences W4-11 atomization stoichiometries 140 Exchange energy differences W4-11 frontier occupations 456 Occupation derivatives Closed/open-shell reference atoms 45 Exchange energies Bulk-solid cohesive stoichiometries 9Exchange energy differences Total 1238
+
+## Electronic-structure calculations 
+
+Molecular benchmark calculations (GMTKN55) for RS-CIDER and HSE06 used PySCF 33 with the def2-QZVPPD basis 34 and DFT-D4 dispersion 35 ; additional PySCF comparison data used the same basis with the dispersion treatment indicated by each functional label. Periodic RS-CIDER calculations were performed self-consistently with GPAW 36 
+
+in a plane-wave PAW representation, with the CiderPress code 37 used to evaluate the CIDER functionals. For the solid-state band-gap benchmark, the PBE, r 2SCAN, earlier CIDER, and HSE06 values were taken from Bystrom and Kozinsky 15 . Reference calculations for the other periodic applications used GPAW or VASP 38 as specified in the 10 Supplementary Information. Unless otherwise stated, HSE06 used 25% short-range exact exchange with the standard screening parameter 𝜔 = 0.11 bohr −1. Per-system plane-wave cutoffs, k-point meshes, supercell sizes, magnetic configurations, and RS-CIDER-specific settings are listed in the Supplementary Information. 
+
+## Intercalation voltage 
+
+The average Li intercalation voltage was computed as 
+
+𝑉 = 𝐸 (delithiated ) + 𝑛 𝜇 Li − 𝐸 (lithiated )
+
+𝑛𝑒 , (9) where 𝜇 Li is the bulk-lithium chemical potential, taken as the energy per atom of bcc lithium, 𝑛 is the number of Li removed, and 𝑒 is the elementary positive charge. 
+
+# Acknowledgements 
+
+We acknowledge support from Tata Steel Ltd, the National Science Foundation Office of Advanced Cyberinfrastructure (OAC) under Award No. 2118201, and the U.S. Department of the Navy, Office of Naval Research under Award No. N00014-20-1-2418. The authors acknowledge computing resources provided by the Harvard University FAS Division of Science Research Computing Group. The authors thank Seán R. Kavanagh and Hao Tang for helpful discussions. The authors also thank Stefano Falletta for sharing a script for generating the charge-image corrections for the polaron calculations. The Flatiron Institute is a division of the Simons Foundation. 11 A Supplementary Information 
+
+## RS-CIDER functional form 
+
+RS-CIDER learns the short-range Hartree–Fock exchange (SRX) of the HSE06 hybrid functional, defined by the error-function screening kernel erfc (𝜔 |r − r′ |)/| r − r′ | with 𝜔 = 0.11 bohr −1, and represents it through a delta-learning model relative to a PBE exchange baseline, 
+
+Δ𝐸 SR x ≡ 𝐸 HF ,SR x (𝜔 ) − 𝐸 PBE x , (10) where 𝐸 HF ,SR x (𝜔 ) is the short-range Hartree–Fock exchange before application of the HSE06 mixing fraction. The residual is constructed by multiplying the short-range LDA by a machine-learned enhancement factor, 
+
+Δ𝐸 SR ,ML x =∑︁ 
+
+> 𝑔
+
+𝑤 𝑔 𝑒 LDA x,SR (𝜔 ; 𝑛 𝑔 ) 𝐹 GPR x (x𝑔 ), (11) where 𝑤 𝑔 is the integration weight at real-space grid point 𝑔 , x𝑔 is the descriptor vector at 𝑔 , and 𝐹 GPR x is the dimen-sionless enhancement factor learned by a Gaussian-process regression. The machine-learned short-range exchange is 
+
+𝐸 SRX-ML x = 𝐸 PBE x + Δ𝐸 SR ,ML x . The RS-CIDER functional combines this learned exchange with PBE using xmix = 0.25 (Eq. (7)). The PBE baseline is subtracted when the residual labels are constructed and added back to form 𝐸 SRX-ML x ; it is not part of the Gaussian-process covariance kernel. The six bounded coordinates are defined in Eqs. (4)–(6). For connection to standard meta-GGA notation, the iso-orbital indicator is 𝛼 = (𝜏 − 𝜏 𝑊 )/ 𝜏 0, with 𝜏 𝑊 = |∇ 𝑛 |2/( 8𝑛 ), so that 𝜏 /𝜏 0 = 𝛼 + 53 𝑠 2. The reduced-gradient coordinate uses 𝛾 𝑠 = 0.243, which Becke chose empirically to fit the exact exchange energies of noble gas atoms 39 .The first five coordinate maps follow the CIDER construction 15 . For the Gaussian exponents in Eq. (5), the parameters are equivalently written 
+
+𝑎 𝜃 =
+
+ 𝜋 
+
+25/3 − 𝐶 𝐹 
+
+16 
+
+
+
+𝑛 2/3 + 116 
+
+𝜏 𝑛 , 𝐶 𝐹 = 310 (3𝜋 2)2/3,𝑎 𝑖 = 𝜆 𝑖 𝑎 𝜃 , (𝜆 1, 𝜆 2, 𝜆 3) =
+
+ 12 , 1, 2
+
+
+
+.
+
+(12) The uniform electron gas normalization constants in Eq. (5), chosen so that b𝐺 𝑖 = 2 and 𝑥 𝐺 𝑖 = 0 for the uniform gas, are 
+
+(N 1, N2, N3) = 3√38 , 1, 3√64
+
+!
+
+. (13) The momentum-scale map in Eq. (6) uses 𝑐 Ω = 0.1 bohr. All descriptor quantities are evaluated in atomic units. The fixed range-separation parameter 𝜔 enters the short-range exchange target, the short-range LDA baseline, and the PBE short-/long-range partition. For spin-polarized densities, the six coordinates are evaluated separately in each channel using the exchange-spin-scaled quantities 𝑛 = 2𝑛 𝜎 , ∇𝑛 = 2∇𝑛 𝜎 , and 𝜏 = 2𝜏 𝜎 . The channel contributions are then combined according to 𝐸 x [𝑛 ↑, 𝑛 ↓] = 12 𝐸 x [2𝑛 ↑] + 12 𝐸 x [2𝑛 ↓].
+
+## Gaussian-process training 
+
+The enhancement factor 𝐹 GPR x is fit to residuals in short-range exchange energies (Eq. 11). At grid point 𝑔 of system 𝑖 ,define the multiplicative baseline 𝑚 𝑖 𝑔 = 𝑒 LDA x,SR (𝜔 ; 𝑛 𝑖 𝑔 ), so that the exchange energy label is 𝐸 𝑖  
+
+> x
+
+= Í𝑔 ∈𝑖 𝑤 𝑖 𝑔 𝑚 𝑖 𝑔 𝐹 GPR x (x𝑖 𝑔 ).Let 𝜅 (x, x′) = Cov [𝐹 GPR x (x), 𝐹 GPR x (x′)] denote the covariance kernel of the dimensionless enhancement factor. Bilin-earity of covariance then gives, for any two training systems 𝑖 and 𝑗 ,Cov (𝐸 𝑖 
+
+> x
+
+, 𝐸 𝑗  
+
+> x
+
+) =∑︁ 
+
+> 𝑔 ∈𝑖
+
+∑︁ ℎ∈ 𝑗 
+
+𝑤 𝑖 𝑔 𝑤 𝑗 ℎ 𝑚 𝑖 𝑔 𝑚 𝑗 ℎ 𝜅 (x𝑖 𝑔 , x 𝑗 ℎ), (14) Orbital-response labels are derivatives with respect to orbital occupation number of the same exchange contribution and therefore enter the GP as linear functionals through the chain rule. Janak’s theorem 23 relates the corresponding total-energy occupation derivatives, of which this exchange response is one contribution, to frontier-orbital eigenvalues. The 12 corresponding control-point projection differentiates the complete product 𝑚 𝑖 𝑔 𝜅 (x𝑖 𝑔 , ˜x𝑎 ) with respect to occupation, including the occupation derivatives of both the LDA baseline and the descriptor vector. Exchange energy and occupation-response constraints are combined in a single covariance matrix for joint fitting. A complete derivation of the orbital-response construction is given in the CIDER24X work 16 .The real-space grid for each system carries ∼ 10 5 points, so forming the full covariance (Eq. 14) for every pair of systems is intractable; it is replaced by a Nyström low-rank approximation built on a small set of control points ˜ x𝑎 in feature space, Cov (𝐸 𝑖 
+
+> x
+
+, 𝐸 𝑗  
+
+> x
+
+) ≈ 𝐾 𝑖 𝑗 ≡ ( ˜k𝑖 )⊤ ˜K−1 ˜k 𝑗 , (15) with ( ˜K)𝑎𝑏 = 𝜅 ( ˜x𝑎 , ˜x𝑏 ) and ( ˜k𝑖 )𝑎 = Í𝑔 ∈𝑖 𝑤 𝑖 𝑔 𝑚 𝑖 𝑔 𝜅 (x𝑖 𝑔 , ˜x𝑎 ). Candidate points are obtained by downsampling the real-space grids of all training systems. After spin-channel expansion, control points are selected automatically from the resulting pool by pivoted incomplete Cholesky decomposition on the normalised kernel matrix, with stopping tolerance ctrl _tol = 10 −3. The predictor in the control-point basis is 
+
+𝐹 GPR x (x∗) =∑︁ 
+
+> 𝑎
+
+𝜅 (x∗, ˜x𝑎 ) 𝛼 𝑎 , 𝜶 = ˜K−1∑︁ 
+
+> 𝑖
+
+˜k𝑖 [K + Σnoise ]−1y 𝑖 , (16) where K is the Nyström label Gram matrix of Eq. (15), Σnoise the diagonal label-noise covariance matrix, and y the stacked label vector; for an occupation-derivative label, ˜ k𝑖 is replaced by the occupation derivative of the complete projection Í𝑔 𝑤 𝑖 𝑔 𝑚 𝑖 𝑔 𝜅 (x𝑖 𝑔 , ˜x𝑎 ) described above 16 .We use an additive Gaussian enhancement-factor kernel 𝜅 with squared-exponential components that support an efficient low-dimensional spline representation for self-consistent evaluation 15 ; length scales 𝑙 𝑖 are set to the standard deviations of the corresponding features over the downsampled descriptor samples used to form the control-point candidate pool. The resulting learned residual is evaluated as a single real-space integral of the dimensionless enhancement factor on the short-range LDA baseline, 
+
+Δ𝐸 SR ,ML x =
+
+∫
+
+𝑑 3𝑟 𝑒 LDA x,SR 
+
+ 𝜔 ; 𝑛 (r) 𝐹 GPR x
+
+ x(r), 𝐹 GPR x (x∗) =∑︁ 
+
+> 𝑎
+
+𝛼 𝑎 𝜅 (x∗, ˜x𝑎 ), (17) with the same control-point coefficients as Eq. (16). 
+
+## Training data 
+
+The RS-CIDER functional was fit by Gaussian-process regression to 1238 supervised constraints defined by thirteen reaction sets over eight sets of systems (Table 1). Descriptor samples for the GP representation were drawn from the same system sets, and separate uniform gas constraints were added independently. The system sets include 3d transition metal ions and their spin states, the G21IP and G21EA molecules, the W4-11 molecules, a GMTKN55 reaction pool included in the control point candidate pool, reference atoms, and bulk solids with their constituent free atoms 15,16,18,40 .Each supervised constraint is a reaction-like linear combination of 𝐸 HF ,SR x (𝜔 ) at 𝜔 = 0.11 bohr −1 relative to PBE exchange. For energy constraints, the stoichiometric coefficients combine exchange energies; for occupation-response constraints, they combine derivatives of those exchange energies with respect to frontier orbital occupations. For the ionization-potential and electron-affinity systems, three related constraint families combine exchange energy and occupation response. To state the actual exchange-only labels, let 𝐸 𝐴  
+
+> x
+
+denote either 𝐸 HF ,SR x (𝜔 ) or 𝐸 PBE x , and define 
+
+𝜖 𝐴  
+
+> x, 𝑝
+
+= 𝜕𝐸 𝐴  
+
+> x
+
+/𝜕 𝑓 𝑝 . For the ionization branch, the three combinations represent the exchange contribution to the ionization potential (IP), the residual associated with the generalized Koopmans condition (GKC), and a piecewise quadraticity (PQ) residual: 
+
+Δ𝐴  
+
+> IP ,x
+
+= 𝐸 𝐴  
+
+> x
+
+(𝑁 −1) − 𝐸 𝐴  
+
+> x
+
+(𝑁 ),
+
+Δ𝐴  
+
+> GKC ,x
+
+= 𝜖 𝐴  
+
+> x,H
+
+(𝑁 ) − 𝜖 𝐴  
+
+> x,L
+
+(𝑁 −1),
+
+Δ𝐴  
+
+> PQ ,x
+
+= Δ 𝐴  
+
+> IP ,x
+
++ 12
+
+𝜖 𝐴  
+
+> x,H
+
+(𝑁 ) + 𝜖 𝐴  
+
+> x,L
+
+(𝑁 −1) . (18) The electron-affinity constraints use the analogous electron-addition occupations. In every case, the supervised target is the difference between the short-range Hartree–Fock and PBE values of the corresponding combination, 
+
+𝑦 𝑋 = Δ HF ,SR  
+
+> 𝑋, x
+
+− ΔPBE  
+
+> 𝑋, x
+
+, 𝑋 ∈ { IP , GKC , PQ }. (19) 13 Thus the generalized Koopmans constraints are differences of occupation derivatives for the neutral HOMO and the adjacent charged-state frontier orbital, whereas the piecewise quadraticity constraints combine an exchange energy change with the two endpoint derivatives. For a quadratic dependence on the frontier orbital occupation 𝑓 ∈ [ 0, 1],
+
+𝐸 𝐴  
+
+> x
+
+( 𝑓 ) = 𝑐 0 + 𝑐 1 𝑓 + 𝑐 2 𝑓 2 and Δ𝐴  
+
+> GKC ,x
+
+= 2𝑐 2. Moreover, 𝐸 𝐴  
+
+> x
+
+(1) − 𝐸 𝐴  
+
+> x
+
+(0) equals the average of the two endpoint derivatives, so Δ𝐴  
+
+> PQ ,x
+
+= 0. Exchange energies are further constrained using W4-11 atomization stoichiometries, reference atoms, and the cohesive energies of the 9 solids. Separate W4-11 data for frontier orbital occupations constrain the corresponding occupation derivatives. Additional uniform gas targets softly constrain the model toward the exact short-range exchange limit. Noise factors were used to balance energy and occupation-response constraints. 
+
+## Computational details 
+
+DFT software and RS-CIDER implementation. Molecular benchmark calculations used PySCF; periodic calcula-tions of band gaps, oxides, polarons, and batteries used GPAW (plane-wave basis with PAW datasets) for RS-CIDER. HSE06 and PBE reference energies for the battery calculations were obtained using VASP (PAW). HSE06 used 
+
+𝛼 = 0.25 exact short-range exchange with 𝜔 = 0.11 bohr −1. Unless otherwise stated, RS-CIDER calculations used the ciderpress implementation with xmix = 0.25 (Eq. (7)) and were performed self-consistently. 
+
+GMTKN55 (Fig. 2). The GMTKN55 calculations used PySCF with the def2-QZVPPD basis 34 and the auxiliary basis 
+
+def2-universal-jkfit for density fitting 41 . DFT-D4 dispersion 35 with HSE06 parameters was added consistently to both RS-CIDER and the HSE06 reference. All calculations used an SCF convergence threshold of 10 −9 Ha. The mean absolute deviation in the left panel of Fig. 2 was pooled directly over a reaction-wise held-out test set of 1113 reactions in 52 subsets. This partition was obtained from the complete 1505-reaction catalogue by excluding the 392 unique GMTKN55 reaction stoichiometries represented among the 1238 supervised training constraints. The split is reaction-wise, so reuse of an individual molecular system does not by itself constitute reaction overlap. Comparison energies for PBE-D4, r 2SCAN-D4, PBE0-D4, and 𝜔 B97M-V were computed with PySCF using the same orbital basis 5,42–44 . The 𝜔 B97M-V data include its VV10 non-local-correlation term; the other labels identify their corresponding D4-corrected energies. For the right panel of Fig. 2, reaction energies for the same 1113 held-out reactions in 52 subsets were calculated from the corresponding system total energies using the GMTKN55 reaction stoichiometries. The reported weighted score was WTMAD-2 held -out = 1
+
+Í𝑖 𝑁 𝑖 ∑︁ 𝑖 
+
+𝑁 𝑖 
+
+𝐶 WTMAD2 
+
+|Δ𝐸 |𝑖 
+
+MAD 𝑖 , (20) where 𝑁 𝑖 and MAD 𝑖 were evaluated on the common held-out reactions in subset 𝑖 , while |Δ𝐸 |𝑖 was calculated from the full reference-energy definition of that subset. The normalization constant 𝐶 WTMAD2 = 56 .84 kcal mol −1 is the value introduced in the original GMTKN55 definition of WTMAD-2 18 .
+
+Solid-state band gaps (Fig. 3). The RS-CIDER gaps were calculated self-consistently with GPAW through the ciderpress interface in plane-wave mode with 𝐸 cut = 520 eV and a Γ-centered even 𝑘 -point mesh with a linear density of 12 points per Å −1. Fermi–Dirac smearing was 0 .01 eV; for Ar, the smearing was set to zero and the number of bands to 200%. The GPAW energy-convergence setting was 10 −6 eV per valence electron. The reported generalized Kohn–Sham gaps were obtained as CBM–VBM eigenvalue differences using ase.dft.bandgap . Structures were ICSD-keyed CIFs from a curated band-gap subset of 17 semiconductors and insulators. The PBE, r 2SCAN, and earlier CIDER values were taken from the GPAW calculations of Bystrom and Kozinsky 15 ,which used the same plane-wave cutoff and linear 𝑘 -point density. The HSE06 values were taken from the VASP calculations reported in the same work, using a 4000 /𝑁 atom 𝑘 -point-mesh criterion; that work reported changes below 0.01 eV relative to denser meshes. 
+
+Cu–O phase diagram (Fig. 4). The phase diagram considers Cu (metal), Cu 2O, CuO, and O 2 as the oxygen reference. CuO was treated in a collinear antiferromagnetic configuration; antiferromagnetic order in CuO is experimentally established 21 . The four Cu sites were initialized in a collinear antiferromagnetic pattern with alternating spin directions. Both functionals used the same Materials Project structures 45 , each relaxing its own cell. HSE06: VASP 6.4.2 (PAW, 
+
+𝛼 = 0.25, 𝜔 = 0.11 bohr −1, 𝐸 cut = 800 eV for all phases); Γ-centered 𝑘 -meshes 12 3 (Cu), 8 3 (Cu 2O), 6 3 (CuO), with 14 O2 a triplet in a 10 × 10 × 10 Å box. RS-CIDER: GPAW through the ciderpress interface, self-consistent single points at plane-wave cutoff 1000 eV; Γ-centered 𝑘 -meshes 12 3, 10 3, 6 3 for Cu, Cu 2O, CuO. The converged RS-CIDER Cu moment in CuO is 0 .63 𝜇 𝐵 .For each condensed phase 𝑖 , the phase diagram compares the grand potential per Cu atom, 
+
+Φ𝑖 (𝑇, 𝑝 O2 ) = 𝐸 𝑖 − 𝑁 Cu ,𝑖 𝜇 Cu − 𝑁 O,𝑖 𝜇 O (𝑇, 𝑝 O2 )
+
+𝑁 Cu ,𝑖 
+
+, (21) with 𝜇 Cu = 𝐸 bulk Cu /4. The oxygen chemical potential is 
+
+𝜇 O (𝑇, 𝑝 O2 ) = 12 𝐸 O2 + 12
+
+𝐻 ◦ 
+
+> O2
+
+(𝑇 ) − 𝐻 ◦ 
+
+> O2
+
+(0) − 𝑇 𝑆 ◦ 
+
+> O2
+
+(𝑇 )
+
++ 12 𝑘 B𝑇 
+
+h
+
+ln 
+
+ 𝑝 O2
+
+1 atm 
+
+
+
++ ln (1.01325 )
+
+i
+
+,
+
+(22) where the second logarithm converts the plotted pressure coordinate from atm to the 1-bar standard state used by NIST–JANAF. Standard-state enthalpy increments and entropies were linearly interpolated from the NIST–JANAF thermochemical data 46 . The method-specific DFT energy 𝐸 O2 was used in Eq. (22), together with the NIST–JANAF thermal contributions and the ideal-gas pressure term; the phase with the lowest Φ𝑖 is assigned as stable. 
+
+Polaron localization (Fig. 5). TiO 2 oxygen-vacancy electron polaron: We used a 2 × 2 × 3 rutile supercell (72 atoms; 71 in the 𝑉 O cell) and Γ-point sampling, as in Deák et al. 47 . The starting lattice was taken from the Materials Project rutile structure 45 and held fixed during ionic relaxation (ISIF = 2). PBE, PBE+U, and HSE06 used VASP (PAW Ti_pv and O; 𝐸 cut = 400 eV for HSE06, 520 eV for PBE/PBE+U). The PBE+ 𝑈 calculation used the rotationally invariant Dudarev formulation with 𝑈 eff = 𝑈 − 𝐽 = 4.2 eV on Ti 3 𝑑 states 48 . RS-CIDER used GPAW with plane-wave 1000 eV (grid spacing ∼ 0.097 Å), xmix = 0.25. All calculations used ISPIN = 2. The left panel of Figure 5 reports site-resolved absolute local magnetic moments for the 𝑞 = +1 charge state in a common atom order. All four calculations used the same initial structure and preserved that order. MgO hole polaron: conventional 2 ×2×2supercell (64 atoms, Mg 32 O32 ), charge state 𝑞 = +1, ISPIN = 2, Γ-only. HSE06 used VASP 6.4.2 ( 𝐸 cut = 520 eV); RS-CIDER used GPAW with plane-wave 1000 eV (grid spacing ∼ 0.165 Å). For each functional, the exchange fraction 
+
+𝛼 𝑘 was determined non-empirically from the zero crossing of a linear fit to the corrected charged–neutral endpoint eigenvalue difference, the condition associated with a piecewise-linear total energy through Janak’s theorem, with Falletta–Wiktor–Pasquarello (FWP) image-charge corrections 24 . We used a Gaussian model-charge width of 1 .4 bohr and the PBE MgO dielectric constants 𝜀 0 = 10 .73 and 𝜀 ∞ = 2.77 reported by Falletta and Pasquarello 22 . Two lattice protocols were used. In the common-lattice protocol, the same PBE-relaxed cell was held fixed for both functionals. Applying the piecewise-linearity tuning procedure on this cell gave 𝛼 𝑘 = 0.4378 for HSE06 and 0 .5740 for RS-CIDER. In the per-functional protocol, each functional first relaxed the pristine MgO cell using the value of 𝛼 𝑘 obtained from the common-lattice tuning. The tuning procedure was then repeated on the resulting fixed cell, giving 𝛼 𝑘 = 0.4527 for HSE06 and 0 .5978 for RS-CIDER. The polaron formation energy was evaluated with two estimators that coincide for a perfectly piecewise-linear functional 16 : a ΔSCF total-energy difference and an eigenvalue-based expression. Their difference |dev | measures the residual non-linearity (Table 3); it is small for HSE06 ( ≤ 0.02 eV) and larger for RS-CIDER ( ≈ 0.25 eV), while the RS-CIDER and HSE06 ΔSCF formation energies agree closely under both lattice protocols, differing by 0 .052 eV for the common-lattice protocol and 0 .044 eV for the per-functional protocol. For the common-lattice fits in the right panel of Fig. 5, HSE06 used 𝛼 = 0.35 and 0 .50 as the fit endpoints, with 
+
+𝛼 = 0.40 as an intermediate check. RS-CIDER used 𝛼 = 0.40 and 0 .60 as the fit endpoints, with 𝛼 = 0.45 and 0 .50 as intermediate checks. A separate RS-CIDER calculation at the fitted value 𝛼 = 0.574 gave Δ𝜀 = +0.024 eV, consistent with the fitted zero crossing. The complete values are listed in Table 2. 
+
+Point-defect formation energy (Fig. 6). Trigonal Se, 3 × 3 × 3 supercells: 81 Se in bulk, 80 in the neutral vacancy cell, and 82 in the neutral interstitial cell. The general RS-CIDER model used GPAW (plane-wave, 𝐸 cut = 600 eV, no SOC); PBE and HSE06 used VASP ( 𝐸 cut = 300 eV; HSE06 at 25% short-range exact exchange, 𝜔 = 0.11 bohr −1). All calculations included D3 dispersion with the parameters of the HSE06 reference ( 𝑠 8 = 0.928, 𝑟 𝑠 6 = 1.287) and a 
+
+Γ-centered 2 × 2 × 2 𝑘 -mesh; ionic relaxations used VASP IBRION = 2 / GPAW BFGS. The published HSE06+SOC structures and formation energies of Kavanagh et al. define the reference geometry and benchmark values 25 . The 15 Table 2: Common-lattice MgO scan values used to select the exchange mixing in the right panel of Fig. 5. The corrected polaron-level difference is Δ𝜀 = [𝜀 𝑝 (𝑞 ) + 𝜀 cor ,𝑞𝑞 ] − [ 𝜀 𝑝 (0) + 𝜀 cor ,0𝑞 ]. The main-text fit uses only the two rows marked as endpoints for each functional. Functional 𝛼 Δ𝜀 (eV) Role HSE06 0.35 −0.758 fit endpoint HSE06 0.40 −0.372 intermediate check HSE06 0.50 +0.537 fit endpoint RS-CIDER 0.40 −1.411 fit endpoint RS-CIDER 0.45 −0.996 intermediate check RS-CIDER 0.50 −0.680 intermediate check RS-CIDER 0.60 +0.211 fit endpoint RS-CIDER 0.574 +0.024 calculation at fitted 𝛼 𝑘 
+
+Table 3: MgO hole-polaron ( 𝑞 = +1) formation energy from two estimators that coincide for a perfectly piecewise-linear functional: a ΔSCF total-energy difference, 𝐸 𝑓 (ΔSCF ), and an eigenvalue-based expression, 𝐸 𝑓 (eig ), both with FWP finite-size corrections. |dev | = |𝐸 𝑓 (ΔSCF ) − 𝐸 𝑓 (eig )| gauges the residual non-linearity. “Common” uses the shared PBE-relaxed cell; “own” uses each functional’s separately relaxed cell and the value of 𝛼 𝑘 obtained by repeating the tuning procedure on that fixed cell. The HSE06 common-lattice entry is interpolated from the exchange-fraction scan; the remaining entries were calculated directly at their fitted 𝛼 𝑘 values. Lattice Functional 𝛼 𝑘 𝐸 𝑓 (ΔSCF ) 𝐸 𝑓 (eig ) |dev |
+
+(eV) (eV) (eV) common HSE06 0.4378 −0.465 −0.477 0.012 common RS-CIDER 0.5740 −0.413 −0.653 0.240 own HSE06 0.4527 −0.383 −0.401 0.018 own RS-CIDER 0.5978 −0.339 −0.592 0.252 Se-rich formation energies are 𝐸 𝑓 (𝑉 ) = 𝐸 (vac , 80 ) − 80 81 𝐸 (bulk , 81 ) and 𝐸 𝑓 (Int ) = 𝐸 (int , 82 ) − 82 81 𝐸 (bulk , 81 ), with defect and bulk taken on the same lattice. For 𝑞 = 0 the formation energy needs no charge correction and no cross-code valence-band reference, so the GPAW (RS-CIDER) and VASP (PBE, HSE06) values are directly comparable. Two controls minimize additional methodological differences. (i) All four methods use identical D3 parameters, providing a controlled dispersion treatment. (ii) Computing HSE06 with and without spin–orbit coupling (otherwise identical) changes the formation energies by only 0 .019 eV ( 𝑉 Se ) and < 0.001 eV (Int), and the SOC- and no-SOC-relaxed lattices differ by < 0.06%. We report three geometry protocols (Table 4): (i) a single point with all atoms at the HSE06 geometry, probing electronic-energy differences without geometry-relaxation differences; (ii) ionic relaxation (ISIF = 2) at the fixed reference cell; and (iii) ionic relaxation at each functional’s independently relaxed bulk lattice. For the RS-CIDER vacancy in protocol (iii), a clean BFGS calculation converged to 𝑓 max = 0.044 eV/Å before a tighter single-point calculation gave 𝐸 𝑓 = 1.466 eV. At fixed cell the functionals relax to nearly the same ionic geometry—the RS-CIDER and PBE structures lie within 0 .07 Å (RMSD) of the HSE06 geometry for both defects (RS-CIDER 0 .04/0 .02, PBE 0.05/0 .07 Å for vacancy/interstitial), so these small geometric differences alone cannot explain the energy spread. Consistently, the residual forces at the HSE06 geometry are largest for PBE ( ∼ 0.7 eV/Å), smaller for RS-CIDER (∼ 0.4), and near zero for HSE06. Under protocol (iii) PBE’s relaxed lattice over-binds (its 𝑎 axis contracts 4 .4%), shifting its bulk reference by 1 .6 eV and producing the large protocol-(iii) swings, whereas RS-CIDER’s lattice expands only 1 .5% and its formation energies stay near HSE06. The one case where PBE is fortuitously close is the interstitial at the fixed HSE06 geometry (Table 4); on relaxation PBE drives that energy negative while RS-CIDER converges toward HSE06. 
+
+Battery intercalation voltages (Fig. 7). The four olivine cells comprise the lithiated forms LiFePO 4 and LiMnPO 4
+
+(28 atoms each) and the delithiated forms FePO 4 and MnPO 4 (24 atoms each); bulk bcc Li (one atom) served as the lithium reference. The olivine geometries were the DFT+ 𝑈 +𝑉 -relaxed structures reported by Timrov et al. 31 , which were also used for the HSE06 calculations in that study. Antiferromagnetic AF1 ordering was imposed on the transition-16 Table 4: Formation energies 𝐸 𝑓 (eV) of the neutral Se vacancy and interstitial in trigonal Se ( 𝑞 = 0) under three geometry protocols: all atoms at the HSE06 geometry (“fixed”), ions relaxed in the fixed reference cell (“reference lattice”), and ions relaxed at each functional’s own optimized bulk lattice (“own bulk”). The HSE06 row repeats the published HSE06+SOC reference values of Kavanagh et al. across the three protocol columns 25 .Defect Functional fixed reference lattice own bulk 
+
+𝑉 0Se PBE 1.080 0.176 1.274 RS-CIDER 1.362 1.118 1.466 HSE06 1.525 1.525 1.525 Int 0Se PBE 0.927 −0.107 1.510 RS-CIDER 1.140 0.949 0.949 HSE06 0.823 0.823 0.823 metal sites in the pattern (+ , +, −, −) . PBE and HSE06 reference energies used VASP 6.4.2 (PAW Fe_pv / Mn_pv / O / P / Li_sv) with 𝐸 cut = 1100 eV for PBE and 𝐸 cut = 600 eV for HSE06. RS-CIDER energies used GPAW + ciderpress with xmix = 0.25, self-consistent SCF, and a uniform 𝐸 cut = 1100 eV. 𝑘 -meshes were 6 × 8 × 10 Γ-centered for the olivines and 10 × 10 × 10 for bulk Li. Voltages were computed as 𝑉 = −[ 𝐸 (LiMPO 4) − 𝐸 (MPO 4) − 4 𝐸 (Li )]/( 4𝑒 )
+
+with 𝑛 = 4 Li per unit cell and 𝑒 the elementary positive charge. Mn charge transfer was evaluated by applying the grid-based Bader partitioning algorithm 28 to the converged charge densities of LiMnPO 4 and MnPO 4. The net Mn Bader charge was averaged over the four Mn sites in each cell, and the reported Mn-centered redox transfer was defined as Δ𝑞 Mn = 𝑞 Mn (MnPO 4) − 𝑞 Mn (LiMnPO 4); positive Δ𝑞 Mn 
+
+therefore denotes a loss of Mn-centered electron density upon delithiation. 
+
+Computational cost (Fig. 8). Diamond C: 8-atom perfect cubic cell ( 𝑎 = 3.567 Å) and a single-vacancy 7-atom variant; GPAW plane-wave mode with a 500 eV cutoff (grid spacing 0 .1784 Å); 4 × 4 × 4 Γ-centered Monkhorst–Pack 
+
+𝑘 -mesh; Fermi–Dirac smearing 0 .01 eV; and energy convergence threshold 10 −5 eV per valence electron. Plain PBE and RS-CIDER were each run three times on the same physical node using 32 MPI ranks. The HSE06 timings were taken from existing GPAW HybridXC calculations with identical numerical settings and the same node type, using 
+
+𝛼 = 0.25 and 𝜔 = 0.11 bohr −1.Per-SCF-step wall times are the GPAW Timing report’s SCF-cycle total divided by the number of completed iterations. Table 5: Per-SCF-step wall times (s) for the 8-atom diamond-C cell and the 7-atom C-vacancy cell, with 32 MPI ranks used for each calculation. PBE and RS-CIDER show three paired repeats, with medians in bold parentheses. The HSE06 values are averages over completed SCF steps.         
+
+> Method Perfect cell C vacancy PBE 0.0609, 0.0602, 0.0593 ( 0.0602 )0.0567, 0.0567, 0.0562 ( 0.0567 )RS-CIDER 0.3300, 0.3303, 0.3308 ( 0.3303 )0.3324, 0.3344, 0.3398 ( 0.3344 )HSE06 58.9781 47.9680
+
+## Solid-state band-gap data 
+
+Table 6 reports the calculated and experimental band gaps of the 17 semiconductors and insulators used in the main-text comparison (Fig. 3). The RS-CIDER gaps were obtained from self-consistent GPAW calculations using a 520 eV plane-wave cutoff and the smallest even, Γ-centered 𝑘 -point mesh with a linear density of at least 12 𝑘 points per Å −1. Each band gap was evaluated as the difference between the conduction-band minimum and valence-band maximum on this 𝑘 -point mesh. The PBE, r 2SCAN, earlier CIDER, and HSE06 band gaps were taken from Bystrom and Kozinsky 15 . In that work, the PBE, r 2SCAN, and CIDER calculations used the same cutoff and 𝑘 -point-density criterion, whereas the HSE06 calculations used VASP, with the 𝑘 -point mesh set to contain 4000 𝑘 points divided by the number of atoms in the unit cell. Across this set, RS-CIDER reproduces the HSE06 reference gaps with a mean absolute deviation of 0 .197 eV (mean 17 signed deviation −0.102 eV), roughly halving the 0 .362 eV mean absolute deviation of the earlier CIDER functional, which targets PBE0. HSE06 is the reference for RS-CIDER; HSE06 itself underestimates the experimental gaps of the widest-gap systems (e.g., CaO, NaCl, LiF, and Ar), so the experimental column is provided only for context. Table 6: Calculated and experimental band gaps (in eV) for the solid-state benchmark set. PBE, r 2SCAN, CIDER, RS-CIDER, and HSE06 are computed values. Experimental gaps are shown for context, whereas HSE06 is the reference for assessing RS-CIDER fidelity. RS-CIDER values were calculated in this work with GPAW; the remaining calculated values are from Bystrom and Kozinsky 15 , and experimental values are from Borlido et al. 12 .Material PBE r2SCAN CIDER RS-CIDER HSE06 Exp. Si 0.57 0.76 1.05 1.14 1.15 1.17 Ge 0.12 0.48 0.71 0.97 0.81 0.74 InP 0.69 1.12 1.47 1.67 1.52 1.42 GaAs 0.59 1.08 1.36 1.68 1.43 1.52 CdSe 0.71 1.19 1.48 1.68 1.69 1.74 BP 1.25 1.42 1.71 1.84 1.98 2.10 GaP 1.61 1.88 2.09 2.30 2.29 2.35 CdS 1.20 1.65 2.02 2.22 2.27 2.48 GaN 1.88 2.33 2.65 2.76 3.18 3.50 ZnS 2.13 2.69 3.04 3.30 3.37 3.72 C 4.13 4.34 4.70 4.84 5.33 5.50 BN 4.21 4.79 5.08 5.38 5.63 5.96 CaO 3.68 4.23 4.53 5.05 5.32 6.88 MgO 4.73 5.63 6.11 6.22 6.42 7.67 NaCl 5.11 5.90 6.32 6.54 6.45 8.75 LiF 9.07 10.05 10.40 10.76 11.39 13.60 Ar 8.71 9.61 9.71 10.51 10.36 14.15 
+
+# References 
+
+[1] Aron J. Cohen, Paula Mori-Sánchez, and Weitao Yang. Insights into Current Limitations of Density Functional Theory. Science , 321(5890):792–794, August 2008. ISSN 0036-8075. doi: 10.1126/science.1158722. [2] Paula Mori-Sánchez, Aron J. Cohen, and Weitao Yang. Localization and Delocalization Errors in Density Functional Theory and Implications for Band-Gap Prediction. Phys. Rev. Lett. , 100(14):146401, April 2008. doi: 10.1103/PhysRevLett.100.146401. [3] Jochen Heyd, Gustavo E. Scuseria, and Matthias Ernzerhof. Hybrid Functionals Based on a Screened Coulomb Potential. J. Chem. Phys. , 118(18):8207–8215, 2003. ISSN 00219606. doi: 10.1063/1.1564060. [4] Aliaksandr V. Krukau, Oleg A. Vydrov, Artur F. Izmaylov, and Gustavo E. Scuseria. Influence of the Exchange Screening Parameter on the Performance of Screened Hybrid Functionals. J. Chem. Phys. , 125(22):224106, December 2006. ISSN 0021-9606. doi: 10.1063/1.2404663. [5] J. P. Perdew, K. Burke, and M. Ernzerhof. Generalized Gradient Approximation Made Simple. Phys. Rev. Lett. , 77:3865, Oct 1996. doi: 10.1103/PhysRevLett.77.3865. URL http://link.aps.org/doi/10.1103/ PhysRevLett.77.3865 .[6] Benjamin G. Janesko, Thomas M. Henderson, and Gustavo E. Scuseria. Screened Hybrid Density Functionals for Solid-State Chemistry and Physics. Physical Chemistry Chemical Physics , 11(3):443–454, January 2009. ISSN 1463-9076. doi: 10.1039/b812838c. [7] Thomas M. Henderson, Joachim Paier, and Gustavo E. Scuseria. Accurate treatment of solids with the HSE screened hybrid. physica status solidi (b) , 248(4):767–774, 2011. doi: https://doi.org/10.1002/pssb.201046303. URL https://onlinelibrary.wiley.com/doi/abs/10.1002/pssb.201046303 .18 [8] Dong-Hwa Seo, Alexander Urban, and Gerbrand Ceder. Calibrating Transition-Metal Energy Levels and Oxygen Bands in First-Principles Calculations: Accurate Prediction of Redox Potentials and Charge Transfer in Lithium Transition-Metal Oxides. Phys. Rev. B , 92(11):115118, September 2015. ISSN 1098-0121. doi: 10.1103/ PhysRevB.92.115118. [9] Christoph Freysoldt, Blazej Grabowski, Tilmann Hickel, Jörg Neugebauer, Georg Kresse, Anderson Janotti, and Chris G. Van de Walle. First-Principles Calculations for Point Defects in Solids. Rev. Mod. Phys. , 86(1):253–305, March 2014. ISSN 0034-6861. doi: 10.1103/RevModPhys.86.253. [10] Joel Davidsson, Viktor Ivády, Rickard Armiento, N T Son, Adam Gali, and Igor A Abrikosov. First Principles Predictions of Magneto-Optical Data for Semiconductor Point Defect Identification: The Case of Divacancy Defects in 4H–SiC. New Journal of Physics , 20(2):023035, February 2018. ISSN 1367-2630. doi: 10.1088/ 1367-2630/aaa752. [11] M. R. Lambert, Mark E. Turiansky, and Chris G. Van De Walle. Electronic and Optical Properties of Transition Metal Impurities in GaN and AlN. Physical Review B , 112(19):195426, November 2025. ISSN 2469-9950, 2469-9969. doi: 10.1103/zfbt-27km. [12] Pedro Borlido, Thorsten Aull, Ahmad W. Huran, Fabien Tran, Miguel A. L. Marques, and Silvana Botti. Large-Scale Benchmark of Exchange–Correlation Functionals for the Determination of Electronic Band Gaps of Solids. 
+
+J. Chem. Theory Comput. , 15(9):5069–5079, September 2019. ISSN 1549-9618. doi: 10.1021/acs.jctc.9b00322. [13] Lin Lin. Adaptively Compressed Exchange Operator. Journal of Chemical Theory and Computation , 12(5): 2242–2249, 04 2016. ISSN 1549-9618. doi: 10.1021/acs.jctc.6b00092. URL https://doi.org/10.1021/ acs.jctc.6b00092 .[14] Kyle Bystrom and Boris Kozinsky. CIDER: An Expressive, Nonlocal Feature Set for Machine Learning Density Functionals with Exact Constraints. Journal of Chemical Theory and Computation , 18(4):2180–2192, March 2022. ISSN 1549-9618. doi: 10.1021/acs.jctc.1c00904. [15] Kyle Bystrom and Boris Kozinsky. Nonlocal machine-learned exchange functional for molecules and solids. 
+
+Phys. Rev. B , 110:075130, Aug 2024. doi: 10.1103/PhysRevB.110.075130. URL https://link.aps.org/ doi/10.1103/PhysRevB.110.075130 .[16] Kyle Bystrom, Stefano Falletta, and Boris Kozinsky. Training Machine-Learned Density Functionals on Band Gaps. Journal of Chemical Theory and Computation , 20(17):7516–7532, 2024. doi: 10.1021/acs.jctc.4c00999. URL https://doi.org/10.1021/acs.jctc.4c00999 . PMID: 39178337. [17] Mel Levy and John P. Perdew. Hellmann-Feynman, virial, and scaling requisites for the exact universal density functionals. Shape of the correlation potential and diamagnetic susceptibility for atoms. Phys. Rev. A , 32:2010– 2021, Oct 1985. doi: 10.1103/PhysRevA.32.2010. URL https://link.aps.org/doi/10.1103/PhysRevA. 32.2010 .[18] Lars Goerigk, Andreas Hansen, Christoph Bauer, Stephan Ehrlich, Asim Najibi, and Stefan Grimme. A Look at the Density Functional Theory Zoo with the Advanced GMTKN55 Database for General Main Group Thermo-chemistry, Kinetics and Noncovalent Interactions. Phys. Chem. Chem. Phys. , 19(48):32184–32215, 2017. ISSN 1463-9076. doi: 10.1039/C7CP04913G. [19] M. O’keeffe and F. S. Stone. The Magnetic Susceptibility of Cupric Oxide. Journal of Physics and Chemistry of Solids , 23(3):261–266, March 1962. ISSN 0022-3697. doi: 10.1016/0022-3697(62)90010-0. [20] P. J. Brown, T. Chattopadhyay, J. B. Forsyth, and V. Nunez. Antiferromagnetism in CuO Studied by Neutron Polarimetry. Journal of Physics: Condensed Matter , 3(23):4281, June 1991. ISSN 0953-8984. doi: 10.1088/ 0953-8984/3/23/016. [21] B. X. Yang, J. M. Tranquada, and G. Shirane. Neutron scattering studies of the magnetic structure of cupric oxide. Phys. Rev. B , 38:174–178, Jul 1988. doi: 10.1103/PhysRevB.38.174. URL https://link.aps.org/ doi/10.1103/PhysRevB.38.174 .19 [22] Stefano Falletta and Alfredo Pasquarello. Polarons Free from Many-Body Self-Interaction in Density Functional Theory. Phys. Rev. B , 106(12):125119, September 2022. ISSN 2469-9950. doi: 10.1103/PhysRevB.106.125119. [23] J. F. Janak. Proof That 𝜕𝐸 /𝜕𝑛 𝑖 = 𝜖 𝑖 in Density-Functional Theory. Phys. Rev. B , 18(12):7165–7168, December 1978. ISSN 0163-1829. doi: 10.1103/PhysRevB.18.7165. [24] Stefano Falletta, Julia Wiktor, and Alfredo Pasquarello. Finite-size corrections of defect energy levels involving ionic polarization. Phys. Rev. B , 102:041115(R), Jul 2020. doi: 10.1103/PhysRevB.102.041115. URL https: //link.aps.org/doi/10.1103/PhysRevB.102.041115 .[25] Seán R. Kavanagh, Rasmus S. Nielsen, John L. Hansen, Rasmus S. Davidsen, Ole Hansen, Alp E. Samli, Peter C. K. Vesborg, David O. Scanlon, and Aron Walsh. Intrinsic point defect tolerance in selenium for indoor and tandem photovoltaics. Energy & Environmental Science , 18(9):4431–4446, 05 2025. ISSN 1754-5692. doi: 10.1039/d4ee04647a. URL https://doi.org/10.1039/d4ee04647a .[26] Stefan Grimme, Jens Antony, Stephan Ehrlich, and Helge Krieg. A Consistent and Accurate Ab Initio Parametriza-tion of Density Functional Dispersion Correction (DFT-D) for the 94 Elements H-Pu. J. Chem. Phys. , 132(15): 154104, April 2010. ISSN 0021-9606. doi: 10.1063/1.3382344. [27] F. Zhou, M. Cococcioni, C. A. Marianetti, D. Morgan, and G. Ceder. First-principles prediction of redox potentials in transition-metal compounds with LDA + 𝑈 . Phys. Rev. B , 70:235121, Dec 2004. doi: 10.1103/PhysRevB.70. 235121. URL https://link.aps.org/doi/10.1103/PhysRevB.70.235121 .[28] Graeme Henkelman, Andri Arnaldsson, and Hannes Jónsson. A fast and robust algorithm for Bader decomposition of charge density. Computational Materials Science , 36(3):354–360, 2006. ISSN 0927-0256. doi: https: //doi.org/10.1016/j.commatsci.2005.04.010. URL https://www.sciencedirect.com/science/article/ pii/S0927025605001849 .[29] A. K. Padhi, K. S. Nanjundaswamy, and J. B. Goodenough. Phospho-olivines as Positive-Electrode Materials for Rechargeable Lithium Batteries. Journal of The Electrochemical Society , 144(4):1188, apr 1997. doi: 10.1149/1.1837571. URL https://doi.org/10.1149/1.1837571 .[30] C. Delacourt, P. Poizot, M. Morcrette, J.-M. Tarascon, and C. Masquelier. One-Step Low-Temperature Route for the Preparation of Electrochemically Active LiMnPO4 Powders. Chemistry of Materials , 16(1):93–99, 12 2003. ISSN 0897-4756. doi: 10.1021/cm030347b. URL https://doi.org/10.1021/cm030347b .[31] Iurii Timrov, Francesco Aquilante, Matteo Cococcioni, and Nicola Marzari. Accurate Electronic Properties and Intercalation Voltages of Olivine-Type Li-Ion Cathode Materials from Extended Hubbard Functionals. PRX Energy , 1:033003, Oct 2022. doi: 10.1103/PRXEnergy.1.033003. URL https://link.aps.org/doi/10. 1103/PRXEnergy.1.033003 .[32] L. F. J. Piper, N. F. Quackenbush, S. Sallis, D. O. Scanlon, G. W. Watson, K.-W. Nam, X.-Q. Yang, K. E. Smith, F. Omenya, N. A. Chernova, and M. S. Whittingham. Elucidating the Nature of Pseudo Jahn–Teller Distortions in LixMnPO4: Combining Density Functional Theory with Soft and Hard X-ray Spectroscopy. The Journal of Physical Chemistry C , 117(20):10383–10396, 04 2013. ISSN 1932-7447. doi: 10.1021/jp3122374. URL 
+
+https://doi.org/10.1021/jp3122374 .[33] Qiming Sun, Xing Zhang, Samragni Banerjee, Peng Bao, Marc Barbry, Nick S. Blunt, Nikolay A. Bogdanov, George H. Booth, Jia Chen, Zhi-Hao Cui, Janus J. Eriksen, Yang Gao, Sheng Guo, Jan Hermann, Matthew R. Hermes, Kevin Koh, Peter Koval, Susi Lehtola, Zhendong Li, Junzi Liu, Narbe Mardirossian, James D. McClain, Mario Motta, Bastien Mussard, Hung Q. Pham, Artem Pulkin, Wirawan Purwanto, Paul J. Robinson, Enrico Ronca, Elvira R. Sayfutyarova, Maximilian Scheurer, Henry F. Schurkus, James E. T. Smith, Chong Sun, Shi-Ning Sun, Shiv Upadhyay, Lucas K. Wagner, Xiao Wang, Alec White, James Daniel Whitfield, Mark J. Williamson, Sebastian Wouters, Jun Yang, Jason M. Yu, Tianyu Zhu, Timothy C. Berkelbach, Sandeep Sharma, Alexander Yu Sokolov, and Garnet Kin-Lic Chan. Recent Developments in the PySCF Program Package. J. Chem. Phys. , 153(2):024109, July 2020. ISSN 0021-9606. doi: 10.1063/5.0006074. [34] Dmitrij Rappoport and Filipp Furche. Property-Optimized Gaussian Basis Sets for Molecular Response Calcu-lations. J. Chem. Phys. , 133(13):134105, October 2010. ISSN 0021-9606. doi: 10.1063/1.3484283. 20 [35] Eike Caldeweyher, Sebastian Ehlert, Andreas Hansen, Hagen Neugebauer, Sebastian Spicher, Christoph Ban-nwarth, and Stefan Grimme. A Generally Applicable Atomic-Charge Dependent London Dispersion Correction. 
+
+J. Chem. Phys. , 150(15):154122, April 2019. ISSN 0021-9606. doi: 10.1063/1.5090222. [36] J. Enkovaara, C. Rostgaard, J. J. Mortensen, J. Chen, M. Dułak, L. Ferrighi, J. Gavnholt, C. Glinsvad, V. Haikola, H. A. Hansen, H. H. Kristoffersen, M. Kuisma, A. H. Larsen, L. Lehtovaara, M. Ljungberg, O. Lopez-Acevedo, P. G. Moses, J. Ojanen, T. Olsen, V. Petzold, N. A. Romero, J. Stausholm-Møller, M. Strange, G. A. Tritsaris, M. Vanin, M. Walter, B. Hammer, H. Häkkinen, G. K. H. Madsen, R. M. Nieminen, J. K. Nørskov, M. Puska, T. T. Rantala, J. Schiøtz, K. S. Thygesen, and K. W. Jacobsen. Electronic structure calculations with GPAW: a real-space implementation of the projector augmented-wave method. J. Phys.: Condens. Matter , 22(25):253202, 2010. doi: 10.1088/0953-8984/22/25/253202. [37] MIR Group. CiderPress: A high-performance software package for training and evaluating machine-learned XC functionals using the CIDER framework. https://github.com/cider-dft/CiderPress , 2026. URL 
+
+https://github.com/cider-dft/CiderPress . GitHub repository, accessed July 29, 2026. [38] G. Kresse and J. Furthmüller. Efficient Iterative Schemes for Ab Initio Total-Energy Calculations Using a Plane-Wave Basis Set. Phys. Rev. B , 54(16):11169–11186, October 1996. ISSN 0163-1829. doi: 10.1103/PhysRevB. 54.11169. [39] A. D. Becke. On the large-gradient behavior of the density functional exchange energy. The Journal of Chemical Physics , 85(12):7184–7187, December 1986. ISSN 1089-7690. doi: 10.1063/1.451353. URL http://dx.doi. org/10.1063/1.451353 .[40] Amir Karton, Shauli Daon, and Jan M. L. Martin. W4-11: a high-confidence benchmark dataset for computational thermochemistry derived from first-principles W4 data. Chemical Physics Letters , 510:165–178, 5 2011. ISSN 00092614. doi: 10.1016/j.cplett.2011.05.007. [41] Florian Weigend. Hartree–Fock Exchange Fitting Basis Sets for H to Rn. J. Comput. Chem. , 29(2):167–175, January 2008. ISSN 01928651. doi: 10.1002/jcc.20702. [42] James W. Furness, Aaron D. Kaplan, Jinliang Ning, John P. Perdew, and Jianwei Sun. Accurate and Numerically Efficient r 2SCAN Meta-Generalized Gradient Approximation. J. Phys. Chem. Lett. , 11(19):8208–8215, 2020. doi: 10.1021/acs.jpclett.0c02405. URL https://doi.org/10.1021/acs.jpclett.0c02405 .[43] Carlo Adamo and Vincenzo Barone. Toward Reliable Density Functional Methods without Adjustable Parameters: The PBE0 Model. J. Chem. Phys. , 110(13):6158–6170, April 1999. ISSN 00219606. doi: 10.1063/1.478522. [44] Narbe Mardirossian and Martin Head-Gordon. Ømega B97M-V: A Combinatorially Optimized, Range-Separated Hybrid, Meta-GGA Density Functional with VV10 Nonlocal Correlation. J. Chem. Phys. , 144(21):214110, June 2016. ISSN 0021-9606. doi: 10.1063/1.4952647. [45] Anubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, and Kristin A. Persson. Commentary: The Materials Project: A Materials Genome Approach to Accelerating Materials Innovation. APL Mater. , 1(1):011002, July 2013. ISSN 2166532X. doi: 10.1063/1.4812323. [46] Thomas C. Allison. NIST-JANAF Thermochemical Tables - SRD 13, 2013. URL https://janaf.nist.gov/ .[47] Peter Deák, Bálint Aradi, and Thomas Frauenheim. Quantitative theory of the oxygen vacancy and carrier self-trapping in bulk TiO 2. Phys. Rev. B , 86:195206, Nov 2012. doi: 10.1103/PhysRevB.86.195206. URL 
+
+https://link.aps.org/doi/10.1103/PhysRevB.86.195206 .[48] S. L. Dudarev, G. A. Botton, S. Y. Savrasov, C. J. Humphreys, and A. P. Sutton. Electron-energy-loss spectra and the structural stability of nickel oxide: An LSDA+U study. Phys. Rev. B , 57:1505–1509, Jan 1998. doi: 10.1103/PhysRevB.57.1505. URL https://link.aps.org/doi/10.1103/PhysRevB.57.1505 .21

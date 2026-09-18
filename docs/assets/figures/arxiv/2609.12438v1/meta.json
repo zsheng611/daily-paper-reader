@@ -1,0 +1,94 @@
+{
+  "version": 2,
+  "extractor": "pymupdf-images",
+  "figures": [
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-001.webp",
+      "caption": "",
+      "page": 1,
+      "index": 1,
+      "width": 1988,
+      "height": 791
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-002.webp",
+      "caption": "",
+      "page": 9,
+      "index": 2,
+      "width": 1788,
+      "height": 1362
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-003.webp",
+      "caption": "",
+      "page": 10,
+      "index": 3,
+      "width": 1678,
+      "height": 922
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-004.webp",
+      "caption": "",
+      "page": 13,
+      "index": 4,
+      "width": 2866,
+      "height": 1670
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-005.webp",
+      "caption": "",
+      "page": 14,
+      "index": 5,
+      "width": 2024,
+      "height": 1088
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-006.webp",
+      "caption": "",
+      "page": 15,
+      "index": 6,
+      "width": 2888,
+      "height": 1674
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-007.webp",
+      "caption": "",
+      "page": 16,
+      "index": 7,
+      "width": 2144,
+      "height": 454
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-008.webp",
+      "caption": "",
+      "page": 16,
+      "index": 8,
+      "width": 1460,
+      "height": 390
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-009.webp",
+      "caption": "",
+      "page": 17,
+      "index": 9,
+      "width": 1814,
+      "height": 754
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-010.webp",
+      "caption": "",
+      "page": 17,
+      "index": 10,
+      "width": 984,
+      "height": 586
+    },
+    {
+      "url": "assets/figures/arxiv/2609.12438v1/fig-011.webp",
+      "caption": "",
+      "page": 18,
+      "index": 11,
+      "width": 1936,
+      "height": 844
+    }
+  ]
+}

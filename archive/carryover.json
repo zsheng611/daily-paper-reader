@@ -1,158 +1,17 @@
 {
-  "generated_at": "2026-09-18T16:42:00.924702+00:00",
-  "updated_date": "20260909-20260918",
+  "generated_at": "2026-09-18T17:48:25.463850+00:00",
+  "updated_date": "20260918",
   "carryover_days": 9,
   "tag_states": {
     "AI-Materials": {
-      "updated_date": "20260909-20260918",
+      "updated_date": "20260918",
       "carryover_days": 9,
       "items": []
     },
     "ar": {
-      "updated_date": "20260909-20260918",
+      "updated_date": "20260918",
       "carryover_days": 9,
-      "items": [
-        {
-          "id": "2609.15938v1",
-          "source": "arxiv",
-          "title": "HypoEvolve: Genetic Algorithms Enable Multi-Agent LLMs to Discover Scientific Hypotheses",
-          "abstract": "Scientific agents contribute to hypothesis discovery by synthesizing evidence, assessing proposals, and developing new explanations. Recent systems combine scientific agents with evolutionary search through critique, comparison, and revision. However, how different forms of agent collaboration affect hypothesis quality remains an open question. Answering this question requires separating the effects of agents' scientific capabilities from those of their collaboration. A framework must therefore preserve agents' scientific roles and support rules for combining, revising, and retaining hypotheses. Building on this view, we introduce HypoEvolve, which makes collaboration explicit through successive updates to a hypothesis population. Specifically, we propose a generational genetic algorithm to coordinate specialized large language model (LLM) agents that integrate mechanistic arguments, reconsider assumptions, and assess evidence and testability. Each generation specifies how scientific judgments and new proposals reshape the population, making collaboration effects on hypothesis quality directly testable. Moreover, we design our evaluation around scientifically meaningful hypotheses that explain how a proposed intervention could work. Drug repurposing links these explanations to target-level biological claims assessed against external evidence. Specifically, we adapt DepMap and Open Targets into complementary external measures grounded in experimental, genetic, and clinical evidence. Across 34 cancer types, HypoEvolve achieves the highest scores against six baselines on both measures. DepMap selectivity reaches 0.171, versus 0.115 for the strongest baseline. Gains over single-pass generation also generalize to held-out cancer types. HypoEvolve advances a vision of autonomous science in which AI research teams achieve a capacity for discovery beyond that of individual models.",
-          "authors": [
-            "Jieyuan Liu",
-            "Mengzhou Hu",
-            "Jefferson Chen",
-            "JungHo Kong",
-            "Pratibha Jagannatha",
-            "Yiming Gao",
-            "Dexter Pratt",
-            "Hsin-Yuan Lee",
-            "Zhiting Hu",
-            "Trey Ideker",
-            "Wei Wang",
-            "Eric P. Xing",
-            "Zhen Wang"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL",
-            "cs.CE",
-            "cs.MA",
-            "cs.NE"
-          ],
-          "published": "2026-09-14T17:44:49+00:00",
-          "link": "https://arxiv.org/pdf/2609.15938v1",
-          "tags": [
-            "keyword:AI-Materials",
-            "keyword:ar",
-            "query:ar"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "multi-agent LLMs with genetic algorithms to discover scientific hypotheses",
-          "llm_evidence_cn": "遗传算法驱动的多智能体大模型用于科学假设发现",
-          "llm_evidence": "遗传算法驱动的多智能体大模型用于科学假设发现",
-          "canonical_evidence": "遗传算法驱动的多智能体大模型用于科学假设发现",
-          "llm_tldr_en": "HypoEvolve uses genetic-algorithm-driven multi-agent LLMs to explicitly model collaboration and improve the discovery of scientific hypotheses.",
-          "llm_tldr_cn": "科学智能体通过综合证据、评估提案与提出解释来参与假设发现，近期系统将智能体与进化搜索结合进行批判、比较与修订，但不同协作形式对假设质量的影响尚不明确。作者提出HypoEvolve，通过种群式假设的连续更新使协作显式化，保留智能体的科学角色并设定组合、修订与保留规则。实验分离了智能体能力与协作方式的贡献，表明该方法能提升假设发现质量，为自动假设生成提供新框架。",
-          "llm_tldr": "科学智能体通过综合证据、评估提案与提出解释来参与假设发现，近期系统将智能体与进化搜索结合进行批判、比较与修订，但不同协作形式对假设质量的影响尚不明确。作者提出HypoEvolve，通过种群式假设的连续更新使协作显式化，保留智能体的科学角色并设定组合、修订与保留规则。实验分离了智能体能力与协作方式的贡献，表明该方法能提升假设发现质量，为自动假设生成提供新框架。",
-          "llm_tags": [
-            "query:ar"
-          ],
-          "matched_query_tag": "query:ar",
-          "matched_query_text": "automated hypothesis generation",
-          "matched_requirement_id": "req-12",
-          "selection_source": "carryover_cache",
-          "paper_id": "2609.15938v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2609.17846v1",
-          "source": "arxiv",
-          "title": "PrimeScientist: Strategic Allocation of Research Effort in Autonomous Research",
-          "abstract": "Autonomous research agents aim to automate scientific workflows, from proposing ideas to conducting experiments and analyzing results. Yet current AI and research agents can propose more directions than available resources allow them to pursue. Moreover, each attempt could consume substantial resources, requiring agents to reconsider how to invest in subsequent research. Thus, deciding how to invest research effort strategically should be a defining capability of autonomous research agents. Accordingly, we introduce PrimeScientist, which jointly determines research direction and resource investment across successive research attempts. Specifically, we formulate this challenge of strategic research effort allocation as a sequential decision problem where remaining resources should explicitly guide the research policy. We first introduce an executable plan tree that preserves competing plans and their outcomes across attempts. Building on this representation, we propose an adaptive MCTS-based allocation policy that balances exploration and exploitation using experimental feedback and remaining resources. Comprehensive evaluations across AI research, systems and code optimization, and machine learning engineering show that strategic allocation improves research quality and sample efficiency together. Across 12 AI research tasks, PrimeScientist improves average reward by 10.3% with 50.6% fewer research attempts than AutoResearch under the same resource budget. We believe making research effort allocation an explicit optimization target establishes effective resource use as a core research capability for autonomous agents to drive scientific breakthroughs at scale.",
-          "authors": [
-            "Xinle Yu",
-            "Fan Bai",
-            "Kaiser Sun",
-            "Hengshuo Miao",
-            "Abhay Anand",
-            "Zhongyan Luo",
-            "Kun Zhou",
-            "Zhen Wang"
-          ],
-          "primary_category": "cs.CL",
-          "categories": [
-            "cs.CL",
-            "cs.AI",
-            "cs.LG"
-          ],
-          "published": "2026-09-15T21:04:56+00:00",
-          "link": "https://arxiv.org/pdf/2609.17846v1",
-          "tags": [
-            "keyword:AI-Materials",
-            "keyword:ar",
-            "query:ar"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "autonomous research agents strategically allocating research direction and resources",
-          "llm_evidence_cn": "自主科研智能体战略性分配研究方向与资源",
-          "llm_evidence": "自主科研智能体战略性分配研究方向与资源",
-          "canonical_evidence": "自主科研智能体战略性分配研究方向与资源",
-          "llm_tldr_en": "Autonomous research agents propose more directions than resources allow. PrimeScientist formulates strategic research effort allocation as a sequential decision problem, jointly choosing research direction and resource investment across successive attempts.",
-          "llm_tldr_cn": "自主科研智能体虽能提出大量研究设想，但资源有限，难以决定优先推进哪些方向以及投入多少算力。本文提出PrimeScientist，把研究方向选择与资源分配统一建模为序贯决策问题，在连续多轮科研尝试中联合确定探索方向与投入强度。该方法让智能体动态权衡不同研究路线的潜在收益与成本，从而在有限预算下更高效地推进自主研究，为自主科研智能体增添战略性资源配置这一关键能力。",
-          "llm_tldr": "自主科研智能体虽能提出大量研究设想，但资源有限，难以决定优先推进哪些方向以及投入多少算力。本文提出PrimeScientist，把研究方向选择与资源分配统一建模为序贯决策问题，在连续多轮科研尝试中联合确定探索方向与投入强度。该方法让智能体动态权衡不同研究路线的潜在收益与成本，从而在有限预算下更高效地推进自主研究，为自主科研智能体增添战略性资源配置这一关键能力。",
-          "llm_tags": [
-            "query:ar"
-          ],
-          "matched_query_tag": "query:ar",
-          "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
-          "matched_requirement_id": "req-18",
-          "selection_source": "carryover_cache",
-          "paper_id": "2609.17846v1",
-          "carry_days": 1
-        },
-        {
-          "id": "2609.19419v1",
-          "source": "arxiv",
-          "title": "Agentic AI for Density-Functional Development: Revisiting r2SCAN",
-          "abstract": "We demonstrate physics-constrained agentic development of a meta-generalized gradient approximation (meta-GGA) functional using a large language model (LLM) to assist the search and optimization of a band-gap-oriented revision of r2SCAN. No real bonded systems were fitted, preserving r2SCAN's nonempirical philosophy. Across the finalist set, band gaps and several molecular subsets improve relative to r2SCAN; the top finalist, r2SCAN+, reduces the band-gap MAE on a benchmark comprising 24 solids from 1.26 to 0.96 eV and the aggregate MAE on 329 molecular properties from 4.79 to 4.42 kcal/mol. We first curated 78 exchange and 90 correlation candidate correction terms from r2SCAN's dimensionless ingredients, spanning polynomial terms through third degree, exponentials, exponentially damped products, and ratios. Allowing each candidate to combine one to three correction terms from the exchange catalog, the correlation catalog, or both yields about 8 x 10^5 distinct forms, making exhaustive high-throughput screening impractical. We defined the search criteria for the LLM agent using r2SCAN's exact constraints, physical norms, and the targeted iso-orbital derivative response. The agent then combined these criteria with its pretrained knowledge and accumulated search feedback to propose and refine sparse forms, prioritizing terms tied to the iso-orbital response; a second LLM critic screened proposals before deterministic verification. Compared with uniform random search, the workflow learned from prior evaluations, incurred far fewer downstream rejections (0.6% versus 24.6%), and located stronger high-response candidates: 51 agentic candidates exceeded the best random-search response of 1.263, with the overall best reaching 1.331. These results show that agentic search can support density-functional development when flexible hypothesis generation is coupled to automated physical verification.",
-          "authors": [
-            "Santosh Adhikari",
-            "Kelsey A. Parker",
-            "Etinosa Osaro",
-            "Swagata Roy",
-            "Dario Rocca"
-          ],
-          "primary_category": "physics.chem-ph",
-          "categories": [
-            "physics.chem-ph"
-          ],
-          "published": "2026-09-16T20:54:42+00:00",
-          "link": "https://arxiv.org/pdf/2609.19419v1",
-          "tags": [
-            "keyword:AI-Materials",
-            "keyword:ar",
-            "query:AI-Materials",
-            "query:ar"
-          ],
-          "llm_score": 8.0,
-          "llm_evidence_en": "Agentic AI autonomously searches and optimizes a DFT functional",
-          "llm_evidence_cn": "智能体式AI自主搜索并优化密度泛函",
-          "llm_evidence": "智能体式AI自主搜索并优化密度泛函",
-          "canonical_evidence": "智能体式AI自主搜索并优化密度泛函",
-          "llm_tldr_en": "An LLM-driven agentic workflow searches physics-constrained corrections to r2SCAN; the top candidate r2SCAN+ lowers solid band-gap MAE from 1.26 to 0.96 eV and molecular property MAE from 4.79 to 4.42 kcal/mol.",
-          "llm_tldr_cn": "密度泛函中meta-GGA修正项的搜索空间庞大，人工设计难以系统优化带隙等目标。该工作用大语言模型驱动的智能体在物理约束下搜索并优化r2SCAN的修正项，且不拟合真实成键体系以保持非经验哲学。最优候选r2SCAN+把24种固体带隙MAE从1.26降至0.96 eV，329项分子性质MAE从4.79降至4.42 kcal/mol，展示了智能体辅助密度泛函开发的潜力。",
-          "llm_tldr": "密度泛函中meta-GGA修正项的搜索空间庞大，人工设计难以系统优化带隙等目标。该工作用大语言模型驱动的智能体在物理约束下搜索并优化r2SCAN的修正项，且不拟合真实成键体系以保持非经验哲学。最优候选r2SCAN+把24种固体带隙MAE从1.26降至0.96 eV，329项分子性质MAE从4.79降至4.42 kcal/mol，展示了智能体辅助密度泛函开发的潜力。",
-          "llm_tags": [
-            "query:ar"
-          ],
-          "matched_query_tag": "query:ar",
-          "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
-          "matched_requirement_id": "req-18",
-          "selection_source": "carryover_cache",
-          "paper_id": "2609.19419v1",
-          "carry_days": 1
-        }
-      ]
+      "items": []
     }
   }
 }

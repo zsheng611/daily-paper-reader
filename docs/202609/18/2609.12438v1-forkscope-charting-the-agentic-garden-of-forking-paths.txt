@@ -1,0 +1,410 @@
+Title: ForkSCOPE: Charting the Agentic Garden of Forking Paths
+
+URL Source: https://arxiv.org/pdf/2609.12438v1
+
+Published Time: Mon, 14 Sep 2026 00:44:18 GMT
+
+Number of Pages: 25
+
+Markdown Content:
+# ForkSCOPE: Charting the Agentic Garden of Forking Paths 
+
+Arjun Balaji 
+
+School of International Public Affairs, Columbia University New York, NY, USA 
+
+Batuhan Duru Yeltekin 
+
+Department of Computer Science, Columbia University New York, NY, USA 
+
+Tian Zheng 
+
+Department of Statistics, Columbia University New York, NY, USA 
+
+tian.zheng@columbia.edu (corresponding author) 
+
+Abstract 
+
+Even with a fixed dataset and research question, data analysis involves many defensible decisions. Understanding how these choices influence the results is scientifically important but remains challenging. Crowdsourcing and agentic AI can generate hundreds of end-to-end analyses, but scaling generation alone can create a processing bottleneck and an analytic “black hole.” A common workaround is to impose a shared fixed decision taxonomy, which can limit insight and understate uncertainty. We present ForkSCOPE, a human-AI collaboration framework that induces structure bottom-up from the code corpus of end-to-end analyses, without a taxonomy fixed before or after generation, so the organization and evaluation of the garden can scale with the corpus. ForkSCOPE surfaces the charted garden of forking paths through a human-AI collaboration pipeline and an evidence-linked interactive viewer for steering and verification: it spotlights organically identified forks and structures and produces a derived taxonomy and decision map compatible with existing multiverse tools. 
+
+Keywords: multiverse analysis; garden of forking paths; analytic decision graph; human-AI collaboration; reproducibility; knowledge organization 
+
+1arXiv:2609.12438v1 [cs.HC] 11 Sep 2026 Figure 1: ForkSCOPE is a human-AI collaboration framework that supports transparent agent-driven exploration of the multiverse of data analysis [4] while inducing decision structure bottom-up from a raw corpus of code and reports, without a decision taxonomy fixed before or after generation. The proposed framework eases the processing bottleneck for scalable multiverse analysis and extracts decision structure for further investigation to reduce the risk of an analytic “black hole” [7]. It keeps human oversight central through an evidence-linked interactive viewer for steering and verification [11]. ForkSCOPE is compatible with existing multiverse analysis tools by design. This title image was created with assistance from ChatGPT [31]. 
+
+# 1 Introduction 
+
+Data analysis is central to data-driven research across many scientific disciplines. The credibility of data-driven claims depends on rigorous, transparent, and verifiable analytic practices. Yet analytic work is inherently multiversal: even for a fixed dataset and research question, many defensible choices can yield materially different estimates and narratives, a flexibility long recognized as a source of irreproducibility [9, 37, 39]. In response, the data science community has developed methods and systems for expressing, enumerating, and communicating alternative analyses, including explorable multiverse reports, code-driven multiverse compilation, and interactive viewers [8, 24, 33, 34]. Many-analyst studies underscore the practical stakes of this space by demonstrating wide dispersion across competent teams; In the widely cited 2018 soccer study by Silberzahn et al., 29 teams reported odds ratios spanning 0.89 to 2.93 when assessing whether soccer referees are more likely to issue red cards to players of color. [36]. Despite this progress, scaling multiverse practice remains difficult. Expert-driven coordination is costly, and while crowdsourcing can distribute judgment, it still incurs substantial coordination overhead [16]. Recent work shows that agentic AI can generate multiverses at a scale that was previously infeasible [4, 29]. This shift moves the bottleneck from generating analyses to processing 
+
+a flat collection of analyses into an organized set of verified speculations built with a shared taxonomy of forks of alternative options. Furthermore, a quickly multiplying agentic garden of forking paths also risks becoming an analytic black hole [7] without tools for systematic investigation and comparison. A common response is to impose a fixed taxonomy before or after generation. Many-analyst studies often code decisions post hoc from questionnaires and interviews [36], while agentic studies extract or elicit decisions using pre-specified categories or prompts with step lists [4, 29]. Such taxonomies can reduce processing complexity and improve comparability, but they can also under-account for genuine choices that were not anticipated or clearly expressed, thereby understating the uncertainty that the multiverse is meant to reveal. To address these limitations, we argue that the missing layer is bottom-up structure construction and auditability. We introduce ForkSCOPE, a human-AI collaboration framework that Segments, 
+
+Canonicalizes, Organizes, Plots, and Evaluates an agentic analysis corpus bottom-up, without 
+
+a taxonomy fixed before or after generation. The result is a verifiable structure that reviewers can audit against the underlying code and prose. Human judgment remains central: interpreting which forks are acceptable, which assumptions are warranted, and what further investigation is required. We operationalize this oversight through a multi-step human-AI collaboration process and an evidence-linked viewer for systematic inspection, steering, verification, and evaluation. A garden owner steers and audits the process and induced structure, while a garden visitor can condition on assumptions and inspect the supporting evidence. The viewer surfaces where variation concentrates, i.e., which forks and options carry it, without exposing how any single option or path would move a 2Table 1: Key terminology used in this paper.            
+
+> term meaning
+> analysis / run One end-to-end execution (script + write-up) in the corpus; we say
+> analysis in the case study for readability, and run when referring to pipeline inputs. raw decision point One concrete analytic action extracted from a single run, anchored to supporting code/prose spans. option A canonicalized label for the same action recurring across runs under different wording. fork A set of mutually exclusive options answering one underlying analytic question. garden owner / visi-tor Human roles: the owner steers and audits the charting process; the visitor explores the induced map and traces claims back to evidence. exon / intron Decision-bearing code spans (exons) versus remaining non-decision script lines (introns). silent decision A decision present in code but not stated in the run’s prose. taxonomy A pre-specified set of categories used to label or code analytic decisions across runs.
+
+reported outcome. This keeps review focused on whether forks and options are correctly formed rather than on which choice yields a preferred answer. By directly extracting forks and options from raw code and its accompanying prose, ForkSCOPE makes decisions auditable against source, surfaces choices that fixed taxonomies can miss, and supports human judgment under the full uncertainty of the agentic multiverse. The paper makes five major contributions: 
+
+C1. A bottom-up human-AI collaboration framework for organizing and auditing an agentic analysis corpus end-to-end, accountable to both corpus fidelity and researcher goals. 
+
+C2. An LLM-based charting method that extracts raw decision points from code/prose and induces a canonical fork-option structure bottom-up, without relying on a pre-specified taxonomy. 
+
+C3. An interactive viewer system for inspecting charted gardens: it offers an interactive browser of forks and options with tags and interdependence/association views, supports corpus-level studies of pivotal forks and outcome impact, summarizes analysis dynamics across life-cycle stages, and provides a corpus browser for individual runs with summary statistics. 
+
+C4. An empirical case study of an agentic multiverse corpus [4, 36] that demonstrates what bottom-up charting reveals in practice, including garden shape (short shoulder/long tail), pivotal contested forks, and measurable gaps between code and prose. 
+
+C5. Design implications for agentic-multiverse tooling: generate from a fixed grid versus chart an open-ended space, audit at the level of forks versus the whole runs, and how charted agentic gardens can be used as scaffolding for human judgment. 32 Related Work 
+
+2.1 Analytic flexibility and many-analyst studies 
+
+The garden-of-forking-paths argument states that data-dependent analytic choices can invalidate reported p-values even when only one test is run, because the test was chosen after seeing the data [9, 10]. Multiverse [39] and specification-curve analyses [38] address this by enumerating defensible specifications and reporting the resulting distribution with joint inference. Many-analyst studies provide the empirical evidence [36, 5, 6], and their most concerning finding is that the variation remains mostly unaccounted for: in Breznau et al. (2022), identified elements explained 2.6% of the variance, leaving 95.2% unexplained [6]. In many-analyst studies, defining a decision space (a decision taxonomy ) has usually meant either fixing it before analyses via an organizer-provided catalog (e.g., Miao et al. (2026)’s seven axes [29]), or reconstructing it after the fact by classifying completed work. Silberzahn et al. (2018) and Breznau et al. (2022) follow the latter: after independent teams submitted their analyses, choices were captured through qualitative coding [36, 6]. 
+
+Our position: ForkSCOPE instead induces options and forks directly from the corpus, with no prewritten list or retrospective codebook. A multiverse in Steegen et al. (2016)’s sense is an investigator-specified Cartesian product over a prespecified decision space [39]. Our corpus is 
+
+empirical : forks occur wherever analyses meaningfully branch, even in places that no prespecified grid would cover. A related question is how to justify a multiverse’s scope. Del Giudice and Gangestad argue most multiverses do not justify why included alternatives are non-arbitrary, and that uncurated multiverses can become analytic “black holes” [7]. Heyman et al. (2025) respond with a four-step tutorial for crowdsourcing which pathways are equivalent across independent raters [16]. Our position: 
+
+ForkSCOPE’s normalization contract automates this: merge decisions are checkable against source, splits occur when needed, and the resulting options are what reviewers would otherwise reconstruct by rating decision-point pairs. The viewer follows the same logic at review time: the flexibility Gelman and Loken (2013) describe [9, 37]; it surfaces where variation concentrates without exposing how any single option would move the outcome. 
+
+2.2 Multiverse tooling in HCI and visualization 
+
+The HCI community has contributed innovative tools to the multiverse problem. When a decision taxonomy is provided, Dragicevic et al. introduce explorable multiverse reports : in-text widgets that let readers swap an analytic choice and see prose, statistics, and figures update in place [8]. Boba 
+
+compiles an annotated script into the full cross-product of universes and pairs it with linked decision-graph, outcome, and model-fit views [24]. The multiverse R package specifies alternatives inline via branch() in standard R Markdown [33]. Milliways separates probabilistic from possibilistic uncertainty using consonance curves and allows readers to trace which decisions produce an outcome pattern [34]. Hall et al. synthesize tasks and visual archetypes across multiverse reports beyond any single system [14]. 
+
+Our position: ForkSCOPE solves a problem upstream of the above analytical and visualization tools. It produces a canonicalized, option-tagged corpus with a derived taxonomy in the shape of input for a Boba-style outcome view or a Milliways consonance curve. Prior HCI work has also examined how decision spaces are articulated and reviewed in human analysis. Kale et al. (2019) characterize decision-making in research synthesis and highlight needs around visualizing forks, capturing rationale, and relating subjective and statistical uncertainty [19]. Liu et al. (2020) model analysts’ processes as Analytic Decision Graphs , arguing that decision review 4depends on seeing inputs, step granularity, relationships, and rationale [23]. Complementing these human-centered accounts, Merrill et al. mine alternative analysis code to propose options at decision points [27]. 
+
+Our position: In this paper, we treat the decision space as something to be reconstructed from both codes and rationale. ForkSCOPE extracts the concrete computational actions expressed in code, cross-examines them against stated rationales in accompanying reports, and uses LLMs to synthesize a verifiable fork-option structure. 
+
+2.3 AI analysts and agentic multiverses 
+
+Bertran et al. (2026) find that autonomous LLM analysts running full pipelines on a fixed dataset and hypothesis, with an AI auditor checking validity, yield effect-size, p-value, and conclusion dispersion comparable to human many-analyst studies. They further reported that the dispersion is steerable by LLM model used and persona even in methodologically sound runs [4]. Miao et al. (2026) formalize this variance decomposition [29] and proposed agentic Bootstrap estimates by using instrumented agents’ logged specifications as an empirical distribution over paths. Miao et al. (2026)’s approach was enabled by giving agents a more prescribed space: example specifications vary along seven pre-fixed analytical-choice axes. Bertran et al. (2026)’s agents were given more generic instructions to try different analytic ideas. They analyzed these more organic analyzes using a fixed spec-curve taxonomy but report that about a third of 1,120 recovered items fall outside the taxonomy [4]. They also provide an example where an unaccounted-for decision shifts the conclusion, underscoring that fixed taxonomies can miss consequential micro-decisions [4]. Bertran et al.’s validity reviewer is effective at judging whether each analysis run is method-ologically sound (86% of reports pass independent AI review) [4]. However, a garden owner may also want to evaluate validity at the fork level across runs: isolating which specific options are problematic (or well-justified) and how they recur across the corpus. Our position: ForkSCOPE supports this by auditing evidence and rationale at the granularity of options within forks , enabling selective flagging and cross-run comparison rather than a single pass/fail label per script. 
+
+2.4 AI-assisted analysis and human oversight 
+
+Prior work suggests LLMs can parse and manipulate computational artifacts (including analysis code) to support decomposition, steering, and verification [12, 13, 20, 42]. But reviews of human-AI decision making and teaming caution that AI-first delegation can obscure uncertainty and reduce human control [11, 25, 28]; ForkSCOPE is designed as collaboration rather than delegation, structuring inspection and evidence-based oversight [22]. 
+
+Our position is that multiverse organization should not be delegated to autonomous agents and then reviewed only in aggregate. Drawing on Gomez et al. (2025)’s interaction patterns [11], ForkSCOPE keeps a human structurally in the loop where judgment is load-bearing: the system surfaces fork-level questions it cannot resolve from evidence, enabling the garden owner steers repairs and exclusions through auditable, asynchronous review artifacts. 
+
+# 3 Design Principles for Charting the Agentic Garden of Forking Paths 
+
+Grounded in the positions discussed in §2, three design principles guide ForkSCOPE. 5• Induce, do not prescribe. Recover forks and options bottom-up from what the analyses do ,rather than fitting them to a fixed taxonomy [27, 7]. We leverage LLMs’ emerging capacity to parse code and reports, while the garden owner determines parsing specifics and auditing rubrics. • Evidence over explanation. Make every summary falsifiable by linking it back to the exact code and report spans that support it [19, 22]. ForkSCOPE uses LLMs to synthesize summaries from segmented code and prose, and produces numerical and visual comparisons that help identify shared structure across analyses. • Collaboration, not delegation. Keep the garden owner in control of scope and validity by surfacing unresolved ambiguities as reviewable questions, not final verdicts [11, 3]. The evidence-linked viewer is designed for inspection and verification at the level of individual forks and options. ForkSCOPE operationalizes these principles as a bottom-up, auditable instrument for charting an agentic corpus and then reading what it produces (§4). Concretely, it combines (i) a staged SCOPE workflow over named artifacts, (ii) a data model that preserves handles from induced forks/options back to the underlying run, and (iii) explicit human-AI control points packaged as reusable skills .The framework supports two complementary human roles. A garden owner runs the instrument, resolves judgments that cannot be settled mechanically, and locks study decisions. A garden visitor 
+
+(often the same person at a different time) reads the resulting map by filtering, conditioning, and comparing analyses within the shared fork-option space. 
+
+From principles to system design. Induce, do not prescribe is implemented by distilling scripts and write-ups into raw decision points, canonicalizing them into recurring options, and organizing options into forks using operational tests (e.g., co-occurrence constraints and the foreclosure test), rather than a prewritten codebook. Evidence over explanation is implemented by (a) representing each run as exons/introns with aligned code/prose spans, and (b) requiring audits to produce concrete exhibits under pinned prompts and schema checks, so summary claims are checkable against stored artifacts. Collaboration, not delegation is implemented by separating judgment from application: the system routes uncertain merges/splits to review rounds for the owner, while scripts apply owner decisions deterministically and replayably; skills define human gates and refusals so autonomous reruns follow the same rules as attended ones. 
+
+Viewer as a reading interface. The viewer is designed less as a full provenance browser than as a structured reading surface over the induced map: it supports systematic inspection of forks and options (including tags and association views), corpus-level summaries such as pivotal forks and analysis dynamics across life-cycle stages, and a corpus browser for individual runs with summary statistics. ForkSCOPE’s interactive viewer presents the induced fork-option map as an evidence-linked chart. Users can traverse forks, compare options, and drill down from summaries to supporting runs and source spans. 
+
+# 4 ForkSCOPE: System Design 
+
+This section presents the design of ForkSCOPE, an auditable instrument for turning a corpus of codes and reports into a charted “garden” of forks and options that can be systematically reviewed and investigated. ForkSCOPE surfaces decisions directly from analyses and makes them 
+
+inspectable at the level of concrete computational actions, and auditable through pinned prompts, named artifacts, and explicit review gates. We first define the data model (§4.1), then describe 6the instrument architecture (§4.2), the staged charting workflow and its clustering/repair methods (§4.3), the skills that operationalize human-AI collaboration (§4.4), and finally the viewer used to inspect the resulting map (§4.5). The supplement provides additional technical details, including full prompts and step-by-step artifacts. 
+
+4.1 Data model: raw decision points, options, and forks 
+
+ForkSCOPE models the corpus at three linked levels. A raw decision point is a concrete action from a single run, anchored to the source spans that implement it and any prose that describes it. An option canonicalizes the same action across runs despite wording differences. A fork groups mutually exclusive and equivalent options that address one analytic question. This option/fork structure mirrors the axis/level abstraction that existing multiverse-authoring and -visualization systems expect as input [24, 33, 34], so a charted garden by ForkSCOPE can be handed to that tooling directly. Each record includes run ID, distilled action text, option label (if any), stated alternatives, rationale (if any), and source spans for all supporting excerpts (code lines, prose sentences). We retain these handles through canonicalization so that the data model supports end-to-end traceability. Runs also include a provenance tag (such as persona ) that can be used to stratify statistics and compare patterns across corpora. We represent scripts as interleaved exons and introns : exons are code spans that justify an extracted decision point, and introns are the remaining non-decision lines (e.g., I/O, plotting, comments). This produces full script-level accounting: each line processed is either associated with a decision or labeled as a non-decision, and it reveals silent decisions as exons that have no corresponding prose [23]. 
+
+4.2 Architecture: scripts, prompts, skills, and agents 
+
+ForkSCOPE is organized in three tiers. 
+
+Tier 1: a frozen instrument. The charting pipeline consists of Python scripts that read and write named artifacts, plus sixteen pinned prompts, each a question asked repeatedly across many items. One module makes all model calls, validates responses against a JSON schema and additional semantic checks, and caches answers by a hash of the prompt text, model, payload, and schema. Changing a prompt invalidates prior answers, making “this map was produced by these prompts” verifiable rather than asserted. Study-specific context is appended as data to a fixed prompt, not used to edit it, so identical instruments across studies can be verified by comparing prompt hashes. Vocabulary-building judgments are fixed at this tier: rerunning a stage against the cache yields byte-identical output. These scripts and prompts were developed with the assistance of Claude Code [1]; the authors specified the pipeline’s design (what each stage checks, what it must refuse to do, and what judgments are escalated to a person) and used Claude Code to implement that design. 
+
+Tier 2: adversarial checks. Each analysis includes a parallel audit. Each check outputs four elements: a verdict; the metric and null; the exhibits (the actual worst-first items, preventing substitution of a “representative” sample, and kept short since verifiability degrades as an explanation grows [30]); and handles linking each item to source lines. The reporting layer rejects any review 
+
+verdict without exhibits. Two agents augment scripted checks: an auditor that tries to refute a reported finding, defaulting to “refuted” if evidence can’t support it [32], and an interpreter that turns verdicts into prose without changing the numbers through a deliberate constraint against the interpreter selectively emphasizing whichever verdicts read best [21]. 7Garden owner Garden visitor Study mani-fest 
+
+study.json policy.json 
+
+Raw corpus 
+
+code + write-ups 
+
+Instrument 
+
+pinned prompts + scripts 
+
+Distilled records 
+
+decision points + source spans 
+
+Decision map 
+
+options / forks /paths 
+
+Findings 
+
+claims + evi-dence + review queue   
+
+> SC/O/P E
+> /distill
+> step 1
+> /intake /chart
+> steps 2–9
+> /audit, /report /review, /refine /walk, /settle /challenge, /replicate /itinerary, /inspect /investigate
+
+Figure 2: ForkSCOPE implements SCOPE as a staged workflow. Each step reads artifacts from the previous stage(s) and writes auditable outputs used downstream: distillation produces raw decisions and code-prose links; canonicalization clusters raw decisions into options; organization groups options into forks and repairs them; plotting renders the interactive viewer and static figures. 
+
+E (evaluation) is not a single terminal stage: audits and checks run throughout charting, and the evaluation outputs summarize what passed, what failed, and what requires human review. 
+
+Tier 3: skills. Neither tier above is meant to be operated by hand. Each recurring instrument procedure is packaged as a skill : a versioned Markdown document that specifies which scripts to run and in what order, what to check before proceeding, what the procedure must refuse to do, and what it must ask of a person. Skills are what a human invokes (e.g., /chart , /review ) and what a command-line agent runs when charting a corpus end to end. We distinguish steps from skills : a step is one script producing one artifact (Table S3 numbers them 1-9), while a skill runs some steps and manages their outputs. Skills can be used within steps; some skills touch no steps and exist only to read the map or record a human decision. Packaging the pipeline this way is a deliberate design choice. Scripts with pinned prompts ensure reproducibility and cost control; a free-running agent that re-clusters options each run would yield a different, unfalsifiable vocabulary every time—worse than a wrong one [2]. Skills encode the procedural knowledge (including refusals) a human would otherwise supply, so autonomous reruns follow the same rules as attended runs. 
+
+4.3 Charting the garden: steps, scripts, and prompts 
+
+Here, we present the charting pipeline organized by the SCOPE stages (Figure 2). Table S3 summarizes its nine steps, the script associated with each, and the artifact it produces; Table S4 enumerates the sixteen prompts, their callers, the model used for each, and the number of calls made in the study described in §5. We then explain what each step does and, for the two clustering steps, how they operate. 
+
+4.3.1 Segment: Distillation into Raw Decision Points (step 1) 
+
+Distillation, i.e., the Segment stage of SCOPE, converts each run’s delivered artifacts (analysis script and write-up) into a uniform set of raw actions (raw decision points), each anchored to the 8Figure 3: Corpus visualization in the viewer. Each corpus is rendered as code exons (decision-bearing spans) and introns (non-decision-bearing script), with color indicating silent decisions (decisions present in code but not stated in prose). minimal code spans needed to justify it and any prose spans that describe it. We distill using two passes. In the first, we fully segment each artifact. For code, segmentation partitions the script exhaustively and exclusively : every line is placed either in a decision span ( exon )or in a typed non-decision category ( intron ) (e.g., configuration, I/O, plotting, narrative comments), and no line belongs to more than one code span. For prose, segmentation divides the write-up into claims and typed non-claims; it is exhaustive but not exclusive, because a single sentence may express multiple claims. We treat coverage as a retryable invariant: if a segmentation does not cover the entire input, we reject it with a specific error message and re-elicit it, rather than accepting it and trying to “handle” the gap later. Second, within each run we connect code choices to the claims made in the accompanying prose. This linkage has two functions: it ties every raw decision point to the written rationale provided by the analysis, and it reveals two forms of leftover signal that we treat as data. A silent decision is a code action that is not referenced by any claim; a misalignment is a linked case in which the prose and code characterize the same action in different ways. We identify both as the complement of a required alignment rather than by searching for them directly, making their frequencies quantifiable rather than anecdotal, and we display them in the viewer at both the corpus overview and individual-analysis levels (Figures 3 and 4). Two prompts handle segmentation and a third handles the linking (Table S4). 9Figure 4: Detailed view of one analysis in the viewer, showing the aligned code/prose evidence for extracted decisions and highlighting where the analysis contains silent decisions. 
+
+4.3.2 Canonicalize: From Raw Decision Points to Options (steps 2 to 4c) 
+
+Distillers often produce specific labels for extracted raw decision points, so the same underlying action is described many different ways across runs; in practice, nearly every raw label is one-of-a-kind. Canonicalization is therefore necessary to collapse paraphrases into shared options and keep the induced map from treating wording variation as analytic disagreement. Grouping is decided by a model operating under an explicit contract, with no predefined schema and no limit on how many options can be induced. We make the canonicalization rules explicit. 1) Cluster by operational behavior. Two raw decision points map to the same option when substituting one for the other would not change what the analysis did (e.g., thresholds that differ in wording but induce the same data split). 2) When uncertain, split. We default to conservative splits; merges can be applied later, but an incorrect merge fabricates consensus. 
+
+Bottom-up grouping (step 2). We induce options in three passes: group raw decision points within small batches (L1), merge duplicate option labels across batches (L2), and merge the underlying questions the options answer (L3), yielding an initial fork layer. 
+
+Repairs (steps 3, 4a, 4c). We then apply two targeted repairs: (i) a deterministic, split-only audit that normalizes numeric/set expressions, and (ii) a within-fork paraphrase pass that re-compares options inside each fork (repeated after fork merges) to collapse duplicates the global passes miss. 
+
+4.3.3 Organize: From Options to Forks (steps 4b to 4f) 
+
+A fork represents one underlying analytic question with mutually exclusive alternatives (options). Wording alone is an unreliable cue for rivalry, so fork induction treats “same fork” as an operational property of what one coherent analysis can do. 
+
+The foreclosure test. Fork induction (step 4d, prompt 22) groups options by purpose using one question: could one competent analyst, in one script, do both? If yes, the options belong to different forks; if no, they are rivals in the same fork. Declared robustness refits are exempted so sensitivity re-runs are not misclassified as competing choices. Candidates are batched with their co-occurrence matrix so the adjudicator sees structural evidence alongside semantics. 
+
+The structural veto. We use within-run co-occurrence as a cannot-link constraint: true alterna-tives should rarely co-occur. Co- occurrence (i) prioritizes which merges to adjudicate, (ii) is shown as evidence to the adjudicator, and (iii) triggers a deterministic split (greedy graph coloring, no model calls) when options co-occur in two or more runs. 10 Earned transitivity. Duplicate forks are merged (step 4b, prompt 21) edge by edge under two brakes: an explicit veto wherever a pair was judged different , and a density floor ( ≥ 60% judged-same links) before a fork may join a component. 
+
+Judgment separated from application. The three repair prompts (19, 20, 21) write verdicts that audit scripts persist to disk; merge scripts then apply those verdicts without calling a model, so each judgment is inspectable and replayable. 
+
+The repair loop and its stopping rule. Because option- and fork- level changes interact, we repair in a fixed order (options within fork, forks merged, options re-checked, forks re-derived), iterating until a round moves at most 2% of forks or a round cap is reached (step 4e). Each round is logged, and a final deterministic option split (step 4f) yields the headline vocabulary. 
+
+4.3.4 Finalize, Analyze, Audit, Plot, and Gate (steps 5 to 9) 
+
+Finalization (step 5) recomputes per-fork metadata that changes after merges (e.g., coverage and script position) and assigns each fork a data science life cycle (DSLC) [41, 40] stage (prompt 14). Prompt 14 is stage-blind by construction: it receives only the fork label, so later comparisons between assigned stage and observed script position are non-circular. Analysis (step 6) then derives the corpus-level summaries shown in the viewer (e.g., which forks are settled or contested, which options are novel, whether analyses return to an earlier stage, and which forks move the reported outcome). Each analysis is accompanied by an audit (step 7) that enforces the evidence contract of §4.2. Finally, Plot (step 8) renders figures and the viewer only from artifacts the pipeline already wrote, and Gate (step 9) measures code-to-prose recovery to decide whether prose-only runs can enter a code-anchored map. 
+
+4.4 LLM-based ForkSCOPE Skills 
+
+The instrument is powered by fourteen skills (Table 2). Each skill is a Markdown file that someone can call by name, or that a command-line agent can load when a task fits its description; both paths use the same file. A skill specifies the steps it executes, the checks it must consult before moving forward, the choices it must defer to a person instead of making on its own, and its cost, since some actions are free using the committed cache while others consume model calls. We organize the skills according to the workflow stage they support. Two constraints hold across all skills: they may not edit prompts (which would silently change the instrument), and they may not report unaudited numbers or declare a queue “clean” without reading it. 
+
+Consultation. /intake is an interview that scopes the study and records the owner’s expectations 
+
+before results exist. It collects corpus facts (e.g., which runs have scripts), domain conventions (including a glossary), and the research questions. It then asks the method choices charting depends on (e.g., how strictly two extractions are compared; how many runs an option needs to count as recurring), presenting each as a decision card with its consequences. Answers are logged as decided ,
+
+defaulted , or unknown in policy.json , so the pipeline’s own forks are explicit and reviewable. 
+
+Charting. /distill runs step 1, first on two runs to catch malformed inputs cheaply, then with spot checks on a stratified sample. /chart orchestrates steps 1-9 while holding the instrument fixed across studies. /audit runs the check suites and reports failures with exhibits; most checks are free against the cache, with only adjudication steps spending model calls. /replicate measures stability by rebuilding under a separate study root with an empty cache, so new model calls cannot overwrite or contaminate the baseline. /settle closes a checkpoint by writing a lock that records what was settled (by content hash) and the owner’s settle-or-rerun decision. 
+
+The review loop. /review turns audit exhibits into a ranked round file of questions (e.g., whether 11 Table 2: The fourteen ForkSCOPE skills. Steps refer to Table S3; prompts to Table S4. Model says whether invoking the skill can spend model calls against an unbuilt study; every skill is free when its answers are already cached. Gates are the points at which the skill stops and waits for a human decision. 
+
+skill phase steps scripts it drives model human gate 
+
+Consultation 
+
+/intake 0 scope - distill.py (two-run smoke test) smoke only owner confirms study.json ,
+
+policy.json , INTAKE.md 
+
+Charting 
+
+/distill 1 chart 1 distill.py , trace.py yes none; hands to /settle distill /chart 1 chart 1-9 build_all.py , compare_vocab.py ,
+
+build_figures.py , forkscope.py 
+
+yes sets the headline vocabulary tag 
+
+/audit 1 chart 3, 7, 9 audit_*.py , _selfcheck.py ,
+
+check_outcomes.py 
+
+2 checks none; reports review verdicts with exhibits 
+
+/replicate 1 chart 1, 2, 4 stability/replicate.py ,
+
+fork_variance.py , arbitrate.py 
+
+yes none; pre-committed replicate count 
+
+/settle gate - settle.py , stability/q1_*.py no lock with content hash, distill or chart 
+
+Review loop 
+
+/review 2 review 7 audit_vocab.py , review_round.py new , trace.py 
+
+no round file answered by the owner 
+
+/refine 3 refine 4, 5, 7 review_round.py read , merge_forks.py ,
+
+repair_clusters.py ,
+
+finalize_vocab.py 
+
+rarely none; applies the round, re-audits 
+
+/report 3 refine - compare_vocab.py , settle.py status , interpreter agent no none; re-derives every quoted num-ber 
+
+Reading the map 
+
+/walk 4 walk - viewer, trace.py , review_round.py new 
+
+no owner judges map against corpus; opens a round 
+
+/investigate any - trace.py no none; walks one claim to source 
+
+/challenge any 6, 7 audit_granularity.py -sample , per-mutation constants, nocache 
+
+yes none; reports held / weakened / overturned 
+
+/itinerary 5 specify - trace.py , co-occurrence audit no visitor chooses options; path audited 
+
+/inspect 7 inspect 1, 6 distill.py run , trace.py run ,
+
+stability.py 
+
+yes visitor and AI agree on what the run shows 
+
+12 Figure 5: Highway view in the viewer. The overview summarizes common routes through induced forks; selecting a highway reveals its constituent forks and the runs that traverse it. two forks are the same question; whether an option bundles two decisions), each with its evidence and what would change under each answer. /refine applies the owner’s answers one at a time, logs what each change did, and re-runs audits. /report then re-derives reported numbers from the artifacts and rewrites the technical report accordingly. 
+
+Reading the map. /walk opens the viewer for exploratory triage and often seeds a new review round. /investigate traces one claim from fork to option to raw record to source span. /challenge 
+
+stress-tests a claim by escalating its audit (e.g., larger samples, more permutations, or an uncached re-ask to measure self-agreement) without relaxing thresholds. /itinerary records a visitor-specified path through contested forks and audits it for incompatibility/foreclosure before comparing it to nearby runs. /inspect then checks one concrete run against that specification. 
+
+4.5 The viewer 
+
+ForkSCOPE visualizes the charted garden in an evidence-linked interactive viewer with five coordi-nated views over the induced fork-option map: Garden, Pivotal Forks, Lifecycle, Corpus Viewer, and About. 
+
+Garden supports navigation and triage: forks are arranged by data science life cycle stages, and a side panel supports sorting, filtering by corpus tags, and search. Highway summarizes common routes through the garden; clicking a highway reveals its constituent forks and the runs that traverse it (Figure 5). 
+
+Pivotal Forks focuses on forks that are both widely encountered and meaningfully contested (§5.5), showing each fork’s options and their shares, and for the analyzed subset, each fork’s aggregate contribution to outcome variation, without revealing how any specific option or path would move an individual run’s reported result. This omission is deliberate: the viewer is meant to see where 13 Figure 6: Fork close-up in the viewer, showing the induced options and the runs that realize each option. variation concentrates, so the review stays focused on examining the compositions of the forks and alternative options. Lifecycle summarizes how forks distribute across stages of an analysis workflow and whether analyses return to earlier stages. Corpus Viewer supports audit by browsing individual runs (with summary statistics) and their fork/option coverage. About reports the artifacts and vocabulary tag each view is drawn from. The viewer is designed for inspection and verification during charting (§4.4). Figure 6 shows a close-up of one fork with its induced options and supporting runs, and Figure 7 shows a keyword search for locating where forks mentioning a particular element appear in the garden. 
+
+# 5 Case Study: Charting an Agentic Multiverse from Bertran et al. [4] 
+
+This section presents a worked example . We use Bertran et al.’s agentic multiverse as a single case study to illustrate what a bottom-up framework can reveal and how the resulting map can be explored. Because this is one study, it is not intended to represent all domains. We discuss limitations and open challenges for understanding and engaging with multiverses in §7.2. More computational details and results from this case study can be found in the supplement. 
+
+5.1 Corpus and Setting 
+
+We use ForkSCOPE to chart two published corpora jointly as a single pooled decision vocabulary. The agent corpus comprises 207 independent autonomous LLM analyses from Bertran et al. [4], each producing a script and report on the fixed dataset and question from [36]. The human corpus 
+
+comprises 31 teams from that original study’s OSF materials [36]. We merge the corpora before induction to show that ForkSCOPE can process both agent-generated and human-generated analyzes 14 Figure 7: Keyword search in the viewer, allowing a garden owner or visitor to locate forks mentioning a given element (e.g., a variable name) in the charted garden. and map comparable underlying decisions by agents and humans to the same slot, enabling direct comparison. This pooled corpus is an ideal case study for a second reason: it is not a specification curve. The human analyses were produced without a fixed taxonomy. In [4], agents received persona prompts ranging from neutral to “maximize support,” and produced open-ended analyses rather than filling a pre-declared grid. Bertran et al. mapped the agents’ decisions to their own fixed 21-slot schema ( decisions_mapped.json ), leaving 33% of 1,120 extracted items across 207 analyses fell into unmapped_decisions . These files were not used by ForkSCOPE as input. We compare our charted garden with them as an external check. Bertran et al. ran three datasets and four base models; we analyze one slice: the soccer dataset, 
+
+claude-sonnet-4-5 , all 5 personas. This yields 207 workspaces (script, report, reasoning trace). One report is empty; our prose-length filter leaves 204 runs. Because extraction is code-anchored, only 19 of 31 human teams that deposited a script contribute decision points. The pooled vocabulary is thus induced over 204+19=223 analyses. 
+
+Terminology. We use runs and analyses interchangeably: run is the unit analyzed by the ForkSCOPE pipeline, while in this case study we write analysis for readability. 
+
+5.2 Prose loses decisions and leads to silent decisions. 
+
+Because ForkSCOPE recovers decisions from scripts (code), we check how much of that decision trace is visible in prose alone. Recall is ≈ 0.64 in AI reports and ≈ 0.53 in human reports, and when a decision is mentioned, humans match the code less often (agreement 0 .847 vs. 0 .921). Around 7-9% of decisions are silent (done in code, never stated). 15 Table 3: The charted garden, at a glance. 19 human and 204 AI analyses, charted together (§5.1).      
+
+> analyses charted 223 decisions 3,946 options 777 forks 317 pivotal forks (§5.5) 17
+
+Figure 8: The garden has a short shoulder and a long tail: forks ranked by coverage on a log axis. Most induced forks are reached by too few runs to support stability statistics. 
+
+5.3 How human and agentic analyses compare 
+
+Using the pooled vocabulary allows us to ask, in a straightforward way, how strongly the human corpus alters the garden compared with an AI-only build. A comparison of the two vocabularies suggests that option identity shifts only slightly (ARI 0 .865), while fork identity changes more noticeably (ARI 0 .756): adding the 19 human runs does not substantially reconfigure the map. That said, with just 19 runs, this finding is limited and is recovered less consistently than the AI corpus result above. Still, a promising finding is that the two corpora largely concur about the structure of the decision space, which is a prerequisite for any future development of agentic multiverse tooling. 
+
+5.4 The shape of the garden: a short shoulder and a long tail 
+
+Table 3 reports the induced vocabulary size: most forks are visited too infrequently to yield reliable stability statistics. Figure 8 visualizes this skew directly, with a short shoulder of rarely reached ones and a long tail of widely visited forks. Forks in the charted garden were additionally aligned with the Data Science Life Cycle (DSLC) 
+
+Figure 9: Analyses move across the stages of the Data Science Life Cycle (DSLC) according to the charted garden. 16 Figure 10: Transitions between DSLC stages within runs. Rows are the from-stage and columns are the to-stage; counts above the diagonal indicate forward progressions, while counts below the diagonal indicate returns to earlier stages. 
+
+Figure 11: Coverage versus effective options for forks in the soccer case study. Upper-right indicates forks that are both widely encountered and meaningfully contested ( pivotal ). described in Veridical Data Science [41]. Figure 9 illustrates how analyses distribute across DSLC stages. Figure 10 summarizes stage-to-stage movement within runs: analyses frequently iterate between data cleaning, exploratory data analysis (EDA), and modeling, and between reporting and modeling. 
+
+5.5 Pivotal forks 
+
+The raw option counts at a given fork conflate two cases: forks most analyses resolve the same way (with a few outliers), and forks analyses genuinely split on. We distinguish them with the effective number of options : the inverse Herfindahl-Hirschman index (HHI) over option shares (including a null option, “never visited”) [17, 15]. Using this measure, we define a fork as pivotal if it meets both a coverage floor ( ≥25% of analyses reach it) and an effective-options floor ( > 1.5). 17 forks 
+
+meet both criteria. 
+
+Do pivotal forks move the answer? We attribute each run’s reported outcome to a decision 17 Figure 12: Which pivotal forks move the outcome. Screenshot from the viewer showing attributions for one outcome (verdict). Each fork is scored by its attribution to the reported result under the Shapley decomposition. Table 4: Out-of-sample prediction by payout, cross-validated R2, ridge penalty selected per payout by cross-validation over {1, 3, 10 , 30 , 100 , 300 , 1000 } for both an expanded (contrast) set and the 17 pivotal forks.             
+
+> payout R2(expanded, 36) R2(pivotal, 17)
+> verdict +0 .293 +0 .262 log(OR) +0 .081 +0 .032
+> z+0 .307 +0 .246 CI width +0 .038 +0 .046
+
+fork with a closed-form Shapley decomposition [35] over a ridge surrogate fit on one-hot level indicators. Four payouts (outcomes) are evaluated: the binary verdict, log(OR), the z-statistic, and confidence-interval width. Attribution is reported per fork, aggregated over its options: it says where variation in the outcome concentrates, not which specific option or path would move an individual run’s result, since that lookup is exactly what the viewer is designed not to encourage. 
+
+The expanded (contrast) set. We compute attribution in the viewer over an expanded set of 36 forks , not just the 17 pivotal ones: any fork with at least two levels each reached by ≥10 analyses, counting did not reach this fork as a level. This targets a different question than the pivotal filter. Pivotal selects contested forks (widely reached and genuinely splitting when reached); contrast selects forks whose signal can be attributed at all, including rare, low-diversity forks that most analyses skip but that still cleanly separate those that do not (e.g., dropping a sensitive covariate, chosen by only 22 of 223 analyses). As shown in Table 4 , expanding to 36 forks changes R2 only modestly, indicating that the 17 pivotal forks dominate the predictive signal. Using only the pivotal set would exclude rare-but-consequential forks, so we use the expanded set as the main player set in the viewer. 18 6 Technical Evaluation 
+
+In this section, we evaluate whether the charting pipeline is stable enough to support reliable analysis. Because ForkSCOPE uses LLM prompts inside scripted stages, repeated executions can differ even on identical input. We therefore run the pipeline multiple times and report three complementary checks: (1) reproducibility of a build via caching and provenance (where caching means reusing stored LLM responses for identical calls, and provenance means each result records the exact inputs/models/prompts that produced it); (2) stability under replication across independent builds with an empty cache (i.e., no stored LLM responses are reused, so all calls are re-made); and (3) a 
+
+human benchmark to contextualize how much variation is “natural” for the underlying clustering judgments. Full procedures and additional tables are in the supplement. 
+
+6.1 Reproducibility (same build, same input) 
+
+Setup. The model interface we use does not expose a controllable seed or temperature, so we do not rely on decoding parameters for exact replay. Instead, we cache every model call under a 
+
+content-addressed key (i.e., a hash of the prompt text, model identifier, input payload, and output schema), and we seed (or compute exactly) every non-model randomization step. 
+
+Results. With caching enabled, re-running an unchanged stage is a cache hit (the LLM call is not re-made) and returns byte-identical output. We also version every repaired vocabulary (never overwrite), and each reported number records the exact vocabulary tag that produced it, so figures are traceable and recomputable. 
+
+Observed hazards. Auditing this mechanism surfaced two practical sources of non-reproducibility: (i) model aliases can drift if they are repointed to newer versions, and (ii) a small amount of run metadata was initially recovered by re-reading an external corpus directory and could silently fail when that directory was missing. We mitigated both by recording resolved model versions at call time and treating failed metadata recovery as an error. Details are reported in the supplement. 
+
+6.2 Stability under replication (independent builds) 
+
+Setup. We ran two full builds from the same corpus under isolated study roots (fresh output directories) with an empty cache, so every model call in the second build was a cache miss and had to be re-made. We compare agreement across the pipeline’s layers (decisions, options, and forks). To isolate the fork-induction stage from upstream variation, we additionally freeze two option-layer vocabularies and re-run fork induction five times against each (ten byte-identical-input replicates). 
+
+Results. Fork induction shows variability with a stable core. Two independent builds recover the same high-level structure where our analyses rely on it: the well-populated trunk converges exactly even when the rare tail does not. Every fork reached by more than 10 runs in one build reproduces identically in the other (40 of 40), and so does every fork that clears the ≥25% coverage bar (18 of 18)—the same coverage floor used to define pivotal forks in §5.5, of which 17 of these 18 also clear that definition’s effective-options half. Run-level geometry (which forks a run touches) reproduces strongly (Mantel r = 0 .766 [26], i.e., a correlation between the two run-by-run “which-forks-were-touched” matrices, against a permutation null at zero). Substantive patterns also re-derive independently, including the persona-route association (§ ?? ) and highway traffic rank ( ρ = 0 .951). The remaining instability is concentrated in low-coverage forks and in forks whose disagreement is driven by rare options: small option-share fluctuations can tip whether a borderline option is merged, split, or treated as its own fork. 
+
+Isolating fork induction. Even holding the option layer fixed, fork induction still varies: across ten replicate runs on byte-identical input, it achieves ARI (adjusted Rand index) [18] = 0 .62 with 19 Table 5: Reproducibility by layer. Agreement falls with abstraction: concrete operations reproduce most reliably, while induced forks are the most variable layer.          
+
+> layer agreement what it means
+> decisions 0.713–0.895 lenient–core F1; median boundary jitter 1 line options 0.853 ARI (adjusted Rand index) over shared decisions forks 0.63–0.77 run-geometry corr.; membership agreement 0.47
+
+itself. Decomposing this shortfall from perfect agreement, induction contributes the larger share (58%) relative to the inherited options layer. In other words, “317 forks” is one draw from a spread of roughly 281-317 on identical input, with most variation coming from the rarely visited tail rather than the high-coverage core. 
+
+6.3 A human benchmark for “natural” variation 
+
+Setup. To interpret self-agreement, we benchmark against human agreement on the same judgments. Three of the authors, working independently of one another and blind to the pipeline’s own verdicts, labeled three tasks: (1) whether two code excerpts implement the same decision (43 pairs), (2) whether two options are true alternatives at the same fork (60 pairs), and (3) whether a sampled fork is correctly formed and, if not, how it should be re-merged (30 forks). 
+
+Results. At the option layer, pipeline agreement is within the range of human agreement on the same items: two raters agree with each other 0.818 of the time, while two independent builds agree 0.849 of the time. When both pipeline builds judged a pair as “same option” (19/19 pairs), the human majority reached the same verdict ( p < 0.0001, exact binomial), suggesting that agreement at this layer reflects correct canonicalization rather than shared error. The benchmark also surfaced an actionable limitation: raters repeatedly identified a small set of induced forks as composite, conflating which variables enter the model with how each variable is transformed , suggesting a future skill that allows revising forks based on human inputs. Full per-task results and limitations appear in the supplement. 
+
+6.4 Computation 
+
+We ran the pipeline using a Claude Max subscription; the figures below are the reported per-call costs logged by the API. Charting the pooled 223-analysis vocabulary cost $804 in logged API spend across 2,273 model calls: distillation (extracting decisions from code and prose) accounts for $447 (680 calls, $1.91/analysis), vocabulary clustering $112 (277 calls), the repair chain $130 (1,154 calls), and the code-ablation audit $114 (162 calls). Two models are used by role: Sonnet performs bulk extraction (724 calls, $444 total, $0.61/call) and Opus performs adjudication: the shorter same/different judgments (1,569 calls, $362 total, $0.21/call). The ten frozen-option fork-formation replicates used for the fork-induction stability check (§6.2) cost roughly $36 each ($356 total). 
+
+# 7 Discussion 
+
+7.1 Design implications for AI-analyst tooling 
+
+Our comparison against Miao et al. [29] and Bertran et al. [4] (§2.3) suggests three design choices for building the next agentic multiverse corpus, and for using the garden it produces, independent of whether ForkSCOPE is adopted. 20 First, the generation interface can either enumerate a fixed decision space upfront or leave the space open and chart it afterward. When the downstream question is focused, a fixed grid is practical. In our corpus, many high-coverage forks have no slot in an axis list written in advance. A direct comparison against this corpus’s curated codebook quantifies the gap: our induced vocabulary recovers at least 91% of Bertran et al. (2026)[4]’s eleven curated decision points , while 60% of our most-walked decision points, including several reached by over half the corpus, have no counterpart in that codebook. In practice, open-ended generation surfaces choices such as specification search outside delivered code or globally suppressed warnings. Second, auditing can operate at the level of whole analyses or at the level of options within forks. Whole-run verdicts are efficient but coarse: one flawed step can fail an otherwise sound run. Option-level auditing keeps uncontested parts of a run usable for the purpose of charting the garden when only one choice is in question and produces concrete exhibits tied to a specific fork and option. Third, a charted garden is not only a target for human review; it is scaffolding a person can walk on their own terms. Once decisions are organized into forks with audited options, a garden visitor can specify an itinerary , i.e., the option their prior beliefs find defensible at each contested fork, and have ForkSCOPE check it for internal incompatibility before comparing it against nearby analyses (§4.4, /itinerary ). This workflow uses AI scale to chart the space and human judgment to walk it, yielding a scoped account of uncertainty without generating and auditing a full multiverse, and helping keep open-ended multiverses from collapsing into an analytic black hole [7]. Because the viewer does not reveal which option would move an individual outcome (§4.5), itinerary-walking asks visitors to commit to options on their own merits rather than searching for a path that flatters a preferred conclusion. The first two choices carry cost: open-ended generation increases charting effort, and option-level auditing increases per-decision review. We argue that both are worth paying once analysis generation becomes cheap enough that the bottleneck shifts to interpretation and verification. The third has not yet been evaluated with real garden visitors; §5.3’s result that the human and agentic corpora largely agree on the shape of the decision space is a first step toward showing the garden is worth a human visiting. ForkSCOPE is intended to reduce the heavier workload of charting and facilitate easier review by humans. 
+
+7.2 Limitations and future work 
+
+We treat the following limitations as open design challenges and research questions. ForkSCOPE offers a ground-up way to operationalize and navigate an agentic multiverse, but a substantial need for further research remains before it can support rigorous end-to-end multiverse inference. 
+
+Scope. Our evidence is a single in-depth case study used to instantiate the framework and surface concrete failure modes. Transfer to other domains is untested. The corpus reflects a single generation design, so coverage of the full analytic space is unknown. Whether the agent multiverse induced here overlaps with the human one remains an open question noted by the corpus authors [4]. 
+
+Attribution. Our fork-to-outcome attribution (§5.5) is observational. Choices co-occur non-randomly and were not experimentally assigned. We compute attribution on a surrogate fit to reported outcomes, so scores reflect both confounding and surrogate approximation error. 
+
+LLM dependence. We rely on Claude models both to implement parts of the pipeline and to run it (§4.2), and the resulting chart is sensitive to that choice. At runtime, open-weight and smaller code-specialized models could plausibly substitute for more mechanical parsing stages and reduce the cost reported in §6.4. The silent-decision rate reported in §5.1 is also model-dependent because it is recovered from code-prose linking. In one comparison, switching the reader model from Opus to Sonnet roughly doubled the observed rate. We have not yet validated which reading is closer to 21 correct, and for this task validation is limited to annotator agreement. 
+
+Atomicity of extracted actions. We treat each extracted action from code as one raw decision point. The human benchmark (§6.3) shows that some induced forks bundle multiple independent choices (e.g., which variable enters a model and how it is transformed). Automatic detection and decomposition of composite decisions is future work. 
+
+No user study yet. This paper reports the framework design and technical evaluation of the chart it produces. We have not yet studied how garden owners prefer to provide corrections on contested forks. As an initial, systematic proxy, part of §6 uses a simulated AI garden owner to probe review decisions more broadly than one person’s schedule allows. We plan to scale this protocol alongside studies with human garden owners. 
+
+Cross-corpus comparisons. We pool the human and agent runs into a single vocabulary rather than charting them separately: all 317 forks and 777 options are shared slots that both corpora occupy, and the viewer’s corpus filter (§4.4) allows either subset to be examined within the same map. However, the two corpora are recovered with different reliability (§5.1), so we do not interpret the data as supporting a clean outcome-level human-AI comparison. The structural comparison in §5.3 is correspondingly narrower: it provides evidence of rough compatibility between the induced vocabularies, but the human subset is too small and inconsistently recovered to support claims about which decisions each corpus favors. 
+
+Conservative canonicalization. We prefer under-merging to over-merging during canonicalization. This makes spurious consensus less likely, but it also means 317 and downstream counts are likely overestimates of the complexity of the charted garden. The size of the stable core (§ 6.2) is a more reliable indicator. 
+
+# 8 Conclusion 
+
+We presented ForkSCOPE, a bottom-up human-AI collaboration framework for charting and reading an agentic analysis corpus without a taxonomy fixed before or after generation. Applied to a pooled corpus of 223 agent- and human-written analyses of the same many-analyst question, ForkSCOPE induced 317 forks over 777 options, distinguished widely contested pivotal forks from settled conventions, and showed that a modest subset of forks carries much of the out-of-sample predictive signal for reported outcomes. A three-rater benchmark found the pipeline’s self-agreement at the option layer comparable to independent human agreement on the same items, while also surfacing concrete directions for future work (§7.2). ForkSCOPE is designed to keep human oversight tractable as agentic corpora grow past what any one reviewer can read end-to-end. It combines a reproducible, artifact-based instrument (pinned prompts, cached builds, and explicit review gates) with an interactive viewer that supports systematic inspection of forks and options (e.g., tags, associations, pivotal-fork impact views, lifecycle dynamics, and run-level browsing). Because the induced map follows the fork/option abstraction expected by existing multiverse tools (§4.1), a charted garden can also serve as a starting point for downstream multiverse visualization and analysis. 
+
+# References 
+
+[1] Anthropic. Claude code (version 2.1) [computer software], 2025. URL 
+
+https://code.claude.com .[2] Samuel G. Z. Asher, Janet Malzahn, Jessica M. Persano, Elliot J. Paschal, Andrew C. W. 22 Myers, and Andrew B. Hall. Do claude code and codex p-hack? sycophancy and statistical analysis in large language models. 2026. [3] Eli Ben-Michael, D. James Greiner, Melody Huang, Kosuke Imai, Zhichao Jiang, and Sooahn Shin. Does AI help humans make better decisions? a statistical evaluation framework for experimental and observational studies. Proceedings of the National Academy of Sciences , 122 (38):e2505106122, 2025. doi: 10.1073/pnas.2505106122. [4] Martin Bertran, Riccardo Fogliato, and Zhiwei Steven Wu. Many AI analysts, one dataset: Navigating the agentic data science multiverse. Proceedings of the National Academy of Sciences of the United States of America , 123(29):e2606495123, July 2026. doi: 10.1073/pnas.2606495123. [5] Rotem Botvinik-Nezer, Felix Holzmeister, Colin F. Camerer, et al. Variability in the analysis of a single neuroimaging dataset by many teams. Nature , 582(7810):84–88, 2020. doi: 10.1038/s41586-020-2314-9. [6] Nate Breznau, Eike Mark Rinke, Alexander Wuttke, et al. Observing many researchers using the same data and hypothesis reveals a hidden universe of uncertainty. Proceedings of the National Academy of Sciences , 119(44):e2203150119, 2022. doi: 10.1073/pnas.2203150119. [7] Marco Del Giudice and Steven W. Gangestad. A traveler’s guide to the multiverse: Promises, pitfalls, and a framework for the evaluation of analytic decisions. Advances in Methods and Practices in Psychological Science , 4(1):1–15, 2021. doi: 10.1177/2515245920954925. [8] Pierre Dragicevic, Yvonne Jansen, Abhraneel Sarma, Matthew Kay, and Fanny Chevalier. Increasing the transparency of research papers with explorable multiverse analyses. In Pro-ceedings of the 2019 CHI Conference on Human Factors in Computing Systems , 2019. doi: 10.1145/3290605.3300295. [9] Andrew Gelman and Eric Loken. The garden of forking paths: Why multi-ple comparisons can be a problem, even when there is no “fishing expedition” or “p-hacking” and the research hypothesis was posited ahead of time. Un-published manuscript, Department of Statistics, Columbia University, 2013. URL 
+
+http://stat.columbia.edu/ gelman/research/unpublished/forking.pdf .[10] Andrew Gelman and Eric Loken. The statistical crisis in science. American Scientist , 102(6): 460–465, 2014. [11] Catalina Gomez, Sue Min Cho, Shichang Ke, Chien-Ming Huang, and Mathias Unberath. Human-AI collaboration is not very collaborative yet: A taxonomy of interaction patterns in AI-assisted decision making from a systematic review. Frontiers in Computer Science , 6, 2025. doi: 10.3389/fcomp.2024.1521066. [12] Ken Gu, Madeleine Grunde-McLaughlin, Andrew McNutt, Jeffrey Heer, and Tim Althoff. How do data analysts respond to ai assistance? a wizard-of-oz study. In Proceedings of the 2024 CHI Conference on Human Factors in Computing Systems , 2024. doi: 10.1145/3613904.3641891. [13] Ken Gu, Ruoxi Shang, Tim Althoff, Chenglong Wang, and Steven M. Drucker. How do analysts understand and verify ai-assisted data analyses? In Proceedings of the 2024 CHI Conference on Human Factors in Computing Systems , 2024. doi: 10.1145/3613904.3642497. 23 [14] Brian D. Hall, Yang Liu, Yvonne Jansen, Pierre Dragicevic, Fanny Chevalier, and Matthew Kay. A survey of tasks and visualizations in multiverse analysis reports. Computer Graphics Forum , 41(1):402–426, 2022. doi: 10.1111/cgf.14443. [15] Orris C. Herfindahl. Concentration in the u.s. steel industry. Columbia University , 1950. Unpublished doctoral dissertation. [16] Tom Heyman, Ekaterina Pronizius, Savannah C. Lewis, et al. Crowdsourcing multiverse analyses to explore the impact of different data-processing and analysis decisions: A tutorial. 
+
+Psychological Methods , 2025. doi: 10.1037/met0000770. [17] Albert O. Hirschman. National power and the structure of foreign trade. University of California Press , 1945. [18] Lawrence Hubert and Phipps Arabie. Comparing partitions. Journal of Classification , 2(1): 193–218, 1985. [19] Alex Kale, Matthew Kay, and Jessica Hullman. Decision-making under uncertainty in research synthesis: Designing for the garden of forking paths. In Proceedings of the 2019 CHI Conference on Human Factors in Computing Systems , 2019. doi: 10.1145/3290605.3300432. [20] Majeed Kazemitabaar, Jack Williams, Ian Drosos, Tovi Grossman, Austin Zachary Henley, Carina Negreanu, and Advait Sarkar. Improving steering and verification in AI-assisted data analysis with interactive task decomposition. In Proceedings of the 37th Annual ACM Symposium on User Interface Software and Technology , 2024. doi: 10.1145/3654777.3676345. [21] Vivian Lai, Yiming Zhang, Chacha Chen, Q. Vera Liao, and Chenhao Tan. Selective ex-planations: Leveraging human input to align explainable AI. Proceedings of the ACM on Human-Computer Interaction , 7(CSCW2), 2023. doi: 10.1145/3610206. [22] Q. Vera Liao, Daniel Gruen, and Sarah Miller. Questioning the AI: Informing design practices for explainable AI user experiences. In Proceedings of the 2020 CHI Conference on Human Factors in Computing Systems , 2020. doi: 10.1145/3313831.3376590. [23] Yang Liu, Tim Althoff, and Jeffrey Heer. Paths explored, paths omitted, paths obscured: Decision points and selective reporting in end-to-end data analysis. In Proceedings of the 2020 CHI Conference on Human Factors in Computing Systems , 2020. doi: 10.1145/3313831.3376533. [24] Yang Liu, Alex Kale, Tim Althoff, and Jeffrey Heer. Boba: Authoring and visualizing multiverse analyses. IEEE Transactions on Visualization and Computer Graphics , 27(2):1753–1763, 2021. doi: 10.1109/TVCG.2020.3028985. [25] Bowen Lou, Tian Lu, T. S. Raghu, and Yingjie Zhang. Unraveling human-AI teaming: A review and outlook, 2025. [26] Nathan Mantel. The detection of disease clustering and a generalized regression approach. 
+
+Cancer Research , 27(2):209–220, 1967. [27] Mike A. Merrill, Ge Zhang, and Tim Althoff. Multiverse: Mining collective data science knowledge from code on the web to suggest alternative analysis approaches. In Proceedings of the 27th ACM SIGKDD Conference on Knowledge Discovery & Data Mining , pages 1212–1222, 2021. doi: 10.1145/3447548.3467455. 24 [28] Lisa Messeri and M. J. Crockett. Artificial intelligence and illusions of understanding in scientific research. Nature , 627:49–58, 2024. doi: 10.1038/s41586-024-07146-0. [29] Jiacheng Miao, Jonathan K. Pritchard, and James Zou. The agentic garden of forking paths. 
+
+arXiv preprint arXiv:2607.01507 , 2026. doi: 10.48550/arXiv.2607.01507. [30] Menaka Narayanan, Emily Chen, Jeffrey He, Been Kim, Samuel J. Gershman, and Finale Doshi-Velez. How do humans understand explanations from machine learning systems? an evaluation of the human-interpretability of explanation. arXiv preprint arXiv:1802.00682 , 2018. doi: 10.48550/arXiv.1802.00682. [31] OpenAI. Chatgpt. Large language model, 2026. Accessed 2026-09-09. [32] Zachary T. Rewolinski, Austin V. Zane, Hao Huang, Chandan Singh, Chenglong Wang, Jianfeng Gao, and Bin Yu. Sanity checks for agentic data science. arXiv preprint arXiv:2604.11003 ,2026. [33] Abhraneel Sarma, Alex Kale, Michael Moon, Nathan Taback, Fanny Chevalier, Jessica Hullman, and Matthew Kay. multiverse: Multiplexing alternative data analyses in r notebooks. In 
+
+Proceedings of the 2023 CHI Conference on Human Factors in Computing Systems , 2023. doi: 10.1145/3544548.3580726. [34] Abhraneel Sarma, Kyle Hwang, Jessica Hullman, and Matthew Kay. Milliways: Taming multiverses through principled evaluation of data analysis paths. In Proceedings of the 2024 CHI Conference on Human Factors in Computing Systems , 2024. doi: 10.1145/3613904.3642375. [35] Lloyd S. Shapley. A value for n-person games. Contributions to the Theory of Games , pages 307–317, 1953. [36] Raphael Silberzahn, Eric L. Uhlmann, Daniel P. Martin, et al. Many analysts, one data set: Making transparent how variations in analytic choices affect results. Advances in Methods and Practices in Psychological Science , 1(3):337–356, 2018. doi: 10.1177/2515245917747646. [37] Joseph P. Simmons, Leif D. Nelson, and Uri Simonsohn. False-positive psychology: Undisclosed flexibility in data collection and analysis allows presenting anything as significant. Psychological Science , 22(11):1359–1366, 2011. doi: 10.1177/0956797611417632. [38] Uri Simonsohn, Joseph P. Simmons, and Leif D. Nelson. Specification curve analysis. Nature Human Behaviour , 4(11):1208–1214, 2020. doi: 10.1038/s41562-020-0912-z. [39] Sara Steegen, Francis Tuerlinckx, Andrew Gelman, and Wolf Vanpaemel. Increasing trans-parency through a multiverse analysis. Perspectives on Psychological Science , 11(5):702–712, 2016. doi: 10.1177/1745691616658637. [40] Bin Yu and Rebecca L. Barter. Veridical Data Science: The Practice of Responsible Data Analysis and Decision Making . MIT Press, 2024. [41] Bin Yu and Karl Kumbier. Veridical data science. Proceedings of the National Academy of Sciences , 117(8):3920–3929, 2020. doi: 10.1073/pnas.1901326117. [42] Yuheng Zhao, Junjie Wang, Linbing Xiang, Xiaowen Zhang, Zifei Guo, Cagatay Turkay, Yu Zhang, and Siming Chen. LightVA: Lightweight visual analytics with LLM agent-based task planning and execution. IEEE Transactions on Visualization and Computer Graphics , 31 (9):6162–6177, 2025. doi: 10.1109/TVCG.2024.3496112. 25

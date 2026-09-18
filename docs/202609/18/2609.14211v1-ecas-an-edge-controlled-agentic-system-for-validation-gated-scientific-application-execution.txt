@@ -1,0 +1,318 @@
+Title: ECAS: An Edge-Controlled Agentic System for Validation-Gated Scientific Application Execution
+
+URL Source: https://arxiv.org/pdf/2609.14211v1
+
+Published Time: Tue, 15 Sep 2026 01:03:26 GMT
+
+Number of Pages: 7
+
+Markdown Content:
+# ECAS: An Edge-Controlled Agentic System for Validation-Gated Scientific Application Execution 
+
+Sun Baixi ∗, Mingze Xia †, Huihuo Zheng ∗∗Argonne National Laboratory, Lemont, IL, USA 
+
+†Oregon State University, Corvallis, OR, USA 
+
+Abstract —Scientific applications increasingly rely on high-performance computing (HPC) systems, yet translating a scien-tist’s high-level goal into a correct target-scale execution remains brittle and labor-intensive. Large language model (LLM) agents offer a promising path toward automating this process, but two obstacles remain. Granting a cloud-hosted model direct HPC sys-tem access exposes credentials and execution authority. However, it requires continuous human supervision, limiting automation. Moreover, one-shot generation cannot adapt when generated artifacts fail in a site-specific HPC environment. To address these issues, we present ECAS, an Edge-Controlled Agentic System for closed-loop execution of scientific computing campaigns with limited human intervention. ECAS separates reasoning , control ,and execution : a cloud-hosted LLM proposes plans, artifacts, and repairs; a user-controlled edge agent retains credentials, workflow state, and execution authority while enforcing policy and resource constraints; and the HPC system performs the computation. Its core mechanism is validation-gated execution :device-side generated artifacts for execution on HPC go through static checks and small-scale validation, failures trigger repairs using sanitized execution feedback, and target-scale execution is permitted only after validation and policy checks pass. Addi-tionally, ECAS uses an edge-resident library of expert-distilled, site-specific skills that is never disclosed to the cloud service. In preliminary experiments using three scientific applications on two production ALCF systems with six types of injected faults, closed-loop repair improves application success from 0/6 to 6/6 over one-shot generation. Validation gating prevents all three observed target-scale failures, and skill conditioning improves success from 4/6 to 6/6. These results demonstrate the feasibility of delegating adaptive reasoning to the cloud, while retaining execution control at the edge. 
+
+Index Terms —LLM agents, high-performance computing, edge computing, automated scientific discovery, closed-loop automa-tion, workflow automation, validation, job submission, I/O bench-marking 
+
+I. I NTRODUCTION 
+
+Deploying a computational campaign on an HPC system is a translation problem. A user begins with a goal. For example, “benchmark the I/O of my data pipeline at scale,”, “train this model on four nodes”, etc. This goal must be converted into concrete, system-specific artifacts, including the source or configuration, the correct software environment (compilers, MPI, Python libraries), a valid launch command for the site’s job launcher, and a batch script with the right queue, account, and resource request. Small mismatches—an incompatible MPI/Python library, the wrong launcher, a data path that does not exist on the compute nodes—surface only at runtime, often after a long queue wait and after consuming allocation. LLMs are attractive for this translation, and recent systems show they can generate and even submit HPC and simulation jobs end-to-end [1]–[4]. However, there are two challenges. First, trust and reliability . Concerns arise when pursuing full automation in performing test execution and scale-up: a cloud-hosted model given direct SSH access to a system would hold user credentials and act on the system with no local checkpoint for policy, resource, or safety checks, and system logs streamed to the cloud may leak paths, usernames, and project identifiers. Second, an adaptation obstacle: one-shot generation cannot react to the failures that dominate real HPC use, where the first artifact is rarely correct, and the informative signal is the errors in logs from an actual run. We present ECAS (Edge-Controlled Agentic System), an agent-based system for automated scientific-computing cam-paigns that turns a natural-language goal into a completed, target-scale HPC run as closed-loop automation with minimal human intervention . It is organized around a single principle: 
+
+reason in the cloud, control at the edge, and execute on HPC . A cloud-hosted LLM performs open-ended reasoning— planning, artifact generation, failure diagnosis, and repair proposals—but never holds credentials or acts directly on the system. A user-controlled edge agent is the trusted control plane: it retains credentials, workflow state, and artifacts; enforces policy and resource checks; mediates all system access; sanitizes logs before they leave the trust boundary; and holds execution authority. The HPC system executes. On top of this separation, ECAS makes execution 
+
+validation-gated . Rather than submitting a generated job di-rectly at the requested scale, the edge agent runs a pipeline: (i) static checks on the artifacts, (ii) a cheap small-scale or debug-queue validation run, (iii) feedback-driven repair from sanitized error output, and (iv) a policy-gated promotion to the target-scale run only after correctness and resource-policy checks pass. This converts expensive scale-out failures into cheap small-scale failures caught before they consume allocation. Closed-loop repair alone, however, is wasteful in a different way: a cold agent rediscovers the same site-specific fixes on every task—the library-compatible MPI/Python pairing, the site’s launcher and queue conventions—because this knowl-edge lives in an expert’s head, not in the model. ECAS therefore treats human expertise as a build-time resource: in an offline, expert-in-the-loop phase an HPC expert works through representative tasks with the agent, and each correction is arXiv:2609.14211v1 [cs.DC] 13 Sep 2026 distilled into a reusable, edge-private skill —a structured unit of site-specific procedural knowledge that, like credentials, never leaves the edge. During runtime, the loop is closed and automated—it retrieves relevant skills to condition generation and repair—and human effort falls toward zero as coverage grows. Human-in-the-loop is thus our building methodology ,not our operating mode: the deployed system runs as closed-loop automation with minimal human intervention, reduced to an occasional validator for genuinely novel failures. This work has three main contributions:  
+
+> •
+
+A user-controlled edge trust boundary for LLM-driven HPC automation that keeps credentials, state, execution authority, and the site-specific skill library off the cloud while still using cloud reasoning, and sanitizes feedback crossing the boundary. The cloud proposes only abstract, site-agnostic intents; the edge resolves each into a con-crete, site-correct command through its private skills, so site identifiers and execution authority never leave the user’s control.  
+
+> •
+
+A validation-gated execution workflow that couples static checks, small-scale validation, and feedback-driven repair with a policy gate before target-scale runs, reducing wasted node-hours.  
+
+> •
+
+A human HPC expert-in-the-loop skill-building methodology in which an HPC expert works through representative tasks with the agent and each expert–agent interaction is distilled into a reusable, edge-private skill .Using it, we build a concrete site-specific skill library that turns an otherwise cold agent into an automated one at deployment and reduces repeated repair and expert intervention. We prototype and evaluate ECAS on two production ALCF systems (Crux and Sophia), with MPI-IO and deep-learning I/O workloads under deterministically injected faults, quanti-fying the benefit of closed-loop repair, validation gating, and skill conditioning. II. B ACKGROUND AND RELATED WORK 
+
+LLMs for HPC. HPC-GPT adapts an LLM to HPC domain tasks such as resource and data-race question an-swering, but targets domain knowledge rather than a closed execution loop [3]. “LLM as HPC Expert” (HyCE) ex-tends retrieval-augmented generation with hypothetical com-mand embeddings to answer system-specific questions and retrieve predefined commands, and discusses data-privacy and command-execution risks, but is retrieval- rather than execution-centric [4]. 
+
+Agentic execution and repair. Foam-Agent and Foam-Agent 2.0 provide an end-to-end multi-agent pipeline that generates OpenFOAM cases, creates HPC submission scripts, and monitors and repairs runs, exposing tools via the Model Context Protocol [1], [2], [5]. These systems are the closest prior art; ECAS differs by treating a user-controlled edge device as the trust and control plane and by making scale-up explicitly validation-gated for resource-waste reduction, rather than by targeting one application domain. Our closed loop follows the reason–act paradigm of ReAct [6]. 
+
+Agentic scientific workflows. Recent work sketches the broader shift to agentic AI in scientific workflows [7] and pro-poses reference architectures and evaluation methodology for LLM agents over workflow provenance [8]. These are largely conceptual or provenance-focused; we contribute a concrete edge-controlled prototype and an execution-time evaluation. 
+
+Skill libraries and experiential agents. A line of work lets agents improve by accumulating reusable experience: Voyager maintains a growing skill library of executable programs [9], ExpeL extracts natural-language insights from past trials [10], and Reflexion converts verbal feedback into self-improvement signals [11]. ECAS adapts this idea to HPC with three differences: skills are sourced from an HPC expert in a build-time loop rather than self-generated; they encode site-specific 
+
+operational knowledge (modules, launchers, queue/account and ABI conventions); and they are kept private on the edge ,since they embed exactly the identifiers that must not reach the cloud. The library is thus both a performance mechanism and part of the trust boundary. 
+
+Workloads and I/O characterization. We build on stan-dard HPC benchmarks: IOR for MPI-IO bandwidth [12], the DLIO benchmark for deep-learning I/O patterns [13], and E3SM-IO for climate-simulation I/O through the ADIOS2 BP backend [14], [15], with Darshan for I/O characterization of the resulting runs [16]. III. S YSTEM DESIGN 
+
+A. Three-Plane Architecture 
+
+ECAS partitions the system into three planes, i.e., edge, cloud, and HPC, with a built-in trusted boundary. The overview of the ECAS system design is presented in Fig. 1. 
+
+Cloud (reasoning plane). A hosted LLM receives the user goal and sanitized context and returns structured proposals: an execution plan, artifacts (source or config, environment specification, launch command, batch script), and, on failure, an abstract diagnosis—a repair category drawn from a fixed, site-agnostic vocabulary—rather than a site-specific command. Site-specific values (launcher binaries, absolute paths, account names) are never chosen by the cloud; the edge resolves an abstract category into a concrete, site-correct fix using its private skill library (Sec. III-D). The cloud plane is stateless with respect to the system: it holds no credentials and issues no commands. 
+
+Edge (control plane). A user-controlled device—the trusted core—owns everything security- and state-sensitive: user and system credentials; workflow state and artifact versions; the private skill library (Sec. III-D); policy and resource checks; the sole SSH/scheduler connection to the system; log sanitiza-tion; and execution authority. Every action the cloud proposes is materialized, checked, and (if permitted) executed by the edge agent. Nothing crosses to the cloud without passing through sanitization. 
+
+HPC (execution plane). One or more systems execute validation and target-scale jobs through their batch scheduler Edge Cloud 
+
+HPC 
+
+Scienti fi c Simulations  AI Workloads 
+
+LLMs 
+
+# + Multi-round interactions 
+
+Internet 
+
+MCP 
+
+MCP 
+
+IRI 
+
+Build-time 
+
+> Execute this
+> …
+
+User 
+
+HPC Expert 
+
+> Skills
+> Policy
+> Sanitize
+
+# +
+
+HPC Agent 
+
+Control Plane  
+
+> Trusted Boundary Fig. 1. Overview of the ECAS. The edge plays an important role as the Control plane, with the ECAS-built trusted boundary.
+
+via Model Context Protocol (MCP) or Integrated Research Infrastructure (IRI) [17]. The execution plane trusts only the edge agent, which authenticates as the user. 
+
+B. Threat and Failure Model 
+
+We assume the cloud LLM is competent but fallible, not adversarial : it may hallucinate or err, i.e., propose the wrong launcher, a nonexistent output path, an oversized or mis-charged resource request, or an artifact that only fails at scale. But it does not actively try to exfiltrate data or subvert the edge. The edge device and its software are trusted and user-controlled, and the HPC site is trusted to execute jobs submitted as the user. Under this model, the edge’s role is to bound the blast radius of an erroneous cloud proposal with deterministic, edge-resident checks: (i) static well-formedness of launcher, queue, and account; (ii) output-path existence and rank/file consistency; (iii) a resource-policy gate on node count, walltime, queue, account, and remaining node-hour budget (Eq. (1)); and (iv) sanitization of every log before it crosses the boundary, stripping usernames, absolute paths, and project identifiers. Because credentials, workflow state, and the skill library never leave the edge, a cloud error cannot escalate privilege, spend beyond the user-set policy, or leak site identifiers; its worst case is a rejected or repaired artifact. We do not defend against a compromised edge, a malicious site, or side channels within the sanitized text itself; those are out of scope. 
+
+C. Validation-Gated Execution 
+
+The control loop (Algorithm 1) never submits a generated job directly at target scale. Artifacts first pass static checks 
+
+(e.g., launcher and queue/account well-formedness, path exis-tence, rank/file consistency). They then run a validation job at minimal scale (one node or a debug queue). Failures produce sanitized feedback that the cloud turns into a repair; repair is bounded by fixed budgets on repair attempts, submissions, and wall-clock time. Only after validation succeeds and aresource-policy gate approves the request (nodes, walltime, account) is the job promoted to the target-scale run. Success is judged by an application-specific oracle, not by the scheduler’s 
+
+COMPLETED status alone. We make the edge’s control decision explicit. A can-didate artifact set a carries a resource footprint ρ(a) =(n(a), w (a), q (a), α (a)) : node count, wall-clock request, queue, and charging account. The edge holds a site policy 
+
+Π = ( Nmax , W max , Q, A, H rem )—per-job node and walltime ceilings, admissible queues and accounts, and the remaining node-hour budget—and the gate is the conjunction of deter-ministic checks 
+
+PolicyGate( a) = Y
+
+> ϕ∈Φ
+
+1[ϕ(a)] , (1) with Φ = { n ≤ Nmax , w ≤ Wmax , q ∈ Q , α ∈ A , n w ≤
+
+Hrem }, evaluated entirely on the edge. Target-scale execution is authorized only when the validation run passes the oracle 
+
+and the target footprint clears the gate, 
+
+Promote( a) ⇐⇒ Oracle( rval ) ∧ PolicyGate( atarget ). (2) Equivalently, target-scale execution is allowed iff three con-ditions hold independently at the edge: the validation run passed its oracle ( ValidationPassed ); the request is policy-admissible (n ≤ Nmax , w ≤ Wmax , q ∈ Q, α ∈ A;
+
+PolicySatisfied ); and it fits the residual allocation ( n w ≤
+
+Hrem ; ResourceBudgetSatisfied ). Because Π and both pred-icates reside at the edge, neither a cloud plan nor a generated artifact can escalate scale or spend beyond the user-set policy. Algorithm 1 Validation-gated execution at deployment (edge agent). The skill library S is built offline (Sec. III-D). 
+
+Require: goal g; skill library S; budgets Brep , B sub , B time  
+
+> 1:
+
+k ← Retrieve( S, g ) ▷ relevant skills  
+
+> 2:
+
+a ← CloudPlanAndGenerate( g, k ) ▷ skill-conditioned artifacts  
+
+> 3:
+
+for i = 1 to Brep do  
+
+> 4:
+
+if ¬ StaticCheck( a) then  
+
+> 5:
+
+a ← CloudRepair( a, static diag. , k ) 
+
+> 6:
+
+continue  
+
+> 7:
+
+end if  
+
+> 8:
+
+r ← RunValidation( a) ▷ 1 node / debug  
+
+> 9:
+
+if Oracle( r) and PolicyGate( atarget ) then  
+
+> 10:
+
+return RunTargetScale( a) 
+
+> 11:
+
+end if  
+
+> 12:
+
+a ← CloudRepair( a, Sanitize( r), k ) 
+
+> 13:
+
+end for  
+
+> 14:
+
+return FAILED ▷ escalate to expert 
+
+D. Skill-Building Methodology 
+
+ECAS operates in two phases. The deployment loop above is automated, but it is only effective once the edge holds site-specific knowledge that a general-purpose cloud model lacks. We obtain that knowledge offline , with a human in the loop, and then reuse it automatically. 
+
+Build phase (expert-in-the-loop). An HPC expert works through a set of representative tasks with the agent. When the automated loop stalls—budget exhausted, or a repair that keeps failing the same way—or when it produces an artifact that runs but violates a site convention, the expert supplies a correction. The edge distills the interaction into a skill :a structured, retrievable record pairing a trigger (workload, site, and error signature) with the procedural knowledge that resolved it—an ABI-compatible module set, a launcher tem-plate, a queue/account rule, or a known-good environment recipe. Skills are versioned alongside artifacts and stored in a library on the edge. Because a skill embeds exactly the usernames, paths, and project conventions that sanitization strips, the library is inherently edge-private; it is never shipped to the cloud, and only the retrieved skill’s sanitized guidance conditions a prompt. 
+
+Deployment phase (automated). For a new goal, the edge retrieves relevant skills and prepends their guidance to cloud generation and repair (Algorithm 1). Tasks covered by the library are handled end to end with no human involvement; a genuinely novel task that exhausts its budget escalates back to the expert, whose correction seeds a new skill. The system thus degrades gracefully and improves monotonically: human effort is spent once per class of failure, not once per run. IV. I MPLEMENTATION 
+
+The edge agent is a Python controller that holds credentials, drives the system over SSH and the PBS scheduler, versions artifacts, and applies static, policy, and sanitization steps. The reasoning plane is a hosted LLM accessed through an               
+
+> TABLE I EXPERIMENTAL CONFIGURATION .Parameter Value Systems Crux (PBS Pro, Cray MPICH, PALS mpiexec ,256 cores/node); Sophia (OpenMPI, 8 ×A100) Workloads IOR (MPI-IO), DLIO, E3SM-IO (ADIOS2 BP) Validation scale 1 node (IOR/DLIO); 16-proc, 1 node (E3SM-IO) Target scale 4 nodes (IOR/DLIO); 512-proc, 2 nodes (E3SM-IO) Injected faults 6 (2 static-decidable, 4 runtime; 2 site-specific) Repair budget Brep = 3 attempts Reasoning model hosted LLM via institutional inference gateway Repetitions N= 5 per fault per condition (E2, E4)
+
+institutional inference gateway. We deploy on two production ALCF systems: Crux (PBS Pro, Cray MPICH) and Sophia 
+
+(NVIDIA DGX-A100, OpenMPI). Three workloads exercise the pipeline: IOR for MPI-IO bandwidth [12], the DLIO benchmark for deep-learning I/O [13], and E3SM-IO [14] for climate-simulation I/O written through the ADIOS2 BP backend [15]; Darshan captures I/O behavior of each run [16]. E3SM-IO doubles as a cross-system portability case: the same source is built and run on both Crux (Cray MPICH) and Sophia (OpenMPI), whose incompatible MPI ABIs mandate independent builds and site-specific launchers. Application-specific oracles define success (e.g., IOR reports nonzero aggregate bandwidth over all segments and a Darshan log is produced; DLIO completes the configured steps and reports throughput; E3SM-IO exits cleanly and reports nonzero write bandwidth for its ADIOS2 BP output). Static checks and the policy gate are deterministic and run entirely on the edge; log sanitization strips usernames, absolute paths, and project identifiers before any text is sent to the cloud. The skill library is a set of structured records on the edge, keyed by workload and site and retrieved by matching the goal and any error signature; retrieval prepends the matched skills’ guidance to the cloud prompt, so no library content leaves the trust boundary in raw form. V. E VALUATION 
+
+A. Experimental Setup 
+
+We evaluate ECAS on two systems using three workflows, as presented in Table I. 
+
+Systems. We evaluate ECAS on two production systems at the Argonne Leadership Computing Facility (ALCF). Crux is a CPU-based system running the PBS Pro scheduler with the Cray MPICH stack and the PALS mpiexec launcher, providing 256 cores per node; it hosts the end-to-end validation and target-scale runs. Sophia is a GPU system with OpenMPI and 8 NVIDIA A100 GPUs per node, used to exercise a distinct site environment (different launcher and MPI conventions). 
+
+Workloads and scales. Three standard scientific-computing workloads span the I/O regimes of interest: IOR for MPI-IO bandwidth, the DLIO benchmark for deep-learning I/O patterns, and E3SM-IO for climate-simulation I/O through the ADIOS2 BP backend. Each workload is exercised under the validation-gated pipeline at two scales: a cheap validation scale (1 node for IOR/DLIO; 16 processes on 1 node for E3SM-IO) at which failures are caught before they consume allocation, and a target scale (4 nodes for IOR/DLIO; 512 processes on 2 nodes for E3SM-IO) to which a run is promoted only after it passes validation and the resource-policy gate. 
+
+Injected faults and repair loop. To probe the closed loop, we inject six fault types that mirror the mismatches that dominate real HPC use: two are statically decidable (caught by artifact checks before submission) and four surface only at runtime; two of the six are site-specific (resolvable only through the edge’s private skill library, not by generic cloud reasoning). The repair loop is bounded by a budget of B rep = 3 attempts per task before escalation to a human. 
+
+Reasoning model and repetitions. Failure diagnosis is pro-duced by Claude-opus-5 [18] accessed through the institution’s inference gateway; the edge maps the model’s abstract diag-nosis to a concrete, site-correct fix. To capture the variance of a real LLM in the loop, every fault is run N = 5 times per condition in experiments E2 and E4. 
+
+Research Questions and Evaluation Structure We ask four questions. (RQ1) Can ECAS take a natural-language goal to a completed target-scale run on real workloads? (RQ2) 
+
+How much does closed-loop repair improve over one-shot generation under realistic faults? (RQ3) How much target-scale waste does validation gating avoid? (RQ4) Does build-time skill conditioning reduce repeated repairs and expert intervention at deployment? All experiments use fixed repair, submission, and time budgets and application-specific oracles. To control for scheduler-queue variability, we report queue-excluded time (wall-clock minus PBS queue wait, from sched-uler timestamps) alongside counts. 
+
+Metrics. For a fault set F , let of ∈ { 0, 1} be the oracle outcome for fault f , ef the number of expert interventions it requires, and Rf , S f its repair and submission counts. A run counts as a success only when all four checks pass—the scheduler reports the job completed ( SchedPass ), the appli-cation exits zero ( ExitPass ), the workload’s application-level metric is present and nonzero ( AppOracle ; IOR aggregate bandwidth, DLIO throughput, or E3SM-IO write bandwidth), and the expected output artifact exists and is well-formed (ArtifactOracle ; a Darshan log, or bpls listing the expected variables in the ADIOS2 BP output): 
+
+of = SchedPass ∧ ExitPass ∧ AppOracle ∧ ArtifactOracle .
+
+(3) This composite oracle is what distinguishes a genuinely com-pleted run from one the scheduler merely marks COMPLETED .We report success rate SR , autonomous completion AC (re-solved with no expert), and mean repairs and submissions, 
+
+SR = 1 
+
+> |F|
+
+X 
+
+> f∈F
+
+of , AC = 1 
+
+> |F|
+
+X 
+
+> f∈F
+
+1[of =1 ∧ ef =0] ,
+
+¯R = 1 
+
+> |F|
+
+X
+
+> f
+
+Rf , ¯S = 1 
+
+> |F|
+
+X
+
+> f
+
+Sf .
+
+(4) Node-hours are attributed by stage. With validation at nv                           
+
+> TABLE II E1: END -TO -END FEASIBILITY ON CRUX . O NE -NODE VALIDATION IS PROMOTED TO THE TARGET SCALE (FOUR NODES FOR IOR/DLIO; THE MAP -PINNED 512-PROCESS ,TWO -NODE CONFIGURATION FOR E3SM-IO). E3SM-IO IS ADDITIONALLY BUILT AND LINK -VERIFIED ON SOPHIA UNDER OPEN MPI ( CROSS -SYSTEM PORTABILITY ). Workload System Completed Agent turns Oracle IOR (MPI-IO) Crux Yes 2pass DLIO Crux Yes 2pass E3SM-IO (ADIOS2) Crux Yes 2pass
+
+nodes and target scale nt, the wasted (non-successful) node-hours of a strategy are 
+
+Hwaste = X 
+
+> f∈F
+
+nv tv 
+
+> f
+
++ X   
+
+> f:of=0
+
+nfail( f ) tfail  
+
+> f
+
+, (5) where nfail( f ) is the scale at which fault f fails: nfail =nt under direct submission (which performs no validation, so its first term vanishes) and nfail =nv under validation gating. Gating thus scales each failure’s wasted node-hours by nv/n t, so its advantage grows with target scale and fault-detection latency. 
+
+B. E1: End-to-End Feasibility (RQ1) 
+
+We run the full pipeline for all three workloads (IOR, DLIO, and E3SM-IO), validating at small scale on one node and promoting to a target run. IOR and DLIO promote to a four-node target; E3SM-IO, whose F-case decomposition map pins the process count, validates with the 16-process map on one node and promotes to the 512-process map on two nodes. We report end-to-end completion, agent turns, and oracle pass/fail (Table II). All three complete on Crux: E3SM-IO writes its F-case history files through the ADIOS2 BP backend at both scales, reaching 1112 MiB/s aggregate write bandwidth at the 512-process target, and the output passes the artifact oracle—a 
+
+bpls listing confirms all 162 F-case variables in the resulting BP dataset. To exercise the cross-system portability path, E3SM-IO and its ADIOS2/PnetCDF stack are additionally built and link-verified on Sophia under OpenMPI, confirming that the same deployment pipeline compiles and links against an incompatible MPI ABI (Cray MPICH vs. OpenMPI); we report the Crux end-to-end runs in Table II. 
+
+C. E2: One-Shot vs. Closed-Loop Agent (RQ2) 
+
+We inject six deterministic faults into the initial state and compare a one-shot baseline (generate once, submit, no repair) with the closed-loop agent. The faults, chosen to span static-and runtime-detected failures, are: (1) wrong queue/account; (2) transfer size exceeding block size (a static-decidable IOR misconfiguration); (3) invalid output path; (4) wrong launcher (OpenMPI mpirun in place of the Cray PALS mpiexec ); (5) excessive ranks-per-node that overruns the launcher’s local-rank limit; and (6) an MPI ABI mismatch (an OpenMPI library LD_PRELOAD ed into Cray MPICH). Faults (1)–(2) are caught by static checks; (3)–(6) surface only at runtime, and (4) and (6) additionally require site-specific knowledge to repair. Because the reasoning model is stochastic, we repeat TABLE III E2/E4: PER -FAULT ORACLE OUTCOMES OVER N =5 REPETITIONS PER CONDITION . One-shot : SINGLE GENERATE -AND -SUBMIT , NO REPAIR (E2                                                          
+
+> BASELINE ). Cold :CLOSED -LOOP REPAIR WITH AN EMPTY SKILL LIBRARY
+> (E4). Skill :CLOSED -LOOP REPAIR WITH THE EDGE SKILL LIBRARY —THE FULL ECAS SYSTEM (E2 CLOSED -LOOP ; E4 SKILL -CONDITIONED ). ENTRIES ARE SUCCESSES OVER FIVE REPETITIONS ;†MARKS FAULTS THAT REQUIRE SITE -SPECIFIC KNOWLEDGE TO REPAIR .Injected fault One-shot Cold Skill Wrong queue/account ×5/5 5/5 Transfer >block size ×5/5 5/5 Invalid output path ×5/5 5/5 Wrong launcher †×0/5 5/5 Excess ranks/node ×5/5 5/5 MPI ABI mismatch †×0/5 5/5 Total (successful runs) 0/6 20/30 30/30 TABLE IV E3: NODE -HOUR ACCOUNTING AND FAILURE SCALE OVER THREE RUNTIME FAULTS ,SUMMED ACROSS N=5 REPETITIONS (15 RUNS PER STRATEGY ). Direct Validation-gated Validation node-hours (1-node) 00.036 Failed node-hours (4-node) 0.030 0Successful node-hours (4-node) 0.319 0.318 Non-productive node-hours 0.030 0.036 Failed target-scale runs 15/15 0/15
+
+every fault N =5 times per condition and report successes with denominators (Table III); the one-shot baseline is a single attempt per fault. The one-shot baseline resolves 0/6 faults; the closed-loop agent (full ECAS, skill column) resolves every fault in every repetition ( 30 /30 runs, all autonomous) at a mean of 1.00 repairs and 2.67 submissions per resolved run (one-shot: 0.67 submissions, no repair). 
+
+D. E3: Direct vs. Validation-Gated Scale-Up (RQ3) 
+
+For three faults that pass static checks but fail at runtime (invalid output path, wrong launcher, and excessive ranks-per-node), we compare direct target-scale submission (four nodes) against validation-gated execution (validate at one node, repair, then four nodes), repeating each fault N =5 
+
+times per strategy (15 real end-to-end runs each) with the same closed loop. We account node-hours by where they are spent—validation (one node), failed attempts, and successful runs—and count failed runs by the scale at which they occur (Table IV). Because these faults fail fast, the non-productive node-hours are comparable across strategies ( 0.030 vs. 0.036 ); the decisive difference is scale . Direct submission incurs a four-node target-scale failure in every one of its 15 runs (15 /15 ), whereas gating confines every failure to one-node validation, leaving zero failed target-scale runs ( 0/15 ). The node-hour advantage of gating therefore grows with fault-detection latency and target scale, which our short-running, small-scale faults deliberately understate. 
+
+E. E4: Cold vs. Skill-Conditioned Agent (RQ4) 
+
+We first build a skill library offline: an HPC expert works through a training set of tasks and faults, and each unresolved or site-suboptimal case is distilled into a skill (Sec. III-D). We then run the automated deployment loop on the six E2 faults under two conditions: cold (empty library) and skill-conditioned . Two of the six faults (wrong launcher, MPI ABI mismatch) require site-specific knowledge to repair; a general agent without the library cannot resolve them within the repair budget and escalates to a human. Over the six faults and five repetitions (Table III, cold vs. skill), the cold agent resolves the four non-site-specific faults every time ( 20 /30 , 67% ) but never either site-specific fault ( 0/10 ), escalating to a human in all ten cases. The skill-conditioned agent resolves all six every time ( 30 /30 , 100% ), including 10 /10 on the site-specific faults, with zero expert interventions. The skill library does not reduce repair count (both average 1.00 ) but converts the two otherwise-unresolvable faults into autonomous fixes. VI. D ISCUSSION AND LIMITATIONS 
+
+This is a research prototype and the results are preliminary. Our evaluation uses two related ALCF systems, a single in-ference gateway, deterministic (not adversarial) fault injection, and small target scales; the faults are representative but not exhaustive. We fix repair, submission, and time budgets, so reported successes are budget-conditioned. We do not evaluate broad security properties, and we deliberately avoid claiming the system is “secure,” “production-scale,” or “large-scale.” Our automation claim is scoped: we describe ECAS as closed-loop automation with minimal human intervention , not as “fully autonomous.” The deployment loop runs automatically only for task classes the skill library covers, and genuinely novel tasks still escalate to the expert. Skills are built by a single expert on a small task set and may encode site-or person-specific idiosyncrasies; retrieval can misfire, and skill quality bounds the benefit we report. Log sanitization reduces but does not eliminate leakage risk, and the policy gate encodes only the checks we implement. Generalization of both the framework and the skill library across schedulers, sites, experts, and models is future work. VII. C ONCLUSION 
+
+We presented ECAS, an edge-controlled agentic system for automated scientific-computing campaigns that separates cloud reasoning, edge control, and HPC execution, and gates target-scale execution behind static checks, small-scale validation, and feedback-driven repair. It takes a natural-language goal to a completed target-scale run as closed-loop automation with minimal human intervention. By keeping credentials, state, the skill library, and execution authority on a user-controlled edge and promoting jobs only after validation, ECAS provides credential isolation and policy-mediated execution for LLM-driven HPC automation while reducing wasted node-hours. A build-time, expert-in-the-loop methodology captures site expertise once as reusable skills, so the deployed loop runs automatically and needs the expert only for genuinely new failures. Our preliminary prototype on two ALCF systems suggests closed-loop repair, validation gating, and skill conditioning meaningfully improve success and reduce wasted node-hours; a full evaluation is ongoing. REFERENCES [1] L. Yue, N. Somasekharan, T. Zhang, Y. Cao, Z. Chen, S. Di, and S. Pan, “Foam-agent: A large language model-based multi-agent framework for automating computational fluid dynamics workflows,” arXiv preprint arXiv:2505.04997 , 2025. [2] L. Yue, N. Somasekharan, T. Zhang, Y. Cao, and S. Pan, “Foam-agent 2.0: An end-to-end composable multi-agent framework for automating cfd simulation in openfoam,” arXiv preprint arXiv:2509.18178 , 2025. [3] X. Ding, L. Chen, M. Emani, C. Liao, P.-H. Lin, T. Vanderbruggen, Z. Xie, A. E. Cerpa, and W. Du, “Hpc-gpt: Integrating large language model for high-performance computing,” in Proc. SC-W ’23: Workshops of the Int. Conf. for High Performance Computing, Networking, Storage and Analysis , 2023. [4] Y. Miyashita, P. K. M. Tung, and J. Barth´ elemy, “Llm as hpc expert: Ex-tending rag architecture for hpc data,” arXiv preprint arXiv:2501.14733 ,2025. [5] Anthropic, “Model context protocol,” https://modelcontextprotocol.io, 2024. [6] S. Yao, J. Zhao, D. Yu, N. Du, I. Shafran, K. Narasimhan, and Y. Cao, “React: Synergizing reasoning and acting in language models,” in Proc. Int. Conf. on Learning Representations (ICLR) , 2023, arXiv:2210.03629. [7] W. Shin, R. Souza, D. Rosendo, F. Suter, F. Wang, P. Balaprakash, and R. Ferreira da Silva, “The (r)evolution of scientific workflows in the agentic ai era: Towards autonomous science,” arXiv preprint arXiv:2509.09915 , 2025. [8] R. Souza, T. Poteet, B. Etz, D. Rosendo, A. Gueroudji, W. Shin, P. Bal-aprakash, and R. Ferreira da Silva, “Llm agents for interactive workflow provenance: Reference architecture and evaluation methodology,” in 
+
+Proc. SC ’25 Workshops , 2025. [9] G. Wang, Y. Xie, Y. Jiang, A. Mandlekar, C. Xiao, Y. Zhu, L. Fan, and A. Anandkumar, “Voyager: An open-ended embodied agent with large language models,” arXiv preprint arXiv:2305.16291 , 2023. [10] A. Zhao, D. Huang, Q. Xu, M. Lin, Y.-J. Liu, and G. Huang, “Expel: Llm agents are experiential learners,” in Proc. AAAI Conf. on Artificial Intelligence (AAAI) , 2024, arXiv:2308.10144. [11] N. Shinn, F. Cassano, E. Berman, A. Gopinath, K. Narasimhan, and S. Yao, “Reflexion: Language agents with verbal reinforcement learn-ing,” in Advances in Neural Information Processing Systems (NeurIPS) ,2023, arXiv:2303.11366. [12] H. Shan and J. Shalf, “Using ior to analyze the i/o performance for hpc platforms,” in Cray User Group (CUG) , 2007. [13] H. Devarajan, H. Zheng, A. Kougkas, X.-H. Sun, and V. Vishwanath, “Dlio: A data-centric benchmark for scientific deep learning applica-tions,” in Proc. IEEE/ACM Int. Symp. on Cluster, Cloud and Internet Computing (CCGrid) , 2021. [14] Parallel-NetCDF, “E3sm-io: Performance benchmark of e3sm’s i/o ker-nel,” GitHub repository, https://github.com/Parallel-NetCDF/E3SM-IO. [15] W. F. Godoy, N. Podhorszki, R. Wang, C. Atkins, G. Eisenhauer, J. Gu, P. Davis, J. Choi, K. Germaschewski et al. , “Adios 2: The adaptable input output system. a framework for high-performance data management,” 
+
+SoftwareX , vol. 12, p. 100561, 2020. [16] P. Carns, K. Harms, W. Allcock, C. Bacon, S. Lang, R. Latham, and R. Ross, “Understanding and improving computational science storage access through continuous characterization,” ACM Trans. Storage , vol. 7, no. 3, 2011. [17] “Doe iri program,” [Online; accessed 2026-08-16]. [Online]. Available: https://iri.science/ [18] “Introducing claude opus 5 \ anthropic,” [Online; accessed 2026-08-16]. [Online]. Available: https://www.anthropic.com/news/claude-opus-5

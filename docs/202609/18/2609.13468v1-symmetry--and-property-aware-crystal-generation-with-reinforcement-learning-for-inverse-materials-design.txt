@@ -1,0 +1,1570 @@
+Title: Symmetry- and Property-Aware Crystal Generation with Reinforcement Learning for Inverse Materials Design
+
+URL Source: https://arxiv.org/pdf/2609.13468v1
+
+Published Time: Tue, 15 Sep 2026 00:20:38 GMT
+
+Number of Pages: 37
+
+Markdown Content:
+# Symmetry- and Property-Aware Crystal Generation with Reinforcement Learning for Inverse Materials Design 
+
+Ting-Wei Hsu 1,2* , Arun Bansil 1,2 and Qimin Yan 1,2* 1Department of Physics, Northeastern University, Boston, 02155, Massachusetts, USA. 
+
+> 2
+
+Quantum Materials and Sensing Institute, Northeastern University, Burlington, 01803, Massachusetts, USA. *Corresponding author(s). E-mail(s): hsu.ting@northeastern.edu; q.yan@northeastern.edu; 
+
+Abstract 
+
+The inverse design of crystalline materials ultimately seeks structures with desired physical properties. However, for many functional responses, a favorable numerical value is meaningful only when supported by the symmetry of the underlying crystal. Without the appropriate crystallographic constraints, an apparent response may be ill defined, accidental, or not symmetry protected. Here we introduce SPARC, a symmetry- and property-aware reinforcement learning framework that optimizes physical objectives while preserving the structural conditions required for their realization. We demonstrate SPARC on two complementary tasks. The first targets strong uniaxial dielectric anisotropy, a tensorial response that is well defined only within appropriate crystal classes. The second maximizes the spectroscopic limited maximum efficiency, a scalar device-level objective without a prescribed symmetry class, allowing the framework to identify favorable crystallographic motifs. These results show that symmetry is not merely an additional design constraint, but a physical foundation for generating candidates with meaningful, robust, and realizable functional properties.  
+
+> Keywords: Materials design, Generative model, Optical properties, Solar cell efficiency, Reinforcement Learning
+
+# 1 Introduction 
+
+The physical properties of functional materials are deeply constrained by the symmetry of their underlying crystal structures. Many technologically relevant responses are not determined by composition alone, but emerge from the coupled effects of atomic species, atomic positions, and lattice geometry. In the inverse design of functional materials, the central goal is therefore to identify crystal structures that satisfy a desired physical objective while remaining chemically and crystallographically plausible. Symmetry plays a particularly important role in this process. From tensorial responses such as dielec-tric anisotropy, to nonlinear optical effects such as second-harmonic generation, and symmetry-protected electronic phenomena all depend on the allowed crystal symmetry. In some cases, the target response is permitted only within specific symmetry classes. For example, electric-dipole second-order nonlinear optical responses require the absence of inversion symmetry, while chiral charge-density-wave states can depend on layer-resolved charge-order patterns and their interlayer phase or stacking relationships. Thus, symmetry is not merely a descriptor of a generated structure, but a fundamental constraint that determines which physical properties can occur. Recent advances in generative modeling have opened new opportunities for crystal structure design. Diffusion-based crystal generators can sample periodic structures across large chemical and configurational spaces [1–3], while steering strategies such as classifier-free guidance [4, 5] and reinforcement learning (RL) [6–9] allow the generation process to be biased toward user-specified objectives. Most demonstrations focus on scalar targets such as formation energy, band gap, or magnetic density, whereas many func-tional materials are defined by tensorial, spectral, or device-level responses. A key distinction among these approaches lies in the structural representation on which the steering is applied. Recent work, for exam-ple, applies group-relative policy optimization to a latent diffusion model and combines novelty, stability, 1arXiv:2609.13468v1 [cond-mat.mtrl-sci] 11 Sep 2026 and diversity rewards to direct sampling toward underexplored regions of chemical space [7]. This strategy controls where the generator samples in property and chemical space, but the latent and free-coordinate representations being optimized do not preserve crystallographic symmetry by construction. As a result, a generated crystal may appear successful in property space while losing the crystallographic symmetry required for the intended functionality, often collapsing toward the P 1 space group when symmetry is not explicitly enforced during generation. This limitation reflects a deeper mismatch between local, continuous structure updates and global crystallographic constraints. Closing this gap requires generative frameworks that optimize functional objectives while preserving the symmetry conditions under which those objectives are physically admissible. Here we introduce SPARC (Symmetry- and Property-Aware Reinforcement Learning for Crystal Gen-eration), a framework for symmetry-aware, property-driven inverse design of crystalline materials. SPARC couples complex property objectives with crystallographic constraints during generation, enabling the search for structures that are simultaneously optimized for target functionality and consistent with physically meaningful symmetry. By integrating symmetry into the design loop, SPARC provides a route to generate candidates for functional materials whose desired properties cannot be specified by scalar objectives alone. We evaluate SPARC on two representative inverse-design tasks that test complementary aspects of symmetry-aware property optimization. First, we consider a symmetry-sensitive optical target, the strong uniaxial dielectric anisotropy. This response is defined by a large contrast between the in-plane and out-of-plane components of the static-limit dielectric tensor (hereafter the dielectric tensor), as commonly found in layered van der Waals crystals [10]. Because the special form of the dielectric tensor is constrained by crystal symmetry, this task tests whether SPARC can access and preserve the symmetry classes required for directional optical response. Second, we consider a device-level optical-efficiency target by maximizing the spectroscopic limited maximum efficiency (SLME) η. Unlike the anisotropy objective, SLME is a scalar figure of merit and does not prescribe a known symmetry class. It depends on the full frequency-resolved dielectric response and implicitly rewards an optimal band gap near the Shockley–Queisser maximum [11]. This task therefore provides a complementary test of whether symmetry-aware generation can discover preferential crystallographic motifs or space-group distributions for a complex device-level objective. Together, these case studies show that incorporating symmetry into complex-property-guided crystal generation is essential for producing realistic candidates and suggest a broader route toward symmetry-aware generative modeling for inverse materials design. 
+
+# 2 Results 
+
+2.1 SPARC pipeline 
+
+SPARC couples a symmetry-constrained SymmCD [12] generator with reward optimization for property-directed crystal generation. Figure 1 traces this pipeline as a left-to-right sequence of five stages, from sampling a crystal structure through denoising, reconstruction, relaxation and scoring, to the terminal reward, and the reward then closes the two feedback loops to update the diffusion model and the space-group proposal. At generation time the policy first samples a space group G from the proposal π(j), then draws the number of representative asymmetric-unit sites M from a per-space-group prior p(M | G) esti-mated from Materials Project (MP-20 dataset) [1, 13]. Conditioned on ( G, M ), it denoises the asymmetric unit M′ = ( A′, F ′, Σ′, k) over T reverse steps, jointly generating the atom types A′, fractional coordi-nates F ′, site-symmetry labels Σ′, and symmetric-matrix lattice basis of its representative sites k. Applying the group operations of G to these representatives then regenerates the full crystal. The reward is there-fore optimized over symmetry-constrained crystals rather than arbitrary coordinate representations. Each decoded structure is first relaxed using MatterSim, a machine-learning interatomic potential (MLIP) [14]. The relaxed structure is then evaluated according to the stable, unique, and novel (S.U.N.) criteria following MatterGen [3], and its target property is evaluated by the surrogate model to assign the terminal reward. Each generated batch drives two decoupled updates, both derived in full details in Methods. In simple words, the inner loop fine-tunes the diffusion policy pθ (A′, F ′, Σ′, k) to adjust the asymmetric-unit gen-eration. Treating the reverse trajectory as a Markov decision process, it applies a reward-weighted policy gradient anchored to the pretrained generator ppre by an explicit Kullback–Leibler (KL) term to discourage reward hacking and preserves the broad chemical and structural coverage learned during pretraining [6]. The experience replay and a diversity filter to improve sample efficiency and downweight near-duplicate candidates. The outer loop updates the space-group proposal itself. Because SymmCD treats G as a fixed conditioning input that the policy gradient cannot reshape, we accumulate reward feedback across the real-ized space groups and tilt the proposal π(j) toward desirable space groups. At every round, we mix the proposal back with the initial base distribution π(0) so that multiple symmetry classes remain active and the optimization does not collapse onto a few low-symmetry structures. 21. Sample                                                      
+
+> G∼ı(j)
+> M∼p(M|G)
+> 2. Denoise p„(M′|G; M )
+> M′= ( A′;F′;Σ′;k)
+> 3. Reconstruct
+> apply SG ops
+> M= ( A;F;L)
+> 4. Relax & filter
+> MLIP relaxation + property surrogate
+> 5. Reward
+> r(M)
+> C4MLIP S.U.N. Response
+> inner loop: reward-weighted policy gradient on „
+> outer loop: reward-guided space-group proposal
+> ı(0)
+> ı(j)Fig. 1 Schematic of the SPARC pipeline. Each reinforcement-learning iteration consists of five stages. (1) The policy samples a space group Gfrom the proposal distribution π(j)and the number of representative asymmetric-unit sites M
+> from the space-group-dependent prior p(M|G). (2) The diffusion policy pθdenoises the asymmetric-unit representation
+> M′= ( A′,F′,Σ′,k). (3) The full crystal M= ( A,F,L) is reconstructed by applying the symmetry operations of G. (4) The reconstructed structures are relaxed, filtered, and evaluated for the target property using a surrogate model. (5) Each resulting structure is assigned a terminal reward r(M). The terminal reward drives two decoupled optimization processes. In the inner loop, the diffusion policy parameters θare fine-tuned over multiple steps using a reward-weighted policy gradient together with a KL-divergence penalty that anchors the policy to the pretrained generator ppre . In the outer loop, the space-group proposal
+> π(j)(G) is updated using rewards aggregated according to the realized space group, thereby increasing the sampling probability of productive symmetries relative to the dataset prior π(0) . Throughout the figure panels, SG abbreviates space group.
+
+2.2 Inverse design of uniaxial dielectric responses 
+
+We first examine whether SPARC can generate crystals whose symmetry is dictated by a target physical response. We consider a uniaxial dielectric tensor, 
+
+ε =
+
+ε∥ 0 00 ε∥ 00 0 ε⊥
+
+ , (1) where ε∥ is the response within the basal plane and ε⊥ is the response along the unique axis. The target requires both in-plane isotropy, εxx = εyy , and a finite out-of-plane contrast, εzz ̸ = εxx . It therefore defines one distinguished dielectric axis without selecting a preferred direction within the perpendicular plane. Crucially, this target is not merely a numerical relation among tensor components. Under Neumann’s principle, the dielectric tensor must reflect the point-group symmetry of the crystal. Three-, four-, and six-fold rotational symmetries enforce εxx = εyy , making the uniaxial form symmetry-compatible with trigonal, tetragonal, and hexagonal crystals. Cubic symmetry instead removes the desired anisotropy by requiring 
+
+εxx = εyy = εzz . Lower-symmetry crystals do not generally enforce the in-plane degeneracy, so any observed 
+
+εxx ≈ εyy is accidental rather than symmetry-protected. We therefore seek structures in which the target dielectric response follows naturally from the underlying crystal symmetry. A large contrast |ε⊥ − ε∥| is useful when a device requires different in-plane and out-of-plane responses without sensitivity to the in-plane orientation of the crystal. This tensor form is relevant to layered dielectric environments, gate dielectrics, and van der Waals heterostructures [15–17]. At finite frequencies, uniaxial anisotropy also supports birefringence and polarization control. It can produce hyperbolic light propagation when the in-plane and out-of-plane permittivities have opposite signs [18, 19]. Although the present task uses the static-limit dielectric tensor, it provides a direct test of whether SPARC can generate crystal symmetries that support a prescribed tensorial response. Black phosphorus (BP) provides a useful example of the technological value of dielectric anisotropy. Its strong in-plane optical anisotropy has enabled polarization-sensitive photodetectors and birefringent optical devices [20–22]. BP is orthorhombic and therefore exhibits a biaxial rather than uniaxial dielec-tric response. Its εxx and εyy components are not symmetry-equivalent. Exfoliated BP can also undergo oxidation and progressive degradation under ambient conditions [23]. These characteristics motivate the search for complementary anisotropic materials with uniaxial symmetry, thermodynamic accessibility, and synthetic feasibility. SPARC provides a route to explore this broader multi-constraint materials space. To express the target response as a scalar objective, we evaluate the dielectric tensor of each generated structure using a modified Tensorial Spectra Equivariant Neural Network (TSENN) surrogate [24]. The tensor is evaluated in the standardized conventional cell. For trigonal, tetragonal, and hexagonal structures, this convention aligns the unique axis with z. We then assign a uniaxial anisotropy reward runi ∈ [0 , 1]. 3The reward combines an in-plane equality term with an out-of-plane contrast gate gz . The first favors 
+
+εxx = εyy . The second requires a finite difference between εzz and the mean in-plane response, thereby excluding the fully isotropic cubic limit. Because the target materials are insulating or semiconducting, the reward additionally includes a band-gap term that suppresses metallic structures. The full reward definition is provided in Methods, and the surrogate benchmark is reported in the Supplementary Information (SI). Figure 2(a) shows the SPARC loop specialized to this task. The initial space-group proposal π(0) is obtained by temperature reweighting the MP-20 distribution [25], yielding a nearly uniform distribution that reduces the strong space-group frequency bias of the training data. Starting from this broad prior, SPARC iteratively updates the proposal using reward feedback, allowing the optimization to identify which symme-try classes best support the target dielectric response. During RL fine-tuning, the mean uniaxial-anisotropy reward increases from 0 .17 to 0 .56 over 120 RL steps (Figure 2(b)). At each step, 30 structures that pass the S.U.N. filter are scored, giving a total of 3,600 evaluated candidates. Over the same optimization tra-jectory, the realized space-group distribution becomes increasingly enriched in trigonal, tetragonal, and hexagonal groups that symmetry-enforce the target tensor form (Figure 2(c)). Importantly, these symmetry classes are not prescribed in advance, but emerge through the reward-guided redistribution of the space-group proposal. Among the 3,600 scored structures, P ¯31 m, P 42/mnm , R¯3, P ¯3 and P 31 together account for approximately 44% of the generated population. The generated Cd 2SnBr 6 structure in Figure 2(a) pro-vides a representative symmetry-enforced result. It belongs to the tetragonal space group P ¯31 m and has the TSENN-predicted dielectric tensor 
+
+ε =
+
+6.2 0 00 6.2 00 0 4.7
+
+ , (2) Its equality εxx = εyy and vanishing off-diagonal components follow directly from its tetragonal symme-try. The finite difference between the in-plane and out-of-plane components provides the desired uniaxial contrast. The structure retains this response after MLIP relaxation and is selected for subsequent density function theory (DFT) validation. sample G ∼ π 0, M ∼ p(M|G)                                       
+
+> Cd 2SnBr 6SG 162 predict ε (TSENN) 3, 4, 6-fold in-plane rotation εxx = ε yy ≠ ε zz compute reward RG(M′)RL update θ SG-conditioned diffusion model pθ(M′|G, M)
+> quni = g z(1 − m), runi =min [ϕ(q uni ), ϕ(E g)]
+> 1115 230 00.007 π0
+> initial SG prior π 0
+> abc
+> xyz6.2 0.0 0.0 0.0 6.2 0.0 0.0 0.0 4.7 εpred
+> 1115 230 space group G 00.3 π(j)
+> reward-updated SG distribution π (j)
+> Br Cd Sn
+> c020 40 60 80 100 120
+> RL step
+> 0.0 0.2 0.4 0.6 0.8
+> Reward mean
+> Reward mean (raw) EMA (span 10) 515 25
+> Fraction of structures (%)
+> 12 12 10 553222222111162 P̄31m
+> 136 P4 2/mnm
+> 148 R̄3
+> 147 P̄3
+> 144 P3 1
+> 163 P̄31c
+> 55 Pbam
+> 12 C12/m1
+> 61 Pbca
+> 14 P12 1/c1
+> 125 P4/nbm
+> 49 Pccm
+> 121 Ī42m
+> 179 P6 522
+> 19 P2 12121
+> Space group Top 15 space groups
+> 1115 230 Space group 515 25 Fraction of structures (%) Overall distribution
+
+(a) (b) (c) 
+
+Fig. 2 Steering generation toward uniaxial dielectric anisotropy. (a) The SPARC loop specialized to the dielectric task. A space group G is drawn from the current proposal π(j), and the space-group-conditioned diffusion model pθ (M′|G, M )generates a crystal. The TSENN surrogate predicts the static dielectric tensor ε and band gap Eg . The uniaxial reward is defined as runi = min[Φ( quni ), Φ( Eg )], where quni = gz (1 − m), m = |εxx − εyy |/(|εxx | + |εyy |), and gz excludes cubic tensors. The band-gap term favors Eg = 0 .3–0 .8 eV. The resulting reward updates both the policy pθ and the space-group proposal π(j). Generated structures are filtered to stable, unique, and novel (S.U.N.) candidates before scoring. The worked example is a generated Cd 2SnBr 6 with P ¯31 m symmetry whose predicted tensor is uniaxial, ε = diag(6 .2, 6.2, 4.7) with 
+
+εxx = εyy ̸ = εzz and vanishing off-diagonal entries. (b) Mean reward versus RL step during fine-tuning (raw per-step mean in grey, exponential moving average with span 10 in black), and the uniaxial-anisotropy score runi climbs from 0 .17 to 0 .56. 
+
+(c) The fifteen most frequent realized space groups among the generated structures (inset, full distribution over all 230 groups). Sampling concentrates on the hexagonal, trigonal, and tetragonal groups that admit a uniaxial dielectric tensor, led by P ¯31 m
+
+and P 42/mnm , followed by R¯3, P ¯3, and P 31. Together, these five groups account for approximately 44% of the generated structures. 
+
+Lower-symmetry groups also remain present in Figure 2(c), including the orthorhombic P bca , and P bam 
+
+group. These structures may approximately satisfy the component-level reward, but the in-plane equality is not symmetry-enforced. This motivates the backbone ablation below. 4To test the necessity of a symmetry-aware diffusion backbone, we performed a controlled ablation by replacing SymmCD with DiffCSP [2], which diffuses atoms freely in continuous coordinate space without enforcing crystallographic symmetry. Both backbones were fine-tuned under the same uniaxial-anisotropy objective. For each backbone, we performed separate runs with MLIP relaxation either enabled or dis-abled before reward evaluation. Figure 3(a) shows that the four runs reach comparable mean rewards during fine-tuning. Their symmetry distributions, however, differ sharply (Figure 3(b)). Without relaxation, approximately 90% of DiffCSP structures have no nontrivial rotational axis and belong to P 1 or P ¯1. MLIP relaxation recovers mainly twofold symmetry, with only a small fraction acquiring threefold or fourfold axes and almost no sixfold symmetry. SymmCD shows the opposite behavior. Because each structure is gener-ated under explicit symmetry constraints, substantial populations with threefold, fourfold, and sixfold axes remain present both with and without relaxation. The quantitative contrast is even more pronounced. With relaxation enabled, 50 .1% of SymmCD struc-tures contain a threefold, fourfold, or sixfold axis, compared with only 1 .4% of DiffCSP structures. This corresponds to one uniaxially symmetric candidate every 2 .0 generations for SymmCD, versus every 70 .6generations for DiffCSP, giving a 35 × higher symmetry yield. Sixfold symmetry appears in 546 SymmCD structures but only once among 3 , 600 DiffCSP samples. Because the two backbones required compara-ble computational wall-clock time for the same number of fine-tuning loops, this yield advantage reduced the computational cost per uniaxially symmetric candidate by approximately 34 × in our runs (43 s versus 1465 s per candidate). The structural examples in Figure 3(c)–(e) illustrate the origin of this contrast. DiffCSP generates CrTe 3W in space group 1 ( P 1), with no imposed rotational symmetry. Because the generated atoms lie far from a high-symmetry arrangement, local relaxation cannot reliably recover the missing rotational symmetry afterward. For the same composition, SymmCD generates an asymmetric unit under P 63/m 
+
+operations. Applying these operations reconstructs the full crystal in space group 176 ( P 63/m ) and produces the required sixfold axis. These results show that reward optimization can satisfy the targeted dielectric relation, but a symmetry-aware backbone is needed when that relation must also be enforced by the crystal symmetry. We therefore adopt SymmCD as a central component of SPARC. 50 20 40 60 80 100 120 
+
+RL step 
+
+> 0.1 0.2 0.3 0.4 0.5 0.6
+> Reward mean
+
+(a) Comparable reward     
+
+> SymmCD ( M′), relax on SymmCD ( M′), relax off DiffCSP ( M), relax on DiffCSP ( M), relax off
+> None (P1/P̄1) 2-fold 3-fold 4-fold 6-fold cubic
+
+Highest rotational axis      
+
+> 020 40 60 80 100
+> % of generated crystals
+> 15 32 16 19 15 332 31 27 5377 21 90 9
+
+(b) As-generated rotational symmetry 
+
+> High-order axes: SymmCD by construction
+> SymmCD ( M′), relax on SymmCD ( M′), relax off DiffCSP ( M), relax on DiffCSP ( M), relax off
+
+(c) DiffCSP generated crystals 
+
+> CrTe 3WSG 1 (P1)
+
+(d) Asymmetric unit with P6 3/m operations 
+
+> Cr WTe
+> 2d (-6..) 2c (-6..) 6h (m..)
+
+(e) SymmCD generated crystals      
+
+> CrTe 3WSG 176 (P6 3/m)
+> Cr Te Wasymmetric unit (wedge) symmetry-image link 6-fold axis
+
+Fig. 3 Ablation of symmetry enforcement and pre-reward relaxation. SymmCD and DiffCSP are fine-tuned using the same uniaxial-anisotropy reward. For each backbone, MLIP relaxation is either enabled or disabled before reward eval-uation. (a) Mean reward as a function of RL step. All runs improve during fine-tuning, and the reward trajectories overlap substantially. Similar reward values therefore do not indicate whether the targeted tensor relation is symmetry-enforced. 
+
+(b) Distribution of the highest rotational axis among generated crystals for the four ablation settings. Without relaxation, Dif-fCSP generates almost exclusively P 1 or P ¯1 structures. Relaxation recovers mainly twofold symmetry, with only rare threefold and fourfold structures and no sixfold structures. SymmCD retains substantial populations with threefold, fourfold, and six-fold axes because symmetry is imposed during generation. (c) Representative DiffCSP-generated CrTe 3W structure in space group 1 ( P 1). (d) SymmCD asymmetric unit for the same composition under the P 63/m space-group operations. Dashed lines connect representative atoms to their symmetry images. (e) Full SymmCD crystal reconstructed from the asymmetric unit. The resulting structure belongs to space group 176 ( P 63/m ) and contains a sixfold rotational axis. 
+
+To validate the reward-guided predictions with first-principles calculations, we performed DFT relax-ations and computed dielectric tensors using density functional perturbation theory (DFPT) [26] for a broader set of generated candidates. Figure 4 highlights four representative examples and summarizes the evolution of the generated population during fine-tuning. As fine-tuning progresses, the reward function shifts the generated population toward the finite-gap, high-reward region. Figure 4(a) compares the distributions obtained during the first and last 10 RL steps. The displacement between their population medians illustrates the corresponding shift in the sampled property space. The four highlighted candidates probe different regions of this distribution. RbGePO 4,ZrTi 2O6, and blue phosphorus occupy the predicted high-reward region, whereas TeAs provides a low-reward biaxial comparison. The positions of the candidates in Figure 4(a) are determined by the surrogate-predicted band gaps and rewards before first-principles validation, whereas the values reported in panel (b) are obtained after DFT relaxation. Differences between the two panels are therefore expected and directly reveal the remaining surrogate error. Figure 4(b) presents the DFT-relaxed structures together with their realized space groups, energies above the convex hull Ehull , Perdew–Burke–Ernzerhof (PBE) band gaps Eg , and dielectric tensors ε0. The DFT band gaps range from 0 .49 to 4 .22 eV, while Ehull ranges from 0 .0 to 60 .8 meV/atom. The three candidates selected from the high-reward region retain the symmetry-constrained uniaxial form εxx = εyy ̸ = εzz after DFT relaxation. Among these candidates, blue phosphorus exhibits the strongest dielectric anisotropy, with 
+
+εxx = 8 .80, εyy = 8 .79, and εzz = 2 .54. This corresponds to an anisotropy ratio ε∥/ε ⊥ ≈ 3.46. ZrTi 2O6 and RbGePO 4 retain weaker but symmetry-consistent uniaxial responses, with ratios of approximately 1 .18 and 1.13, respectively. By contrast, orthorhombic TeAs has three distinct diagonal components, εxx = 15 .98, 
+
+εyy = 9 .76, and εzz = 13 .33, consistent with its low uniaxial reward. 60 1 2 3 4                                                                
+
+> Predicted band gap (eV)
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> Reward  runi
+> First 10 (median) Last 10 (median)
+> 1RbGePO 4(173)
+> 2ZrTi 2O6(162)
+> 3blue-P (144)
+> 4TeAs (61)
+> 1234
+> 0.15 0.30 0.45 0.60 0.75 0.90
+> relative KDE density Rb Ge POZr Ti OPAs Te
+> RbGePO 4ZrTi 2O6PTeAs
+> Space group P6 3(173) P̄31m (162) P3 1(144) Pbca (61)
+> Ehull (meV/atom) 20.2 39.1 60.8 0.0
+> Eg(eV) 4.22 2.61 1.75 0.49
+> ε0
+> 2.57 0002.57 0002.28 6.99 0006.99 0005.93 8.80 0008.79 0002.54 15.98 0009.76 00013.33
+
+(a) RbGePO 4 ZrTi 2O6 blue-P TeAs (b) Fig. 4 RL-guided generation and DFT verification of dielectric-anisotropy candidates. (a) Distribution of gen-erated structures in the plane of surrogate-predicted band gap Eg and uniaxial dielectric reward runi . Kernel-density contours compare structures generated during the first 10 RL rounds with those generated during the last 10 rounds. The black and green circles indicate the corresponding population medians, and the arrow highlights the shift toward the finite-gap, high-reward region during fine-tuning. The dashed lines indicate the band-gap and reward thresholds defining the target region. The four numbered markers denote the candidates selected for first-principles verification: RbGePO 4, ZrTi 2O6, blue phospho-rus, and TeAs. (b) DFT-relaxed structures and calculated properties of the four selected candidates. The table reports the realized space group, Ehull , PBE band gap Eg , and dielectric tensor ε0. The quantities in panel (a) are surrogate predictions before DFT validation, whereas those in panel (b) are obtained after DFT relaxation and may therefore differ. The three high-reward candidates, RbGePO 4 (P 63), ZrTi 2O6 (P ¯31 m), and blue phosphorus ( P 31), retain the symmetry-constrained form 
+
+εxx = εyy ̸ = εzz . Blue phosphorus shows the largest dielectric anisotropy, with ε∥/ε ⊥ ≈ 3.46. In contrast, orthorhombic TeAs (P bca ) has three distinct diagonal components and serves as a low-reward biaxial comparison. 
+
+2.3 Inverse design of high-efficiency photovoltaic absorbers 
+
+We next consider a second optical inverse-design task. Our objective is the SLME η of a single-junction photovoltaic absorber [11, 27]. Although SLME is reported as a single percentage, it depends on the mate-rial’s full optical response. The complex dielectric function ε(ω) determines the absorption coefficient α(ω). This absorption spectrum controls the short-circuit current under the AM1.5G solar spectrum and the radiative dark current associated with black-body emission. Optimizing η therefore requires control over the absorption spectrum above the band edge, rather than the response at a single frequency. This objective complements the uniaxial dielectric task considered above. The uniaxial reward depends only on the dielectric tensor in the ω → 0 limit. It is also restricted to crystal classes that permit the target tensor form. In contrast, SLME depends on the full frequency-dependent optical response and does not prescribe a particular crystal class. This task therefore tests whether SPARC can discover favorable chemical and structural distributions when the target property does not impose a preferred symmetry. For each generated crystal, we evaluate η under fixed device conditions. We use an absorber thickness of Labs = 0 .3 μm, a cell temperature of Tcell = 300 K, and a radiative recombination fraction of fr = 1. The modified TSENN surrogate predicts the imaginary dielectric response ε2(ω). We recover the real part 
+
+ε1(ω) using the Kramers–Kronig relation. The resulting complex dielectric function is then converted to the absorption coefficient through 
+
+α(ω) = 2ωk (ω)
+
+c , (3) where k(ω) is the extinction coefficient [28, 29]. The architecture and performance of the modified surrogate are benchmarked in the SI. SLME depends jointly on the band gap Eg and the spectral response above the gap. The band-gap term in the reward is therefore aligned with the photovoltaic objective rather than acting as a separate competing target. It steers the population away from the near-metallic regime, where the predicted efficiency is low and the optical surrogate is less reliable. We center the search near Eg ≈ 1.3 eV, close to the optimal single-junction band gap under standard assumptions. We define a broader target region of Eg ≈ 0.8–1 .9 eV and 
+
+η ≥ 25%. Reaching this region requires more than placing the band edge at an appropriate energy. The absorption above the edge must also be strong enough to convert a large fraction of the incident photon flux into photocurrent. 7Figure 5(a) shows that fine-tuning produces a clear increase in the reward. The mean reward rises rapidly during the early RL steps and remains elevated throughout the optimization process. Its exponential moving average increases from approximately 0 .28 in the prior window to approximately 0 .46 in the steered window. Figure 5(b) shows the corresponding redistribution in property space. Before steering, the generated structures are concentrated mainly in the low-gap, low-efficiency region. Fine-tuning moves the population toward intermediate band gaps and higher SLME values. Many of the steered candidates approach the Shockley–Queisser limit within the target band-gap range. As a result, the fraction of structures satisfying both Eg ≈ 0.8–1 .9 eV and η ≥ 25% increases from 11% in the prior population (149 structures) to 32% in the steered population (279 structures). The improved photovoltaic response is accompanied by changes in the sampled chemistry. Figure 5(c) shows the number of represented elements decreases only modestly, from 53 in the prior population to 46 after steering. The optimization therefore does not collapse the search onto a single chemical fam-ily. Instead, it redistributes the elemental frequencies while preserving substantial compositional diversity. Sulfur becomes particularly prominent after steering, and antimony is also enriched in the high-SLME population. This trend is consistent with the broader relevance of sulfide semiconductors to photovoltaics, such as kesterite Cu 2ZnSnS 4 and Sb 2S3, which have been extensively investigated as thin-film solar absorbers [30, 31]. The steered population also remains crystallographically diverse. Figure 5(d) compares the ten most frequently realized space groups before and after steering. Since SLME does not favor a specific crystal class, fine-tuning shifts the symmetry distribution without collapsing it to a single family. The cubic F m ¯3m group remains the most common after steering. The orthorhombic P nma and triclinic P ¯1 groups also become more prevalent. This shows that high SLME can be reached through several distinct crystallographic families. This behavior differs from the dielectric task, where the reward favors a much narrower set of rotational symmetries. Taken together, these results establish SLME optimization as a multi-constraint inverse-design task. A successful candidate cannot be identified by optimizing the band gap or a single spectral feature alone. It must combine a suitable band gap with strong absorption across the relevant solar spectrum while remain-ing structurally valid and crystallographically plausible. SPARC addresses these coupled requirements by concentrating the generated population in favorable regions of property, compositional, and crystallographic space, while still preserving multiple structural routes to high efficiency. The increase in the target-region population from 11% to 32% therefore reflects more than an improvement in a single predicted quantity. It demonstrates a coordinated redistribution of the generated population toward candidates that simultane-ously satisfy electronic, optical, and structural constraints. Additional candidates sampled during the RL runs, together with their first-principles validation, are reported in the SI. Overall, this task shows that SPARC can navigate a complex photovoltaic design space governed by the full optical response rather than by a single target descriptor. 80 20 40 60 80 100 120 
+
+RL step  
+
+> 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60
+> Reward mean
+> Prior Steered
+
+(a)     
+
+> Reward mean (raw) EMA (span 10)
+> 01234
+
+Band gap (eV) 
+
+> 515 25 35
+> SLME η (%)
+
+(b) Prior                                                                                                                                                                       
+
+> N = 149 In target region: 11% SQ limit
+> 01234
+> Steered
+> N = 279 In target region: 32% SQ limit
+> HHe Li Be BCNOFNe Na Mg Al Si PSCl Ar KCa Sc Ti VCr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr YZr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te IXe Cs Ba Hf Ta WRe Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og
+> Prior (first 10 steps) 53 elements
+> HHe Li Be BCNOFNe Na Mg Al Si PSCl Ar KCa Sc Ti VCr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr YZr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te IXe Cs Ba Hf Ta WRe Os Ir Pt Au Hg Tl Pb Bi Po At Rn Fr Ra Rf Db Sg Bh Hs Mt Ds Rg Cn Nh Fl Mc Lv Ts Og
+> Steered (last 10 steps) 46 elements
+> 225  Fm̄3m
+> 62  Pnma
+> 2 P̄1
+> 14  P12 1/c1
+> 139  I4/mmm
+> 148  R̄3
+> 164  P̄3m1
+> 221  Pm̄3m
+> 140  I4/mcm
+> 141  I4 1/amd
+> 0510 15 20
+> % of structures
+
+Top 10 space groups 
+
+> Prior Steered
+> 02468
+> KDE density
+> 510 15 20 25 30 35
+> % of structures
+
+(c) (d) Fig. 5 Steering crystal generation toward high-efficiency single-junction absorbers. (a) Mean reward as a function of RL step during SPARC fine-tuning. The gray line shows the raw mean reward at each step, while the black line shows the exponential moving average with a span of 10 steps. The shaded regions indicate the prior window, defined by the first 10 RL steps, and the steered window, defined by the last 10 RL steps. (b) Spectroscopic limited maximum efficiency (SLME), η, as a function of band gap Eg for structures generated in the prior window (left, 149 structures) and the steered window (right, 279 structures). The points are colored by their kernel-density estimate, and the dashed curve indicates the Shockley–Queisser limit. The light-gray area marks the target region, defined by Eg ≈ 0.8–1 .9 eV and η ≥ 25%. The fraction of structures within this region increases from 11% to 32% after steering. (c) Periodic-table heatmaps showing the percentage of generated structures containing each element. The number of represented elements decreases from 53 in the prior population to 46 in the steered population. Steering redistributes the elemental frequencies and enriches sulfur- and antimony-containing structures. 
+
+(d) Relative frequencies of the ten most commonly realized space groups in the prior and steered populations. The cubic 
+
+F m ¯3m space group remains the most frequent symmetry after steering. The orthorhombic P nma and triclinic P ¯1 space groups become substantially more prevalent. 
+
+# 3 Discussion 
+
+The central result of this work is that symmetry and functional properties must be optimized together in crystal inverse design. They are not independent design objectives. Crystal symmetry constrains the form of many physical responses and determines whether a desired behavior is allowed, enforced, or forbidden, while the targeted property in turn determines which symmetry classes are relevant to the design problem. A lower-symmetry structure may still achieve the targeted dielectric response and therefore receive a high reward, but the required tensor relation is not enforced by symmetry and may occur only for a particular atomic configuration. Reward optimization alone therefore cannot guarantee that the desired response is realized in a symmetry-protected form. It must operate within a structural representation that can access the appropriate symmetry while simultaneously improving the target property. The two optical tasks illustrate complementary forms of this coupling. For the uniaxial dielectric objective, the target tensor directly restricts the admissible crystal classes because the required in-plane equivalence is associated with threefold, fourfold, or sixfold rotational symmetry. For SLME, the property depends on the band gap and the full optical spectrum but does not prescribe a unique crystal class, allowing multiple chemical and structural families to achieve favorable photovoltaic performance. Together, these results show that symmetry and property cannot generally be separated into independent stages of crystal design and should instead be treated within the same optimization problem. The backbone ablation makes the physical role of symmetry explicit. SymmCD and DiffCSP reach similar reward values under the same dielectric objective, yet produce markedly different crystallographic distributions. Both can satisfy the targeted tensor relation numerically, but in a low-symmetry structure the equality εxx ≈ εyy is accidental rather than symmetry-enforced. This relation can be lost under small 9structural distortions, while local relaxation cannot reliably recover the missing global symmetry. The same reasoning extends to properties with known symmetry requirements. For example, inversion symmetry forbids piezoelectricity and electric-dipole second-harmonic generation, so the space-group proposal can be restricted to classes that permit the desired response. When the relevant symmetry class is not known in advance, SPARC can instead keep all symmetry channels available and use the reward-guided outer loop to identify which crystallographic families best support the target property, as demonstrated in the SLME task. Blue phosphorus provides a useful benchmark for whether symmetry-aware steering can recover physi-cally meaningful candidates. SPARC generates a layered phosphorus structure with trigonal P 31 symmetry that remains gapped after first-principles relaxation and exhibits strong uniaxial dielectric anisotropy, with a band gap of 1 .75 eV. The structure is absent from the MP-20 training set, although a blue-phosphorus allotrope was proposed independently in prior work [32]. No phosphorus-specific target or structural tem-plate was supplied during optimization. Its recovery therefore provides a positive benchmark. It shows that SPARC can reach a known and physically plausible motif beyond the training distribution, even though blue phosphorus is not the most stable phosphorus allotrope. The two tasks also show that property steering can concentrate upon different dimensions of materials space. The dielectric objective acts primarily in symmetry space because only specific crystal classes enforce the target tensor. SLME leaves several crystallographic routes available and instead produces a stronger redistribution in property and chemical space. This selective concentration is an important output of inverse design. The goal is not to preserve the full diversity of the pretrained model, but to identify a smaller region that is more likely to contain the desired response. Such behavior should be distinguished from uncontrolled mode collapse because diversity remains along directions that are less strongly constrained. In the SLME task, the generated population becomes concentrated in a smaller region of chemical space while retaining a broad distribution of crystal symmetries. The same principle extends beyond optical properties. Symmetry-aware generation can benefit the design of magnetocrystalline anisotropy, elastic and piezoelectric response, thermal expansion, and other symmetry-constrained material properties [33, 34]. More broadly, SPARC is not tied to a specific surrogate and can be coupled to models that predict tensorial properties, transport quantities, or the electronic Hamiltonian directly [35–39]. Electronic Hamiltonians are particularly attractive because they provide a common starting point for evaluating band structures, Berry-phase and Berry-curvature quantities, and topological properties through standard electronic-structure post-processing [38–40]. The reward may change across applications, but the generated structure must still possess the symmetry needed to support the intended physics. Realizing this broader potential will also require improving the accuracy of the reward signal. Learned surrogates inherit both their own prediction errors and the approximations of the reference calculations used for training. This is particularly relevant for the SLME task, where the efficiency depends sensitively on the band gap and absorption edge. The present surrogate is trained on PBE-level data, for which semiconductor band gaps are expected to be systematically underestimated [41, 42]. Promising candidates could instead be evaluated using higher-level methods such as hybrid functionals [43] or GW [44, 45]. Because such calculations are substantially more expensive, the resulting high-fidelity dataset will naturally be much smaller than the available PBE dataset. Multi-fidelity learning provides a natural way to address this imbalance by combining abundant low-fidelity data with a smaller number of high-fidelity calculations to improve predictions at the desired level of accuracy [46]. This strategy could be incorporated into an active-learning extension of SPARC, where candidates with high reward or high predictive uncertainty are prioritized for higher-level electronic-structure calculations. The most promising candidates could then be validated experimentally, providing an additional level of fidelity. These theoretical and experimental data could be fed back into the surrogate to improve the reward signal for subsequent rounds of generation and fine-tuning. In this way, increasingly accurate theory and experiment become part of the optimization loop rather than serving only as final validation steps. Taken together, these results establish SPARC as a framework for crystal inverse design in which sym-metry and functional properties are optimized together rather than treated as separate stages. By keeping crystallographic symmetry explicit during reward-guided generation, SPARC can enforce known symmetry requirements or identify favorable symmetry classes when they are not known in advance. More broadly, this provides a route toward inverse design in which the search is guided not only toward high-performing materials, but toward structures that can physically support the targeted response. 10 4 Methods 
+
+4.1 Symmetry-constrained crystal representation 
+
+A crystal M is the periodic arrangement of atoms specified by the triplet M = ( A, F , L), where A =[a1, . . . , aN ] ∈ Rh×N collects the one-hot atom types of the N atoms in the cell over the h = 94 supported chemical species, L = [ l1, l2, l3] ∈ R3×3 is the lattice whose columns span one period of the crystal, and 
+
+F = [ f 1, . . . , f N ] ∈ [0 , 1) 3×N collects the fractional coordinates, related to the Cartesian coordinates by 
+
+X = LF , from which physical quantities such as interatomic distances are computed. The space group G is the set of Euclidean operations g = ( O, t), with O ∈ O(3) and t ∈ R3, that leave the periodic crystal invariant. In three dimensions, space groups are classified into 230 types. The operations that leave a given site fixed form its site-symmetry group. Sites related by operations of G belong to the same crystallographic orbit, and these orbits partition the atomic sites into symmetry-equivalent classes. Points whose site-symmetry groups are conjugate within G belong to the same Wyckoff position. SPARC adopts the symmetry-constrained asymmetric-unit representation used in SymmCD [12]. For a fixed space group G, a crystal can be reconstructed from a symmetry-compatible lattice and one represen-tative atom from each occupied orbit. Applying the operations of G to these representatives generates the remaining symmetry-equivalent sites. The representatives form the asymmetric unit, and their number is denoted by M . Conditioned on the sampled pair ( G, M ), the asymmetric-unit representation is encoded as 
+
+M′ = ( A′, F ′, Σ′, k), (4) where A′ and F ′ contain the atom types and fractional coordinates of the M representative sites. The labels 
+
+Σ′ specify their site symmetries within G, and k ∈ R6 parameterizes the lattice subject to the constraints imposed by G. The space group G and the number of representatives M are supplied as conditioning variables and are therefore not included among the generated components of M′. The model generates 
+
+M′ conditioned on ( G, M ), after which the full crystal M is reconstructed by applying the space-group operations. Following DiffCSP++ [47], the lattice is parameterized in a rotation-invariant way rather than through the raw matrix L. The polar decomposition L = Q exp( S) separates a rigid rotation Q ∈ SO (3) from a symmetric matrix S, and S expands uniquely in a fixed six-dimensional symmetric basis {Bi}6 
+
+> i=1
+
+as 
+
+S = P6 
+
+> i=1
+
+kiBi, yielding the coordinate vector k = ( k1, . . . , k 6). For each crystal family a subset of the 
+
+ki is fixed by symmetry while the remainder are free, so a space group is enforced simply by holding the constrained entries at their symmetry-determined values. The explicit basis {Bi} and the per-family constraints on k are reproduced in the SI. 
+
+4.2 Symmetry-aware generation 
+
+We use the symmetry-constrained diffusion model SymmCD [12], which builds on DiffCSP++ [47]. Given a space group G and the number of representative sites M , the model jointly generates the four components of the asymmetric-unit representation, 
+
+pθ (M′ | G, M ) = pθ (A′, F ′, Σ′, k | G, M ). (5) For simplicity, we do not write G and M in every equation in this work. But they are still used as inputs in all generation and denoising steps. Before RL fine-tuning, G is sampled from the empirical MP-20 distribution 
+
+pmarg (G), and M is sampled from pmarg (M | G). These distributions provide the initial sampling rule used for property steering. The reverse diffusion process jointly denoises the atomic species A′, fractional coordinates F ′, site-symmetry descriptors Σ′, and lattice coefficients k. Crystal symmetry restricts the allowed values of k. A binary mask m(G) ∈ { 0, 1}6 selects the coefficients that remain free under the chosen space group. Only these coefficients are denoised, while the symmetry-constrained coefficients remain fixed. The reconstructed lattice is therefore consistent with G by construction. The site-symmetry descriptors are also defined relative to G. For each representative site, Σ′ is encoded as a 15 × 13 binary array. The 15 rows correspond to crystallographic axes such as [001], [010], [100], [110], and [111]. The 13 columns represent the possible site-symmetry operations associated with these axes, including rotations, reflections, and rotoinversions. Each entry indicates whether the corresponding operation is present, giving a 195-dimensional descriptor for each representative site. During the forward discrete diffusion process, these descriptors approach a marginal distribution defined for the selected space group. The complete encoding and transition process are provided in the SI. 11 The denoiser is trained to reconstruct all four components from their noisy representations. We use a score-matching loss for the fractional coordinates, a masked noise-prediction loss for the lattice coefficients, and categorical cross-entropy losses for the atomic species and site-symmetry descriptors. The total objective is 
+
+L = λk Lk + λF ′ LF ′ + λA′ LA′ + λΣ′ LΣ′ , (6) where the loss weights are λk = 5, λF ′ = 1, λA′ = 0 .1, and λΣ′ = 10. The individual component losses and the transition matrices used for the discrete variables are given in the SI. 
+
+4.3 Reward definition 
+
+We define a separate reward for each inverse-design task. Both rewards depend on the target property and the predicted band gap, but the band gap plays a different role in each case. For the dielectric task, it penalizes near-metallic candidates for which the static dielectric response is not physically meaningful. For the SLME task, it guides the generated population toward the band-gap region favored by the Shockley– Queisser limit. We use the clamped linear function Φ( x; a, b ) = clip 
+
+ x − ab − a , 0, 1
+
+
+
+(7) to map selected quantities to the interval [0 , 1]. 
+
+Uniaxial dielectric anisotropy. For the uniaxial dielectric task, we evaluate the dielectric tensor of each generated structure using the TSENN surrogate. Before evaluation, we standardize the refined cell so that the symmetry-determined unique axis is aligned with z.We define the out-of-plane response as ε⊥ ≡ εzz and the mean in-plane response as ε∥ ≡ 12 (εxx + εyy ). We then introduce an out-of-plane contrast factor 
+
+gz = clip ε⊥ − ε∥
+
+δz
+
+, 0, 1
+
+!
+
+, (8) where δz = 0 .01 sets the contrast required to receive full credit. The factor gz is zero for a fully isotropic tensor. It increases linearly with the dielectric contrast and reaches one when the contrast exceeds δz .The residual mismatch between the two in-plane components is 
+
+m = |εxx − εyy ||εxx | + |εyy | , (9) The uniaxial-anisotropy score is then 
+
+quni = gz (1 − m) ∈ [0 , 1] . (10) The factor (1 −m) penalizes differences between εxx and εyy , while gz penalizes insufficient contrast between the in-plane and out-of-plane responses. A high score therefore requires both approximate in-plane equality and finite out-of-plane anisotropy. We further penalize structures with vanishing band gaps by defining 
+
+runi = min [Φ ( quni ; auni , b uni ) , Φ ( Eg ; ag , b g )] . (11) The band-gap score limits the final reward when Eg approaches the metallic regime. A high anisotropy score therefore cannot compensate for a vanishing band gap. This keeps the generated population within the finite-gap regime where the static dielectric response is well defined and can be verified using DFPT. 
+
+Spectroscopic limited maximum efficiency. For the photovoltaic task, the target property is the spectroscopic limited maximum efficiency η. It is evaluated under the AM1.5G solar spectrum using an absorber thickness Labs = 0 .3 μm, a cell temperature Tcell = 300 K, and a radiative recombination fraction 
+
+fr = 1 [11, 48]. The full calculation of η from the predicted absorption spectrum is provided in the SI. High SLME alone does not explicitly localize the generated population near the band-gap region favored for single-junction solar cells. We therefore combine an efficiency score with a band-gap localization score, 
+
+rSLME = wη rη + wg rg, SLME , (12) 12 where 
+
+rη = Φ( η; 0 , 0.35) , (13) and 
+
+rg, SLME (Eg ) = clip 
+
+
+
+1 − |Eg − E∗|
+
+∆ , 0, 1
+
+
+
+. (14) We use wη = 0 .8, wg = 0 .2, E∗ = 1 .3 eV, and ∆ = 1 .0 eV. The band-gap score forms a symmetric tent centered at E∗ = 1 .3 eV and becomes zero outside Eg ∈ [0 .3, 2.3] eV. It therefore encourages the search to remain near the theoretically favorable single-junction region without acting as a hard constraint. The larger value of wη keeps SLME as the dominant optimization objective. The smaller band-gap term discourages both near-metallic candidates and overly wide-gap materials with weak solar absorption. The reward therefore favors structures that combine high predicted photovoltaic efficiency with a band gap near the single-junction optimum. The ramp intervals and the resulting reward surfaces for both tasks are provided in the SI. 
+
+4.4 Reward-guided fine-tuning on the asymmetric unit 
+
+Reinforcement-learning fine-tuning shifts the reverse diffusion process toward high-reward crystals by weighting the likelihood of each denoising transition according to the terminal reward. Recent reinforcement-learning approaches to crystal generation optimize either the full crystal representation, including atom types, atomic coordinates, and lattice parameters [6], or a learned continuous latent representation [7]. SPARC instead fine-tunes the diffusion process directly in the symmetry-constrained asymmetric-unit rep-resentation M′ = ( A′, F ′, Σ′, k). The generated variables are constrained by the selected space group, and the full crystal is reconstructed from the final asymmetric unit through the space-group operation RG.Because the reverse trajectory, policy, and KL anchor are all defined on M′, symmetry is built into the optimization rather than imposed as a post hoc filter. We retain the reward-weighted objective with an explicit KL anchor introduced for crystal generation in MatInvent [6]. The choice of gradient estimator is independent of the representation, allowing other policy-gradient methods to be used without changing the symmetry constraints imposed during generation. For a sampled space group G and number of representative sites M , the reverse process generates a trajectory M′ 
+
+> T
+
+, . . . , M′
+
+> 0
+
+. As above, we omit the explicit conditioning on ( G, M ) for notational simplicity. At reverse step t, the current noisy asymmetric unit M′ 
+
+> t
+
+is the policy state, and the transition to M′ 
+
+> t−1
+
+is sampled from 
+
+pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+). (15) The terminal sample M′ 
+
+> 0
+
+is expanded into a full crystal M by applying the operations RG. The reward is evaluated only on this reconstructed crystal. Intermediate noisy states are not assigned separate rewards. The reinforcement-learning objective maximizes the expected terminal reward, 
+
+JRL (θ) = Epθ (M′ 
+
+> 0)
+
+[r(M)] . (16) Using the reverse trajectory as a policy rollout, the corresponding loss gradient can be written as 
+
+∇θ LRL = Epθ (M′ 
+
+> 0: T)
+
+"
+
+−r(M)
+
+> T
+
+X
+
+> t=1
+
+∇θ log pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+)
+
+#
+
+. (17) The same terminal reward weights every transition along the trajectory that produced the crystal. This is the standard policy-gradient formulation for reinforcement-learning fine-tuning of diffusion models [49, 50] and follows its application to crystal generation in MatInvent [6]. Optimizing the terminal reward alone can move the policy too far from the pretrained crystal distri-bution. The model may then generate implausible structures or exploit errors in the property surrogates. We therefore regularize the fine-tuned reverse process against the frozen pretrained process ppre . At each reverse step, we evaluate the KL divergence between the fine-tuned and pretrained transition distributions. The KL contribution for each trajectory is weighted by λ − r(M), where λ is chosen above the maximum attainable reward. This coefficient remains positive and decreases as the reward increases. Low-reward tra-jectories are therefore kept close to the pretrained process, while high-reward trajectories are allowed to deviate more strongly. 13 Combining the reward and KL contributions gives the gradient estimator used for fine-tuning, 
+
+∇θ L(θ) = Epθ (M′ 
+
+> 0: T)
+
+h
+
+− α r (M)
+
+> T
+
+X
+
+> t=1
+
+∇θ log pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+)+ β λ − r(M) TX
+
+> t=1
+
+∇θ KL  pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+) ∥ ppre (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+)i
+
+,
+
+(18) where α and β control the reward and KL contributions, respectively. The sampled reward is treated as a fixed weight during each parameter update. The derivation of the policy-gradient term and the data-processing-inequality bound that replaces the intractable terminal-distribution KL with a sum of per-step conditional KL terms are provided in the SI. Because the full crystal M is reconstructed deterministically from M′ 
+
+> 0
+
+and RG, its terminal reward provides a learning signal for the asymmetric-unit trajectory that generated it. The policy update therefore increases the probability of asymmetric units whose reconstructed crystals achieve high rewards, while the KL term limits unsupported deviations from the pretrained generator. The space-group proposal is updated separately across reinforcement-learning rounds using the outer-loop procedure described next. 
+
+4.5 Adaptive space-group sampling 
+
+The reward-weighted policy gradient updates the conditional generator pθ (A′, F ′, Σ′, k | G, M ) but does not directly update the proposal distribution over G. At the beginning of each trajectory, a space group G
+
+is sampled from the current proposal and the number of representative sites M is sampled from pmarg (M |
+
+G). Both variables remain fixed throughout the T reverse-diffusion steps. Although G is provided to the denoising model as a conditioning variable, it is sampled outside the diffusion policy and is not parameterized by θ. The policy-gradient update therefore changes the generated distribution conditioned on ( G, M ) but not the probability of selecting each space group. We address this limitation using a discrete outer-loop update of the space-group proposal after each RL round. Let π(0) denote the base proposal over the supported space groups. It is obtained from the empirical MP-20 marginal using an optional temperature reweighting [25], 
+
+π(0) (G) = pmarg (G)1/T sg 
+
+P 
+
+> G′∈S
+
+pmarg (G′)1/T sg 
+
+, (19) where S = {G : pmarg (G) > 0} is the support of the training distribution. The first RL round samples G
+
+from π(0) , while subsequent rounds use the updated proposal defined below. For each generated crystal, we determine the realized space group from the reconstructed full structure using SpacegroupAnalyzer with symprec = 0 .01 ˚ A. The detected label can differ from the conditioning label because of accidental higher symmetry or small numerical deviations in the reconstructed structure. We associate the terminal reward with this realized space-group label. Let ¯ r(j)(G) denote the mean terminal reward of structures assigned to space group G during RL round j. We update a running reward estimate for each space group using 
+
+μ(j)(G) = 
+
+(
+
+γ μ (j−1) (G) + (1 − γ) ¯ r(j)(G), G observed in round j, γ μ (j−1) (G), G unobserved in round j, (20) where γ ∈ (0 , 1) controls the decay of previous reward estimates. The second branch gradually removes stale reward information for space groups that are not observed in the current round. The running reward estimates are used to reweight the base proposal, 
+
+eπ(j)(G) = π(0) (G) exp  κμ (j)(G)P 
+
+> H∈S
+
+π(0) (H) exp  κμ (j)(H) , (21) where κ controls the sensitivity of the proposal to the accumulated reward. We then mix the reward-reweighted distribution with the base proposal, 
+
+π(j)(G) = ρ π (0) (G) + (1 − ρ) eπ(j)(G), (22) where ρ ∈ [0 , 1] controls the strength of the base-distribution anchor. A minimum-probability floor is subsequently applied to every G ∈ S , followed by renormalization. 14 Both terms in the mixture retain the base proposal π(0) . The adaptive component favors space groups with larger running rewards, while the anchored component continually restores probability mass across the original support. The probability floor provides an additional safeguard against eliminating rarely sampled space groups. Together, these terms limit premature concentration of the proposal and preserve exploration throughout fine-tuning. We use different base proposals for the two design tasks, 
+
+π(0) (G) ∝ pmarg (G)1/T sg . (23) For the uniaxial dielectric objective, we use Tsg = 100, γ = 0 .9, κ = 5 .0, and ρ = 0 .15. The large temperature produces a nearly uniform base proposal over S, reducing the influence of the MP-20 space-group frequencies for this strongly symmetry-dependent objective. For the SLME objective, we use Tsg = 1, γ = 0 .9, κ = 3 .0, and ρ = 0 .1. This choice retains the empirical MP-20 marginal as the base proposal because SLME is not restricted to a narrow set of crystal symmetries. 
+
+4.6 Training and fine-tuning details 
+
+SPARC uses the SymmCD generator [12] as its diffusion backbone. The generator was pretrained on the MP-20 dataset. We initialize the policy pθ from the released checkpoint and retain a frozen copy as the KL reference policy ppre . Only the reward-guided fine-tuning stage is performed in this work. The original diffusion process is retained, with T = 1000 reverse-diffusion steps. Both objectives are fine-tuned for 120 RL rounds using an initial learning rate of 3 × 10 −5. The learning rate remains constant for the dielectric-anisotropy objective and is multiplied by 0 .98 after each round for the SLME objective. The policy-gradient coefficient is set to α = 1, and the reward-anchor threshold is set to λ = 1 .1. The KL coefficient is initialized as β0 = 0 .025 and decays with the fine-tuning update index ν
+
+according to 
+
+βν = β0
+
+p1 + ν/ 50 . (24) Complete optimization, diffusion, and sampling settings are provided in SI. 
+
+# Data Availability 
+
+The data that support the findings of this study are available from the corresponding author upon reasonable request. The datasets and trained model weights will be deposited in a publicly accessible repository upon acceptance of the manuscript. 
+
+# Code Availability 
+
+The code that supports the findings of this study is available from the corresponding author upon reasonable request. It will be released in a publicly accessible repository upon acceptance of the manuscript. 
+
+# Declarations 
+
+Acknowledgements. T.-W.H. and Q.Y. acknowledge support from the U.S. Department of Energy, Office of Science, Office of Basic Energy Sciences, under Award No. DE-SC0023664. T.-W.H. and A.B. acknowledge support from the U.S. National Science Foundation through the Expanding Capacity in Quantum Information Science and Engineering (ExpandQISE) program under Award No. OMA-2329067. This research used resources of the National Energy Research Scientific Computing Center (NERSC), a U.S. Department of Energy Office of Science User Facility operated under Contract No. DE-AC02-05CH11231, through NERSC Award No. BES-ERCAP0029544. This work also benefited from Northeastern University’s Quantum Materials and Sensing Institute (QMSI). 
+
+Author Contribution. T.-W.H. and Q.Y. conceived the study. T.-W.H. developed the methodology, performed the calculations, trained the models, analyzed the results, and prepared the figures. Q.Y. and A.B. supervised the project. The manuscript was written with contributions from all authors, and all authors approved the final version. 
+
+Competing Interest. The authors declare no competing interests. 15 References 
+
+[1] Xie, T., Fu, X., Ganea, O.-E., Barzilay, R., Jaakkola, T.: Crystal diffusion variational autoencoder for periodic material generation. In: International Conference on Learning Representations (ICLR) (2022) [2] Jiao, R., Huang, W.-b., Zhang, Y., Rong, J., Liu, Y.: Crystal structure prediction by joint equivariant diffusion. In: Advances in Neural Information Processing Systems (NeurIPS) (2023) [3] Zeni, C., Pinsler, R., Z¨ ugner, D., Fowler, A., Horton, M., Fu, X., Wang, Z., Shysheya, A., Crabb´ e, J., Ueda, S., Sordillo, R., Sun, L., Smith, J., Nguyen, B., Schulz, H., Lewis, S., Huang, C.-W., Lu, Z., Zhou, Y., Yang, H., Hao, H., Li, J., Yang, C., Li, W., Tomioka, R., Xie, T.: A generative model for inorganic materials design. Nature 639 (8055), 624–632 (2025) https://doi.org/10.1038/s41586-025-08628-5 [4] Ho, J., Salimans, T.: Classifier-free diffusion guidance. arXiv preprint arXiv:2207.12598 (2022) arXiv:2207.12598 [5] Guo, G., Saidi, T.L., Terban, M.W., Valsecchi, M., Billinge, S.J.L., Lipson, H.: Ab initio structure solutions from nanocrystalline powder diffraction data via diffusion models. Nature Materials 24 (11), 1726–1734 (2025) https://doi.org/10.1038/s41563-025-02220-y . Accessed 2026-07-05 [6] Chen, J., Guo, J., Fako, E., Schwaller, P.: Accelerating inverse materials design using generative diffusion models with reinforcement learning. arXiv preprint arXiv:2511.03112 (2025) arXiv:2511.03112 [7] Park, H., Walsh, A.: Guiding generative models to uncover diverse and novel crystals via reinforcement learning. Nature Machine Intelligence (2026) https://doi.org/10.1038/s42256-026-01262-4 . Published online 6 July 2026 [8] Govindarajan, P., Reymond, M., Clavaud, A., Phielipp, M., Miret, S., Chandar, S.: CrystalGym: A New Benchmark for Materials Discovery Using Reinforcement Learning. arXiv. arXiv:2509.23156 [cs.LG] (2025). https://doi.org/10.48550/arXiv.2509.23156 . http://arxiv.org/abs/2509.23156 Accessed 2026-07-06 [9] Cao, Z., Wang, L.: Reinforcement Fine-Tuning for Materials Design. Physical Review B 113 (2), 024106 (2026) https://doi.org/10.1103/45zh-44bg . arXiv:2504.02367 [cond-mat.mtrl-sci]. Accessed 2026-07-06 [10] Liu, Y., Weiss, N.O., Duan, X., Cheng, H.-C., Huang, Y., Duan, X.: Van der Waals heterostructures and devices. Nature Reviews Materials 1(9), 16042 (2016) https://doi.org/10.1038/natrevmats.2016.42 . Accessed 2026-07-07 [11] Yu, L., Zunger, A.: Identification of Potential Photovoltaic Absorbers Based on First-Principles Spec-troscopic Screening of Materials. Physical Review Letters 108 (6), 068701 (2012) https://doi.org/10. 1103/PhysRevLett.108.068701 . Accessed 2026-07-02 [12] Levy, D., Panigrahi, S.S., Kaba, S.-O., Zhu, Q., Lee, K.L.K., Galkin, M., Miret, S., Ravanbakhsh, S.: Symmcd: Symmetry-preserving crystal generation with diffusion models. In: The Thirteenth International Conference on Learning Representations [13] Jain, A., Ong, S.P., Hautier, G., Chen, W., Richards, W.D., Dacek, S., Cholia, S., Gunter, D., Skinner, D., Ceder, G., Persson, K.A.: Commentary: The Materials Project: A materials genome approach to accelerating materials innovation. APL Materials 1(1), 011002 (2013) https://doi.org/10.1063/1. 4812323 [14] Yang, H., Hu, C., Zhou, Y., Liu, X., Shi, Y., Li, J., Li, G., Chen, Z., Chen, S., Zeni, C., Horton, M., Pinsler, R., Fowler, A., Z¨ ugner, D., Xie, T., Smith, J., Sun, L., Wang, Q., Kong, L., Liu, C., Hao, H., Lu, Z.: Mattersim: A deep learning atomistic model across elements, temperatures and pressures. arXiv preprint arXiv:2405.04967 (2024) arXiv:2405.04967 [cond-mat.mtrl-sci] [15] Dean, C.R., et al. : Boron nitride substrates for high-quality graphene electronics. Nature Nanotech-nology 5, 722–726 (2010) https://doi.org/10.1038/nnano.2010.172 [16] Laturia, A., Put, M.L., Vandenberghe, W.G.: Dielectric properties of hexagonal boron nitride and transition metal dichalcogenides: From monolayer to bulk. npj 2D Materials and Applications 2, 6 16 (2018) https://doi.org/10.1038/s41699-018-0050-x [17] Illarionov, Y.Y., et al. : Insulators for 2d nanoelectronics: The gap to bridge. Nature Communications 
+
+11 , 3385 (2020) https://doi.org/10.1038/s41467-020-16640-8 [18] Niu, S., et al. : Giant optical anisotropy in a quasi-one-dimensional crystal. Nature Photonics 12 ,392–396 (2018) https://doi.org/10.1038/s41566-018-0189-1 [19] Ermolaev, G.A., et al. : Giant optical anisotropy in transition metal dichalcogenides for next-generation photonics. Nature Communications 12 , 854 (2021) https://doi.org/10.1038/s41467-021-21139-x [20] Yuan, H., Liu, X., Afshinmanesh, F., Li, W., Xu, G., Sun, J., Lian, B., Curto, A.G., Ye, G., Hikita, Y., Shen, Z., Zhang, S.-C., Chen, X., Brongersma, M., Hwang, H.Y., Cui, Y.: Polarization-sensitive broadband photodetector using a black phosphorus vertical p–n junction. Nature Nanotechnology 
+
+10 (8), 707–713 (2015) https://doi.org/10.1038/nnano.2015.112 . Accessed 2026-07-26 [21] Qiao, J., Kong, X., Hu, Z.-X., Yang, F., Ji, W.: High-mobility transport anisotropy and linear dichroism in few-layer black phosphorus 5(1), 4475 https://doi.org/10.1038/ncomms5475 . Accessed 2026-08-31 [22] Xia, F., Wang, H., Jia, Y.: Rediscovering black phosphorus as an anisotropic layered material for optoelectronics and electronics 5(1), 4458 https://doi.org/10.1038/ncomms5458 . Accessed 2026-08-31 [23] Island, J.O., Steele, G.A., Zant, H.S.J., Castellanos-Gomez, A.: Environmental instability of few-layer black phosphorus. 2D Materials 2(1), 011002 (2015) https://doi.org/10.1088/2053-1583/2/1/011002 . Accessed 2026-07-26 [24] Hsu, T.-W., Fang, Z., Bansil, A., Yan, Q.: Accurate prediction of tensorial spectra using equivariant graph neural network. Nature Communications (2026) https://doi.org/10.1038/s41467-026-69159-9 [25] Kirkpatrick, S., Gelatt, C.D., Vecchi, M.P.: Optimization by Simulated Annealing 220 (4598), 671–680 1690046. Accessed 2026-09-02 [26] Petousis, I., Chen, W., Hautier, G., Graf, T., Schladt, T.D., Persson, K.A., Prinz, F.B.: Benchmarking density functional perturbation theory to enable high-throughput screening of materials for dielec-tric constant and refractive index. Physical Review B 93 (11), 115151 (2016) https://doi.org/10.1103/ PhysRevB.93.115151 . Accessed 2026-07-06 [27] Choudhary, K., Bercx, M., Jiang, J., Pachter, R., Lamoen, D., Tavazza, F.: Accelerated Discovery of Efficient Solar Cell Materials Using Quantum and Machine-Learning Methods. Chemistry of Materials 
+
+31 (15), 5900–5908 (2019) https://doi.org/10.1021/acs.chemmater.9b02166 . Accessed 2026-07-02 [28] Fox, M.: Optical Properties of Solids. Oxford University Press, Oxford, UK (2010) [29] Gajdoˇ s, M., Hummer, K., Kresse, G., Furthm¨ uller, J., Bechstedt, F.: Linear optical properties in the projector-augmented wave methodology. Physical Review B 73 (4), 045112 (2006) https://doi.org/10. 1103/PhysRevB.73.045112 . Accessed 2026-07-06 [30] Yan, C., Huang, J., Sun, K., Johnston, S., Zhang, Y., Sun, H., Pu, A., He, M., Liu, F., Eder, K., Yang, L., Cairney, J.M., Ekins-Daukes, N.J., Hameiri, Z., Stride, J.A., Chen, S., Green, M.A., Hao, X.: Cu2ZnSnS4 solar cells with over 10% power conversion efficiency enabled by heterojunction heat treatment 3(9), 764–772 https://doi.org/10.1038/s41560-018-0206-0 . Accessed 2026-08-31 [31] Yang, Z., Wang, X., Chen, Y., Zheng, Z., Chen, Z., Xu, W., Liu, W., Yang, Y.M., Zhao, J., Chen, T., Zhu, H.: Ultrafast self-trapping of photoexcited carriers sets the upper limit on antimony trisulfide photovoltaic devices 10 (1), 4540 https://doi.org/10.1038/s41467-019-12445-6 . Accessed 2026-08-31 [32] Zhu, Z., Tom´ anek, D.: Semiconducting layered blue phosphorus: A computational study. Physical Review Letters 112 (17), 176802 (2014) https://doi.org/10.1103/PhysRevLett.112.176802 [33] Magnetic anisotropy in the van der waals ferromagnet vi3. Physical Review B 103 , 174401 (2021) https://doi.org/10.1103/PhysRevB.103.174401 [34] Yan, K., Saxton, A., Qian, X., Qian, X., Ji, S.: A Space Group Symmetry Informed Network for O(3) 17 Equivariant Crystal Tensor Prediction. https://doi.org/10.48550/arXiv.2406.12888 . http://arxiv.org/ abs/2406.12888 Accessed 2025-02-11 [35] Dong, L., Zhang, X., Yang, Z., Shen, L., Lu, Y.: Accurate piezoelectric tensor prediction with equiv-ariant attention tensor graph neural network 11 (1) https://doi.org/10.1038/s41524-025-01546-0 . Accessed 2025-07-22 [36] Zeng, Y., Cao, W., Zuo, Y., Lyu, F., Xie, W., Peng, T., Hou, Y., Miao, L., Wang, Z., Shi, J.: Learning thermoelectric transport from crystal structures via multiscale graph neural network 26 (1), 014019 https://doi.org/10.1103/m8nb-bbp8 . Accessed 2026-09-04 [37] Li, H., Wang, Z., Zou, N., Ye, M., Xu, R., Gong, X., Duan, W., Xu, Y.: Deep-Learning Density Functional Theory Hamiltonian for Efficient ab initio Electronic-Structure Calculation 2(6), 367–377 https://doi.org/10.1038/s43588-022-00265-6 2104.03786. Accessed 2024-06-03 [38] Gong, X., Li, H., Zou, N., Xu, R., Duan, W., Xu, Y.: General framework for E(3)-equivariant neural network representation of density functional theory Hamiltonian 14 (1), 2848 https://doi.org/10.1038/ s41467-023-38468-8 . Accessed 2026-09-04 [39] Zhong, Y., Wang, R., Gong, X., Xiang, H.: A universal spin–orbit-coupled Hamiltonian model for accelerated quantum material discovery 8(3), 403–414 https://doi.org/10.1038/s42256-026-01196-x . Accessed 2026-09-04 [40] Wang, C., Zhao, S., Guo, X., Ren, X., Gu, B.-L., Xu, Y., Duan, W.: First-principles calculation of optical responses based on nonorthogonal localized orbitals 21 (9), 093001 https://doi.org/10.1088/ 1367-2630/ab3c9c . Accessed 2024-07-01 [41] Sham, L.J., Schl¨ uter, M.: Density-Functional Theory of the Energy Gap 51 (20), 1888–1891 https: //doi.org/10.1103/PhysRevLett.51.1888 . Accessed 2026-09-02 [42] Borlido, P., Aull, T., Huran, A.W., Tran, F., Marques, M.A.L., Botti, S.: Large-Scale Benchmark of Exchange–Correlation Functionals for the Determination of Electronic Band Gaps of Solids 15 (9), 5069–5079 https://doi.org/10.1021/acs.jctc.9b00322 . Accessed 2026-09-02 [43] Heyd, J., Scuseria, G.E., Ernzerhof, M.: Erratum: “Hybrid functionals based on a screened Coulomb potential” [J. Chem. Phys. 118, 8207 (2003)] 124 (21), 219906 https://doi.org/10.1063/1.2204597 . Accessed 2026-09-04 [44] Govoni, M., Galli, G.: Large Scale GW Calculations 11 (6), 2680–2696 https://doi.org/10.1021/ ct500958p . Accessed 2026-09-02 [45] Deslippe, J., Samsonidze, G., Strubbe, D.A., Jain, M., Cohen, M.L., Louie, S.G.: BerkeleyGW: A massively parallel computer package for the calculation of the quasiparticle and optical properties of materials and nanostructures 183 (6), 1269–1289 https://doi.org/10.1016/j.cpc.2011.12.006 . Accessed 2026-09-04 [46] Chen, C., Zuo, Y., Ye, W., Li, X., Ong, S.P.: Learning properties of ordered and disordered materials from multi-fidelity data 1(1), 46–53 https://doi.org/10.1038/s43588-020-00002-x . Accessed 2026-09-04 [47] Jiao, R., Huang, W., Liu, Y., Zhao, D., Liu, Y.: Space group constrained crystal generation. In: International Conference on Learning Representations (ICLR) (2024) [48] Hung, N.T., Okabe, R., Chotrattanapituk, A., Li, M.: Universal Ensemble-Embedding Graph Neural Network for Direct Prediction of Optical Spectra from Crystal Structures. Advanced Materials 36 (46), 2409175 (2024) https://doi.org/10.1002/adma.202409175 . Accessed 2025-11-24 [49] Black, K., Janner, M., Du, Y., Kostrikov, I., Levine, S.: Training diffusion models with reinforcement learning. arXiv preprint arXiv:2305.13301 (2023) arXiv:2305.13301 [50] Fan, Y., Watkins, O., Du, Y., Liu, H., Ryu, M., Boutilier, C., Abbeel, P., Ghavamzadeh, M., Lee, K., Lee, K.: DPOK: Reinforcement learning for fine-tuning text-to-image diffusion models. In: Advances in Neural Information Processing Systems (NeurIPS) (2023) 18 Supplementary Information for Symmetry- and Property-Aware Crystal Generation with Reinforcement Learning for Inverse Materials Design 
+
+Ting-Wei Hsu 1,2* , Arun Bansil 1,2 and Qimin Yan 1,2* 1Department of Physics, Northeastern University, Boston, 02155, Massachusetts, USA. 
+
+> 2
+
+Quantum Materials and Sensing Institute, Northeastern University, Burlington, 01803, Massachusetts, USA. *Corresponding author(s). E-mail(s): hsu.ting@northeastern.edu; q.yan@northeastern.edu; 
+
+# 1 Reinforcement-learning experimental setup 
+
+This section provides the complete experimental workflow and optimization settings used for reinforcement-learning (RL) fine-tuning. SPARC uses the publicly released SymmCD model [1], pretrained on MP-20, as the initial generative model and RL policy. A frozen copy of the same checkpoint is retained as the reference policy ppre for Kullback–Leibler (KL) regularization. Both design campaigns are run for 120 RL rounds. Each round consists of the following steps. 1. For each generation trajectory, a space group G is sampled from the current proposal distribution π(j)(G), and the number of representative asymmetric-unit sites M is sampled from pmarg (M | G). The initial proposal π(0) (G) is obtained from the MP-20 space-group marginal using the task-specific temperature transformation described in the main text. The proposal over G is updated between RL rounds, while 
+
+pmarg (M | G) remains fixed. 2. Conditioned on the sampled pair ( G, M ), the diffusion model generates asymmetric-unit candidates M′
+
+through the reverse denoising process. The uniaxial dielectric task generates 96 candidates per round, while the spectroscopic limited maximum efficiency (SLME) task generates 128 candidates per round. Each asymmetric-unit candidate is expanded using the space-group reconstruction operator RG to obtain the corresponding full crystal, 
+
+M = RG(M′). (1) Generation and policy updates are performed on the compact asymmetric-unit representation. Relax-ation, filtering, property prediction, and reward evaluation are performed on the reconstructed full crystal. 3. The reconstructed structures are relaxed using the MatterSim-v1.0.0-5M machine-learning interatomic potential (MLIP) [2]. Relaxation is performed with the FIRE optimizer under full variable-cell relaxation, with the atomic positions and lattice optimized jointly using an exponential cell filter. We use a force-convergence threshold of fmax = 0 .05 eV ˚ A−1 and a maximum of 5000 optimization steps. 4. The relaxed structures are first checked for structural validity and then evaluated using the stable, unique, and novel (S.U.N.) criteria following MatterGen [3]. A structure is considered stable when its MLIP-estimated energy above the full Materials Project convex hull satisfies Ehull ≤ 0.10 eV /atom [4]. Uniqueness is evaluated by comparing the generated structures with one another using the pymatgen 
+
+StructureMatcher . Novelty is evaluated by comparing the generated structures with the Materials Project reference set using the same matcher. Only structurally valid candidates satisfying all three S.U.N. criteria proceed to property evaluation. 5. Up to 30 surviving structures are evaluated by the fixed property surrogates in each RL round. When more than 30 structures pass the filters, 30 are selected for surrogate evaluation. Otherwise, all surviving structures are evaluated. Each scored structure is assigned the task-specific terminal reward defined in the main Methods. These are runi for the uniaxial dielectric task and rSLME for the photovoltaic task. 16. The terminal reward r(RG(M′
+
+> 0
+
+)) is assigned to the asymmetric unit that generated the relaxed full crystal. For each policy update, a diffusion time t is sampled and the clean asymmetric unit M′ 
+
+> 0
+
+is forward-noised to M′
+
+> t
+
+. The policy is then updated using the reward-weighted denoising loss together with the KL penalty relative to ppre . The noising and denoising operations act on the asymmetric-unit variables A′, F ′, Σ′, and k. The full crystal is recovered through RG, allowing the policy to improve the target reward while preserving compatibility with the conditioning space group. 7. After reward evaluation and policy fine-tuning, the realized space group of each reconstructed structure is determined using SpacegroupAnalyzer with symprec = 0 .01 ˚ A. The rewards are grouped by the realized space-group labels and used to update π(j)(G) according to the outer-loop rule defined in the main text. Space groups that repeatedly yield high-reward structures receive increased proposal probability. The base-distribution anchor and minimum-probability floor retain sampling probability across the original support. The outer-loop parameters are the proposal temperature Tsg , the reward-decay factor γ, the tilt strength κ, and the base-proposal mixture ρ, set to Tsg = 100, γ = 0 .9, κ = 5 .0, ρ = 0 .15 for the dielectric task and Tsg = 1, γ = 0 .9, κ = 3 .0, ρ = 0 .1 for the SLME task. The updated proposal is used in the next RL round. The filtering stage can substantially reduce the number of structures available for property evaluation. Candidates may be removed because of invalid geometries, insufficient stability, duplication within the gen-erated population, or matches to known Materials Project structures. We therefore generate more structures than are used in each policy update. The dielectric task generates 96 candidates per round, while the SLME task generates 128. At most 30 surviving structures are evaluated and used for fine-tuning in each round. Over 120 rounds, the SLME campaign generated 15 ,360 structures. Of these, 4 ,825 passed the validity checks and 3 ,522 entered the capped per-round evaluation pool and were scored by the property surrogates. To improve sample efficiency, high-reward structures from previous rounds are reused through an experience-replay buffer. The buffer stores up to 100 structures, and 10 stored structures are replayed in each RL round. Only structures with reward r ≥ 0.1 are eligible to enter or be sampled from the buffer. A diversity filter is also applied to reduce the influence of near-duplicate candidates. The filter uses the implementation parameters of tolerance 3 and buffer size 6. Fine-tuning retains the diffusion settings of the pretrained SymmCD model. The diffusion process con-tains T = 1000 steps. A cosine variance schedule with offset s = 0 .008 is used for the lattice coefficients k
+
+and the discrete atom-type and site-symmetry variables. A geometric noise-scale schedule from σmin = 0 .005 to σmax = 0 .5 is used for the fractional coordinates. The initial learning rate is 3 × 10 −5 for both tasks. It remains constant during dielectric fine-tuning and is multiplied by 0 .98 after each RL round for the SLME task. The KL coefficient is initialized at β0 = 0 .025 and decays with the fine-tuning update index ν according to 
+
+βν = β0
+
+p1 + ν/ 50 . (2) The policy-gradient coefficient is α = 1, and the reward-anchor threshold is λ = 1 .1. Each RL round contains three inner fine-tuning epochs. The training mini-batch size is 30, and gradients are accumulated over 50 steps before each optimizer update. The property surrogates remain frozen throughout RL fine-tuning. The uniaxial dielectric reward uses the band-gap and dielectric-tensor surrogates, while the SLME reward uses the band-gap and spectral surrogates. Their architectures, training datasets, and predictive benchmarks are described separately in Section 4. 2Supplementary Table 1 . Reinforcement-learning optimization settings. Shared and task-specific settings used for SPARC fine-tuning. Both campaigns were run for 120 RL rounds. 
+
+Setting Shared Dielectric RL SLME RL Initial policy SymmCD MP-20 checkpoint – –Reference policy Frozen initial checkpoint – –Optimizer Adam – –Initial learning rate – 3 × 10 −5 3 × 10 −5
+
+Learning-rate multiplier per round – 1.0 0.98 Weight decay 0 – –Diffusion steps T 1000 – –Cosine-schedule offset s 0.008 – –Coordinate noise range σmin = 0 .005, σmax = 0 .5 – –Denoising loss weights λk=5, λF ′ =1, λA′ =0 .1, 
+
+λΣ′ =10 – –Training mini-batch size 30 – –Gradient accumulation steps 50 – –Inner fine-tuning epochs per round 3 – –RL rounds 120 – –Generated candidates per round – 96 128 Total generated candidates – 11 ,520 15 ,360 Scored candidates per round 30 – –Policy-gradient coefficient α 1 – –Initial KL coefficient β0 0.025 – –KL schedule βν = β0/p1 + ν/ 50 – –Reward-anchor threshold λ 1.1 – –Replay-buffer capacity 100 – –Replayed structures per round 10 – –Replay reward threshold 0.1 – –
+
+# 2 Symmetry-constrained generation 
+
+SPARC inherits its symmetry-constrained generation from SymmCD [1]. The central idea is to diffuse not only over atom types, fractional coordinates, and the lattice, but also over the site symmetries of the representative atoms, conditioned on the space group G. Because the asymmetric unit is generated together with its site-symmetry assignments, applying the operations of G regenerates a crystal that respects G by construction, rather than one whose symmetry must be recovered after generation. This decomposition is illustrated on a two-dimensional toy example in Supplementary Figure 1. 0.0 0.5 1.0 x (fractional) 0.0 0.5 1.0 y (fractional) 
+
+> asymmetric unit
+> (0.00, 0.00) symm: 4mm (0.32, 0.32) symm: ..m (0.40, 0.15) symm: 1
+
+(a) Asymmetric unit coords + species + site symm   
+
+> XYZ
+> 0.0 0.5 1.0 x (fractional) 0.0 0.5 1.0 y (fractional)
+
+(b) Site symmetries mirror lines + rotation centres   
+
+> XYZ
+> 0.0 0.5 1.0 x (fractional) 0.0 0.5 1.0 y (fractional)
+
+(c) Replicated unit cell (asym unit × space-group ops)       
+
+> species X species Y species Z 4-fold rotation 2-fold rotation mirror plane asymmetric unit
+
+Supplementary Figure 1. Symmetry-constrained decomposition of a crystal . On a two-dimensional toy example (wallpaper group p4mm , fictitious species X, Y, Z). (a) The asymmetric unit, comprising the representative atoms with their fractional coordinates, species, and site symmetries (X on a 4mm site, Y on a mirror line, Z on a general site). (b) The corresponding space-group symmetry elements, the mirror lines and rotation centres. (c) Applying these operations to the asymmetric unit replicates it across the unit cell and recovers the full crystal. SPARC generates only the asymmetric unit in (a) and reconstructs the complete structure through (b) and (c) , so every generated crystal is symmetry-valid by construction. 3The symmetry enters the generator through a data-driven prior. For a given space group G we aggregate the site-symmetry assignments of every training material in G to form the site-symmetry marginal pmarg (Σ′ |
+
+G). For example, G = 225 ( F m ¯3m), the marginal pmarg (Σ′ | G = 225) is naturally displayed as a 15 × 13 heatmap over the 15 crystallographic axes and 13 site-symmetry categories, with color encoding probability (Supplementary Figure 2). 1 2 3 4 5 6 7 8 9 10 11 12 13 site-symmetry class index k 12345678910 11 12 13 14 15 axis u 
+
+> SG 225 (Fm3m)
+> 0.0 0.2 0.4 0.6 0.8 1.0 probability
+
+Supplementary Figure 2 . Site-symmetry marginal for space group 225 ( F m ¯3m). Empirical site-symmetry marginal pmarg (Σ′ | G=225), aggregated over all training materials in F m ¯3m and shown as a 15 ×
+
+13 heatmap over the 15 crystallographic axes and 13 site-symmetry categories. Color encodes probability. The site-symmetry representation Σ′ is treated as a collection of categorical variables. For each represen-tative atom i, the site symmetry is represented by 15 one-hot vectors Σ′ 
+
+> i,u
+
+∈ { 0, 1}13 , where u ∈ { 1, . . . , 15 }
+
+indexes the crystallographic symmetry axis and the 13 categories correspond to the possible site-symmetry operations along that axis. We apply discrete diffusion independently to each axis. Given the initial site-symmetry representation Σ′ 
+
+> 0,i,u
+
+and space group G, the noising process is defined as 
+
+q(Σ′ 
+
+> t,i,u
+
+| Σ′
+
+> 0,i,u
+
+, G ) = Cat  Σ′
+
+> t,i,u
+
+; p = Σ′
+
+> 0,i,u ⊤
+
+Qt,u,G 
+
+ ,
+
+with the cumulative transition matrix 
+
+Qt,u,G =
+
+> t
+
+Y 
+
+> τ=1
+
+Qτ,u,G , Qt,u,G = αtI + βt1m⊤
+
+> Σ,u,G
+
+.
+
+Here, mΣ,u,G denotes the empirical marginal distribution of site-symmetry operations for axis u within space group G, so the forward process drives each axis from its clean assignment toward this space-group-specific marginal (Supplementary Figure 2). The denoising network predicts the clean site-symmetry distribution ˆΣ′ 
+
+> 0
+
+= ϕΣ(M′
+
+> t
+
+, t, G ) and is trained using the averaged cross-entropy loss 
+
+LΣ′ = Et∼U (1 ,T )EΣ′
+
+> t∼q(Σ′
+> t|Σ′
+> 0,G )
+
+"
+
+115 M
+
+> M
+
+X
+
+> i=1 15
+
+X
+
+> u=1
+
+CrossEntropy 
+
+
+
+Σ′
+
+> 0,i,u
+
+, ˆΣ′
+
+> 0,i,u
+
+#
+
+.
+
+where M is the number of representative atoms in the asymmetric unit. Supplementary Figure 3 makes this forward process concrete for a single crystallographic axis of space group 225. Panel (a) showing the initial prior is the space-group marginal mΣ,u,G at axis u = 1, which for this axis places its mass on only site-symmetry classes number 7, 8, and 12. Panel (b) showing the noise schedule drives the cumulative weight ¯ αt from 1 to 0 over the trajectory, interpolating from the clean assignment at t = 0 toward this marginal at t = T . Panels (c) and (d) trace the resulting relaxation. Panel (c) shows that the self-transition probability Qt[i, i ] decays from 1 as t increases, so an initially one-hot class progressively transfers probability to other allowed classes. Panel (d) shows the full row distribution e⊤ 
+
+> i
+
+Qt
+
+for a representative source class, i = 12. As time progresses, this distribution evolves from a sharp peak at 4the initial class toward the space-group marginal, with probability redistributed only among the symmetry classes supported by the marginal. Because this absorbing distribution is space-group-specific, the forward noise process is itself symmetry-aware. During sampling, the reverse denoising model learns to invert this process, mapping noisy site-symmetry assignments back toward configurations compatible with the target space group G. Thus, the model samples within a symmetry-conditioned space rather than an unconstrained categorical space. Results in the generated structures preserve local site-symmetry assignments consistent with the prescribed global symmetry. 1 2 3 4 5 6 7 8 9 10 11 12 13 class k 0.0 0.1 0.2 0.3 0.4 0.5 0.6 probability 
+
+(a) Marginal m , u, G for axis u = 1      
+
+> 0200 400 600 800 1000 timestep t 0.0 0.2 0.4 0.6 0.8 1.0 weight
+
+(b) Scheduler weights over diffusion time       
+
+> t
+> t
+> selected t
+> 0200 400 600 800 1000 timestep t 0.0 0.2 0.4 0.6 0.8 1.0 probability of staying in class i
+
+(c) Self-transition Qt[i, i] for representative classes             
+
+> class 12 class 8 class 7 12345678910 11 12 13 destination class j 0.0 0.2 0.4 0.6 0.8 1.0 transition probability
+
+(d) Row distribution ei Qt for source class i = 12      
+
+> t=0 ( =1.000)
+> t=250 ( =0.847)
+> t=500 ( =0.494)
+> t=750 ( =0.144)
+> t=1000 ( =0.000)
+
+Site-symmetry diffusion summary for SG 225 (Fm3m), axis u=1 
+
+Supplementary Figure 3 . Discrete-diffusion transition toward the site-symmetry marginal (space group 225, F m ¯3m, axis u = 1 ). The forward process for the site-symmetry labels along one crys-tallographic axis, shown through the cumulative transition Qt,u,G at diffusion steps t = 0 , 250 , 500 , 750 , 1000. 
+
+(a) The space-group marginal mΣ,u,G over the 13 site-symmetry classes, the absorbing prior the forward process relaxes onto; for this axis the mass concentrates on a few classes. (b) The noise-schedule weights αt
+
+and the cumulative ¯ αt over diffusion time, with the five sampled timesteps marked; ¯ αt decreases from 1 to 0 as the clean signal is replaced by the marginal. (c) The self-transition probability Qt[i, i ], the probability of remaining in the initial class i, versus t for three representative classes; each decays from 1 toward its marginal weight. (d) The row distribution e⊤
+
+i Qt for source class i = 12 at the five timesteps, showing how probability initially localized on class 12 spreads toward the marginal as t grows. 
+
+2.1 Lattice parameterization and space-group constraints 
+
+SPARC inherits its lattice parameterization from DiffCSP++ [5]. Rather than denoising the raw 3 × 3lattice matrix L, we use the polar decomposition L = Q exp( S), where Q ∈ SO (3) is orthogonal, S = S⊤
+
+is symmetric, and exp( S) = P∞
+
+n=0 Sn/n ! is the matrix exponential. Any rigid rotation of L is absorbed entirely by Q and leaves S unchanged, so S furnishes a rotation-invariant description of the lattice. Every symmetric S expands uniquely in a fixed six-dimensional symmetric basis, 
+
+S =
+
+6X
+
+i=1 
+
+kiBi, k = ( k1, . . . , k 6) ∈ R6, (3) 5Supplementary Table 2 . Relationship between the lattice shape and the constraint on the symmetric-basis coefficients k, where a, b, c and α, β, γ denote the lengths and angles of the lattice bases, respectively (after DiffCSP++ [5]).                                                                                          
+
+> Crystal Family Space Group No. Lattice Shape Constraint of Symmetric Bases Triclinic 1∼2No Constraint No Constraint Monoclinic 3∼15 α=γ= 90 ◦k1=k3= 0 Orthorhombic 16 ∼74 α=β=γ= 90 ◦k1=k2=k3= 0 Tetragonal 75 ∼142 α=β=γ= 90 ◦
+> a=bk1=k2=k3= 0
+> k4= 0 Trigonal/Hexagonal 143 ∼194 α=β= 90 ◦, γ = 120 ◦
+> a=bk2=k3= 0 , k 1=−log(3) /4
+> k4= 0 Cubic 195 ∼230 α=β=γ= 90 ◦
+> a=b=ck1=k2=k3= 0
+> k4=k5= 0
+
+with basis matrices 
+
+B1 =
+
+ 0 1 0 1 0 0 0 0 0 
+
+ ,B2 =
+
+ 0 0 1 0 0 0 1 0 0 
+
+ , B3 =
+
+ 0 0 0 0 0 1 0 1 0 
+
+ ,
+
+B4 =
+
+ 1 0 00 −1 0 0 0 0
+
+ ,B5 =
+
+ 1 0 00 1 00 0 −2
+
+ , B6 =
+
+ 1 0 0 0 1 0 0 0 1 
+
+ .
+
+(4) For a chosen space group G, the crystal family fixes a subset of the ki while the rest remain free, as listed in Supplementary Table 2. During generation we hold the constrained coefficients at their required values through a mask m ∈ { 0, 1}6 and denoise only the free entries, guaranteeing that every generated lattice is consistent with G.
+
+2.2 Denoising losses 
+
+Following SymmCD [1], the denoiser reconstructs the four asymmetric-unit components jointly, minimizing 
+
+L = λkLk + λF ′ LF ′ + λA′ LA′ + λΣ′ LΣ′ , with the weights listed in Supplementary Table 1. The fractional coordinates use a denoising score-matching loss, 
+
+LF ′ = EF ′
+
+> t∼q′
+
+(F ′ 
+
+> t|F′
+> 0
+
+),t ∼U (1 ,T )
+
+h
+
+λt ∇F ′ 
+
+> t
+
+log q′  F ′ 
+
+> t
+
+| F ′
+
+> 0
+
+ − ˆϵF ′ (M′
+
+> t
+
+, t ) 22
+
+i
+
+, (5) the lattice coefficients a masked ϵ-prediction loss, in which the mask m zeroes the symmetry-constrained entries, 
+
+Lk = Eϵk∼N (0 ,I),t ∼U (1 ,T )
+
+h
+
+∥m ⊙ ϵk − ˆϵk (M′
+
+> t
+
+, t )∥22
+
+i
+
+, (6) and the atom types a categorical cross-entropy under the discrete-diffusion transition Qt,
+
+LA′ = Eat∼Cat (a⊤ 
+
+> 0Qt
+
+),t ∼U (1 ,T )
+
+> M
+
+X
+
+> i=1
+
+CrossEntropy  a′
+
+> i
+
+, ˆa′
+
+> i
+
+ . (7) The site-symmetry loss LΣ′ has the same cross-entropy form and is defined earlier in this section. 
+
+2.3 Denoising-network architecture 
+
+SPARC retains the denoising architecture of the released SymmCD model [1], which is adapted from the graph neural network used in DiffCSP [6]. The network operates on a fully connected graph whose M nodes correspond to the representative sites in the asymmetric unit. Following SymmCD, the denoiser is not explicitly rotation-equivariant because the conventional unit-cell axes define a canonical reference frame. Periodic translation invariance is incorporated through Fourier features of the relative fractional coordinates. For representative site i, the initial node feature hi is constructed from its atom type ai, fractional coor-dinate xi, site-symmetry descriptor Σ′
+
+> i
+
+, the space group G, and the diffusion timestep t. The timestep is encoded using a sinusoidal embedding ψt(t), while the space group is embedded using a multilayer percep-tron (MLP) ϕG. The site-symmetry descriptor is embedded separately along each of the 15 crystallographic 6axes using a shared MLP ϕU , and the resulting axis-wise embeddings are combined using a second MLP ϕS ,
+
+hi ← ϕh ai, xi, ϕ S
+
+> 15
+
+M
+
+> u=1
+
+ϕU
+
+ Σ′
+
+> i,u
+
+!
+
+, ϕ G(G), ψ t(t)
+
+!
+
+. (8) At each message-passing layer, the message from representative j to representative i is computed as 
+
+mij = ϕm (hi, hj , k, ψ x (xi − xj )) , (9) where ψx is a Fourier embedding of the relative fractional coordinate. The node features are then updated by aggregating the incoming messages, 
+
+hi ← hi + ϕn hi,
+
+> M
+
+X
+
+> j=1
+
+mij 
+
+!
+
+. (10) The edge and node networks ϕm and ϕn are MLPs with SiLU activations, and layer normalization is applied at each message-passing layer. After the final layer, node-level output heads predict the fractional-coordinate denoising term, atom-type logits, and site-symmetry logits. The site-symmetry output contains one categorical distribution over 13 possible operations for each of the 15 crystallographic axes. The lattice denoising term is predicted from the aggregated graph representation, 
+
+hgraph =
+
+> M
+
+X
+
+> i=1
+
+hi. (11) The resulting outputs are denoted by ˆ ϵF ′ , ˆA′
+
+, ˆΣ′
+
+, ˆϵk. The architecture and diffusion hyperparameters are summarized in Supplementary Table 3. 
+
+Supplementary Table 3. Denoising-network architecture hyperparameters (inherited from the SymmCD MP-20 model).                          
+
+> Component Value Backbone CSPNet message-passing graph neural network (fully connected over representatives) Message-passing layers 8Hidden / representation dim. 1024 Timestep embedding dim. 10 Coordinate Fourier frequencies 128 Activation SiLU Normalization LayerNorm (each layer) Lattice parameterization k∈R6
+> Site-symmetry dimension 15 ×13 = 195 Atom-type 94 Prediction heads (linear) k(6), F′(3), A′(94), Σ′(195) Parameters 61,010,350
+
+# 3 Reinforcement-learning fine-tuning objective 
+
+This section reproduces the reward-weighted KL objective of MatInvent [7], see also the reinforcement-learning treatments of diffusion samplers in [8, 9]. In SPARC the diffusion policy acts on the asymmetric unit rather than the full crystal, so we write the objective directly in the asymmetric-unit representation 
+
+M′ = ( A′, F ′, Σ′, k). Given a space group G, a generated asymmetric unit is decoded into a full crystal by the deterministic space-group replication map RG, M = RG(M′), and the reward is evaluated on this decoded crystal. Because RG is fixed and non-learned, a reward on M acts as a reward on the M′ that generated it, and the entire trajectory, policy, and regularizer below live in M′-space (all conditioned on 
+
+G, which we suppress in the notation for brevity). We treat the length-T reverse denoising trajectory M′ 
+
+> 0: T
+
+as a Markov decision process whose actions are the per-step transitions pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+), and assign the terminal reward r(RG(M′
+
+> 0
+
+)) to the decoded crystal. The fine-tuning objective is min  
+
+> θ
+
+Epθ (M′ 
+
+> 0)
+
+[−r(RG(M′
+
+> 0
+
+))] . (12) 7Since log pθ (M′
+
+> 0
+
+) is intractable, we differentiate through the trajectory likelihood using the score-function identity ∇θ pθ = pθ ∇θ log pθ , giving the policy gradient 
+
+∇θ Epθ (M′ 
+
+> 0)
+
+[−r(RG(M′
+
+> 0
+
+))] = Epθ (M′ 
+
+> 0: T)
+
+"
+
+r(RG(M′
+
+> 0
+
+)) 
+
+> T
+
+X
+
+> t=1
+
+ −∇ θ log pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+)#
+
+, (13) i.e. the per-step denoising-loss gradient weighted by the terminal reward. To keep the fine-tuned policy near the pretrained generator we regularize the marginal divergence KL( pθ (M′
+
+> 0
+
+) ∥ ppre (M′
+
+> 0
+
+)). This marginal is intractable, but the data-processing inequality bounds it by the divergence of the full trajectories, KL  pθ (M′
+
+> 0
+
+) ∥ ppre (M′
+
+> 0
+
+) ≤ KL  pθ (M′ 
+
+> 0: T
+
+) ∥ ppre (M′ 
+
+> 0: T
+
+), (14) and the Markov factorization of the reverse process reduces the right-hand side to a sum of per-step KL divergences, KL  pθ (M′ 
+
+> 0: T
+
+) ∥ ppre (M′ 
+
+> 0: T
+
+) =
+
+> T
+
+X
+
+> t=1
+
+Epθ (M′ 
+
+> t)
+
+KL  pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+) ∥ ppre (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+), (15) where the shared terminal prior pθ (M′ 
+
+> T
+
+) = ppre (M′ 
+
+> T
+
+) eliminates the boundary term. Weighting each trajectory’s per-step KL by ( λ − r(RG(M′
+
+> 0
+
+))) yields the reward-weighted regularizer 
+
+Epθ (M′ 
+
+> 0: T)
+
+" λ − r(RG(M′
+
+> 0
+
+))  TX
+
+> t=1
+
+KL  pθ (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+) ∥ ppre (M′ 
+
+> t−1
+
+| M ′
+
+> t
+
+)#
+
+, (16) where λ is chosen above the maximum reward so that λ − r(RG(M′
+
+> 0
+
+)) remains positive. The KL penalty decreases as the reward increases. High-reward trajectories are therefore allowed to deviate more from ppre ,whereas low-reward trajectories remain more strongly constrained. Combining this regularization term with the policy-gradient contribution using weights α, β > 0 gives the SPARC training gradient reported in the main text. 
+
+# 4 Property surrogate models 
+
+This section documents the three property surrogates used as reward models in the inverse-design loop, a band-gap Eg predictor, an SLME η predictor, and a static-limit dielectric-tensor predictor (hereafter the dielectric-tensor surrogate). All three use the same Tensorial Spectra Equivariant Neural Network (TSENN) [10] backbone but differ in the output irreducible representations (irreps), training dataset, and task-specific hyperparameters. The output irreps are chosen to match the symmetry of each target property. Although pretrained weights are publicly available for some related tasks, we retrain a TSENN model from scratch on every task so that all three surrogates share a common e3nn -based backbone and a consistent evaluation protocol, allowing us to swap target properties by changing only the output head, without maintaining a separate model definition per objective. The trained surrogate weights are released alongside the code repository. 
+
+4.1 Band gap 
+
+For the band gap, the output head is a single scalar irrep ( 1x0e ), so the network predicts the density functional theory (DFT) band gap Eg as one real number per material. 
+
+Dataset. 
+
+The training data are drawn from the Materials Project dataset [4], which contains 151 , 330 entries. The full dataset is not uniformly labeled for every target property, particularly, band-gap labels are available only for a subset of the structures. We therefore restrict the band-gap surrogate to entries with valid band-gap targets. The band-gap labels were obtained from VASP calculations using Materials Project-consistent Perdew–Burke–Ernzerhof (PBE) + U settings. Full details of the underlying DFT protocols are provided in the original dataset references. As these are semilocal PBE(+U) gaps, they underestimate experimental band gaps as expected at this level of theory, and the surrogate predicts on the same PBE scale. 8Train/validation/test splits. 
+
+We stratified the dataset into an 8:1:1 ratio, resulting in 121 , 065 for training, 15 , 138 for validation, and 15 , 127 for testing. 
+
+Training. 
+
+Learning rate 1 .5 × 10 −3, weight decay 5 × 10 −2; remaining hyperparameters in Supplementary Table 4. 
+
+Supplementary Table 4 . Hyperparameters for the TSENN band-gap surrogate.        
+
+> Hyperparameter Value Maximum spherical harmonic order ℓmax 2Embedding dimension 128 Number of layers 4Channel multiplicity 16 Batch size 128
+
+The surrogate attains R2 = 0 .902 with mean absolute error MAE = 0 .223 eV on the training set, 
+
+R2 = 0 .869 with MAE = 0 .265 eV on the validation set, and R2 = 0 .881 with MAE = 0 .252 eV on the held-out test set. The corresponding parity plots are shown in Supplementary Figure 4, where the train, validation, and test predictions closely follow the y = x reference line. The close agreement between validation and test metrics, together with the high R2 across this chemically diverse dataset, indicates that the surrogate provides a reliable held-out estimate and is suitable for scoring generated candidates within the chemical regime represented by the training data. 0 3 6 9 12 036912 train R² = 0.902 MAE = 0.223 eV                           
+
+> 036912 036912 valid R² =0.869 MAE =0.265 eV
+> 036912 036912 test R² =0.881 MAE =0.252 eV Target band gap (eV) Predicted  band  gap  (eV) train (121065) valid (15138) test (15127)
+
+Supplementary Figure 4 . Predicted versus DFT-computed band gap. Parity plots of the predicted band gap Eg against the DFT reference, shown for the train, validation, and test splits (left to right). The dashed line indicates perfect agreement ( y = x). On the held-out test set, the model achieves R2 = 0 .881 with MAE = 0 .252 eV. 
+
+4.2 Spectroscopic limited maximum efficiency 
+
+The output head is a sequence of scalar irreps: 201 × 0e, predicting the frequency-dependent trace of the imaginary part of the dielectric tensor, ε2(ω) = 13 Tr ε2,ij (ω), on a fixed frequency grid from 0 to 20 eV with spacing ∆ E = 0 .1 eV. The corresponding real part ε1(ω) is recovered from the predicted ε2(ω) via the Kramers–Kronig (KK) relations, and the absorption coefficient is obtained from the standard expression 
+
+α(ω) = 
+
+√2 ωc
+
+q 
+
+ε21(ω) + ε22(ω) − ε1(ω)
+
+1/2
+
+. (17) Given α(E), the SLME η is evaluated at a fixed film thickness Labs = 0 .3 μm, device temperature Tcell =300 K, and reference solar spectrum (AM1.5G). 9Dataset. 
+
+The training data are drawn from OptiMate [11], a large-scale DFT dataset of dielectric spectra comprising 21 ,064 materials sampled from the Alexandria database [12]. The underlying ground-state calculations were performed with Quantum ESPRESSO [13], and the frequency-dependent dielectric spectra were obtained with Yambo [14]. 
+
+Train/validation/test splits. 
+
+Following the protocol of the original TSENN study [10], we partition the data into 16 ,848 training, 2 ,106 validation, and 2 ,110 test materials — an 80 /10 /10 split stratified by crystal system, so that the symmetry distribution is preserved across the three splits. 
+
+Training. 
+
+Learning rate 1 × 10 −2, weight decay 5 × 10 −2; remaining hyperparameters in Supplementary Table 5. 
+
+Supplementary Table 5 . Hyperparameters for the TSENN SLME surrogate.        
+
+> Hyperparameter Value Maximum spherical harmonic order ℓmax 2Embedding dimension 128 Number of layers 4Channel multiplicity 64 Batch size 24
+
+The parity plots in Supplementary Figure 5 compare the predicted SLME values with those computed for the train, validation, and test splits. The surrogate attains R2 = 0 .943, MAE = 1 .15% on the training sets, R2 = 0 .921, MAE = 1 .37% on the validation sets, and R2 = 0 .925, MAE = 1 .35% on the test sets. The high R2 on the held-out test set indicates that the predictor remains accurate on held-out materials, which is the most relevant benchmark for inverse design because generated candidates are not part of the training set. 0 10 20 30 Target η (%) 010 20 30 Predicted η (%) R² = 0.943 MAE = 1.15 % train 
+
+0 10 20 30 Target η (%) 010 20 30 R² = 0.921 MAE = 1.37 % valid 
+
+0 10 20 30 Target η (%) 010 20 30 R² = 0.925 MAE = 1.35 % test train (9922) valid (1271) test (1224) 
+
+Supplementary Figure 5 . Predicted versus DFT-computed SLME. Parity plots of the predicted SLME η against the value computed from the DFT dielectric spectrum, shown for the train, validation, and test splits (left to right). The dashed line indicates perfect agreement ( y = x). On the held-out test set, the model achieves R2 = 0 .925 with MAE = 1 .35% (absolute efficiency percentage points). 
+
+4.3 Static-limit dielectric tensor 
+
+The output head emits two irreps of O(3): a scalar ( 1x0e ) and a symmetric rank-2 traceless tensor ( 1x2e ), giving 1 + 5 = 6 independent coefficients. These coefficients are mapped back to the Cartesian symmetric dielectric tensor εij via the spherical-to-Cartesian transformation, recovering the six independent entries 
+
+{εxx , ε yy , ε zz , ε xy , ε xz , ε yz }. This decomposition separates the isotropic trace from the anisotropic traceless 10 response. This is important because the diagonal entries are typically much larger than the off-diagonal entries; separating the two scales prevents the loss from being dominated by the diagonal components [10]. 
+
+Dataset. 
+
+The training data comprise 6 ,706 materials drawn from the Materials Project database [4], with dielectric tensors computed by density-functional perturbation theory (DFPT) in VASP [15]. 
+
+Train/validation/test splits. 
+
+We partition the data into 5 ,363 training, 671 validation, and 672 test materials, an ≈ 80 /10 /10 split stratified by crystal system, so that the symmetry distribution is preserved across the three splits. 
+
+Training. 
+
+Learning rate 1 × 10 −2, weight decay 5 × 10 −2; remaining hyperparameters in Table 6. 
+
+Supplementary Table 6 . Hyperparameters for the TSENN dielectric-tensor surro-gate.        
+
+> Hyperparameter Value Maximum spherical harmonic order ℓmax 2Embedding dimension 64 Number of layers 2Channel multiplicity 32 Batch size 16
+
+Per-component test-set metrics are reported in Supplementary Table 7, and the corresponding parity plots across all splits are shown in Supplementary Figure 6. The off-diagonal components have substantially smaller absolute errors than the diagonal components, consistent with their smaller magnitudes in the DFT data. Despite this scale separation, the model maintains high R2 values for both diagonal and off-diagonal components. These results indicate that the scalar and rank-2 irrep decomposition enables the surrogate to learn the full symmetric dielectric tensor without letting the large diagonal components dominate the prediction. The resulting model is therefore suitable as a tensorial scorer for inverse-design tasks, including those targeting materials with finite off-diagonal dielectric responses. 
+
+Supplementary Table 7. Per-component performance of the TSENN dielectric-tensor surrogate on the held-out test split. MAE is reported in units of the relative dielectric constant.               
+
+> Component R2MAE
+> εxx 0.993 0.087
+> εyy 0.992 0.083
+> εzz 0.991 0.088
+> εxy 0.986 0.005
+> εxz 0.976 0.006
+> εyz 0.956 0.009
+
+11 0 6 12 18 24 0612 18 24 
+
+> train: MAE 0.106, R² 0.987 valid: MAE 0.103, R² 0.985 test: MAE 0.087, R² 0.993
+
+εxx     
+
+> 0510 15 20 0510 15 20
+> train: MAE 0.107, R² 0.982 valid: MAE 0.102, R² 0.986 test: MAE 0.083, R² 0.992
+
+εyy     
+
+> 0510 15 20 0510 15 20
+> train: MAE 0.099, R² 0.988 valid: MAE 0.103, R² 0.988 test: MAE 0.088, R² 0.991
+
+εzz     
+
+> −4 −2 024−4 −2 024
+> train: MAE 0.007, R² 0.931 valid: MAE 0.012, R² 0.849 test: MAE 0.005, R² 0.986
+
+εxy    
+
+> −2 024−2 024
+> train: MAE 0.011, R² 0.959 valid: MAE 0.012, R² 0.939 test: MAE 0.009, R² 0.956
+
+εyz    
+
+> −2 024−2 024
+> train: MAE 0.009, R² 0.966 valid: MAE 0.008, R² 0.987 test: MAE 0.006, R² 0.976
+
+εxz 
+
+Target dielectric tensor component Predicted dielectric tensor component   
+
+> train (n=5363) valid (n=671) test (n=672)
+
+Supplementary Figure 6 . Predicted versus DFT-computed static-limit dielectric tensors across all three splits. Parity plots of each independent Cartesian component εij (i, j ∈ { x, y, z }) of the dielectric tensor, evaluated on the train, validation, and test splits. The dashed line indicates perfect agreement (y = x). The inset showing the MAE for per-component performance, and all the metrics are also reported in Supplementary Table 7. 
+
+# 5 Reward shaping 
+
+For both inverse-design tasks, the reward depends on a task-specific property and the predicted band gap. Selected quantities are mapped to [0 , 1] using the clamped ascending linear ramp Φ( x; a, b ) = clip 
+
+ x − ab − a , 0, 1
+
+
+
+, (18) which is zero for x ≤ a, increases linearly between a and b, and saturates at one for x ≥ b. The dielectric and SLME tasks combine their property and band-gap terms differently. The dielectric reward uses the smaller of the two terms, while the SLME reward uses a weighted sum that favors band gaps near the single-junction optimum. 
+
+Dielectric task. 
+
+The tensor-based uniaxial dielectric score is 
+
+quni = gz (1 − m) ∈ [0 , 1] , (19) where gz measures the contrast between the out-of-plane and mean in-plane dielectric responses, and m
+
+measures the residual mismatch between εxx and εyy . These quantities are defined in the main Methods. It is convenient to name the in-plane isotropy factor separately, 
+
+qiso ≡ 1 − m ∈ [0 , 1] , quni = gz qiso , (20) since the two factors suppress different failure modes, where gz rejects near-isotropic tensors, while qiso 
+
+rejects biaxial ones. The uniaxial score is mapped to [0 , 1] using 
+
+rq = Φ( quni ; 0 , 0.20) , (21) 12 while the band-gap contribution is 
+
+rg, uni (Eg ) = Φ( Eg ; 0 .3, 0.8) . (22) The final dielectric reward is 
+
+runi = min [ rq , r g, uni (Eg )] = min [Φ( quni ; 0 , 0.20) , Φ( Eg ; 0 .3, 0.8)] . (23) The minimum operator makes the smaller term the limiting contribution. A large uniaxial score cannot compensate for a small predicted band gap, and a large band gap cannot compensate for a poor uniaxial response. The reward is therefore nonzero only when quni > 0 and Eg > 0.3 eV. It reaches one when 
+
+quni ≥ 0.20 and Eg ≥ 0.8 eV. Because the ramp saturates at quni = 0 .20, the reward does not discriminate among candidates with quni > 0.20. We therefore apply an additional in-plane isotropy criterion, qiso ≥ 0.95, when selecting candidates for first-principles validation. This construction prevents near-metallic candidates from receiving a high reward solely because of their predicted dielectric response. It also keeps the search within the finite-gap regime represented by the dielectric surrogate and used for subsequent DFPT validation. The resulting reward surface is shown in Supplementary Figure 7(a). 
+
+SLME property term. 
+
+For the photovoltaic task, the property term is the SLME η. We evaluate η under the AM1.5G illumination spectrum using a film thickness Labs = 0 .3 μm, a cell temperature Tcell = 300 K, and a radiative fraction 
+
+fr = 1 [16, 17]. The efficiency is defined as 
+
+η = Pmax 
+
+Psolar 
+
+, (24) where the incident solar power is 
+
+Psolar =
+
+Z ∞
+
+> 0
+
+Isolar (E) d E. (25) Here, Isolar (E) is the AM1.5G energy irradiance. The maximum electrical output power is obtained from the diode J–V curve, 
+
+Pmax = max  
+
+> V
+
+{J(V )V }, J(V ) = Jsc − J0
+
+
+
+eqV / (kB Tcell ) − 1
+
+
+
+, (26) where q is the elementary charge and kB is the Boltzmann constant. The material absorptance is calculated from the predicted absorption coefficient as 
+
+A(E) = 1 − e−2α(E)Labs , (27) where E = ℏω. The short-circuit current density is 
+
+Jsc = q
+
+Z ∞
+
+> Eg
+
+A(E) ϕsolar (E) d E, (28) where Eg defines the absorption edge and ϕsolar (E) is the incident solar photon flux. When the photon energy E is expressed in electronvolts, the photon flux is obtained from the energy irradiance as 
+
+ϕsolar (E) = Isolar (E)
+
+qE , (29) where qE converts the photon energy from electronvolts to joules. The dark saturation current is modeled as radiative-recombination limited, 
+
+J0 = Jrad 0
+
+fr
+
+= qπ fr
+
+Z ∞
+
+> Eg
+
+A(E) ϕbb (E, T cell ) d E, (30) where ϕbb (E, T cell ) is the blackbody photon radiance per unit solid angle, 
+
+ϕbb (E, T cell ) = 2E2
+
+h3c2
+
+1exp ( E/k B Tcell ) − 1 . (31) Here, h is Planck’s constant and c is the speed of light. The factor π performs the hemispherical angular integration that converts the radiance into an emitted photon flux. Because η depends on both the band gap and the full absorption spectrum α(E), it provides the task-specific photovoltaic property term. 13 SLME reward. 
+
+Although η already depends on the band gap, we include an additional band-gap term to guide the generated population toward the favorable region for single-junction solar cells. The final SLME reward is 
+
+rSLME = wη rη + wg rg, SLME , (32) where the normalized efficiency term is 
+
+rη = Φ( η; 0 , 0.35) , (33) and the band-gap localization term is 
+
+rg, SLME (Eg ) = clip 
+
+
+
+1 − |Eg − E∗|
+
+∆ , 0, 1
+
+
+
+. (34) We use wη = 0 .8, wg = 0 .2, E∗ = 1 .3 eV, and ∆ = 1 .0 eV. Because both terms lie in [0 , 1] and the weights sum to one, the final reward also satisfies rSLME ∈ [0 , 1]. The band-gap term forms a symmetric tent centered at E∗ = 1 .3 eV. It reaches one at the center and decreases linearly to zero at Eg = 0 .3 and 2 .3 eV. Outside this interval, the band-gap contribution remains zero. This term does not act as a hard gate. A candidate outside the preferred interval can still receive reward through its predicted efficiency, but it does not receive the additional contribution from band-gap localization. The larger weight wη = 0 .8 keeps SLME as the dominant optimization objective. The smaller band-gap term discourages the search from drifting toward very small-gap or overly wide-gap regions. As shown in Supplementary Figure 7(b), the reward increases with SLME and contains an additional ridge centered near Eg = 1 .3 eV. For reference, the dashed curve in Supplementary Figure 7(b) shows the Shockley–Queisser detailed-balance limit ηSQ (Eg ) evaluated using the same AM1.5G spectrum. In our implementation, the curve reaches a maximum efficiency of 33 .7% at Eg = 1 .34 eV. This curve provides a theoretical reference and is not included in the reward. 0 1 2 3 4
+
+> Band gap (eV)
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> rq
+
+(a)       
+
+> runi = min ( rq,rg, uni )
+> 01234
+> Band gap (eV)
+> 0816 24 32 40
+> SLME  η (%)
+
+(b)       
+
+> rSLME =wηrη+wgrg, SLME
+> SQ limit
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> reward
+
+Supplementary Figure 7 . Reward surfaces. Reward as a function of the predicted band gap Eg and the task-specific property for (a) the uniaxial dielectric objective and (b) the SLME objective. In (a), the tensor-based property score is quni = gz (1 − m), and the final reward is runi = min[Φ( quni ; 0 , 0.20) , Φ( Eg ; 0 .3, 0.8)]. The vertical dotted line marks the onset of the band-gap contribution at Eg = 0 .3 eV. In (b), the final reward is rSLME = 0 .8rη + 0 .2rg, SLME , where rη = Φ( η; 0 , 0.35) and rg, SLME is a symmetric tent centered at E∗ = 1 .3 eV. The dashed curve shows the Shockley–Queisser detailed-balance limit ηSQ (Eg ) evaluated using the same AM1.5G spectrum. 14 6 First-principles validation of generated candidates across crystal systems 
+
+6.1 Uniaxial dielectric responses 
+
+To test whether the dielectric responses identified by the surrogate remain valid at the first-principles level, we relaxed selected generated structures with DFT and calculated their dielectric tensors using DFPT. Candidates were selected from the generated population by requiring a uniaxial dielectric reward of runi ≥
+
+0.5 and a predicted Ehull ≤ 0.10 eV/atom. The reward threshold ensures that the selected candidates satisfy both the dielectric-anisotropy and finite-gap objectives defined in the reward function. The high-throughput calculations were managed using atomate2 0.1.5 and performed with VASP 6.4.2 . Each candidate underwent two successive full cell-and-ion relaxations followed by a static calculation using the Materials Project-compatible PBE(+ U ) protocol implemented through MPRelaxSet 
+
+and MPStaticSet . These calculations used projector augmented-wave (PAW) PBE potentials, a plane-wave cutoff of Ecut = 520 eV, and the standard Materials Project Hubbard-U corrections for transition-metal oxides and fluorides. The relaxed geometry was then evaluated using the DFPT dielectric workflow with 
+
+LEPSILON = .TRUE. , IBRION = 8 , the PBEsol exchange-correlation functional, and a plane-wave cutoff of 
+
+Ecut = 680 eV. The resulting dielectric tensor is denoted by ε0.Supplementary Figure 8(a) shows nine generated candidates whose first-principles dielectric tensors retain the targeted relation 
+
+ε0,xx ≈ ε0,yy , ε0,zz ̸ = ε0,xx + ε0,yy 
+
+2 . (35) For simplicity, the subscript 0 is omitted from the individual tensor components below. The validated candidates span the hexagonal, tetragonal, orthorhombic, and monoclinic crystal systems. Their DFT band gaps range from 0 .72 to 5 .47 eV, and their Ehull range from 0 to 67 meV/atom. For the hexagonal and tetragonal candidates, equality between the two in-plane components is imposed by crystal symmetry. These structures include OsO 4 in P 63, ZrTi 2O6 and TiOF 2 in P 42/mnm , InPS 4
+
+in I¯42 m, and RbLiTeO 4 in P 63. The tetragonal P 42/mnm phase of ZrTi 2O6 shown here is a distinct polymorph from the trigonal P ¯31 m phase highlighted in the main text. The occurrence of both polymorphs further illustrates that the targeted dielectric response is controlled by the crystal structure and symmetry, rather than by composition alone. Their DFPT tensors satisfy εxx = εyy within the reported numerical precision, while εzz remains distinct. Among these candidates, InPS 4 exhibits the largest contrast, with 
+
+εxx = 5 .77, εyy = 5 .78, and εzz = 3 .57. The lower-symmetry candidates show that the same numerical tensor relation can also arise without symmetry protection. Monoclinic SrCl 2 in C2/m and the orthorhombic structures SiTe 2 in P 212121, TeO 2
+
+in P 212121, and Ti(TeO 3)2 in P 21212 exhibit approximately equal in-plane components and a distinct response along the selected out-of-plane direction. Their space groups do not require εxx = εyy , so the approximate equality arises from the particular relaxed structures. These responses may therefore be more sensitive to strain, defects, temperature, or further structural perturbations than the symmetry-enforced responses of the hexagonal and tetragonal candidates. Supplementary Figure 8(b) presents three comparison cases that illustrate distinct rejection mecha-nisms. Orthorhombic Ti 2TeO 6 in P nn 2 retains an approximately uniaxial tensor, with diagonal components 8.18, 8 .24, and 8 .77, but its Ehull is 105 meV/atom, slightly exceeding the 0 .10 eV/atom stability cutoff. Orthorhombic SrTiO 3 in P nma has an almost isotropic tensor, with diagonal components 6 .39, 6 .41, and 6.35, and is therefore suppressed by the out-of-plane contrast term. Monoclinic TeI 2 in P 21/c has strongly unequal diagonal components, 4 .26, 7 .43, and 13 .44, and is rejected by the in-plane isotropy requirement. These examples show how stability, out-of-plane contrast, and in-plane equality contribute separately to candidate selection. The first-principles calculations confirm that the surrogate-guided search identifies finite-gap structures whose dielectric tensors reproduce the desired relation between the in-plane and out-of-plane responses. They also distinguish symmetry-enforced uniaxiality from approximate uniaxiality that occurs only for a specific relaxed configuration. The comparison cases further demonstrate that a favorable tensor con-trast alone is not sufficient. A candidate must also satisfy the stability, in-plane isotropy, and finite-gap requirements of the complete selection procedure. 15 1 OsO 4 P6 3 (173) 
+
+⊙ c Os O   
+
+> ε0=
+> Eg= 3.41 eV
+> Ehull = +6 meV/atom
+
+2 ZrTi 2O6 P4 2/mnm (136) 
+
+⊙ c Zr Ti O   
+
+> ε0=
+> Eg= 2.04 eV
+> Ehull = +46 meV/atom
+
+3 SrCl 2 C2/m (12) 
+
+⊙ c Sr Cl    
+
+> ε0=
+> Eg= 5.47 eV
+> Ehull = +67 meV/atom
+
+4 TiOF 2 P4 2/mnm (136) 
+
+⊙ c Ti O F   
+
+> ε0=
+> Eg= 3.46 eV
+> Ehull = +67 meV/atom
+
+5 InPS 4 I42m (121) 
+
+⊙ c In P S   
+
+> ε0=
+> Eg= 1.39 eV
+> Ehull = +61 meV/atom
+
+6 SiTe 2 P2 12121 (19) 
+
+⊙ c Te Si    
+
+> ε0=
+> Eg= 0.72 eV
+> Ehull = +0 meV/atom
+
+7 RbLiTeO 4 P6 3 (173) 
+
+⊙ c Rb Te Li O   
+
+> ε0=
+> Eg= 2.70 eV
+> Ehull = +0 meV/atom
+
+8 TeO 2 P2 12121 (19) 
+
+⊙ b Te O   
+
+> ε0=
+> Eg= 3.30 eV
+> Ehull = +0 meV/atom
+
+9 Ti(TeO 3)2 P2 1212 (18) 
+
+⊙ c Ti Te O   
+
+> ε0=
+> Eg= 2.53 eV
+> Ehull = +52 meV/atom
+
+Ti 2TeO 6 Pnn2 (34) 
+
+⊙ c Ti Te O   
+
+> ε0=
+> Eg= 1.51 eV
+> Ehull = +105 meV/atom
+
+SrTiO 3 Pnma (62) 
+
+⊙ a Sr Ti O   
+
+> ε0=
+> Eg= 1.81 eV
+> Ehull = +28 meV/atom
+
+TeI 2 P2 1/c (14) 
+
+⊙ c I Te    
+
+> ε0=
+> Eg= 0.90 eV
+> Ehull = +59 meV/atom
+
+(a) (b) Supplementary Figure 8 . First-principles validation of generated uniaxial dielectric candi-dates. (a) Nine generated structures whose dielectric tensors ε0 retain the targeted relation εxx ≈ εyy 
+
+with a distinct out-of-plane component. Each entry shows the DFT-relaxed structure, realized space group, calculated dielectric tensor, DFT band gap Eg , and Ehull . The viewing direction is indicated below each structure, and ⊙ denotes an axis pointing out of the page. The hexagonal and tetragonal structures exhibit symmetry-enforced in-plane equality, while the monoclinic and orthorhombic structures exhibit approximate equality that is not required by symmetry. (b) Comparison cases illustrating three rejection mechanisms. Ti 2TeO 6 retains an approximately uniaxial tensor but exceeds the stability cutoff, SrTiO 3 has a nearly isotropic response and is suppressed by the out-of-plane contrast term, and TeI 2 has a biaxial response that fails the in-plane isotropy requirement. 
+
+6.2 SLME 
+
+To verify that the generative loop discovers genuinely diverse semiconductors rather than repeatedly exploit-ing a single low-symmetry motif, we relaxed a representative set of generated structures with DFT and computed their optical responses. Because the TSENN surrogate was trained on the OptiMate dataset, the 16 validation calculations were performed using the same high-throughput PBE independent-particle workflow used to construct the training data [11]. Briefly, ground-state calculations were performed using Quantum ESPRESSO with SG15 norm-conserving pseudopotentials, and the frequency-dependent dielectric functions were calculated using Yambo over the 0–20 eV range with an energy spacing of 0.01 eV and a broadening of 0.10 eV. The plane-wave cutoff, k-point density, and number of unoccupied bands were converged following the OptiMate protocol. Candidate materials were selected according to the surrogate predictions, requiring a TSENN-predicted band gap of 0.8–1.9 eV and an SLME exceeding 25%. Of the 576 structures satisfying these criteria, 241 (42%) relaxed to gapped semiconductors with well-defined absorption spectra, whereas the remainder became metallic or nearly metallic after DFT relaxation. Because SLME depends strongly on the absorption onset, uncertainty in the predicted band gap is the dominant source of error, rather than inaccuracies in the predicted optical spectra. The eight materials shown in Supplementary Figure 9 are drawn from this DFT-confirmed semiconducting pool, and their first-principles ε2(ω) spectra are compared with the TSENN surrogate that guided the search. The selected materials span six of the seven crystal systems, including cubic K 2Te ( F m ¯3m) and NaHfCu 3S4 (P ¯43 m), trigonal CsGeBr 3 (R3m), tetragonal SnBr 2 (P 42/mnm ), orthorhombic BiSI ( P nma )and PbS ( P mn 21), monoclinic InGaS 2 (P 21/c ), and triclinic AsS 4 (P ¯1). This diversity shows that the search discovers promising photovoltaic absorbers across a broad range of crystal symmetries rather than collapsing onto the triclinic P 1/ P ¯1 structures that dominate the raw efficiency ranking. Across this representative set, the candidates exhibit PBE indirect band gaps of 1.15–2.12 eV and SLME values of 18–32%, placing most within the desired range for single-junction photovoltaic absorbers. The TSENN surrogate closely reproduces the DFT-computed ε2(ω) spectra, including the absorption onset, dom-inant absorption peak, and higher-energy spectral features across all represented crystal systems. Spectral agreement was quantified using the spectral similarity coefficient (SC), SC[ εTSENN 2 (ω); εDFT 2 (ω)] = 1 −
+
+R |εDFT 2 (ω) − εTSENN 2 (ω)|dω 
+
+R |εDFT 2 (ω)|dω (36) following Ref. [11], where SC = 1 indicates identical spectra. The layered orthorhombic PbS shows the closest agreement, with an SC of 0.97. The reported band gaps and optical spectra were calculated at the PBE independent-particle level and should therefore be interpreted as internally consistent screening quantities rather than quantitative quasiparticle or optical excitation energies. PBE generally underestimates band gaps, while the independent-particle approximation neglects electron–hole interactions and microscopic local-field effects. Nevertheless, the close agreement between the surrogate and the corresponding DFT calculations confirms that the reward model reproduces the level of optical physics represented in its training data across a structurally diverse set of semiconductors, supporting its use in the generative search. 17 K2Te Fm3m (225)                                                                              
+
+> KTe ⊙a
+> 0246810 02468
+> ε2
+> Eg= 2.12 eV SLME = 18% DFT TSENN CsGeBr 3R3m (160)
+> Ge Br Cs ⊙a
+> 0246810 0246
+> ε2
+> Eg= 1.42 eV SLME = 29% SnBr 2P4 2/mnm (136)
+> Br Sn ⊙c
+> 0246810 0369
+> ε2
+> Eg= 1.62 eV SLME = 23% AsS 4P1 (2)
+> SAs ⊙b
+> 0246810
+> Photon energy (eV)
+> 0246
+> ε2
+> Eg= 1.30 eV SLME = 32% NaHfCu 3S4P43m (215)
+> Na SCu Hf ⊙a
+> 0246810 036912
+> ε2
+> Eg= 1.58 eV SLME = 22% BiSI Pnma (62)
+> SIBi ⊙b
+> 0246810 036912
+> ε2
+> Eg= 1.70 eV SLME = 25% PbS Pmn2 1(31)
+> SPb ⊙b
+> 0246810 0510 15 20
+> ε2
+> Eg= 1.15 eV SLME = 28% InGaS 2P2 1/c (14)
+> SGa In ⊙a
+> 0246810
+> Photon energy (eV)
+> 0369
+> ε2
+> Eg= 1.68 eV SLME = 27%
+
+Supplementary Figure 9 . First-principles optical response of eight generated candidates. For each material the left panel shows the relaxed crystal structure (ball-and-stick, unit cell outlined) viewed down the crystallographic axis marked in the lower-left corner. The ⊙ denotes a viewing axis pointing out of the page. Each structure panel associated to a spectra panel comparing the imaginary dielectric function ε2(ω) from first-principles DFT (QE, black solid) with the TSENN prediction (red dashed) over 0– 10 eV. Annotations give the PBE indirect band gap Eg and the SLME evaluated following the parameters throughout the work describe in main text. 
+
+# References 
+
+[1] Levy, D., Panigrahi, S.S., Kaba, S.-O., Zhu, Q., Lee, K.L.K., Galkin, M., Miret, S., Ravanbakhsh, S.: Symmcd: Symmetry-preserving crystal generation with diffusion models. In: The Thirteenth International Conference on Learning Representations [2] Yang, H., Hu, C., Zhou, Y., Liu, X., Shi, Y., Li, J., Li, G., Chen, Z., Chen, S., Zeni, C., Horton, M., Pinsler, R., Fowler, A., Z¨ ugner, D., Xie, T., Smith, J., Sun, L., Wang, Q., Kong, L., Liu, C., Hao, H., Lu, Z.: Mattersim: A deep learning atomistic model across elements, temperatures and pressures. arXiv preprint arXiv:2405.04967 (2024) arXiv:2405.04967 [cond-mat.mtrl-sci] [3] Zeni, C., Pinsler, R., Z¨ ugner, D., Fowler, A., Horton, M., Fu, X., Wang, Z., Shysheya, A., Crabb´ e, J., Ueda, S., Sordillo, R., Sun, L., Smith, J., Nguyen, B., Schulz, H., Lewis, S., Huang, C.-W., Lu, Z., Zhou, Y., Yang, H., Hao, H., Li, J., Yang, C., Li, W., Tomioka, R., Xie, T.: A generative model for inorganic materials design. Nature 639 (8055), 624–632 (2025) https://doi.org/10.1038/s41586-025-08628-5 [4] Jain, A., Ong, S.P., Hautier, G., Chen, W., Richards, W.D., Dacek, S., Cholia, S., Gunter, D., Skinner, D., Ceder, G., Persson, K.A.: Commentary: The Materials Project: A materials genome approach to accelerating materials innovation. APL Materials 1(1), 011002 (2013) https://doi.org/10.1063/1. 4812323 [5] Jiao, R., Huang, W., Liu, Y., Zhao, D., Liu, Y.: Space group constrained crystal generation. In: 18 International Conference on Learning Representations (ICLR) (2024) [6] Jiao, R., Huang, W.-b., Zhang, Y., Rong, J., Liu, Y.: Crystal structure prediction by joint equivariant diffusion. In: Advances in Neural Information Processing Systems (NeurIPS) (2023) [7] Chen, J., Guo, J., Fako, E., Schwaller, P.: Accelerating inverse materials design using generative diffusion models with reinforcement learning. arXiv preprint arXiv:2511.03112 (2025) arXiv:2511.03112 [8] Black, K., Janner, M., Du, Y., Kostrikov, I., Levine, S.: Training diffusion models with reinforcement learning. arXiv preprint arXiv:2305.13301 (2023) arXiv:2305.13301 [9] Fan, Y., Watkins, O., Du, Y., Liu, H., Ryu, M., Boutilier, C., Abbeel, P., Ghavamzadeh, M., Lee, K., Lee, K.: DPOK: Reinforcement learning for fine-tuning text-to-image diffusion models. In: Advances in Neural Information Processing Systems (NeurIPS) (2023) [10] Hsu, T.-W., Fang, Z., Bansil, A., Yan, Q.: Accurate prediction of tensorial spectra using equivariant graph neural network. Nature Communications (2026) https://doi.org/10.1038/s41467-026-69159-9 [11] Grunert, M., Großmann, M., Runge, E.: Deep learning of spectra: Predicting the dielectric func-tion of semiconductors. Physical Review Materials 8(12), 122201 (2024) https://doi.org/10.1103/ PhysRevMaterials.8.L122201 [12] Schmidt, J., Hoffmann, N., Wang, H.-C., Borlido, P., Carri¸ co, P.J.M.A., Cerqueira, T.F.T., Botti, S., Marques, M.A.L.: Machine-Learning-Assisted Determination of the Global Zero-Temperature Phase Diagram of Materials. Advanced Materials 35 (22), 2210788 (2023) https://doi.org/10.1002/adma. 202210788 [13] Giannozzi, P., Baroni, S., Bonini, N., Calandra, M., Car, R., Cavazzoni, C., Ceresoli, D., Chiarotti, G.L., Cococcioni, M., Dabo, I., Dal Corso, A., de Gironcoli, S., Fabris, S., Fratesi, G., Gebauer, R., Gerstmann, U., Gougoussis, C., Kokalj, A., Lazzeri, M., Martin-Samos, L., Marzari, N., Mauri, F., Mazzarello, R., Paolini, S., Pasquarello, A., Paulatto, L., Sbraccia, C., Scandolo, S., Sclauzero, G., Seitsonen, A.P., Smogunov, A., Umari, P., Wentzcovitch, R.M.: QUANTUM ESPRESSO: A modular and open-source software project for quantum simulations of materials. Journal of Physics: Condensed Matter 21 (39), 395502 (2009) https://doi.org/10.1088/0953-8984/21/39/395502 [14] Sangalli, D., Ferretti, A., Miranda, H., Attaccalite, C., Marri, I., Cannuccia, E., Melo, P., Marsili, M., Paleari, F., Marrazzo, A., Prandini, G., Bonf` a, P., Atambo, M.O., Affinito, F., Palummo, M., Molina-S´ anchez, A., Hogan, C., Gr¨ uning, M., Varsano, D., Marini, A.: Many-body perturbation theory calculations using the yambo code. Journal of Physics: Condensed Matter 31 (32), 325902 (2019) https: //doi.org/10.1088/1361-648X/ab15d0 [15] Petousis, I., Chen, W., Hautier, G., Graf, T., Schladt, T.D., Persson, K.A., Prinz, F.B.: Benchmarking density functional perturbation theory to enable high-throughput screening of materials for dielec-tric constant and refractive index. Physical Review B 93 (11), 115151 (2016) https://doi.org/10.1103/ PhysRevB.93.115151 . Accessed 2026-07-06 [16] Yu, L., Zunger, A.: Identification of Potential Photovoltaic Absorbers Based on First-Principles Spec-troscopic Screening of Materials. Physical Review Letters 108 (6), 068701 (2012) https://doi.org/10. 1103/PhysRevLett.108.068701 . Accessed 2026-07-02 [17] Hung, N.T., Okabe, R., Chotrattanapituk, A., Li, M.: Universal Ensemble-Embedding Graph Neural Network for Direct Prediction of Optical Spectra from Crystal Structures. Advanced Materials 36 (46), 2409175 (2024) https://doi.org/10.1002/adma.202409175 . Accessed 2025-11-24 19

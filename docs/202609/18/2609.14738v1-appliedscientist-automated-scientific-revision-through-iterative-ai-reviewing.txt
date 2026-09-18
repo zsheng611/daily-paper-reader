@@ -1,0 +1,590 @@
+Title: AppliedScientist: Automated Scientific Revision Through Iterative AI Reviewing
+
+URL Source: https://arxiv.org/pdf/2609.14738v1
+
+Published Time: Tue, 15 Sep 2026 01:35:42 GMT
+
+Number of Pages: 16
+
+Markdown Content:
+# AppliedScientist: Automated Scientific Revision Through Iterative AI Reviewing 
+
+## Vidushee Vats ∗, Karun Sharma ∗, Shengzhi Li ∗, Shichao Pei 1
+
+> 1
+
+Department of Computer Science University of Massachusetts Boston 
+
+Abstract 
+
+Automated reviewing systems are increasingly evaluated based on the quality of the reviews they produce. Yet a re-view is only useful if acting on it leads to a measurable improvement in the paper. We present AppliedScientist, a closed-loop system that couples an autonomous AI scientist with an AI reviewer, and evaluate it by iteratively revising rejected papers from a range of research subfields. To mirror how human authors build on earlier drafts, the AI scientist has access to its previous versions during revision. To avoid bias from prior judgments, however, each review is gener-ated independently, with the reviewer having no memory of earlier feedback or scores. We compare three revision set-tings: one initialized with the original venue reviews, one initialized with AI-generated reviews, and autonomous self-revision using the same fixed prompt in every round. Because the reviewer both guides and evaluates the revision, we also as-sess the human-initialized revisions using Stanford Reviewer as an independent evaluator. Reviewer-guided revision con-sistently improves more than fixed-prompt self-revision, and Stanford Reviewer also assigns higher scores to later revi-sions. AppliedScientist resolves 128 of 150 execution-related weaknesses (85.3%), but only 2 of 18 idea-related weaknesses (11.1%), suggesting that iterative revision is effective at im-proving experiments and implementation, but rarely changes concerns about novelty or significance. 
+
+Project page: https://theappliedscientist.github.io 
+
+## Introduction 
+
+Scientific publishing is an iterative process rather than a one-time evaluation. Reviewers identify strengths and weak-nesses, and authors revise the work before it is considered again. Addressing reviewer feedback, however, often requires substantially more than revising the manuscript. Authors may need to reproduce results, run new experiments, evaluate stronger baselines, and determine whether the resulting evi-dence addresses the reviewers’ concerns. As language mod-els become increasingly capable of conducting research and reviewing scientific papers, a natural question emerges: Can this process of scientific review and revision itself be auto-mated? Recent work has steadily automated different stages of the scientific publication process. AI scientists can conduct re-search and prepare manuscripts (Lu et al. 2024; Yamada et al. 
+
+> ∗
+
+Equal Contributors 
+
+2025; Gottweis et al. 2026), while AI reviewers can produce detailed critiques grounded in a submitted paper (Zhu et al. 2025; Goyal et al. 2026; Jiang and Ng 2026). Yet generat-ing a paper or a review does not establish that acting on the review improves the underlying research. In a closed revi-sion loop, the reviewer is not merely an evaluator; it supplies the feedback signal that determines which weaknesses the scientist addresses, much as a grader or reward model di-rects optimization in reinforcement learning. Even a capable scientist can therefore optimize toward the wrong objective when its reviewer is unreliable. Existing systems provide ei-ther a broad experimental action space under fixed human feedback or dynamic AI feedback restricted to paper gener-ation or textual rewriting. What remains unclear is whether an independently evaluated AI reviewer can repeatedly guide code, experiment, and manuscript revisions of the same ex-isting paper without replacing its central contribution. We study this question using real rejected papers, which already contain an implemented method, experimental code, and reviewer feedback describing the work’s shortcomings. We introduce AppliedScientist , a closed-loop system in which a scientist revises the implementation, executes ex-periments, analyzes the resulting artifacts, and updates the manuscript. After each revision, an independent AI Re-viewer evaluates only the current manuscript and returns fresh feedback for the next round. The scientist retains its previous code, results, manuscripts, and feedback so that revisions accumulate and the reviewer retains no history, preventing earlier judgments or scores from biasing its as-sessment of the current version. The central research con-tribution remains fixed, allowing us to study revision rather than replacement of the original project. We evaluate three sources of revision guidance. In the 
+
+human-initialized condition, written venue reviews guide the first round and the AI Reviewer guides subsequent rounds. In the AI-initialized condition, the AI Reviewer also supplies the first-round feedback. In autonomous self-revision , the scientist instead receives the same fixed self-review prompt in every round. The scientist has the same research capabilities in all three conditions, isolating the effect of the guidance it receives. Because our AI Reviewer both guides and scores the reviewer-driven conditions, we additionally use Stanford Reviewer to evaluate every saved version from the human-initialized trajectories. arXiv:2609.14738v1 [cs.AI] 13 Sep 2026 We evaluate AppliedScientist on 25 rejected and 5borderline-accepted ICLR papers spanning multiple research domains. Reviewer-guided revision improves substantially more than autonomous self-revision, while Stanford Re-viewer also assigns higher scores to later human-initialized versions. The effect depends strongly on the type of weak-ness: AppliedScientist resolves 128 of 150 execution-related weaknesses (85.3%), but only 2 of 18 idea-related weak-nesses ( ∼ 11 .1% ). Iterative revision can therefore strengthen the implementation, experimental evidence, and presentation of an existing contribution, but it rarely resolves concerns about the novelty or significance of the contribution itself Our contributions are three-fold: 
+
+• We introduce AppliedScientist, an iterative scientist-reviewer system that revises an existing paper’s imple-mentation, experiments, and manuscript in response to fresh reviews of each version. 
+
+• We treat the reviewer as a first-class component: we benchmark its review quality separately, compare its dy-namic guidance with fixed-prompt self-revision, and use an external reviewer to evaluate the resulting trajectories. 
+
+• We characterize what autonomous revision can and can-not improve: execution-related concerns can often be resolved through systematic revision, whereas novelty-related concerns remain substantially more difficult. 
+
+## Related Work 
+
+AI Scientists and Autonomous Research Autonomous AI systems increasingly cover multiple stages of the sci-entific research lifecycle, including idea generation, litera-ture review, experimentation, manuscript preparation, and peer review (Lu et al. 2024; Yamada et al. 2025; Gottweis et al. 2026; Baek et al. 2025; Weng et al. 2025; Ghareeb et al. 2026; Mitchener et al. 2025; Schmidgall et al. 2025). Prior systems already recognize the value of reviewing, but use it in different ways. AI Scientist evaluates a completed manuscript and archives the result for future research gener-ations, AI Scientist-v2 uses VLM critiques to refine exper-imental and manuscript figures, and CycleResearcher uses CycleReviewer scores to construct preference pairs across training rounds (Lu et al. 2024; Yamada et al. 2025; Weng et al. 2025). Robin and Kosmos push the same loop into new domains: Robin runs a full hypothesis-generate-and-test cy-cle for experimental biology and Kosmos shares a structured model across parallel analysis and literature-search agents to sustain longer, coherent discovery sessions (Ghareeb et al. 2026; Mitchener et al. 2025). These works establish strong foundations for autonomous scientific research. In contrast, our work focuses on iterative scientific revision guided by repeated peer review. 
+
+Automated Peer Review Automated reviewers increas-ingly use structured reasoning, multiple agents, and litera-ture retrieval to produce grounded critiques (Zhu et al. 2025; Goyal et al. 2026; Jiang and Ng 2026; Idahl and Ahmadi 2024; Taechoyotin and Acuna 2025; Weng et al. 2026). These systems differ mainly in how they get to a grounded critique: OpenReviewer fine-tunes directly on expert reviews, Remor trains with reinforcement learning against a reward function built from human preferences, and DeepReviewer 2.0 forces every claim in its output to be traceable to a specific loca-tion in the manuscript before it is released (Idahl and Ahmadi 2024; Taechoyotin and Acuna 2025; Weng et al. 2026).Goyal et al. (2026), Jin et al. (2024), D’Arcy et al. (2024), Jiang and Ng (2026) and Tan et al. (2024) focus on the use of mul-tiple agents, distinct personas, and retrieval mechanisms to simulate collaborative reviewing. This literature primarily evaluates the review itself. We separately benchmark our reviewer, and then observe whether acting on its feedback improves the research. 
+
+AI-Assisted Scientific Revision Compared with auto-mated reviewing, autonomous scientific revision remains relatively underexplored. The closest systems each cover one side of our setting. Apres revises existing scientific manuscripts by optimizing a learned rubric predictive of future citation impact, but restricts its action space to pre-sentation and protects experimental results from modifica-tion (Zhao et al. 2026). CycleResearcher studies the author-reviewer interaction during automated paper generation, but operates on synthetically generated manuscripts and does not execute new experiments during refinement (Weng et al. 2025). Alongside these systems, recent resources have emerged for studying revision itself. Luo et al. (2026) bench-mark an LLM’s ability to revise papers using real reviewer feedback, allowing repository edits, experiment execution, and manuscript revision, but acts once on a fixed set of human weaknesses rather than obtaining a new review of the revised paper. Other systems stay at the level of text entirely. ARIES aligns reviewer comments to the edits they prompted in the original manuscript, without generating new edits itself, and XtraGPT, trained on 140K instruction–revision pairs derived from published papers, rewrites one section at a time (e.g. the introduction) to satisfy a stated instruction, without touch-ing the underlying experiments (D’Arcy et al. 2024; Chen et al. 2026). Together, these works establish revision as an emerging research direction, although they primarily focus on textual revision rather than experimentally validating re-viewer feedback. 
+
+## Methodology 
+
+AppliedScientist consists of two components: a scientist that revises the implementation, experiments, and manuscript, and an AI reviewer that independently reviews each revision and provides feedback for the next iteration. We describe each component below. 
+
+AppliedScientist Revising an existing scientific paper dif-fers fundamentally from generating one from a new research idea. During research generation, the problem formulation, methodology, and experimental design may all evolve as the work develops. Revision instead begins with an estab-lished contribution, implementation, and manuscript, where the goal is to address reviewer concerns without replacing the central research idea. AppliedScientist is designed for this constrained setting. Given a rejected paper, its source repository, and current feedback, the scientist is instructed to address every reviewer Phase- Structured Review Agent Input Representation  
+
+> Read
+> Literature Search & Novelt y Assessment
+> Impact Assessment
+> Methodology Critique
+> Deep Search & Distillation
+> Specialized Search API
+> Index: 1M+ arXiv papers
+> Embedded using Gemini
+> Embedding 2 (Title+Abstract)
+> Constraints: Temporal
+> Grounding (~3 months filter)
+> Dense Retrieval + BM25
+> Context Graph
+> Framing & Positioning
+> Build understanding of the work.
+> Identify related work and assess the novelty and
+> motivation of the idea
+> Will people use it? Does it spark new research? Is
+> it the right idea at the right time for the field?
+> Is the setup fit for the claims? Are the metrics right?
+> Are the baselines fair and up to date?
+> Final High- Qualit y Review
+> OCR:
+> PDF to Markdown
+> Are the limitations honestly discussed ? Does the
+> abstract accurately reflect the paper' s contribution ?
+> Search Literature
+> and related w ork
+> Understand
+> Review
+> Verif y suggestions that
+> could be addressed
+> Design and
+> Run Experiments Improve paper draft
+> Analy ze Results
+
+# A ppliedScientist 
+
+A I R eviewer AI Reviewer 
+
+Figure 1: Overview of AppliedScientist. The scientist iteratively verifies reviewer suggestions, runs experiments, analyzes results, and updates the manuscript. The review component independently reads each revision, searches the literature, assesses its technical quality and significance, and returns structured feedback for the next round. concern while determining how each should be resolved. Depending on the feedback, this may require inspecting the repository and manuscript, searching the literature, editing implementation, reproducing results, adding baselines and presenting ablations, executing new experiments and ana-lyzing the results and updating the manuscript. The central research contribution is treated as fixed; if addressing a con-cern would require changing that contribution, the scientist records it as unresolved rather than reframing the work as a different project. Throughout the revision process, the scientist maintains the complete revision history, including previous manuscript versions, reviewer feedback, experimental results, and inter-mediate analyses. Each revision builds upon the results and decisions from earlier iterations rather than restarting from the original submission. The revision procedure is otherwise identical across all three conditions; only the guidance pro-vided to the scientist changes. 
+
+Review Component Our reviewer is inspired by how hu-man reviewers evaluate scientific papers. Rather than as-sessing every aspect of a paper simultaneously, reviewers gradually build an understanding of the work before forming specific judgments. For example, novelty cannot be assessed without understanding the relevant literature, and experimen-tal results cannot be evaluated without first understanding the claims they are intended to support. Skipping or reordering these steps can lead to unreliable assessments. Our reviewer therefore follows a structured review process in which each stage builds upon the information established by the previous one. The reviewer first identifies the paper’s contributions, methodology, and evaluation setting before conducting an independent literature search beyond the cited references. To assess novelty, it performs a deep search over an indexed collection of around one million arXiv papers. The search retrieves literature from multiple perspectives, including di-rect competitors, alternative approaches to the same prob-lem, recent benchmark methods, and work built upon similar baselines. It then evaluates the paper’s novelty, positioning with respect to prior work, the adequacy of its experimental evaluation, and its broader impact before synthesizing these observations into a structured review containing strengths, weaknesses, and suggestions for the next revision. Unlike the scientist, our reviewer intentionally maintains no memory of previous revisions. Every manuscript version is reviewed independently without access to earlier drafts, re-viewer comments, or historical scores. Retaining this history could bias the review by allowing judgments to be influ-enced by previous evaluations or previous scores rather than the quality of the submitted manuscript. Before producing the final review, the reviewer performs a verification pass to ensure that factual statements and comparisons are supported by either the manuscript or the retrieved literature. 
+
+Revision Loop Let V0 and C0 denote the original manuscript and codebase. At revision round t, the scientist receives the previous manuscript and codebase (Vt−1, C t−1),its accumulated revision history, and guidance Gt−1. It then updates the implementation, performs any required exper-iments, and produces revised code, experimental artifacts, and manuscript (Ct, E t, V t). The reviewer evaluates only Vt
+
+(together with any literature retrieved during that review) and generates a new review Rt without access to earlier manuscript versions, reviews, or evaluation scores. In the reviewer-guided conditions, Gt = Rt for the next revision round. In the autonomous self-revision condition, Gt remains the same fixed self-review prompt, while Rt is used only for evaluation. 0 1 2 3 4 5                     
+
+> Revision round
+> 34567
+> Reviewer score
+> NLP
+> 012345
+> Revision round
+> CV
+> 012345
+> Revision round
+> Graph
+> 012345
+> Revision round
+> Time Series
+> 012345
+> Revision round
+> RL
+> Human Review Initialized AppliedScientist Mean of human review scores
+
+Figure 2: Score trajectories across five scientific domains for the human-initialized condition. Round 0 reports the mean score assigned to the original manuscript by the human venue reviewers. AppliedScientist uses the written venue reviews to produce Round 1. Thereafter, our AI reviewer independently reviews each revision, and its feedback guides the following round. 
+
+Decision Domain N Rejected Borderline 
+
+NLP 12 11 1Computer Vision 4 3 1Graph Learning 5 4 1Time Series 5 4 1Reinforcement Learning 4 3 1
+
+Total 30 25 5
+
+Table 1: We curate 30 ICLR papers spanning five research domains and retain only papers with publicly available source code that can be reproduced on a single GPU within our VRAM budget. 
+
+## Experimental Setup 
+
+Data We mine 25 rejected and 5 borderline-accepted ICLR papers with both publicly available reviews and code. To ensure a diverse evaluation set, we sample papers spanning multiple research domains while preferring those with low variance in original human reviewer scores (Table 1). Finally, we filter papers by computational requirements, retaining only those that can be executed on CPU or a single GPU with 96 GB of VRAM. 
+
+Setup We evaluate AppliedScientist under the three re-vision conditions summarized in Table 2. The human-initialized condition begins with the original venue reviews, whereas the AI-initialized condition replaces them with re-views generated by our reviewer. In both cases, our reviewer evaluates every subsequent revision, and each new review guides the next iteration. By contrast, the autonomous self-revision condition uses no external reviewer feedback and the scientist relies on a same self-review prompt through-out. This comparison isolates the effect of iterative reviewer feedback from the scientist’s ability to revise autonomously. For all conditions, V0 denotes the original manuscript and 
+
+V1–V5 denote successive revisions. Each revision run takes approximately 9 hours on a 96 GB VRAM GPU. 
+
+Evaluation Our reviewer scores every saved manuscript version without access to earlier drafts, feedback, or scores. Because this reviewer also guides the reviewer-driven con-ditions, we separately score the human-initialized trajectory with Stanford Reviewer. Stanford Reviewer is used only for external evaluation and its outputs are never shown to the scientist. The score and threshold analyses below use the 30 completed human-initialized trajectories. 
+
+## Reviewer Evaluation 
+
+In a closed revision loop, the reviewer serves both as an eval-uator and as the feedback signal that guides the scientist’s next action. Reviewer validity is therefore a prerequisite for interpreting downstream improvements: a stronger scientist does not make the loop reliable if its reviewer consistently re-wards the wrong changes. Before using our reviewer’s scores to assess revision, we compare it with existing automated reviewers using the evaluation setup introduced in DeepRe-viewBench and ScholarPeer (Zhu et al. 2025; Goyal et al. 2026). We evaluate on 300 papers from 2020–2026, using the ICLR 2024 and ICLR 2025 splits of DeepReviewBench together with 300 papers from the AgentReviewer test set containing ICLR papers from 2020–2023. To evaluate perfor-mance on newer research, we additionally include a held-out set of 50 ICLR 2026 submissions. We adopt the extensions to the original DeepReviewBench protocol, replace the plau-sibility criterion with significance assessment, and allow the judge to use web search for novelty verification, following ScholarPeer. We use a search-enabled judge that receives the input pa-per together with reviews from two anonymized systems, with review order randomized to avoid positional bias. The judge compares the reviews across five dimensions: Tech-nical Accuracy, Constructive Value, Analytical Depth and Significance Assessment, with strong penalties for halluci-nated claims and generic feedback. Table 3 shows that our Reviewer outperforms all baselines across nearly every evalu-ation dimension. On Constructive Value, however, it achieves performance comparable to Stanford Agent Reviewer (44.3% vs. 45.7% win rate), with the remaining 10% of comparisons resulting in ties. Condition Guidance used for V1 Guidance used for V2–V5 Role of our reviewer 
+
+Human-initialized Original written venue reviews of 
+
+V0
+
+A fresh, independent AI review of the preceding version Guides V2–V5 and scores each version AI-initialized A fresh, independent AI review of 
+
+V0
+
+A fresh, independent AI review of the preceding version Guides V1–V5 and scores each version Autonomous self-revision Fixed self-review prompt The same fixed self-review prompt in every round Evaluation only; no feed-back is shown to the scientist 
+
+Table 2: Revision conditions. Guidance is the feedback shown to the scientist before it produces the indicated version. Evaluation-only reviews and scores are never exposed to the scientist. Stanford Reviewer is applied only to the saved versions from the human-initialized condition. Ours Stanford Ours      
+
+> 0.0 0.2 0.4 0.6
+> Correlation with human rating ( ρ)
+> 0.571 0.510 0.480
+> Deepseek v4 flash Reviewer MiniMax M2.7
+> Ours Stanford Ours
+> 0% 25% 50% 75%
+> Venue decision agreement  76.2% 71.1% 67.2%
+> Deepseek v4 flash Reviewer MiniMax M2.7
+
+Figure 3: Score alignment with venue reviews on a set of 650 ICLR 2020-26 papers. Left: Spearman correlation with the mean human rating. Right: agreement with the venue’s accept/reject decision. Across these papers, our Reviewer correlates with mean human ratings at ρ = 0 .571 with DeepSeek V4 Flash and matches the venue’s decision 76 .2% of the time, against ρ =0.48 and 67 .2% with MiniMax M2.7 (Figure 3). The Stanford Reviewer falls between the two, at ρ = 0 .51 and 71 .1% .
+
+## Results and Discussion 
+
+Does Reviewer Guidance Improve Papers? We first eval-uate the human-initialized condition, in which the original written venue reviews guide V1 and fresh feedback from our reviewer guides each later revision. Reviewer scores improve steadily across successive rounds. We compare this condi-tion with autonomous self-revision, in which the scientist receives the same fixed self-review prompt in every round and no reviewer-generated feedback (Figure 4). Although the scientist retains the same literature search, code execu-tion, experiment design, analysis, and manuscript-editing ca-pabilities, removing iterative reviewer feedback substantially reduces improvement. This suggests that the gains arise from the iterative scientist-reviewer process rather than from the scientist alone. We also evaluate the AI-initialized condition, in which our reviewer generates the initial feedback on V0 instead of using the venue reviews. This condition consistently outper-forms autonomous self-revision and converges to nearly the same final score as the human-initialized condition after five revision rounds. Figure 2 shows trajectories for the human-initialized con-0 1 2 3 4 5
+
+> Revision round
+> 456
+> Reviewer score
+> AppliedScientist Initialized with Human Review Stanford AI Reviewer AppliedScientist with a self-review prompt
+
+Figure 4: Under our reviewer, Rounds 1–5 of the human-initialized condition match the weighted domain averages in Figure 2; Round 0 is our reviewer’s score on the unre-vised manuscripts. Stanford Reviewer independently scores the original and revised manuscripts. Reviewer-guided re-vision improves substantially more than autonomous self-revision with a fixed prompt. dition across different scientific domains. The upward pattern appears in every represented domain rather than being con-fined to one research area. 
+
+External Evaluation. To test whether the improvements in our main human-initialized condition are specific to our re-viewer, we separately evaluate every saved version from that condition using Stanford Reviewer. We do not run Stanford Reviewer on the AI-initialized or autonomous self-revision conditions, and its evaluation-only reviews are never pro-vided to the scientist. Although Stanford Reviewer assigns different absolute scores, it observes the same upward trajec-tory across the human-initialized revisions, indicating that the improvements produced by the AppliedScientist with AI Reviewer reflect genuine gains in paper quality rather than optimization towards a single reviewer. 
+
+Score Improvements In the human-initialized condition, our reviewer scores the original papers at 5.37 on average and the best revision for each paper at 6.53 , a gain of +1 .16 
+
+points. Under the same best-revision aggregation, Stanford Reviewer increases from 5.50 to 6.15 , a gain of +0 .65 points. At their best revision, all 30 papers score at least 6 under our reviewer, compared with only 12 at V0 (Table 4). Category Baseline Technical Accuracy Constructive Value Analytical Depth Significance Assessment Win (%) Loss (%) Win (%) Loss (%) Win (%) Loss (%) Win (%) Loss (%) Fine-tuned                                                                                                                                                 
+
+> CycleReviewer-8B 100 0100 099 1100 0CycleReviewer-70B 99.2 0.4 100 0100 099.6 0.2 DeepReviewer-7B 96.5 2.1 99.4 0.4 99.2 0.6 97.8 1.1 DeepReviewer-14B 91.2 3.7 96.0 2.2 94.7 2.6 97.9 1.3
+> LLM
+> Gemini 3.1 Flash 60.6 21.5 88.2 6.6 75.1 9.9 74.2 4.6 Gemini 3.1 Pro 62.2 11.7 83.9 6.5 71.6 9.0 70.7 5.1 DeepSeek V4 Flash 74.3 10.9 92.5 7.1 78.9 7.4 82.3 3.9 DeepSeek V4 Pro 78.6 7.5 96.5 5.0 79.2 5.1 80.4 3.2
+> LLM w/ Search
+> Gemini 3.1 Flash 55.8 12.8 85.7 8.5 70.5 10.2 72.8 6.3 Gemini 3.1 Pro 56.3 14.6 80.1 7.6 68.4 8.8 66.9 5.8 DeepSeek V4 Flash 71.4 15.3 89.4 7.0 76.9 7.5 80.1 5.0 DeepSeek V4 Pro 72.9 17.6 93.1 8.5 73.8 8.1 79.7 6.4
+> Multi-Agent Framework w/ Search
+> Agent Review (Gemini 3.1 Pro) 52.1 18.9 89.5 10.4 60.7 10.8 65.6 7.9 Agent Review (DeepSeek V4 Flash) 61.7 20.5 95.3 11.2 72.8 11.6 68.5 8.7 AI Scientist v2 (Gemini 3.1 Pro) 50.2 22.3 84.5 12.1 58.5 12.5 62.2 9.5 AI Scientist v2 (DeepSeek V4 Flash) 56.7 24.1 94.2 13.2 88.3 13.6 67.1 10.3 DeepReviewer-v2 (StepFun 3.5 Flash) 63.4 16.8 95.6 15.0 91.8 15.4 77.3 11.6 Stanford Agent Reviewer *48.5 24.8 44.3 45.7 52.7 14.0 54.6 10.8
+
+Table 3: Pairwise preference evaluation of our AI Reviewer against existing automated reviewers on 650 ICLR papers from 2020-26. A search-enabled LLM judge compares anonymized review pairs using the evaluation rubric of Goyal et al. (2026). Entries report the percentage of comparisons won by our reviewer (Win) or the baseline (Loss), with the remaining comparisons resulting in ties. Higher Win and lower Loss indicate better performance. * Stanford Reviewer was evaluated on 100 papers because it is not open-source and is accessible only through a web interface.                         
+
+> Score ≥Papers at V0Papers at Vmax ∆
+> Our reviewer
+> 524/30 30/30 +6 612/30 30/30 +18 73/30 14/30 +11
+> Stanford Reviewer
+> 5.028/30 30/30 +2 5.75 8/30 25/30 +17 6.03/30 19/30 +16
+
+Table 4: Number of papers scoring at or above each threshold, before revision ( V0) and at each paper’s best revision ( Vmax ), out of 30 papers. 
+
+What Can Revision Improve? To better understand the limits of autonomous revision, we ask a simple question: What kinds of reviewer criticisms can revision actually re-solve? To answer this, we first analyse why papers are re-jected. We randomly sample 500 rejected ICLR papers and use Gemini 3.1 Pro to classify every reviewer criticism as either an execution issue (e.g., missing baselines, weak ev-idence, unsupported claims, or unclear writing) or an idea 
+
+issue (e.g., insufficient novelty or significance). This analysis is used only to estimate the distribution of rejection reasons and is separate from our evaluation set. Execution issues ac-count for 48% of rejections, idea-related issues for 35%, and the remaining 17% involve both. Having identified these two broad categories, we next ask which of them can actually be resolved through iterative revision. On our evaluation set, AppliedScientist resolves 128 of 150 execution weaknesses (85.3%), but only 2 of 18 idea weaknesses ( ∼ 11 .1% ). As shown in Figure 5, revision consistently succeeds on suggestions that require stronger evidence via additional experiments, baselines, ablations, or clearer presentation, but rarely changes reviewer judgements about novelty or significance. This difference persists across revision rounds. Our re-viewer retains novelty-related objections until the final round, often citing prior work to justify them. Once the contribution itself is judged to lack novelty, additional evidence seldom changes the outcome. Our results therefore suggest that au-tonomous revision is well suited to strengthening the evi-dence behind an idea, but improving the idea itself requires returning to the ideation stage rather than continuing the revision loop. 
+
+## Conclusion 
+
+We presented AppliedScientist, a closed-loop system for it-eratively revising rejected research papers using repeated AI reviewer feedback. Across 30 ICLR papers, reviewer-guided revision consistently improved papers more than autonomous self-revision with a fixed prompt, with most improvements coming from stronger experiments, implementation, evalu-ation, and presentation rather than changes to the underly-Presentation Analysis Rigor Baselines Scope Novelty     
+
+> 0% 25% 50% 75% 100%
+> Resolution rate (%)
+> 100% 94% 86% 71% 63% 11%
+> Execution (mechanical) Idea / novelty (conceptual)
+
+Figure 5: Resolution rate of AI-suggested weaknesses by AppliedScientist. Most empirical weaknesses are resolved, whereas only 2 of 18 idea-related weaknesses (11.1%) are addressed, suggesting that iterative revision is more effective at improving research execution than altering the core scien-tific idea. ing research idea. Our results suggest that autonomous revi-sion can substantially strengthen the execution of existing re-search, but concerns about novelty and significance generally require returning to the ideation stage. A practical limitation of this work is evaluation cost: running the complete revision process for a single paper, including multiple revision rounds and experiment execution, costs approximately $65, limiting the number of papers we could evaluate. 
+
+## References 
+
+Baek, J.; Jauhar, S. K.; Cucerzan, S.; and Hwang, S. J. 2025. ResearchAgent: Iterative Research Idea Generation over Scientific Literature with Large Language Models. arXiv:2404.07738. Chen, N.; HuiKai, A. L.; Wu, J.; Hou, J.; Zhang, Z.; Wang, Q.; Wang, X.; and He, B. 2026. XtraGPT: Context-Aware and Controllable Academic Paper Revision via Human-AI Collaboration. arXiv:2505.11336. D’Arcy, M.; Hope, T.; Birnbaum, L.; and Downey, D. 2024. MARG: Multi-Agent Review Generation for Scientific Pa-pers. arXiv:2401.04259. D’Arcy, M.; Ross, A.; Bransom, E.; Kuehl, B.; Bragg, J.; Hope, T.; and Downey, D. 2024. ARIES: A Corpus of Scien-tific Paper Edits Made in Response to Peer Reviews. In Ku, L.-W.; Martins, A.; and Srikumar, V., eds., Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers) , 6985–7001. Bangkok, Thailand: Association for Computational Linguistics. Ghareeb, A. E.; Chang, B.; Mitchener, L.; Yiu, A.; Szostkiewicz, C. J.; Shved, D.; Gyimesi, G. J.; Laurent, J. M.; Wright, S. M.; Razzak, M. T.; White, A. D.; Finnemann, S. C.; Hinks, M. M.; and Rodriques, S. G. 2026. A Multi-Agent System for Automating Scientific Discovery. Nature ,655(8122): 497–505. Gottweis, J.; Weng, W.-H.; Daryin, A.; et al. 2026. Accel-erating Scientific Discovery with Co-Scientist. Nature , 655: 487–496. Goyal, P.; Parmar, M.; Song, Y.; Palangi, H.; Pfister, T.; and Yoon, J. 2026. ScholarPeer: A Context-Aware Multi-Agent Framework for Automated Peer Review. arXiv preprint arXiv: 2601.22638 .Idahl, M.; and Ahmadi, Z. 2024. OpenReviewer: A Special-ized Large Language Model for Generating Critical Scien-tific Paper Reviews. Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (System Demonstrations) .Jiang, Y.; and Ng, A. 2026. Stanford Agentic Reviewer. https://paperreview.ai. Accessed: 2026-05-24. Jin, Y.; Zhao, Q.; Wang, Y.; Chen, H.; Zhu, K.; Xiao, Y.; and Wang, J. 2024. AgentReview: Exploring Peer Review Dynamics with LLM Agents. In EMNLP .Lu, C.; Lu, C.; Lange, R. T.; Foerster, J.; Clune, J.; and Ha, D. 2024. The AI Scientist: Towards Fully Auto-mated Open-Ended Scientific Discovery. arXiv preprint arXiv:2408.06292 .Luo, Z.; Huang, H.; Lian, J.; Chang, Y.; Xie, X.; and Jin, H. 2026. Can AI Revise Research Papers with Human Review Feedback? An Empirical Study and Benchmark. In Findings of the Association for Computational Linguistics: ACL 2026 ,17876–17893. Association for Computational Linguistics. Mitchener, L.; Yiu, A.; Chang, B.; Bourdenx, M.; Nadol-ski, T.; Sulovari, A.; Landsness, E. C.; Barabasi, D. L.; Narayanan, S.; Evans, N.; Reddy, S.; Foiani, M.; Kamal, A.; Shriver, L. P.; Cao, F.; Wassie, A. T.; Laurent, J. M.; Melville-Green, E.; Caldas, M.; Bou, A.; Roberts, K. F.; Zagorac, S.; Orr, T. C.; Orr, M. E.; Zwezdaryk, K. J.; Ghareeb, A. E.; Mc-Coy, L.; Gomes, B.; Ashley, E. A.; Duff, K. E.; Buonassisi, T.; Rainforth, T.; Bateman, R. J.; Skarlinski, M.; Rodriques, S. G.; Hinks, M. M.; and White, A. D. 2025. Kosmos: An AI Scientist for Autonomous Discovery. arXiv:2511.02824. Schmidgall, S.; Su, Y.; Wang, Z.; Sun, X.; Wu, J.; Yu, X.; Liu, J.; Moor, M.; Liu, Z.; and Barsoum, E. 2025. Agent Laboratory: Using LLM Agents as Research Assistants. In Christodoulopoulos, C.; Chakraborty, T.; Rose, C.; and Peng, V., eds., Findings of the Association for Computational Lin-guistics: EMNLP 2025 , 5977–6043. Suzhou, China: Asso-ciation for Computational Linguistics. ISBN 979-8-89176-335-7. Taechoyotin, P.; and Acuna, D. 2025. REMOR: Automated Peer Review Generation with LLM Reasoning and Multi-Objective Reinforcement Learning. arXiv preprint arXiv: 2505.11718 .Tan, C.; Lyu, D.; Li, S.; Gao, Z.; Wei, J.; Ma, S.; Liu, Z.; and Li, S. Z. 2024. Peer Review as A Multi-Turn and Long-Context Dialogue with Role-Based Interactions. arXiv preprint arXiv: 2406.05688 .Weng, Y.; Zhu, M.; Bao, G.; Zhang, H.; Wang, J.; Zhang, Y.; and Yang, L. 2025. CycleResearcher: Improving Auto-mated Research via Automated Review. In The Thirteenth International Conference on Learning Representations .Weng, Y.; Zhu, M.; Xie, Q.; Ning, Z.; Li, S.; Lu, P.; Lin, Z.; Gu, E.; Sun, Q.; and Zhang, Y. 2026. DeepReviewer 2.0: A Traceable Agentic System for Auditable Scientific Peer Review. arXiv preprint arXiv: 2604.09590 .Yamada, Y.; Lange, R. T.; Lu, C.; Hu, S.; Lu, C.; Foer-ster, J.; Clune, J.; and Ha, D. 2025. The AI Scientist-v2: Workshop-Level Automated Scientific Discovery via Agen-tic Tree Search. arXiv preprint arXiv:2504.08066 .Zhao, B.; Zhang, J.; Whitehouse, C.; Jiang, M.; Shvartsman, M.; Charnalia, A.; Magka, D.; Shavrina, T.; Dunfield, D.; Aodha, O. M.; and Bachrach, Y. 2026. APRES: An Agentic Paper Revision and Evaluation System. arXiv:2603.03142. Zhu, M.; Weng, Y.; Yang, L.; and Zhang, Y. 2025. DeepRe-view: Improving LLM-based Paper Review with Human-like Deep Thinking Process. arXiv preprint arXiv: 2503.08569 .Supplementary Material AppliedScientist: Automated Scientific Revision Through Iterative AI Reviewing 
+
+A. Our AI Reviewer . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .9 A.1 Deep Search and Retrieval . . . . . . . . . . . . . . . . . . . . . . . . . . . . 9 A.2 AgenticJudge for Review Evaluation . . . . . . . . . . . . . . . . . . . 9 A.3 Input Representation: LaTeX vs PDF . . . . . . . . . . . . . . . . . . 11 
+
+B. AppliedScientist . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11 B.1 The Revision Round . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11 B.2 Example Revision Trajectories . . . . . . . . . . . . . . . . . . . . . . . . 11 B.3 Per-Domain Results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11 B.4 Verifying Novelty Objections . . . . . . . . . . . . . . . . . . . . . . . . . 11 B.5 Computation Cost . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 11 
+
+C. Prompts . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12 C.1 Reviewer Prompt . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 12 C.2 Scientist and Control Prompts . . . . . . . . . . . . . . . . . . . . . . . . 13 C.3 Side-by-Side Judge . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 14 C.4 Agentic Judge . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 15 
+
+D. Example AI Review . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 16 
+
+## A Our AI Reviewer 
+
+A.1 Deep Search and Retrieval 
+
+Index. Titles, abstracts, and metadata for over one million arXiv papers. Title and abstract embeddings are computed with Gemini Embedding-2 and stored in LanceDB alongside BM25 lexical indexes over the same fields, giving hybrid dense–sparse retrieval. The system performs batched multi-query search with parallel retrieval, reciprocal-rank fusion, cross-query deduplication, and paper-conditioned related-work expansion from a known arXiv identifier. 
+
+Interface. The reviewer has three search commands: 
+
+• batch — runs several queries at once and fuses the results. 
+
+• related — returns papers near a given arXiv identifier. 
+
+• query — asks natural-language questions about named papers. These are command-line commands, not an HTTP API. Given an HTTP endpoint, the models invented parameter names and query formats. The CLI prints its own usage documentation, which stopped this. 
+
+Temporal cutoff. Results are restricted to papers published at least three months before the submission date of the paper under review. Without this, the reviewer criticises papers for not citing work that appeared after they were written. Older papers in our set are affected most. 
+
+Context-distillation sub-agent. Abstracts are often too short to judge a competing method against, and reading every retrieved paper in full fills the context window. We therefore embed a context-distillation sub-agent within the search tool. During deep search, whenever the reviewing agent identifies a paper that requires closer inspection, it passes the full paper to the sub-agent and issues one or more targeted queries (e.g., "Provide a summary," "How does it address X?" or "What are its results on Y?"). The sub-agent reads the complete paper, answers these queries, and returns the response. 
+
+A.2 AgenticJudge for Review Evaluation 
+
+In addition to the pairwise preference comparison used by ScholarPeer, we define three evaluation rubrics that consis-tently emerged when human annotators were asked what makes a review useful. We use these dimensions to further evaluate the quality of our generated reviews against a range of baselines. AgenticJudge evaluates reviews across five criteria, of which three contribute to the final reward score. Given the full paper and the generated review, the judge evaluates Issue Overlap , Fabrication , and Calibration (Table 5) through in-dependent parallel calls with agentic tool use, allowing each criterion to verify claims and supporting evidence against the source paper before assigning a score. 
+
+Criteria To identify what makes a review genuinely use-ful, we ran a structured annotation study comparing human-written and AI-generated reviews. Human annotators were shown a set of reviews and asked to describe what distin-guished good reviews from poor ones. We iterated over mul-tiple rounds until the responses converged on a stable set of evaluation axes. This process produced five candidate crite-ria: Comprehension , Substance , Issue Overlap , Fabrication ,and Calibration . Among these, Comprehension and Sub-stance saturated at a score of ≥0.95 across all systems. These two criteria measure capabilities including understanding a paper, writing specific technical points , that frontier mod-els generate easily and uniformly. We retain them as sanity CycleReviewer-8B CycleReviewer-70B DeepReviewer-7B DeepReviewer-14B Gemini 3.1 Flash Gemini 3.1 Pro Deepseek v4 Flash Deepseek v4 Pro Gemini 3.1 Flash Gemini 3.1 Pro Deepseek v4 Flash Deepseek v4 Pro AgentReview (Gemini 3.1 Pro) AI Scientist v2 (Gemini 3.1 Pro) AI Scientist v2 (DS v4 Flash) DeepReviewer-v2 Stanford Reviewer               
+
+> Our AI Reviewer (DeepSeek flash v4, no search) Our AI Reviewer (DeepSeek v4 flash)
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> Score
+> 0.26 0.27 0.32 0.32 0.41 0.47 0.51 0.48 0.47 0.53 0.60 0.53 0.57 0.51 0.52 0.53 0.76 0.80 0.85
+> Fine-tuned Single Agent Agent + Search Multi-Agent Stanford Ours
+> Overlap Fabrication Calibration Reward (mean)
+
+Figure 6: Different Review baselines are scored by the AgenticJudge (Gemini 3.1 pro) on the 3 rubrics: Overlap , Fabrication 
+
+and Calibration .checks in our reported breakdowns but exclude them from the aggregate reward. This leaves three discriminative criteria, and all of them are summarized in Table 5 for reference. To prevent cross-contamination between criteria, we do three independent calls to the judge LLM rather than scoring all criteria in a single prompt. The complete description of each criteria can be found in the Appendix. 
+
+Dataset We ground evaluation in human reviews collected from ICLR 2018–2021 as reviews from this period were not largely affected by the availability of capable LLMs, mak-ing it unlikely that any review in our dataset was majorly LLM-assisted. This gives us clean, uncontaminated human judgments to use as evaluation anchors. Our test set con-tains 650 papers. After collecting paper–review pairs, we apply a soft filtering pass using lightweight heuristics. We deliberately avoid hard multi-stage filtering, since aggressive filtering can impose strong prior assumptions about review quality and bias the evaluation itself. 
+
+Human Alignment with Judge An automated evaluation metric for peer review is only useful if it highly aligns with human experts. We randomly sample a set of 100 papers from above eval set, and four human experts are asked to anno-tate across our three main discriminative metrics, following the same setup and input as that of our AgenticJudge. Agen-ticJudge achieves Spearman’s rank correlation of ρ = 0 .84 
+
+against human annotation, a raw inter-reviewer agreement of 92% and a Cohen’s κ of 0.81 . This demonstrate strong alignment of AgenticJudge with humans hence, proving it to be a useful metric in automated peer review analysis. 
+
+Score Agreement Across Backbone Models We also check how closely our reviewer’s scores follow the outcomes these papers received at the venue. The left panel of Figure 7 compares each reviewer’s score against the average rating from the human reviewers, and the right panel counts how often the reviewer reaches the same accept or reject outcome Ours Ours Stanford Ours 
+
+> 0.0 0.2 0.4 0.6
+> Correlation with human rating ( ρ)
+
+0.571 0.522 0.510 0.480    
+
+> Deepseek v4 flash Kimi K3 Reviewer MiniMax M2.7
+> Ours Ours Stanford Ours
+> 0% 25% 50% 75%
+> Venue decision agreement
+
+76.2% 72.8% 71.1% 67.2% 
+
+> Deepseek v4 flash Kimi K3 Reviewer MiniMax M2.7
+
+Figure 7: Agreement with human reviewers on the DeepRe-view papers, measured against the average human rating and against the venue’s accept or reject decision. as the venue. We run our reviewer with three different back-bone models to see how much the choice of model matters, with the Stanford Reviewer included for reference. Our AI Reviewer with Deepseek v4 flash aligns the most across all baselines. 
+
+Autonomous vs Structured Reviewer We compare our structured AI Reviewer with an autonomous variant that has access to the same tools but is free to decide its own execution strategy with the stages randomly shuffled. In practice, the autonomous agent often skips important evaluation steps or performs them out of order, resulting in weaker reviews. Despite using the same set of tools, the structured reviewer consistently outperforms the autonomous variant (Figure 8). 
+
+Results Across Review Baselines We compare our AI Re-viewer against three categories of baselines: fine-tuned mod-els, LLMs with and without search, multi-agent frameworks with and without search, and the frontier LLMs used within our reviewer. Including the underlying frontier LLMs allows us to test whether the gains come from the reviewer frame-work itself rather than the base model alone. All systems are scored by AgenticJudge on Overlap, Fabrication, and Cali-Figure 8: Our Reviewer Vs the Autonomous variant of Our Reviewer on Agentic Judge             
+
+> Criterion Input Purpose Reward
+> Comprehension P + GR Accurately identifies core contribu-tions using textual evidence.
+> ✗
+> Substance P + GR Raises specific, non-trivial techni-cal critiques.
+> ✗
+> Issue Over-lap
+> HR + GR If the generated review covers points human reviewers raised
+> ✓
+> Fabrication P + GR Check whether the model review invents facts about the paper.
+> ✓
+> Calibration P + HR + GR Mean of decision alignment with human consensus and internal con-sistency between review critique and final score.
+> ✓
+
+Table 5: AgenticJudge evaluation criteria. P: Paper, HR: Hu-man Review, GR: Generated Review. Comprehension and Substance are retained as sanity checks but excluded from the aggregate reward because they saturate across frontier models. The final reward is the mean over the three discrim-inative criteria. bration. Figure 6 shows the results across various baselines. 
+
+A.3 Input Representation: LaTeX vs PDF 
+
+To ensure the reviewing agent accurately interprets tables and mathematical notation, our reviewer performs OCR on the PDF rather than using bloated raw LaTeX source which gives poor performance and leads to fabrication (Table 6). We utilize olmOCR-2-7B-1025 to convert the document into Markdown and use OCR markdown as the default input for-mat for all experiments. Pandoc conversion breaks tables and mathematical notation, and the reviewer then misreports numbers. Faithfulness drops to 0.365 from 0.500 and Cali-bration to 0.403 from 0.589. 
+
+Input format Reward ∆
+
+LaTeX → pandoc 0.463 baseline OCR markdown (olmOCR) 0.575 +0.112 
+
+Table 6: OCR of the compiled PDF against pandoc con-version of the LaTeX source, using our AI Reviewer with DeepSeek-Flash. 
+
+## B AppliedScientist 
+
+B.1 The Revision Round 
+
+The scientist retains every prior draft, review, and experi-mental result, so round t revises Vt−1 rather than the original submission. The reviewer receives only Vt: with no access to earlier drafts or scores, its rating reflects the submitted manuscript and not the sequence that produced it. 
+
+B.2 Example Revision Trajectories 
+
+Table 7 reports detailed results for ten randomly selected pa-pers from the 30-paper evaluation set. For each paper, we report the human reviewer average from the original submis-sion, the number of execution- and idea-related weaknesses resolved, the score trajectory assigned by our reviewer across revision rounds, the best score achieved during revision, and the corresponding change in Stanford Reviewer score. 
+
+B.3 Per-Domain Results 
+
+Figure 9 shows the average score trajectory for each research domain, together with the independent evaluation provided by Stanford Reviewer. Figure 10 reports the average trajec-tory under AI initialization, showing that it progressively narrows the gap with the human-initialized condition over successive revision rounds. 
+
+B.4 Verifying Novelty Objections 
+
+The low idea-resolution rate raises the possibility that some novelty-related objections arise from unsupported or hallu-cinated comparisons rather than genuine prior work. To in-vestigate this, we examined every idea-related objection that remained in the final review (17 objections across 13 pa-pers). For each objection, we extracted the cited prior work, verified the references against the arXiv API, and manually inspected each cited paper to determine whether it was rel-evant to the submitted work and whether it supported the novelty claim made by the reviewer. Fourteen objections cite specific prior work. The remaining three could not be veri-fied: two no longer contained citations because the reviewer removed them in the final revision, and one concerned an in-ternal claim rather than a comparison with prior work. Across the 14 verifiable objections, all 23 cited papers were found on arXiv, and our manual inspection confirmed that the cited works were relevant to the corresponding submissions and supported the reviewer’s novelty objection (Table 8). 
+
+B.5 Computation Cost 
+
+Each revision run for a paper takes approximately 9 hours on a single RTX Pro 6000 (96 GB GPU) and includes five rounds of reviewer feedback, scientist tool use, experiment execu-tion, and literature search. The total cost is approximately $65 per paper, with most of the expense arising from the LLM API used during scientist’s execution and experimentation rather than review generation. Evaluating the full benchmark of 30 papers required roughly $2,000 and 270 GPU-hours. This computational budget was the primary factor limiting the size of our evaluation set. Running the same protocol on 100 papers would require approximately $6,500 and 900 GPU-hours, which was beyond the resources available for S.No. Human Weaknesses fixed Our reviewer Stanford Domain Label avg exec idea V0 V1 . . . V n Vmax V0 → Vmax 
+
+1 NLP exec 4.00 5/7 0/1 4 6 6 7 6 6 7 5.2 → 5.8 2 NLP mixed 2.00 7/8 0/1 5 5 4 4 6 5 6 4.3 → 6.9 3 NLP idea 2.00 5/6 1/3 5 6 7 4 6 6 7 5.2 → 6.3 4 NLP exec 6.00 4/7 0/1 6 4 4 6 6 4 6 6.8 → 6.5 5 CV idea 2.00 7/7 0/1 5 4 3 6 7 6 7 5.6 → 6.1 6 CV exec 3.00 4/6 0/1 4 5 5 6 4 6 6 5.6 → 5.4 7 Graph mixed 5.67 3/5 0/1 6 6 7 7 7 6 7 5.2 → 6.9 8 Graph exec 5.00 8/10 0/1 5 3 6 4 5 5 6 5.2 → 5.2 9 TS mixed 5.40 9/9 0/2 7 5 5 7 4 7 7 5.2 → 5.8 10 RL mixed 4.00 9/10 0/1 6 6 4 7 6 7 7 5.2 → 6.5 
+
+Table 7: Representative results for ten randomly selected papers. 0 1 2 3 4 5
+
+> Revision round
+
+34567
+
+> Reviewer score
+> NLP
+
+0 1 2 3 4 5
+
+> Revision round
+> CV
+
+0 1 2 3 4 5
+
+> Revision round
+> Graph
+
+0 1 2 3 4 5
+
+> Revision round
+> Time Series
+
+0 1 2 3 4 5  
+
+> Revision round
+> RL
+> AppliedScientist, scored by our reviewer Same revisions, scored by Stanford Reviewer Mean of human review scores
+
+Figure 9: Average Score of Each Round of Draft produced by AppliedScientist for various domains, independently scores by Stanford Reviewer. 0 1 2 3 4 5
+
+> Revision round
+> 456
+> Reviewer score
+> AppliedScientist Initialized with Human Review Stanford AI Reviewer AppliedScientist Initialized with AI Review AppliedScientist with a self-review prompt
+
+Figure 10: Average score trajectory of differently initialized AppliedScientist setup this study. Within this budget, we selected papers spanning multiple research domains to provide a diverse evaluation set. 
+
+## C Prompts 
+
+C.1 Reviewer Prompt 
+
+Reviewer 
+
+You are a senior researcher at a frontier AI lab. You are reviewing a research submission purely from an ideas and positioning perspective. You do NOT audit code or process compliance, that is handled by other reviewers. Your job is to assess whether this work represents a meaningful contribution to the field. 
+
+Phase 1 - Read the Paper 
+
+1. Read the full paper at /app/latex/template.tex .2. Read /app/paper_cutoff.txt to anchor the pa-per’s era. All literature you cite must predate the paper’s submission. 3. Identify the core claims: what is the paper’s thesis? What specific contributions are claimed? 4. Note the methods, baselines, benchmarks, and datasets used. 
+
+Phase 2 - Deep Literature Search Invoke 
+
+/search-papers to load the CLI documentation, then search using /app/search . Run at least 3–4 search batch calls with -sort importance , covering: 
+
+• Direct competitors : the paper’s exact topic, its thesis stated in different words, its main claimed contribution. ID Cited prior work Ver. 
+
+01 iML; AIDE; Agent K; SELA yes 02 Bijection Learning (2410.01294); ACE/LACE yes 03 AREG; MixTalk yes 05 Beyond Frequency: Role of Redundancy yes 06 In-context interference (2309.12727) yes 06 LifelongAgentBench (2505.11942) yes 08 Merullo et al. (2024) yes 09 Context is the Key (2409.04142) yes 10 Ehrhardt et al. (2019); Agrawal et al. (2016) yes 12 Lee et al. (2023); Zaheer et al. (2017) yes 14 Original OMOG (2412.00315) yes 16 Authors’ prior work (2409.12915) yes 18 ARS framework yes 20 TRAMA (ICLR 2025) yes 15, 17 no citation given n/a 
+
+Table 8: Prior work cited by the novelty objections that sur-vived every revision round. In two cases the reviewer cited the paper’s own earlier arXiv version to argue that the sub-mission was incremental over it. We count those as valid. 
+
+• Methods and techniques : the specific technique used, prior work on it, alternative approaches to the same prob-lem. 
+
+• Baselines and SOTA : state of the art on each benchmark used, recent improvements to each baseline method. 
+
+Do not use this like a web search engine: pass 
+
+-year / -conference flags rather than date-filtering the query string. Then drill deeper: search query <id> ... -q "..." for the 6–10 most important papers, and 
+
+search related <id> to explore the neighbourhood of the strongest hits. 
+
+Phase 3 - Novelty Assessment 
+
+1. Is the core idea genuinely new, or a recombination of existing ideas? 2. If a recombination, is the combination non-obvious and well motivated? 3. Are there papers the authors should have cited but did not? 4. Are any novelty claims overclaimed given existing litera-ture? 
+
+Phase 4 - Impact Analysis 
+
+1. Practical impact : would practitioners adopt this? Does it solve a real problem? 2. Theoretical impact : does it provide new understanding or open new research directions? 3. Scope : is this narrow/incremental or broadly applicable? 4. Timing : is this the right contribution at the right time given the field’s trajectory? 
+
+Phase 5 - Methodology Critique 
+
+1. Is the experimental design appropriate for the claims being made? 2. Are the right metrics being used? 
+
+Algorithm 1 The revision loop. The scientist keeps every-thing it has produced; the reviewer sees only the manuscript handed to it. 
+
+1: Given: manuscript V0, codebase C0, initial guidance G0 (venue reviews, our review of V0, or the fixed self-review prompt) 2: for t = 1 to 5 do 
+
+3: Scientist sees Vt−1, Ct−1, Gt−1, and all earlier rounds: 4: address each weakness in Gt−1 — edit code, add a base-line or ablation, run experiments, rewrite a section 5: skip any weakness that would replace the main contribu-tion; record it unresolved 6: Ct, E t, V t ← updated codebase, its results, rewritten manuscript 7: Reviewer sees Vt alone — no earlier drafts, reviews, or scores: 8: Rt ← strengths, numbered weaknesses, suggestions, score 9: Gt ← Rt if reviewer-guided, else G0 {autonomous: Rt
+
+scored, not fed back} 10: end for 
+
+11: Output: V1 . . . V 5 and scores from R1 . . . R 5
+
+3. Are there obvious experiments that should have been run but weren’t? 4. Are the baselines fair and current (same compute budget, hyperparameter tuning)? 5. Are there confounding variables not controlled for? 6. Would the results likely replicate on different datasets or settings? 
+
+Phase 6 - Framing and Positioning 
+
+1. Is the contribution accurately framed? (Over-claimed? Under-sold?) 2. Is the paper positioned correctly in the literature land-scape? 3. Are the limitations honestly discussed? 4. Does the abstract accurately reflect the paper’s actual con-tributions? 
+
+Phase 7 - Constructive Suggestions For each major weak-ness, propose a concrete, actionable improvement the authors could make in a revision cycle. Tie each suggestion to a spe-cific weakness from your review. Prefer specific baselines, ablations, or framing tweaks over vague advice or large-scale experiments which are not possible to run in a considerable amount of time. 
+
+C.2 Scientist and Control Prompts 
+
+Scientist task directive 
+
+You are given a rejected paper, its repository, and the current feedback. Address every concern raised, deciding for each how it should be resolved: inspecting the repository, searching the literature, editing the implementation, reproducing results, adding baselines or ablations, running experiments, updating the manuscript. The central contribution is fixed. If a concern can only be resolved by replacing it, record that concern as unresolved. Do not reframe the work as a different project. You retain all previous manuscripts, feedback, results, and analyses. Build on them; do not restart from the original submission. 
+
+Fixed self-review prompt (autonomous control, identical every round) 
+
+Critically review your current manuscript as an expert peer re-viewer would. Identify its most significant weaknesses in method-ology, experimental evidence, positioning against prior work, and presentation. List the concrete improvements you will make in the next revision. 
+
+Feedback format. Guidance Gt reaches the scientist as strengths, numbered weaknesses, and suggestions keyed to those numbers. The review also contains the reviewer’s over-all score, so the scientist sees the score its previous revision received. 
+
+C.3 Side-by-Side Judge 
+
+The pairwise comparison in the main paper uses a judge with web search. The prompt is below. 
+
+Side-by-side judge System Prompt 
+
+You are a neutral arbitrator evaluating peer review comments for academic papers. Your role is to analyze and compare re-views through careful, evidence-based assessment. Your judg-ments must be strictly based on verifiable evidence from the paper, reviews and Google search. Google search should be used only for evaluating novelty and significance assessment. Do not use it for other dimensions. 
+
+Special Instruction for evaluating "Novelty and Signif-icance Assessment". You must only search for and con-sider information available on or before the cutoff date: 
+
+{cutoff_date} . The cutoff date represents the date on which the paper was published; information after this date is irrelevant to the review. 
+
+For each evaluation, you must: 
+
+1. Thoroughly understand the paper by analyzing: 
+
+• Research objectives and contributions 
+
+• Methodology and experiments 
+
+• Claims and evidence 
+
+• Results and conclusions 2. For each review, methodically examine: 
+
+• Claims made about the paper 
+
+• Evidence cited to support claims 
+
+• Technical assessments and critiques 
+
+• Suggested improvements 3. Compare reviews systematically using: 
+
+• Direct quotes from the paper and reviews 
+
+• Specific examples and counterexamples 
+
+• Clear reasoning chains 
+
+• Objective quality metrics 
+
+Evaluate reviews based on these aspects: 
+
+• Technical Accuracy – Are claims consistent with paper content? 
+
+– Is evidence properly interpreted? 
+
+– Are technical assessments valid? 
+
+– Are critiques well-supported? 
+
+• Constructive Value – How actionable is the feedback? 
+
+– Are suggestions specific and feasible? 
+
+– Is criticism balanced with strengths? 
+
+– Would authors understand how to improve? 
+
+• Analytical Depth – How thoroughly are key aspects examined? 
+
+– Is analysis appropriately detailed? 
+
+– Are important elements addressed? 
+
+– Is assessment comprehensive? 
+
+• Novelty and Significance Assessment (Search encour-aged) 
+
+1. Identify claims: What do the paper and reviewers claim is novel? 2. Formulate search queries: Create targeted queries to find relevant prior work for these specific claims, ex-plicitly restricting results to before {cutoff_date} .3. Execute search: Focus on top-tier conferences in the relevant domain and arXiv. 4. Verify and compare: 
+
+– Did reviewer A or reviewer B miss a critical prior work that you found? 
+
+– Did reviewer A or reviewer B accurately identify that a novel claim is actually a known technique? 
+
+– Which reviewer’s assessment of significance aligns better with the actual state of the field at the time? 5. Cite sources: Include the specific external papers (title, venue, year, and authors) used to make this determina-tion. 
+
+For each aspect and the overall judgment: 
+
+1. Provide specific evidence from the source materials. 2. Quote directly from the paper and reviews; use external sources only for novelty and significance. 3. Explain your reasoning in detail. 4. Consider alternative interpretations. 
+
+Input Format 
+
+#### Paper Text: #### <Paper text> #### Assistant A’s Review: #### <Review A> #### Assistant B’s Review: #### <Review B> 
+
+Output Format 
+
+Respond in the following format: THOUGHT: <THOUGHT> REVIEW COMPARISON JSON: "Technical Accuracy Rea-son": "...", "Technical Accuracy Better Assistant": "A/B/Tie", "Constructive Value Reason": "...", "Constructive Value Bet-ter Assistant": "A/B/Tie", "Analytical Depth Reason": "...", "Analytical Depth Better Assistant": "A/B/Tie", "Novelty and Significance Assessment External Sources Used": [ "title": "...", "venue": "...", "year": "...", "authors": "..." ], "Nov-elty and Significance Assessment Reason": "...", "Novelty and Significance Assessment Better Assistant": "A/B/Tie", "Overall Reason": "...", "Overall Better Assistant": "A/B/Tie" In THOUGHT , evaluate assistants A and B for each aspect followed by a comparative assessment. Treat this as the note-taking phase of the evaluation. The JSON must exactly follow the specified schema, as it will be parsed automatically. 
+
+Controls. The order of the two reviews is randomised per comparison. 
+
+C.4 Agentic Judge 
+
+> Overlap
+
+Call 1 — Issue Overlap Inputs: human reviews + AI review (no paper body) You are an experienced area chair at a top-tier ML conference. Score how well the model’s review covers the points the human reviewers explicitly raised. Human Reviews human_reviews_text Model’s Review model_review Issue Overlap Extract every substantive point from the human reviews (strengths, weaknesses, questions). Check if the model’s review covers each point (by sub-stance, not exact wording). CRITICAL: Only list points the human reviewers ex-plicitly stated. Do NOT add points from your own as-sessment or knowledge. Every point in your list must be directly traceable to the human review text above. Convergent points (raised by ≥ 2 reviewers) weight 2 ×
+
+single-reviewer points. Score = (weighted covered) / (total weighted). Also extract: reference_verdict.overall_mean: mean of human rat-ing scores reference_verdict.decision_consensus: "Ac-cept" if >50% vote Accept, else "Reject" refer-ence_verdict.soundness_mean: mean soundness if re-ported, else null Return JSON. No preamble. 
+
+> Fabrication
+
+Call 2 — Fabrication Inputs: full paper body + AI re-view (no human reviews) You are an experienced area chair at a top-tier ML conference. Check whether the model’s review fabricates facts about the paper. Full Paper Body (up to References) {paper_body} Model’s Review {model_review} Fabrication Check Enumerate every specific factual claim in the model review: numbers, named baselines, algorithm details, section references, quoted phrases. For each claim, scan the paper body above to verify it. The paper is the only source of truth. Numbers may appear as prose (0.5), LaTeX (\\( 0.5 \\)), or HTML table cells ( <td >14.71% </td >). Names may appear in running text, reference lists, or abbreviations. Mark each claim: verified — found in paper body. Quote matching text in note. unverified — paper positively contradicts the claim: a different value is explicitly present, or the paper states the opposite. Quote the contradiction in note. unverifiable — paper body neither confirms nor contra-dicts (e.g. claim is about a result, number, or detail that would plausibly live in a table or figure absent from the converted text). No penalty. Before marking unverified you must: (1) check all text forms (prose, LaTeX math, HTML table cells), (2) confirm an explicit contradiction exists — not find-ing something is NOT a contradiction, (3) ask whether the value could be in a missing table or figure — if yes, mark unverifiable. When in doubt between unverified and unverifiable, choose unverifiable. Score: 1.0 if zero unverified, 0.5 if one, 0.0 if ≥ 2. Return JSON. No preamble. 
+
+> Calibration
+
+Call 3 — Calibration Inputs: paper title + abstract + full paper body + human reviews + AI review You are an experienced area chair at a top-tier ML conference. Score the model’s review on: Comprehension, Sub-stance, Insight, and Calibration. Paper **Title:** {title} **Abstract:** {abstract} **Full Paper Body (up to References):** {paper_body} Human Reviews {human_reviews_text} Model’s Review {model_review} —Criterion 1: Pairwise Calibration — continuous [0.0, 1.0] Score two dimensions and take the mean: **Dimension A — Decision Alignment** (binary: 0 or 1): - Extract the model’s final verdict (Accept/Reject) from its review. - Extract the human consensus verdict from the human reviews above. - Score 1.0 if they match, 0.0 if they do not. **Dimension B — Internal Consistency** (continu-ous: 0.0, 0.5, 1.0): - Read the model’s Strengths, Weaknesses, and Over-all score together. - Score 1.0 if the verdict and score are fully consistent with the written critique: a paper praised with few weaknesses gets a high score and Ac-cept; a paper heavily criticised gets a low score and Reject. - Score 0.5 if there is a minor mismatch (e.g. mostly positive but slightly low score, or one unex-plained inconsistency). - Score 0.0 if there is a clear contradiction: the review raises severe weaknesses but accepts the paper, or praises it strongly but rejects it. Final calibration score = mean(Dimension A, Dimen-sion B). Return JSON. No preamble. 
+
+## D Example AI Review 
+
+The following content is an example review produced by our AI Reviewer and AppliedScientist for the paper mentioned below. Original manuscript: Gorka Abad, Stjepan Picek, Lorenzo Cavallaro, and Aitor Urbieta, *Context is the Key: Back-door Attacks for In-Context Learning with Vision Transform-ers* (2026), OpenReview: https://openreview.net/forum?id= 1h7JvTbIYJ. 
+
+Summary 
+
+This paper is an extended version of the authors’ earlier preprint on in-context backdoor attacks against masked-image-modeling vision transformers (Painter ViT-L and SegGPT ViT-L). The carried-over contributions are task-specific and task-agnostic data-poisoning backdoors. The genuinely new content is a measurement correction, a causal mechanism, and a defense: (1) the paper shows the standard degradation metric conflates the backdoor with the fact that the trigger oc-cludes 10% of the input, since a clean model fed the trigger already loses 22–42% PSNR; it introduces trigger-controlled degradation and a targeted attack success rate (TASR) that re-move this confounder, and re-measures the attack with them; (2) it attributes the attack to a “context-routing hijack” and demonstrates causality by projecting out an estimated trig-ger direction at inference; (3) it proposes context-consistency screening (CCS), a black-box detector that separates triggered from clean inputs (AUC 1.00 on the test set). The attack and its cross-task transfer are reproduced on a second backbone (SegGPT). 
+
+Strength — self-correction 
+
+The occlusion-confounder analysis is the strongest part. The exact within-construction decomposition — clean/triggered = 22.76 →15.84, compromised/triggered = 5.37, giving 76.4% total = 30.4% occlusion + 46.0% backdoor — is clearly stated and arithmetically consistent. The paper explicitly corrects its own earlier evaluation (“our earlier evaluation understated cross-task transfer because its metric could not see it”), which is rare and commendable. 
+
+Weakness — test construction for the headline claim 
+
+The never-poisoned-task TASR values (deraining 0.608, de-noising 0.902, grayscale 0.914, against 0.152–0.170 clean) are measured on tasks built from LoL images, not on the native SRD/SIDD pipelines. This matters because the earlier native-dataset evaluation found the LoL attack produced “small or almost no degradation” on deraining/denoising. The direction is consistent across both evaluations, but the magnitude is not directly comparable, and the paper’s most distinctive claim — task-agnostic behavior from a task-specific budget — is cur-rently supported only in a construction where image statistics are held fixed. 
+
+Weakness — detection results are a 15-query result 
+
+CCS, STRIP, activation clustering, and spectral signatures all report AUC/accuracy 1.00 on the compromised model, but on only 15 held-out LoL test queries. An AUC computed over ordered pairs of 15 queries cannot distinguish 1.00 from, say, 0.99, and the defense section is where the weakest statistics support the strongest-sounding numbers. CCS is also only validated on LoL, not on the native task suite or on SegGPT. 
+
+Suggestion, tied to the weakness above 
+
+Run TASR on the native pipelines (SRD, SIDD, ADE20K, NYUv2, FSS-1000) for the LoL-poisoned model. This is the single experiment that would convert the cross-task transfer claim from “demonstrated in a controlled construction” to “demonstrated in the paper’s own primary evaluation proto-col.” Report TASR and trigger-controlled degradation along-side the existing degradation values for the same native test sets so the two views are directly comparable. 
+
+Scores Soundness 3/4 — The confounder analysis, decomposition, causal intervention, and specificity controls are exemplary; the cross-task-transfer and detection claims rest on nonstan-dard or tiny test constructions. Presentation 3/4 — Dense but clear, and unusually honest about limitations; marred by a handful of small numerical inconsistencies across sections. 
+
+Contribution 3/4 — The attack itself is prior work, but the measurement correction, the context-routing mechanism, and the black-box defense are meaningful, citable additions that improve the whole sub-field’s evaluation practice. Overall 
+
+6/10. Confidence 4/5. Decision : Accept.

@@ -1,0 +1,453 @@
+Title: Prescreening Point Defects in Semiconductors With Machine Learning
+
+URL Source: https://arxiv.org/pdf/2609.14846v1
+
+Published Time: Tue, 15 Sep 2026 01:42:49 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+# Prescreening Point Defects in Semiconductors With Machine Learning 
+
+Paul Karlsson, Joel Davidsson, ∗ and Rickard Armiento †
+
+Department of Physics, Chemistry and Biology, Link¨ oping University, Link¨ oping, Sweden 
+
+High-throughput calculations using density-functional theory (DFT) are commonly used to explore point defects for applications in power electronics and quantum technologies. There is currently a major shift away from these traditional simulation techniques towards machine learning (ML) methods. We explore a class of physics-guided ML models for predicting defect formation energies and zero-phonon lines (ZPL) to identify point defects for quantum applications. The models are specifically targeted for use in a prescreening step for accelerated high-throughput workflows, and are therefore designed to avoid the costly relaxation step typically present with ML interatomic potentials (MLIPs). We compare performance for single and double point defect systems in 4H-SiC with ridge, kernel ridge, and multilayer perceptron (MLP) models using three different descriptors representing the defect systems. For vacancies and substitutions, the optimized models give mean absolute errors (MAEs) of 0.437 eV for the formation energy and 0.202 eV for ZPLs, which is just above the level at which such predictions can be useful even beyond the targeted prescreening, i.e., in some applications they may completely replace the need for costly DFT calculations. For interstitials the MAEs are larger, 1.101 eV for the formation energy and 0.230 eV for the ZPL, which, while still useful for prescreening, will not generally be useful for more detailed characterization. Hence, while the results may be further improved by model design and optimization, the models presented in this work are already useful for prescreening in high-throughput characterization of point defects. 
+
+I. INTRODUCTION 
+
+Silicon carbide is extensively used as a semiconductor in power electronics due to its relevant combination of proper-ties, such as its wide band gap, high breakdown voltage, and high thermal conductivity [1]. Important applications range from motor controls, power supplies, robotics, transportation, renewable energy, telecommunication, and heating to power transmission. Among the more than 200 polytypes [2], 4H-SiC is the most widely used [3] and it already benefits from indus-trial production methods that keep improving [2, 4–10]. It is important to identify and reduce point defects in 4H-SiC semi-conductors, as they can affect the carrier lifetime, which in turn can negatively impact conductivity, lead to excessive switch-ing loss, and limit the switching frequency [11]. At the same time, the introduction of point defects in 4H-SiC has paved the way to possible applications such as quantum computers [12, 13], quantum communication, and quantum metrology [14]. Quantum computers are of special interest since they may be able to compromise certain classical cryptographic protocols [12, 13], enable quantum machine learning [15], and efficiently simulate quantum systems [13]. These simulations can then be used to develop novel artificial nanotechnologies and to further understand biological molecules [14]. Machine learning (ML) has the potential to avoid the compu-tational expense of high-throughput calculations [16, 17] and is therefore attractive for exploring the large chemical and con-figurational space of possibly interesting point defects [18, 19]. Prior works have made formation energy predictions to deter-mine stability of materials [20–24] and point defects [25–44]. However, these studies give less attention to the prediction of formation energies of interstitial defects, and to the prediction   
+
+> ∗joel.davidsson@liu.se
+> †rickard.armiento@liu.se
+
+of zero-phonon lines (ZPLs) for vacancies, substitutions, and interstitials. These quantities are for identifying point defects and assessing the potential of the point defects for quantum technology [19]. Furthermore, available ML models do not yet come with the same track record of proven reliable predictions as density-functional theory (DFT) calculations, nor are mod-els available for all properties of interest when characterizing a defect for possible use in quantum applications. Hence, our primary interest in this work is to design ML methods suitable for very broad prescreening of an enumeration of candidate sys-tems. The models of interest are thus meant to incur minimal computational cost per system, preferably avoiding expensive iterative procedures such as the relaxations typically present for ML predictions using interatomic potentials (MLIPs). Defect systems identified during prescreening are then meant to be followed up by DFT calculations that have been proven to be broadly reliable. In this paper we investigate the ability of ridge, kernel ridge, and multilayer perceptron models to predict both formation en-ergies and ZPL values for all three types of defects. The mean absolute error is minimized using 10-fold cross-validation, where we seek to come as close as possible to the error of high-throughput calculations used for screening defects, which is approximately 0.4 eV for formation energies and 0.2 eV for ZPLs [19]. The models are trained on a dataset of 39333 
+
+unique double and 853 unique single point defects in 4H-SiC, consisting of vacancies, substitutions, and interstitials with various charge and spin configurations that are taken from the database of ADAQ (Automatic Defect Analysis and Qualifi-cation) [3, 19, 45, 46]. ADAQ is a computational framework for point defects in semiconductors with automated workflows for high-throughput calculations of formation energies and magneto-optical properties such as ZPLs. It is implemented us-ing the high-throughput toolkit ( httk ) [23] using the Vienna Ab initio Simulation Package [47, 48] for density functional the-ory (DFT) calculations [49–51]. We design and evaluate three descriptors that can be constructed at very low computational arXiv:2609.14846v1 [cond-mat.mtrl-sci] 13 Sep 2026 cost from an abstract defect representation, i.e., without requir-ing the full relaxed atomic coordinates: the Atomic Descriptor, the Wyckoff Letter Descriptor, and the Wyckoff Coordinate Descriptor. The first descriptor does not use any information about the atom structure symmetries surrounding the point de-fects, whereas the last two do. The common input parameters for all three are: an atomic number representation for each point defect type, the distance between all unique pairs of point defects, and lastly, the charge and spin of the defect cluster. The outline of the paper is as follows: the background covers point defects in 4H-SiC (II A), statistical measures (II B), ML models (II C), data scaling (II D). The method section presents the descriptors (III A), details on the performance assessments (III B), implementation and optimization of the ML models (III C). Section IV presents the datasets used in this work. Our results are presented in Sec. V with all final scores and corresponding ML hyperparameters, followed by discussion (VI) and conclusions (VII). Appendices are provided with more details on the descriptors (A) and the optimization algorithms used with the multilayer perceptron model (B).   
+
+> II. BACKGROUND A. Point Defects in 4H-SiC
+
+The three main types of point defects are vacancies, substi-tutions, and interstitials. Vacancies are created by removing an atom, substitutions are made by substituting an atom with another, and interstitials are formed by adding an atom at a previously unoccupied position not belonging to the original lattice. Groups of multiple point defects are called defect clus-ters [3]. There are different ways to describe the atomic structure symmetry surrounding point defects, which naturally depend on the crystal structure. In Ramsdell’s notation, the polytype name 4H-SiC comes from its four atom layers in the unit cell (ABCB stacking) and its hexagonal crystal system (H). Locally, the atoms surrounding each lattice site in this polytype can ei-ther have a hexagonal structure, denoted h, or a cubic structure, denoted k [2]. Point defects, namely vacancies and substitu-tions, at these two sites normally exhibit distinct optical and electronic signatures. If the actual properties vary accordingly, then it is useful in quantum technology applications where it could enable precise selection of coherence properties and emission wavelength [52]. Local site symmetry of interstitials are instead described using Wyckoff positions. These positions range from points, lines, and planes to the entire space [53–55]. It is related to site symmetry, which refers to how the struc-ture symmetry of neighboring atoms remains the same under symmetry operations such as rotations [56]. The formation energy, the energy needed to create a point defect, is a marker of stability [19] given by 
+
+∆HD,q (Ef , μ ) = [ ED,q − EH ]+ X
+
+> i
+
+niμi +qE f +Ecorr (q),
+
+(1) where Ef is the Fermi energy, ED,q and EH are respectively the total energies of the charged defect supercell and the host material supercell, i is the atomic number notation used in ni,which tracks the number of added or removed atoms, and μi,which represents the chemical potential, q is the charge of the defect supercell, and lastly, Ecorr corrects finite-size effects due to charge [57, 58]. Zero-phonon lines are spectroscopic features induced by point defects with states in the band gap that allow electrons to transition between. If the non-radiative decay rate is small, energy can be released as photoluminescence following an allowed transition between defect states. If a phonon is emit-ted or absorbed during the transition, the energy released is referred to as the emission or absorption phonon sideband. However, without the involvement of phonons, a more concen-trated energy release occurs between the emission and absorp-tion sidebands, and this is referred to as the zero-phonon line. The zero-phonon lines are useful for identifying point defects [3, 19] and for assessing their potential applications, such as single-photon emitters for quantum computers, quantum com-munication, and quantum metrology [59]. The ZPL energy is given by 
+
+EZPL = Ee, min − Eg, min , (2) where Ee, min and Eg, min are the energy minima of the excited state and the ground state, respectively [3, 19].  
+
+> B. Statistical Measures
+
+Our statistical analysis uses the standard deviation and co-variance, 
+
+s =
+
+vuut 1
+
+n − 1
+
+> n
+
+X
+
+> i=1
+
+(xi − ¯x)2, (3) 
+
+Cov( x, y ) = 1
+
+n − 1
+
+> n
+
+X
+
+> i=1
+
+(xi − ¯x)( yi − ¯y) (4) where n is the number of data points of each variable, xi, y i
+
+are numeric values of the input parameter of data point i ∈{1, 2, . . . , n }, and ¯x and ¯y are the averages of the two variables. The covariance measures how much two variables x and y tend to increase and decrease together relative to their mean. The Pearson correlation coefficient is a statistical measure of how linearly correlated two variables x and y are, given by 
+
+rxy = cov (x, y )
+
+sxsy
+
+, (5) where cov (x, y ) is the covariance between x and y, and sx and 
+
+sy are the standard deviations of the variables [60]. Values of rxy between −0.3 and 0; and between 0 and 0.3 indicate a weak negative or positive linear correlation respectively be-tween x and y. A value of 0 means there is no linear correlation and a value of 1 means there is a perfect positive correlation [60]. 2The primary performance measure used to evaluate the per-formance of the ML model predictions in this work is the mean absolute error, MAE = 1
+
+n
+
+> n
+
+X
+
+> i=1
+
+|yi − ˆyi| , (6) where yi and ˆyi are correspondingly the true and the predicted value of data point i ∈ { 1, 2, . . . , n }. 
+
+> C. ML Models
+
+Ridge regression fits a linear function to the input parameters. Its prediction function f for centered inputs is 
+
+f (x) =     XTX + αI−1 XTy
+
+| {z }
+
+> w
+
+⊤x + b, (7) where w are the weights, y and x contain the true values and the input parameters of the training data, respectively, b is the bias set to the average of y, and α ≥ 0 is a regularization term [61]. Kernel ridge regression transforms the input parameters so that an originally nonlinear function can be learned as a linear function [62]. In this paper, the transformation is carried out by the Gaussian kernel [61, 63] and the prediction function f
+
+are 
+
+f (x) = 
+
+> n
+
+X
+
+> i=1
+
+λi e−γ∥xi−x∥2
+
+| {z }
+
+> Gaussian Kernel
+
+,
+
+λ = ( K + αI)−1 y,Kij = exp( γ|| xi − xj || 2),
+
+(8) where xi and λi respectively represent the input parameters and the attributed weight of data point i ∈ { 1, . . . , n } in the training data, λ > 0 controls how similarities (the Euclidean distance) between the input parameters of each data point in the training data and the point to be predicted affect the prediction, 
+
+α > 0 is a regularization term, and finally, X and y contain all the input parameters and the true values of the training data [62]. The loss function of the kernel ridge model is convex, which makes it easier to optimize [64]. The multilayer perceptron model is a type of artificial neural network. It is composed of fully connected layers consist-ing of processing units called neurons, which compute affine functions and pass the results to an activation function, before passing them forward to the next layer. The four activation functions considered are: the identity function x, the logis-tic function 11+ e−x , the hyperbolic tangent tanh( x), and the ReLU function max(0 , x ).All weights of the affine functions are initialized randomly using a set seed referred to as the random state [65]. Each weight is then updated iteratively by optimization algorithms based on how much it contributes to the prediction error (back-propagation). The contribution is calculated using the chain rule together with the gradient of the loss function [66], 
+
+L(ˆy, y, x) = 12n
+
+> n
+
+X
+
+> i=1
+
+∥ˆyi(x) − yi∥22 + α
+
+2n ∥W ∥22, (9) where ˆy contains the predicted values, y contains the true val-ues, x contains the input parameters of the prediction, n is the number of data points, α is a regularization parameter, and W
+
+contains all the weights [67]. A drawback of the multilayer per-ceptron model is that the loss function is non-convex, meaning it is harder to optimize [64, 67, 68]. The three employed optimization algorithms are: Nesterov Accelerated Gradient (NAG) [69], ADAptive Moment esti-mation (Adam) [70], and Limited memory Broyden-Fletcher-Goldfarb-Shanno (L-BFGS) [71]. The weights are updated until a certain maximum number of iterations has been reached, L-BFGS has reached a maximum number of loss function eval-uations, or the error does not improve more than the tolerance value after 10 consecutive iterations [65]. Further details re-garding the optimization algorithms are found in Appendix B. As a final point, the input parameters are typically scaled to speed up the optimization algorithms, which is further moti-vated in Section II D.  
+
+> D. Data Scaling
+
+Scaling of the numerical values used in ML models can be crucial to achieve good performance. The two main techniques are standardization and normalization [72]. In this study, both the input parameters and the target values are scaled. Standardization (also known as z-score normalization) scales the input parameters to have an average of zero and a unitary standard deviation, putting everything on the same scale while preserving the underlying distribution of the data. The formula for standardizing the data points is given by 
+
+xstandardized = x − μσ (10) where xstandardized is the standardized data point, x is the data point being scaled, and μ and σ are the mean and standard deviation of all the data points of the specific input parameter, respectively [72, 73]. Normalization (also commonly referred to as min-max scal-ing) consists of shifting and scaling the input parameters to fit the values within the closed interval [0 , 1] . The associated formula is 
+
+xnormalized = x − min( x)max( x) − min( x) , (11) where xnormalized is the normalized data point, x is the data point getting scaled, and x are all the data points for the specific input parameter [72, 73]. Scaling the data through standardization and normalization is particularly suited for artificial neural networks. By centering the inputs and bringing them to comparable scales, standard-ization can reduce differences in the magnitudes of the corre-sponding synaptic weight updates [74] and has been found to improve the performance of artificial neural networks [75–77]. 3III. METHOD A. Descriptors for defect systems 
+
+The representation that encodes the input for an ML model as parameters, known as the descriptor, can be crucial for model performance [22, 78, 79]. This work explores descriptors cre-ated from the following input parameters: an atomic number representation of each point defect, the distance in ˚ Angstr¨ om between each unique pair of point defects, the charge and spin state of the defect cluster, and optionally, the local site sym-metries of the point defects. For vacancies, the atomic number representation consists of the negative atomic number of the removed atom. The positive atomic number corresponds to the added atom in substitutions and interstitials. A zero represents the absence of a point defect. Lastly, for single point defects, the distance is set to zero. These particular input parameters are motivated from the physics of defect systems: the atomic number representation carries information about the point defect type; both the dis-tance and the local site symmetries provide information about the point defect symmetry and its position relative to the gen-eral crystal structure; the charge state is associated with the spin state, and both tend to give information about optical and electronic properties of the point defect. Furthermore, the point defect symmetry is known to influence the zero-phonon lines [80]. In more detail, the first descriptor is the Atomic Descriptor ,which uses all input parameters except the local site symme-tries, encoded as 
+
+x = a1 · · · an d12 · · · d(n−1) n c s⊤ , (12) where n is the fixed number of allocated defect slots. The indices i, j ∈ { 1, 2, . . . , n } refer to these slots. The entry 
+
+ai is the atomic number representation of each point defect assigned to slot i, or zero if the slot is unused. For i < j ,
+
+dij is the distance between the point defects in slots i and 
+
+j, or zero if either slot is unused. Finally, c and s are the charge and spin state of the defect cluster, respectively. The slots are sorted by their atomic number representations, with the distance entries following the same ordering, to obtain a consistent representation of each defect cluster. The second descriptor is the Wyckoff Letter Descriptor . It extends the Atomic Descriptor by assigning fixed groups of entries in the descriptor vector to site categories and placing the atomic number representation of each defect in the group corresponding to its category. These local site symmetries are either hexagonal h or cubic k for vacancies and substitutions, and for interstitials they are represented by the Wyckoff letter of the position of the point defect according to Table I. The descriptor then takes the form 
+
+x = a11 . . . a nm d1121 . . . dn−1mnm c s⊤ (13) where aik is the atomic number representation of each point defect i ∈ { 1, 2, . . . , n } having the neighboring atom structure symmetry k ∈ { 1, 2, . . . , m }, diujv is the distance between point defect i and j respectively having the local site symme-tries u and v, and c and s are the charge and the spin state of the defect cluster. The atomic number representations are sorted by their value within each subgroup corresponding to a certain neighboring atom structure symmetry, to further ensure a unique representation of each defect cluster. The third descriptor is the Wyckoff Coordinate Descriptor .It takes the same mathematical form as the Wyckoff Letter De-scriptor, eqn 13, but with a different set of site categories. The categories h and k for vacancies and substitutions are kept, but each of the 26 distinct interstitial coordinate triples in Table I constitutes a separate category. Hence, in eqn 13 the atomic number representations, pair distances, charge, and spin are un-changed, and aiu remains the atomic number representation in slot i of category u, or zero if that slot is unoccupied. However, for interstitials, u now identifies a particular listed coordinate triple, meaning that sites sharing a Wyckoff letter but having different listed coordinates occupy different groups of entries. More details on the descriptors are available in Appendix A.  
+
+> B. Performance Assessment
+
+Ten-fold cross-validation is used to get an indication of the average performance independent of the data bias. Using a fixed seed, the double point defect data is first randomly split into 10 subgroups, called folds. The single point defect data is grouped with nine of the folds, which are then used for training the ML models. After the training is complete, the ML models try to predict the data points in the last remaining fold, called the test fold, and the accuracy of the predictions is measured using mean absolute error. This process is repeated ten times for each unique fold combination. The average of the ten resulting scores is used for the final score [72, 81]. The learning curve shows how the performance varies with the amount of training data. These curves are obtained using a variation of 10-fold cross-validation, which is referred to as varied split ratio 10-fold cross-validation, described below. This variation varies the train-test split ratio nine times fol-lowing eqn 14, where NTrain and NTest are, respectively, the number of folds used for training and testing out of the 10 original folds containing the data of the double point defects. The data of single point defects is once more always added to the training data. This process results in nine averaged mean absolute error scores which are plotted as a function of the mean number of training data points used for calculating each individual average score. Additionally, a varied split ratio 10-fold cross-validation is also used to assess the performance of predictions on the train-ing data. This is to see where the prediction performance of the test and training data converges, to determine the theoretical performance limit of an infinite amount of data points. The projected performance is calculated as the mean of the average scores of the test and training data, where NT rain = 9 , and 
+
+NT est = 1 .
+
+NTrain ∈ { 1, 2, . . . , 9}
+
+NTest = 10 − NTrain 
+
+(14) 4Letter Coordinate Letter Coordinate Letter Coordinate Letter Coordinate a (0 , 0, 332 ) b ( 13 , − 13 , 332 ) c ( 45 82 , − 45 82 , 885 ) c ( 37 82 , − 37 82 , 885 )                                                                                                                                                                                           
+
+> a(0 ,0,11 32 )b(13,−13,11 32 )c(56,−56,332 )c(21 88 ,−21 88 ,732 )
+> b(13,−13,732 )b(13,−13,19 32 )c(774 ,−774 ,732 )c(47,−47,732 )
+> b(13,−13,27 32 )c(37,−37,732 )c(55 96 ,−55 96 ,15 32 )c(19 99 ,−19 99 ,332 )
+> b(13,−13,29 32 )c(41 96 ,−41 96 ,15 32 )c(51 67 ,−51 67 ,15 32 )d(27,27,11 32 )
+> b(13,−13,31 32 )c(48 53 ,−48 53 ,15 32 )c(56,−56,732 )
+> b(13,−13,13 32 )c(12,−12,13 32 )c(16,−16,15 32 )
+
+TABLE I: The Wyckoff letters and coordinates of the point defect sites of the 4H-SiC interstitial data [19, 53–55]. Lastly, scatter plots showing the predicted values as a func-tion of the true values are yet another way to assess perfor-mance. If the predictions are accurate, then the points will line up on a straight line in the middle, whereas they will be more spread out if inaccurate.  
+
+> C. Implementation and Optimization
+
+The open-source library scikit-learn [82] is used for dataset scaling, the implementation of the ML models, the optimiza-tion, and performance assessment. The Ridge model is opti-mized by trying out the 101 different values of α evaluated using 10-fold cross-validation with mean absolute error as the performance metric, given by 
+
+α ∈ { 10 e/ 4, e = −32 , −31 , . . . , 68 }. (15) The kernel ridge model is optimized in the same way as the ridge model but with the following values 
+
+α ∈ { 10 e, e = −8, −7, . . . , 2},γ ∈ { 0, 159 , 115 , 15 } ∪ { 10 e, e = −4, −3, . . . , 4}, (16) where the values of γ after the initial zero correspond to the in-verse of the number of input parameters for the Atomic Descrip-tor, the Wyckoff Letter Descriptor, and the Wyckoff Coordinate Descriptor. Optimizing the multilayer perceptron model consists once more of methodically trying out different hyperparameters. The hyperparameters that are kept constant throughout the whole optimization process and their values are the following: the maximum number of iterations and the maximum number of function calls for the L-BFGS algorithm are both set to infinite (in practice they have been set to 9999999999999 ), the tolerance value is set to 10 −4, the learning rates in the NAG and Adam algorithms are set to 10 −3, β1, β2, and ϵ for Adam are respectively set to 0.9, 0.999 , and 10 −8 (standard values [70]), and lastly, the random state is set to 42. Additionally, the value of α is kept constant at 10 −4 to begin with. The first step is to try different numbers of hidden layers with 25, 50, 75, and 100 neurons in each, together with all possible combinations of activation functions and optimization algorithms. When promising combinations are found they are then reiterated but with a different number of neurons, until a perceived optimum has been achieved. Up until this point only four out of the 10 possible scores in 10-fold cross-validations are used for the indicative average performance to save time and computational resources. Afterward, using all 10 scores in 10-fold cross-validation, a subset of the different values of α,
+
+α ∈ { 10 e, e = −12 , −9, . . . , 10 } (17) are tested for the most promising combinations until the op-timization space has been explored satisfactorily. For the de-tailed optimization results of the models, please consult the supplementary material.  
+
+> IV. DATASETS
+
+The division of the data into different datasets depends on de-fect size (single or double defects), defect type (vacancies and substitutions or interstitials), and descriptor (Atomic, Wyckoff Letter, or Wyckoff Coordinate). The defect type referred to as interstitials means there is at least one interstitial in the defect cluster. In contrast, the joint defect type referred to as vacancies and substitutions includes only those types of defects. Each dataset contains only one data point for each unique combination of input parameters, since the models cannot dis-tinguish systems represented by identical inputs. If two or more data points share the same input parameters when creating the datasets, the data point with the lowest formation energy is kept. Consequently, the dataset used with the Atomic Descriptor has the fewest data points. To evaluate whether the removed data points affect the performance, two additional evaluations are made, labeled Wyckoff Letter Compare Descriptor and Wyckoff Coordinate Compare Descriptor . They refer to the application of the Wyckoff Letter Descriptor and the Wyckoff Coordinate Descriptor only to the data points used for the Atomic Descrip-tor, whose dataset is a strict subset of each of the two Wyckoff datasets. With these additional datasets, we arrive at a total of 20. For each dataset, the given names, the number of data 5Value Min. Max. Average Standard Deviation 025 50 75                
+
+> (a) 025 50 75 (b) 020 40 60 80 (c) 025 50 75 (d) 025 50 75
+> (e) 025 50 75 (f) 020 40 60 80 (g) 025 50 75 (h) 025 50 75
+> (i) 025 50 75 (j) 020 40 60 80 (k) 025 50 75 (l) 025 50 75
+> (m) 025 50 75 (n) 020 40 60 80 (o) 025 50 75 (p) 025 50 75
+> (q) 025 50 75 (r) 020 40 60 80 (s) 025 50 75 (t)
+
+Input Parameter FIG. 1: Input data set statistical properties for the datasets in Table II, showing the minimum, maximum, average, and standard deviation. The datasets shown are: (a) A-VS-S, (b) A-VS-D, (c) A-I-S, (d) A-I-D, (e) WL-VS-S, (f) WL-VS-D, (g) WL-I-S, (h) WL-I-D, (i) WC-VS-S, (j) WC-VS-D, (k) WC-I-S, (l) WC-I-D, (m) WLC-VS-S, (n) WLC-VS-D, (o) WLC-I-S, (p) WLC-I-D, (q) WCC-VS-S, (r) WCC-VS-D, (s) WCC-I-S, (t) WCC-I-D. points, the mean formation energy, and the mean zero-phonon line are given in Table II. The minimum, maximum, average, and standard deviation of each input parameter for each dataset are shown in Fig. 1. By looking at these values it is clear that the magnitude can vary significantly across input parameters. As stated in Section II D, ML models rarely perform well when the order of magnitude varies widely across input parameters. Therefore, it is moti-vated to scale the input parameters, especially in the case of the multilayer perceptron model since averages far from zero slow down the convergence, as discussed in Section II D. A slow convergence of the multilayer perceptron model is problematic, as it is already more sluggish and computationally intensive than the ridge and kernel ridge models. Additionally, standard-izing the data has been shown to improve the accuracy of the multilayer perceptron model, as mentioned in Section II D. Furthermore, the computed covariances and the Pearson correlation coefficients between all input parameters for each dataset are found in Fig. 2. Note that the input parameters are uncorrelated and that the covariances between input parame-ters are in general small. However, the covariances between some unscaled input parameters are in some cases moderately large, which slows down the convergence of the multilayer                                     
+
+> (a) (b) (c) (d) (e) (f) (g) (h) (i) (j)
+> (k) (l) (m) (n) (o) (p) (q) (r) (s) (t)
+> (u) (v) (w) (x) (y) (z) (aa) (bb) (cc) (dd)
+> (ee) (ff) (gg) (hh) (ii) (jj) (kk) (ll) (mm) (nn)
+
+FIG. 2: Heatmaps of the correlation between input parameters in the datasets of Table II. Magnitudes are shown in blue with darker shades for smaller magnitudes and values above 0.31 
+
+shown in red. Row 1 through 3 show: covariance between unscaled, standardized, and normalized input parameters. Row 4 shows the Pearson correlation coefficients between input parameters, which are identical across unscaled, standardized, and normalized input parameters. Columns 1 through 10 show the combined data of datasets: A-VS-S and A-VS-D, A-I-S and A-I-D, WL-VS-S and WL-VS-D, WL-I-S and WL-I-D, WC-VS-S and WC-VS-D, WC-I-S and WC-I-D, WLC-VS-S and WLC-VS-D, WLC-I-S and WLC-I-D, WCC-VS-S and WCC-VS-D, in addition to WCC-I-S and WCC-I-D. perceptron model, as discussed in Section II D. Scaling of the input parameters is therefore once more motivated.  
+
+> V. RESULTS
+
+As described above, 10-fold cross-validation together with mean absolute error is used to calculate the final scores for each defect type, descriptor, scaling, and predicted energy. These final scores are given in Table IIIa where the best ones for each defect type and predicted energy are enclosed in red rectangles. The best formation energy and zero-phonon line prediction scores are around 0.4 and 0.2 eV for vacancies and substitutions, respectively. This result confidently allows for prescreening said point defects. The corresponding accuracies are around 1.1 and 0.23 eV for interstitials, indicating that ML can still be used for prescreening, but in a more coarse-grained manner. The corresponding ML hyperparameters that are used to obtain the results in Table IIIa are given in Ta-ble IIIb and IIIc. Lastly, all formation energy predictions in Table IIIa are below the averages given in Table II. The zero-phonon line predictions are, however, not always below the average, which suggests that zero-phonon lines are harder to predict compared to formation energies. Concerning the choice of descriptors, the most notable result is that the Atomic Descriptor achieves the best performance in three out of four cases, as highlighted with red rectangles in Table IIIa. The exception is interstitial formation energy predictions, where the best performance is achieved using the 6Single Double Descriptor Defect Type Name Nr. Points Mean FE Mean ZPL Name Nr. Points Mean FE Mean ZPL                                                                                   
+
+> Atomic Vacancy-Substitution A-VS-S 170 5.86 0.1951 A-VS-D 5136 9.08 0.3189 Interstitial A-I-S 147 11.32 0.1780 A-I-D 30502 10.20 0.2542 W. Letter Vacancy-Substitution WL-VS-S 306 5.81 0.1796 WL-VS-D 5834 9.14 0.3137 Interstitial WL-I-S 248 9.66 0.1767 WL-I-D 32556 10.27 0.2549 W. Coord. Vacancy-Substitution WC-VS-S 306 5.81 0.1796 WC-VS-D 5834 9.14 0.3137 Interstitial WC-I-S 547 8.72 0.1380 WC-I-D 33499 10.25 0.2537 W. Letter C. Vacancy-Substitution WLC-VS-S 170 5.86 0.1951 WLC-VS-D 5136 9.08 0.3189 Interstitial WLC-I-S 147 11.32 0.1780 WLC-I-D 30502 10.20 0.2542 W. Coord. C. Vacancy-Substitution WCC-VS-S 170 5.86 0.1951 WCC-VS-D 5136 9.08 0.3189 Interstitial WCC-I-S 147 11.32 0.1780 WCC-I-D 30502 10.20 0.2542
+
+TABLE II: Names, number of data points, mean formation energy (FE) and mean zero-phonon line (ZPL) in eV for each dataset. Wyckoff Coordinate Descriptor. The Wyckoff Coordinate De-scriptor and the Wyckoff Letter Descriptor are worse but mostly on par with the Atomic Descriptor for the usual cases. The Atomic Descriptor gives the lowest reported MAE for vacancy and substitution ZPLs, at 0.202 eV (Table III). Similarly, the Wyckoff Coordinate Descriptor is mostly unrivaled when it comes to formation energy predictions for interstitials. The Wyckoff Letter Descriptor can almost rival the Wyckoff Coor-dinate Descriptor when paired with the multilayer perceptron model, but the difference is still noticeable. In general, the multilayer perceptron model, together with standardized input parameters, achieves the best performance for formation en-ergy predictions. Regarding zero-phonon line predictions, the kernel ridge model, combined with unscaled input parameters, achieves the best performance. Varied split ratio 10-fold cross-validation is used to plot the learning curves for each of the three types of ML models using their respective best combination of scaling, descriptor, and hy-perparameter configuration given in Table IIIa for each defect type and predicted energy. These learning curves for the test and training data are seen in Fig. 3. These plots show that the test performance of each model consistently improves as more training data points are provided, whereas the performance of the training data consistently worsens. To clarify, this is also true for the ridge model, even though the performance variation for the test and training data is minimal. Moreover, Fig. 3a and 3c show the performance variation of formation energy predictions, and it looks like the performance plateaus for a large enough number of data points. This plateauing be-havior is rarely the case for other ML models across any of the defect types or predicted energies. The exception is for formation energy predictions in vacancies and substitutions, where the kernel ridge model also plateaus for a large enough number of training data points, which can be seen in Fig. 3a. The projected scores calculated as the mean of the final train and test scores for each defect type and predicted energy, which correspond to Fig. 3, are given in Table IV. These projection scores further show that the multilayer perceptron model achieves the best performance for formation energy predictions and that the kernel ridge model achieves the best performance regarding zero-phonon line predictions. To draw the predicted values as a function of the true values in a scatter plot is another way to evaluate the accuracy of the predictions. Such plots corresponding to the predictions used in the first fold combination in the 10-fold cross-validation averages are given in Fig. 4. Each plot corresponds to the best scores highlighted with red rectangles in Table IIIa. It is seen that the formation energy predictions more accurately correspond to perfect predictions unlike zero-phonon line pre-dictions, which shows that the latter is harder to predict.  
+
+> VI. DISCUSSION
+
+As shown in Table IIIa, the smallest average errors of the formation energy and zero-phonon predictions are around 0.4
+
+eV and 0.2 eV for vacancies and substitutions, respectively. This result matches the screening accuracy of high-throughput calculations, which allow for ML to sort out uninteresting point defects. The respective errors for interstitials are around 1.1
+
+and 0.23 eV, which is worse but still enough to be used as a coarse-grained filter. The previous results show that ML can be used to alleviate the computational cost of high-throughput calculations. The Atomic Descriptor gives the lowest reported MAEs for formation energies and ZPLs in vacancies and substitutions, and is among the best-performing descriptors for interstitial ZPLs (Table Table IIIa). The Wyckoff descriptors retain the atomic-number information but distribute it among separate vector entries according to site category. This provides addi-tional structural information while changing how similarities between defect systems are represented. One possible expla-nation for their poorer performance on some tasks is that this separation makes relationships shared across site categories harder to learn from a finite dataset. The results are consistent with this explanation but do not establish it, since the com-parisons also involve differences in descriptor dimensionality and optimized model configurations. Nevertheless, the com-parisons restricted to the same retained samples confirm that the additional site encoding does not improve the best vacancy 7Unscaled Standardized Normalized Ridge Kernel Ridge Ridge Kernel Ridge Multilayer Perceptron Ridge Kernel Ridge Defect Type Descriptor FE ZPL FE ZPL FE ZPL FE ZPL FE ZPL FE ZPL FE ZPL 
+
+Vacancy-Substitution Atomic 2.598 0.270 1.263 0.202 2.598 0.270 2.003 0.210 0.437 0.231 2.597 0.270 2.020 0.258 Wyckoff Letter 2.576 0.266 1.314 0.242 2.575 0.266 1.986 0.250 0.476 0.252 2.572 0.266 2.008 0.257 Wyckoff Coordinate 2.576 0.266 1.314 0.242 2.575 0.266 1.986 0.250 0.483 0.252 2.572 0.266 2.008 0.257 Wyckoff Letter Compare 2.595 0.270 1.314 0.248 2.594 0.270 2.004 0.259 0.529 0.262 2.592 0.270 2.021 0.262 Wyckoff Coordinate Compare 2.595 0.270 1.314 0.248 2.594 0.270 2.004 0.259 0.536 0.257 2.592 0.270 2.021 0.262 Interstitial Atomic 3.562 0.280 2.530 0.230 3.559 0.280 3.072 0.254 2.575 0.242 3.554 0.280 3.047 0.259 Wyckoff Letter 3.462 0.281 2.420 0.232 3.460 0.281 2.851 0.259 1.486 0.244 3.461 0.281 2.880 0.265 Wyckoff Coordinate 3.301 0.280 1.818 0.237 3.301 0.280 2.214 0.260 1.101 0.257 3.301 0.280 2.418 0.266 Wyckoff Letter Compare 3.482 0.279 2.410 0.230 3.480 0.279 2.850 0.257 1.607 0.243 3.481 0.279 2.882 0.263 Wyckoff Coordinate Compare 3.326 0.279 1.841 0.235 3.326 0.279 2.225 0.259 1.172 0.258 3.326 0.279 2.422 0.265 
+
+(a) The best final scores for different combinations of models and descriptors (eV). 
+
+Unscaled Standardized Normalized Ridge Kernel Ridge Ridge Kernel Ridge Ridge Kernel Ridge FE ZPL FE ZPL FE ZPL FE ZPL FE ZPL FE ZPL Type Descriptor α α γ α γ α α γ α γ α α γ α γ
+
+V.-S. Atomic 10 −8 10 27 /4 10 −7 1/59 10 −1 10 1 10 3/2 10 15 /4 10 −2 1/5 10 −2 10 3 10 3/4 10 5/2 10 −8 1/5 10 −3 1
+
+W. Letter 10 −8 10 −8 10 −5 1/59 1 1/5 10 7/4 10 7/2 10 −5 1/59 10 −2 10 3 10 1 10 5/4 10 −7 1/5 10 −3 1
+
+W. Coor. 10 −8 10 −8 10 −5 1/59 1 1/5 10 7/4 10 7/2 10 −5 1/59 10 −2 10 3 10 1 10 5/4 10 −7 1/5 10 −3 1
+
+W. Letter C. 10 −8 10 −8 10 −5 1/59 1 1/5 10 7/4 10 7/2 10 −5 1/59 10 −2 10 3 10 3/4 10 7/4 10 −8 10 −1 10 −3 1
+
+W. Coord. C. 10 −8 10 −8 10 −5 1/59 1 1/5 10 7/4 10 7/2 10 −5 1/59 10 −2 10 3 10 3/4 10 7/4 10 −8 10 −1 10 −3 1
+
+Int. Atomic 10 −8 10 −8 10 −2 1/5 1 10 1 10 11 /4 10 −8 10 −1 1 1 10 1 10 7/4 10 −8 10 −2 10 1 10 −2 10 1
+
+W. Letter 1 10 −8 10 −2 10 −1 1 1 10 5/2 10 −8 10 −1 1/5 1 1 10 1/4 10 1/4 10 −3 1 10 −3 1
+
+W. Coor. 10 −8 10 5/4 10 −3 1/59 1 1 10 5/4 10 −8 10 −2 1/15 1 1/5 10 −8 10 −1/2 10 −3 1 10 −2 1
+
+W. Letter C. 10 −1/4 10 −8 10 −2 10 −1 1 1 10 5/2 10 −8 10 −1 10 −1 1 1 1 10 1/4 10 −3 1 10 −3 1
+
+W. Coord. C. 10 −1/4 10 −8 10 −3 1/59 1 1 10 −8 10 −8 10 −2 1/15 1 1/5 10 −8 10 −1/2 10 −3 1 10 −2 1
+
+(b) Best ridge and kernel ridge model hyperparameters. The ridge model optimizes the value of α and the kernel ridge model paired with the Gaussian kernel optimizes the value of α and γ.
+
+Formation Energy Zero-Phonon Line Type Descriptor Nr. Hidden Layers Nr. Neurons Activation Solver α Nr. Hidden Layers Nr. Neurons Activation Solver α
+
+Vacancy-Substitution Atomic 8 24 Tanh L-BFGS 1e-02 4 960 ReLU Adam 1e-06 Wyckoff Letter 6 43 Tanh L-BFGS 1e-04 1 307 ReLU Adam 1e-01 Wyckoff Coordinate 5 36 Tanh L-BFGS 1e-03 2 25 ReLU Adam 1e-01 Wyckoff Letter C. 6 34 Tanh L-BFGS 1e-03 2 61 ReLU Adam 1e-01 Wyckoff Coordinate C. 4 31 Tanh L-BFGS 1e-02 2 28 ReLU Adam 1e-01 Interstitial Atomic 3 20 Tanh L-BFGS 1e-01 15 391 ReLU Adam 1e-03 Wyckoff Letter 5 44 Tanh L-BFGS 1e-01 17 62 Tanh Adam 1e-02 Wyckoff Coordinate 4 80 Tanh L-BFGS 1e-01 10 73 Tanh NAG 1e-01 Wyckoff Letter C. 4 52 Tanh L-BFGS 1e-04 16 62 Tanh Adam 1e-02 Wyckoff Coordinate C. 3 72 Tanh L-BFGS 1e-01 3 39 Tanh NAG 1e-01 
+
+(c) Best multilayer perceptron model hyperparameters. The multilayer perceptron model optimizes the number of hidden layers and the same number of neurons in each of them, the activation function, the solver, and the value of α.
+
+TABLE III: Performance for predictions across different models and descriptors: (a) the best mean absolute errors averaged across 10-fold cross-validation for each predicted energy, defect type, descriptor, scaling, and machine learning model; (b) the corresponding hyperparameters for both the ridge and the kernel ridge model; and (c) the equivalent for the multilayer perceptron model. The best overall scores are highlighted with red boxes; where blue numbers show the best ridge model score, orange the best kernel ridge model score, and green the best multilayer perceptron model score. and substitution predictions obtained here. The case where the Wyckoff Letter Descriptor and the Wyck-off Coordinate Descriptor outclass the Atomic Descriptor is for interstitial formation energy predictions, as seen in Ta-ble IIIa. Between the two, the Wyckoff Coordinate Descriptor achieves the best performance, suggesting that more informa-tion about the neighboring atom structure symmetry is bene-ficial in this case. A previous study also reported improved 8Defect Type Energy R KR MLP  
+
+> Vacancy-Subst. Formation Energy (eV) 2.563 1.088 0.344 Zero-Phonon Line (eV) 0.266 0.166 0.248 Interstitial Formation Energy (eV) 3.300 1.540 0.807 Zero-Phonon Line (eV) 0.279 0.223 0.241
+
+TABLE IV: Projection scores corresponding to the best performing combination of scaling and descriptor for the ridge (R), the kernel ridge (KR), and the multilayer perceptron (MLP) model for formation energy and zero-phonon line predictions in vacancies, substitutions, and interstitials. These projected scores correspond to the best scores of each model highlighted in Table III. Average MAE (eV) R Test R Train KR Test KR Train MLP Test MLP Train 10 3
+
+0.000 2.500 5.000 
+
+> (a)
+
+10 3
+
+0.100 0.200 0.300 
+
+> (b)
+
+10 4
+
+0.000 5.000 
+
+> (c)
+
+10 4
+
+0.200 0.250 
+
+> (d)
+
+Training data points (Log10 scale) FIG. 3: Learning curves of the average MAE using split ratio 10-fold cross-validation for train and test data as a function of the average number of training data points for the ridge (R), the kernel ridge (KR), and the multilayer perceptron (MLP) model, where each uses its respective best combination of descriptor, scaling and hyperparameters given in Table III. (a) and (b) show formation energy and zero-phonon line predictions for vacancies and substitutions, respectively. Similarly, (c) and (d) show respectively the same thing but for interstitials. ML model predicted Energy (eV) Predictions Perfect Predictions Average Energy 0 20 010 20 30        
+
+> (a) 012
+> −0.50.00.51.01.5(b) 050
+> −20 020 40 60
+> (c) −2.50.02.5
+> −0.50.00.51.0(d)
+
+DFT Energy (eV) FIG. 4: Scatter plots of the predicted energy as a function of the true energy. (a) and (b) show respectively formation energy and zero-phonon line predictions for vacancies and substitutions. Similarly, (c) and (d) show respectively the same thing but for interstitials. These predictions each correspond to one out of the 10 mean absolute error scores used to calculate the final best score for each defect type and predicted energy encircled in red in Table IIIa. interstitial formation-energy predictions in diamond when in-formation about the local atomic environment was included [83]. Among the models and hyperparameter configurations eval-uated, the multilayer perceptron achieves the lowest formation-energy MAEs for both defect classes (Table III). Its substantial improvement over ridge regression supports the importance of nonlinear relationships among the descriptor features. How-ever, because kernel ridge regression also represents nonlinear relationships, these comparisons do not establish that greater model flexibility alone explains the MLP’s advantage. Kernel ridge regression achieves lower ZPL MAEs than the multilayer perceptron for both defect classes (Table IIIa). Both model classes can represent nonlinear relationships, and their relative predictive performance depends on the descriptors, training data, regularization, and optimization. The present re-sults therefore establish a performance advantage for the tested kernel ridge configurations, without identifying a single ex-planation for that advantage. The different MLP architectures and solvers selected for formation-energy and ZPL prediction (Table IIIc) indicate that the preferred model configurations depend on the target property. These differences do not, by themselves, establish distinct underlying physical relationships. Similarly, the fluctuations in the MLP training MAEs in Figs. 3b and 3d suggest that sensitivity to initialization and opti-mization warrants investigation, but the learning curves alone cannot determine whether incomplete optimization accounts for the higher ZPL errors. The scatter plots in Figs. 4b and 4d 9also shows that substantial discrepancies remain between pre-dicted and reference ZPLs even for the best-performing models. More informative descriptors or changes to the training proce-dure may improve these predictions. The current comparisons do not determine which changes would be most effective.  
+
+> VII. CONCLUSIONS
+
+The best performance is obtained by using a descriptor that consists of: an atomic number representation of the point de-fects, the distance between each unique pair of point defects, and the charge and spin state of the defect cluster. The excep-tion to the rule is formation energy predictions for interstitials, which heavily relied on the addition of local site symmetries, in the form of local atom structures and Wyckoff coordinates, to function at an acceptable level. For this special case, the Wyck-off letters of the point defects can serve as a substitute for the coordinates, but at the cost of noticeably worse performance. The current final scores and scatter plots showing predicted energies as a function of true energies show that it is harder to predict zero-phonon lines than formation energies. Perhaps a new or modified descriptor is needed to predict zero-phonon lines accurately. For vacancies and substitution defects, the best MAE of ML predictions of the formation energy is around 0.437 eV and for zero-phonon lines 0.202 eV. For interstitials, the corresponding values are around 1.101 eV for the formation energies and 
+
+0.230 eV for the zero-phonon lines. These MAE values are small enough for the ML models presented in this work to be immediately useful in prescreening enumerated interstitials. Our approach also remains promising for further refinement, which may be able to bring down errors to a level where, for some applications, costly DFT calculations of large defect systems can be entirely avoided. 
+
+> ACKNOWLEDGMENTS
+
+RA acknowledges support from the Swedish Government Strategic Research Area Swedish e-science Research Centre (SeRC) and the Swedish Research Council (VR) Grant No. 2020-05402. JD acknowledges support from the Swedish Re-search Council (VR) Grant No. 2022-00276, Zenith Career Grant no. 26.15 from Link¨ oping University, and the Magnus Bergvall Foundation (Grant no. 2025-602). The computations were enabled by resources provided by the National Academic Infrastructure for Supercomputing in Sweden (NAISS), par-tially funded by the Swedish Research Council through grant agreement no. 2022-06725. 
+
+> Appendix A: Descriptor Details
+
+Describing the descriptors in more detail, we start with the Atomic Descriptor, which is constructed as a variation of a distance matrix 
+
+DAtomic =
+
+
+
+a1 d12 d13 · · · d1n
+
+d21 a2 d23 · · · d2n
+
+d31 d32 a3 · · · d3n
+
+... ... ... . . . ...
+
+dn1 dn2 dn3 · · · an
+
+ , (A1) where ai is the atomic number representation of each point defect i ∈ { 1, 2, . . . , n }, and dij is the distance between each unique pair of point defects (i, j ). Note that all entries on the diagonal corresponding to atomic number representations are sorted by their numeric value to ensure a unique representation of each defect cluster. Subsequently, all the unique distances between all point defects can be constructed as 
+
+dAtomic = d12 d13 · · · d1n d23 d24 · · · d(n−1) n
+
+⊤ .
+
+(A2) which gives for the descriptor vector 
+
+xAtomic = a1 a2 · · · an d⊤ 
+
+> Atomic
+
+c s ⊤ , (A3) where ai are the diagonal elements of eqn A1, c is the charge, and s is the spin of the defect cluster. The Wyckoff Letter Descriptor is constructed as another vari-ation of a distance matrix. However, eqn A1 is extended so that diagonal positions encode the site categories. local site symmetries for vacancies and substitutions are either hexago-nal h or cubic k. The Wyckoff letters in Table I are used for interstitials. The distance matrix becomes 
+
+DWyckoff =
+
+
+
+A1 D12 · · · D1m
+
+D21 A2 · · · D2m
+
+... ... . . . ...
+
+Dm1 Dm2 · · · Am
+
+ , (A4) where 
+
+Au =
+
+
+
+a1u d1u2u · · · d1unu 
+
+d2u1u a2u · · · d2unu 
+
+... ... . . . ...
+
+dnu 1u dnu 2u · · · anu 
+
+ , (A5) 
+
+Duv =
+
+
+
+d1u1v d1u2v · · · d1unv 
+
+d2u1v d2u2v · · · d2unv 
+
+... ... . . . ...
+
+dnu 1v dnu 2v · · · dnunv 
+
+ , (A6) and, for each neighboring atom structure u ∈ { 1, 2, . . . , m },the entries on the diagonal of Au correspond to the atomic number representation aiu for each point defect i having neigh-boring atom structure u, and diujv corresponds to the distance between point defect i and j respectively having neighboring atom structure u and v. The atomic number representations on the diagonal are sorted by their numeric value to ensure that each defect cluster has a unique descriptor vector. Furthermore, 10 Duv are the distances between unique pairs of point defects each having local site symmetries u and v.The m site categories have a fixed order common to all samples. Each category is allocated n slots, where n = 2 is the maximum number of point defects in a cluster, also used for single-defect samples. Hence, DWyckoff has dimensions 
+
+nm × nm . The index iu denotes slot i within category u,corresponding to matrix row and column p = n(u − 1) + i.Unoccupied slots have zero diagonal entries, and distances involving an unoccupied slot are zero. The vector of unique distances between all point defects is given by 
+
+dWyckoff = d1u2v · · · d1unv d2u3v · · · d(n−1) unv 
+
+⊤ .
+
+(A7) Finally, the predictor vector for the Wyckoff Letter Descriptor, where once more c is the charge and s is the spin of the defect cluster is given by 
+
+xWyckoff = a11 a21 · · · anm d⊤ 
+
+> Wyckoff
+
+c s⊤ , (A8) and the same block construction is used with one interstitial category per coordinate triple in Table I, instead of one per Wyckoff letter and the h and k categories are retained. 
+
+Appendix B: Multilayer Perceptron Optimization Algorithms 
+
+Using a set seed referred to as the random state, NAG up-dates the weights using randomly chosen small subsets of the training data. Its updating rule is 
+
+mk = μm k−1 − η∇wL(wk−1 + μm k−1),wk = wk−1 + mk, (B1) where mk is a momentum term at iteration k, μ ∈ [0 , 1] is the momentum coefficient, η > 0 is the learning rate, L is the loss function in eqn 9, and wk is the weight to be updated at iteration k [69]. Similarly, with the same fixed seed referred to as the random state, Adam also uses a small randomly chosen subset of the training data to update the weights. Its updating rule is 
+
+mk = β1mk−1 + (1 − β1)gk,
+
+ˆmk = mk
+
+1 − βk
+
+> 1
+
+,vk = β2vk−1 + (1 − β2)g2
+
+> k
+
+1 − βk
+
+> 2
+
+,wk = wk−1 − η ˆmk
+
+√ˆvk + ϵ ,
+
+(B2) where mk and vk are the bias-corrected mean and uncentered variance of the gradient at iteration k, β1 and β2 control the exponential decay rate, gk is the gradient of the loss function in eqn 9, η is the learning rate, and ϵ is a small constant to avoid division by zero [70]. The updating rule of L-BFGS is 
+
+dk = −Hkgk,wk = wk−1 + αkdk, (B3) where dk is the search direction, Hk and gk are respectively an approximation of the inverse Hessian and the gradient of the loss function given in eqn 9, αk is the step length chosen to satisfy two Wolfe conditions, and wk is once more the updated weight at iteration k [71]. 
+
+[1] H. Matsunami, Current SiC technology for power electronic devices beyond si, Microelectronic Engineering 83 , 2 (2006), the Symposium K Proceedings of the 3rd International Conference on Materials for Advanced Technologies (ICMAT 2005). [2] T. Kimoto and J. A. Cooper, eds., Fundamentals of Silicon Carbide Technology: Growth, Characterization, Devices, and Applications (John Wiley & Sons Singapore Pte. Ltd, 2014). [3] J. Davidsson, Color Centers in Semiconductors for Quantum Applications : A High-Throughput Search of Point Defects in SiC , Ph.D. thesis, Link¨ oping University, Theoretical Physics, Faculty of Science & Engineering (2021). [4] M. Musolino, E. Carria, D. Crippa, S. Preti, M. Azadmand, M. Mauceri, M. Isacson, M. Calabretta, and A. Messina, Devel-opment of n-type epitaxial growth on 200 mm 4H-SiC wafers for the next generation of power devices, Microelectronic Engi-neering 274 , 111976 (2023). [5] N. Zhang, Y. Gao, R. Zhu, R. Wang, D. Yang, and X. Pi, Physical-vapor-transport growth of 4h silicon carbide single crystals by a tiling method, Journal of Crystal Growth 600 , 126915 (2022). [6] H. Tsuchida, I. Kamata, T. Miyazawa, M. Ito, X. Zhang, and M. Nagano, Recent advances in 4H-SiC epitaxy for high-voltage power devices, Materials Science in Semiconductor Processing 
+
+78 , 2 (2018), wide band gap semiconductors technology for next generation of energy efficient power electronics. [7] H. Tsuchida and T. Kanda, Advances in fast 4H-SiC crystal growth and defect reduction by high-temperature gas-source method, Materials Science in Semiconductor Processing 176 ,108315 (2024). [8] G. Ferro and D. Chaussende, A new model for in situ nitrogen incorporation into 4H-SiC during epitaxy, Scientific Reports 7,43069 (2017). [9] T. Kimoto, Bulk and epitaxial growth of silicon carbide, Progress in Crystal Growth and Characterization of Materials 62 , 329 (2016), special Issue: Recent Progress on Fundamentals and Applications of Crystal Growth; Proceedings of the 16th Inter-national Summer School on Crystal Growth (ISSCG-16). [10] C. R. Eddy and D. K. Gaskill, Silicon carbide as a platform for power electronics, Science 324 , 1398 (2009), https://www.science.org/doi/pdf/10.1126/science.1168704. [11] K. Danno, D. Nakamura, and T. Kimoto, Investiga-tion of carrier lifetime in 4H-SiC epilayers and life-time control by electron irradiation, Applied Physics Let-ters 90 , 202109 (2007), https://pubs.aip.org/aip/apl/article-pdf/doi/10.1063/1.2740580/13199743/202109 1 online.pdf. 
+
+11 [12] A. Dzurak, Diamond and silicon converge, Nature 479 , 47 (2011). [13] M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information: 10th Anniversary Edition (Cambridge University Press, 2010). [14] T. D. Ladd, F. Jelezko, R. Laflamme, Y. Nakamura, C. Monroe, and J. L. O’Brien, Quantum computers, Nature 464 , 45 (2010). [15] J. Biamonte, P. Wittek, N. Pancotti, P. Rebentrost, N. Wiebe, and S. Lloyd, Quantum machine learning, Nature 549 , 195 (2017). [16] M. Benaissa, T. Ouahrani, K. Hatada, K. Yoshikawa, and D. S´ ebilleau, Simple approach to more efficient density func-tional theory simulations, Computational Condensed Matter 42 ,e01012 (2025). [17] S. Mohr, M. Eixarch, M. Amsler, M. J. Mantsinen, and L. Gen-ovese, Linear scaling DFT calculations for large tungsten sys-tems using an optimized local basis, Nuclear Materials and En-ergy 15 , 64 (2018). [18] L. C. Bassett, A. Alkauskas, A. L. Exarhos, and K.-M. C. Fu, Quantum defects by design, Nanophotonics 8, 1867 (2019), cited by: 97; All Open Access, Gold Open Access, Green Open Access. [19] J. Davidsson, V. Iv´ ady, R. Armiento, and I. A. Abrikosov, ADAQ: Automatic workflows for magneto-optical properties of point defects in semiconductors, Computer Physics Communi-cations 269 , 108091 (2021). [20] A. S. Parackal, R. E. A. Goodall, F. A. Faber, and R. Armiento, Identifying crystal structures beyond known prototypes from x-ray powder diffraction spectra, Phys. Rev. Mater. 8, 103801 (2024). [21] F. A. Faber, A. Lindmaa, O. A. von Lilienfeld, and R. Armiento, Machine learning energies of 2 million elpasolite (abC 2D6)
+
+crystals, Phys. Rev. Lett. 117 , 135502 (2016). [22] F. Faber, A. Lindmaa, O. A. von Lilienfeld, and R. Armiento, Crystal structure representations for ma-chine learning models of formation energies, Interna-tional Journal of Quantum Chemistry 115 , 1094 (2015), https://onlinelibrary.wiley.com/doi/pdf/10.1002/qua.24917. [23] R. Armiento, Database-driven high-throughput calculations and machine learning models for materials design, in Machine Learn-ing Meets Quantum Physics , edited by K. T. Sch¨ utt, S. Chmiela, O. A. von Lilienfeld, A. Tkatchenko, K. Tsuda, and K.-R. M¨ uller (Springer International Publishing, Cham, 2020) pp. 377– 395. [24] R. E. A. Goodall, A. S. Parackal, F. A. Faber, R. Armiento, and A. A. Lee, Rapid discovery of stable materials by coordinate-free coarse graining, Science Advances 8, eabn4117 (2022), https://www.science.org/doi/pdf/10.1126/sciadv.abn4117. [25] A. El Alouani, M. Al Khalfioui, A. Michon, S. V´ ezian, P. Bou-caud, and M. Dau, Defect formation energy of impurities in 2d materials: How does data engineering shape machine learning model selection?, Materials Today Physics 61 , 102006 (2026). [26] A. Mannodi-Kanakkithodi, M. Huang, P. Gorai, and S. R. Ka-vanagh, Accelerating point defect simulations using data-driven and machine learning approaches (2026), arXiv:2604.21069 [cond-mat.mtrl-sci]. [27] K. Sharma, A. Loew, H. Wang, F. A. Nilsson, M. Jain, M. A. L. Marques, and K. S. Thygesen, Accelerating point defect photo-emission calculations with machine learning interatomic poten-tials, npj Computational Materials 11 , 334 (2025). [28] I. Mosquera-Lois, S. R. Kavanagh, A. M. Ganose, and A. Walsh, Machine-learning structural reconstructions for accelerated point defect calculations, npj Computational Materials 10 , 121 (2024). [29] N. C. Frey, D. Akinwande, D. Jariwala, and V. B. Shenoy, Machine learning-enabled design of point defects in 2d materials for quantum and neuromorphic information processing, ACS Nano 14 , 13406 (2020). [30] C. Lapointe, T. D. Swinburne, L. Thiry, S. Mallat, L. Proville, C. S. Becquart, and M.-C. Marinica, Machine learning surrogate models for prediction of point defect vibrational entropy, Phys. Rev. Mater. 4, 063802 (2020). [31] J. Yang, Y. Sun, and B. Xu, Impact of point defects on the thermal conductivity of GaN studied using machine-learned potentials, Phys. Rev. B 111 , 104112 (2025). [32] A. Manzoor, G. Arora, B. Jerome, N. Linton, B. Norman, and D. S. Aidhy, Machine learning based methodology to predict point defect energies in multi-principal element alloys, Fron-tiers in Materials Volume 8 - 2021 , 10.3389/fmats.2021.673574 (2021). [33] M. H. Rahman, P. Gollapalli, P. Manganaris, S. K. Yadav, G. Pilania, B. DeCost, K. Choudhary, and A. Mannodi-Kanakkithodi, Accelerating defect predictions in semi-conductors using graph neural networks, APL Machine Learning 2, 016122 (2024), https://pubs.aip.org/aip/aml/article-pdf/doi/10.1063/5.0176333/19855410/016122 1 5.0176333.pdf. [34] A. Mannodi-Kanakkithodi, X. Xiang, L. Jacoby, R. Biegaj, S. T. Dunham, D. R. Gamelin, and M. K. Chan, Universal machine learning framework for defect predictions in zinc blende semi-conductors, Patterns 3, 100450 (2022). [35] J. B. Varley, A. Samanta, and V. Lordi, Descriptor-based ap-proach for the prediction of cation vacancy formation energies and transition levels, The Journal of Physical Chemistry Letters 
+
+8, 5059 (2017). [36] Z. Wan, Q.-D. Wang, D. Liu, and J. Liang, Data-driven machine learning model for the prediction of oxygen vacancy formation energy of metal oxide materials, Phys. Chem. Chem. Phys. 23 ,15675 (2021). [37] R. B. Wexler, G. S. Gautam, E. B. Stechel, and E. A. Carter, Fac-tors governing oxygen vacancy formation in oxide perovskites, Journal of the American Chemical Society 143 , 13212 (2021). [38] V. Sharma, P. Kumar, P. Dev, and G. Pilania, Ma-chine learning substitutional defect formation ener-gies in abo3 perovskites, Journal of Applied Physics 
+
+128 , 034902 (2020), https://pubs.aip.org/aip/jap/article-pdf/doi/10.1063/5.0015538/20741781/034902 1 5.0015538.pdf. [39] B. Baldassarri, J. He, A. Gopakumar, S. Griesemer, A. J. A. Salgado-Casanova, T.-C. Liu, S. B. Torrisi, and C. Wolver-ton, Oxygen vacancy formation energy in metal oxides: High-throughput computational studies and machine-learning predic-tions, Chemistry of Materials 35 , 10619 (2023). [40] S. Park, N. Lee, J. O. Park, J. Park, Y. S. Heo, and J. Lee, Ex-ploring the latent chemical space of oxygen vacancy formation energy by a machine learning ensemble, ACS Materials Letters 
+
+6, 66 (2024). [41] N. Kazeev, A. R. Al-Maeeni, I. Romanov, M. Faleev, R. Lukin, A. Tormasov, A. H. Castro Neto, K. S. Novoselov, P. Huang, and A. Ustyuzhanin, Sparse representation for machine learning the properties of defects in 2d materials, npj Computational Materials 9, 113 (2023). [42] K. Choudhary and B. G. Sumpter, Can a deep-learning model make fast predictions of vacancy formation in diverse materials?, AIP Advances 13 ,095109 (2023), https://pubs.aip.org/aip/adv/article-pdf/doi/10.1063/5.0135382/18113040/095109 1 5.0135382.pdf. [43] X. Zhao, S. Yu, J. Zheng, M. J. Reece, and R.-Z. Zhang, Machine learning of carbon vacancy formation energy in high-entropy carbides, Journal of the European Ceramic Society 43 ,1315 (2023). [44] S. Kiyohara, C. Shibui, S. Bae, and Y. Kumagai, Machine-
+
+12 learning prediction of charged-defect formation energies from crystal structures, Phys. Rev. Lett. 135 , 246101 (2025). [45] J. Davidsson, R. Babar, D. Shafizadeh, I. G. Ivanov, V. Iv´ ady, R. Armiento, and I. A. Abrikosov, Exhaustive characterization of modified si vacancies in 4H-SiC, Nanophotonics 11 , 4565 (2022). [46] O. Bulancea-Lindvall, J. Davidsson, R. Armiento, and I. A. Abrikosov, Chlorine vacancy in 4H-SiC: An nv-like defect with telecom-wavelength emission, Phys. Rev. B 108 , 224106 (2023). [47] G. Kresse and J. Hafner, Ab initio molecular-dynamics simu-lation of the liquid-metalamorphous- semiconductor transition in germanium, Physical Review B 49 , 14251 (1994), cited by: 21244. [48] G. Kresse and J. Furthm¨ uller, Efficient iterative schemes for ab initio total-energy calculations using a plane-wave basis set, Physical Review B - Condensed Matter and Materials Physics 
+
+54 , 11169 (1996), cited by: 110636. [49] P. Hohenberg and W. Kohn, Inhomogeneous electron gas, Physi-cal Review 136 , B864 (1964), cited by: 48030; All Open Access, Bronze Open Access. [50] W. Kohn and L. Sham, Self-consistent equations including ex-change and correlation effects, Physical Review 140 , A1133 (1965), cited by: 58277; All Open Access, Bronze Open Access. [51] V. Iv´ ady, I. A. Abrikosov, and A. Gali, First principles calcula-tion of spin-related quantities for point defect qubit research, npj Computational Materials 4, 10.1038/s41524-018-0132-5 (2018), cited by: 87; All Open Access, Gold Open Access, Green Open Access. [52] M. Bathen, C. Linder¨ alv, U. Grossner, and L. Vines, Chapter 14 -color centers in silicon carbide, in Nanophotonics with Diamond and Silicon Carbide for Quantum Technologies , Nanophotonics, edited by M. Agio and S. Castelletto (Elsevier, 2025) pp. 247– 275. [53] M. Aroyo, J. Perez-Mato, D. Orobengoa, E. Tasci, G. De La Flor, and A. Kirov, Crystallography online: Bilbao crystallographic server, Bulgarian Chemical Communications 43 , 183 (2011), cited by: 647. [54] M. I. Aroyo, J. M. Perez-Mato, C. Capillas, E. Kroumova, S. Ivantchev, G. Madariaga, A. Kirov, and H. Wondratschek, Bilbao crystallographic server: I. databases and crystallographic computing programs, Zeitschrift f¨ ur Kristallographie - Crys-talline Materials 221 , 15 (2006). [55] M. I. Aroyo, A. Kirov, C. Capillas, J. M. Perez-Mato, and H. Wondratschek, Bilbao Crystallographic Server. II. Represen-tations of crystallographic point groups and space groups, Acta Crystallographica Section A 62 , 115 (2006). [56] B. Souvignier, ed., Space groups and their descriptions, in In-ternational Tables for Crystallography Volume A: Space-group symmetry (International Union of Crystallography, 2015) Chap. 1.4., pp. 61–67. [57] A. Goyal, P. Gorai, H. Peng, S. Lany, and V. Stevanovi´ c, A com-putational framework for automation of point defect calculations, Computational Materials Science 130 , 1 (2017). [58] C. Freysoldt, B. Grabowski, T. Hickel, J. Neugebauer, G. Kresse, A. Janotti, and C. G. Van de Walle, First-principles calculations for point defects in solids, Rev. Mod. Phys. 86 , 253 (2014). [59] I. Aharonovich, D. Englund, and M. Toth, Solid-state single-photon emitters, Nature Photonics 10 , 631 (2016). [60] V. Profillidis and G. Botzoris, Chapter 5 - statistical methods for transport demand modeling, in Modeling of Transport Demand ,edited by V. Profillidis and G. Botzoris (Elsevier, 2019) pp. 163– 224. [61] T. Hastie, R. Tibshirani, and J. Friedman, The Elements of Sta-tistical Learning – Data Mining, Inference, and Prediction , 2nd ed. (Springer, 2017). [62] M. Mohri, A. Rostamizadeh, and A. Talwalkar, Foundations of Machine Learning , 2nd ed. (The MIT Press, 2018). [63] scikit-learn developers, 7.8.5. rbf kernel (2026), accessed: 2026-03-26. [64] A. Choromanska, M. Henaff, M. Mathieu, G. B. Arous, and Y. LeCun, The loss surfaces of multilayer networks (2015), arXiv:1412.0233 [cs.LG]. [65] scikit-learn developers, Mlpregressor (2026), accessed: 2026-04-14. [66] F. Chollet, Deep Learning with Python (Manning, 2018). [67] scikit-learn developers, 1.17. neural network models (super-vised) (2026), accessed: 2026-03-23. [68] G. B. Fotopoulos, P. Popovich, and N. H. Papadopoulos, Review non-convex optimization method for machine learning (2024), arXiv:2410.02017 [cs.LG]. [69] I. Sutskever, J. Martens, G. Dahl, and G. Hinton, On the impor-tance of initialization and momentum in deep learning, in Pro-ceedings of the 30th International Conference on Machine Learn-ing , Proceedings of Machine Learning Research, Vol. 28(3), edited by S. Dasgupta and D. McAllester (PMLR, Atlanta, Geor-gia, USA, 2013) pp. 1139–1147. [70] D. P. Kingma and J. Ba, Adam: A method for stochastic opti-mization (2017), arXiv:1412.6980 [cs.LG]. [71] D. C. Liu and J. Nocedal, On the limited memory bfgs method for large scale optimization, Mathematical Programming 45 , 503 (1989). [72] A. G´ eron, Hands-on Machine Learning with Scikit-Learn, Keras, and TensorFlow , 2nd ed. (O’Reilly Media, Inc., 1005 Graven-stein Highway North, Sebastopol, CA 95472, 2019). [73] M. Biehl, The Shallow and the Deep: A biased introduction to neural networks and old school machine learning (University of Groningen Press, 2023). [74] S. Haykin, Neural Networks and Learning Machines , 3rd ed. (Pearson, New Jersey, 2009). [75] M. Shanker, M. Hu, and M. Hung, Effect of data standardization on neural network training, Omega 24 , 385 (1996). [76] Y.-S. Kim, M. K. Kim, N. Fu, J. Liu, J. Wang, and J. Sre-bric, Investigating the impact of data normalization methods on predicting electricity consumption in a building using different artificial neural network models, Sustainable Cities and Society 
+
+118 , 105570 (2025). [77] K. Cabello-Solorzano, I. Ortigosa de Araujo, M. Pe˜ na, L. Cor-reia, and A. J. Tall´ on-Ballesteros, The impact of data normal-ization on the accuracy of machine learning algorithms: A com-parative analysis, in 18th International Conference on Soft Com-puting Models in Industrial and Environmental Applications (SOCO 2023) , edited by P. Garc´ ıa Bringas, H. P´ erez Garc´ ıa, F. J. Mart´ ınez de Pis´ on, F. Mart´ ınez ´ Alvarez, A. Troncoso Lora, ´A. Herrero, J. L. Calvo Rolle, H. Quinti´ an, and E. Corchado (Springer Nature Switzerland, Cham, 2023) pp. 344–353. [78] L. M. Ghiringhelli, J. Vybiral, S. V. Levchenko, C. Draxl, and M. Scheffler, Big data of materials science: Critical role of the descriptor, Phys. Rev. Lett. 114 , 105503 (2015). [79] A. Seko, A. Togo, and I. Tanaka, Descriptors for machine learn-ing of materials data, in Nanoinformatics , edited by I. Tanaka (Springer Singapore, Singapore, 2018) pp. 3–23. [80] S. Castelletto, L. Rosa, and B. C. Johnson, Silicon carbide for novel quantum technology devices, in Advanced Silicon Carbide Devices and Processing , edited by S. E. Saddow and F. L. Via (IntechOpen, London, 2015) Chap. 8. [81] S. Raschka and V. Mirjalili, Python Machine Learning , 3rd ed. (Packt Publishing Ltd., Livery Place, 35 Livery Street, Birming-ham B3 2PB, UK., 2019). 
+
+13 [82] F. Pedregosa, G. Varoquaux, A. Gramfort, V. Michel, B. Thirion, O. Grisel, M. Blondel, P. Prettenhofer, R. Weiss, V. Dubourg, J. Vanderplas, A. Passos, D. Cournapeau, M. Brucher, M. Perrot, and E. Duchesnay, Scikit-learn: Machine learning in Python, Journal of Machine Learning Research 12 , 2825 (2011). [83] P. Karlsson, Finding New Wide-Bandgap Semiconductor Point Defects With Machine Learning : Estimation of Formation En-ergies and Zero-Phonon Lines for Point Defects in Silicon Car-bide , Master’s thesis, Link¨ oping University, Theoretical Physics (2026). 
+
+14

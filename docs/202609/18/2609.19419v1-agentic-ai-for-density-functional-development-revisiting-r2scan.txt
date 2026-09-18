@@ -1,0 +1,2051 @@
+Title: Agentic AI for Density-Functional Development: Revisiting r2SCAN
+
+URL Source: https://arxiv.org/pdf/2609.19419v1
+
+Published Time: Fri, 18 Sep 2026 00:17:28 GMT
+
+Number of Pages: 50
+
+Markdown Content:
+# Agentic AI for Density-Functional Development: Revisiting r2SCAN 
+
+Santosh Adhikari, Kelsey A. Parker, Etinosa Osaro, Swagata Roy, and Dario Rocca 
+
+PsiQuantum, 700 Hansen Way, Palo Alto, California 94304, USA 
+
+(*Electronic mail: drocca@psiquantum.com) (*Electronic mail: sadhikari@psiquantum.com) (Dated: 18 September 2026) 
+
+In this work, we demonstrate physics-constrained agentic development of a meta-generalized gradient approxi-mation (meta-GGA) functional using a large language model (LLM) to assist the search and optimization of a band-gap-oriented revision of r2SCAN. Throughout optimization, no real bonded systems were fitted, preserving r2SCAN’s nonempirical philosophy. We externally validated three finalists from the agentic search. Across the finalist set, band gaps and several molecular energetic and structural subsets improve relative to r2SCAN; the first-ranked finalist, r2SCAN+, reduces the band-gap MAE on a benchmark comprising 24 solids from 1.26 to 0.96 eV and the aggregate MAE across a benchmark comprising 329 reactions from 4.79 to 4.42 kcal/mol. To achieve this, we first curated 78 exchange and 90 correlation candidate correction terms from r2SCAN’s dimensionless ingredients, spanning polynomial terms through third degree, exponentials, exponentially damped products, and ratios. Even within this controlled search space, allowing each candidate to combine one to three correction terms from the exchange catalog, the correlation catalog, or both yields about 8 × 10 5 distinct forms, making exhaustive high-throughput screening impractical. We therefore used an LLM agent to prioritize promising combinations. We defined its search criteria using r2SCAN’s exact constraints, physical norms, and the targeted iso-orbital derivative response. The agent then combined these criteria with its pretrained knowledge and accumulated search feedback to propose and refine sparse forms, prioritizing terms tied to the iso-orbital response; a second LLM critic screened proposals before deterministic verification. Compared with uniform random search, the workflow learned from prior evaluations, incurred far fewer downstream rejections (0.6% versus 24.6%), and located stronger high-response candidates: 51 agentic candidates exceeded the best random-search response of 1.263, with the overall best reaching 1.331. Overall, these results show that agentic search can support density-functional development when flexible hypothesis generation is coupled to automated physical verification. 
+
+I. INTRODUCTION 
+
+Density-functional theory (DFT) 1,2 is widely used in chemistry and materials science 3,4 . Over the years, DFT has helped build an extensive infrastructure for scien-tific research and innovation: open-source software such as PySCF 5,6 and Quantum ESPRESSO 7–9 , associated libraries such as libxc 10 , reusable benchmark and refer-ence repositories 11–14 and a vast literature rich in physi-cal insight and methodological ideas 15–21 . This mature ecosystem provides not only the tools for applying exist-ing density-functional approximations, but also much of the knowledge and computational machinery needed to develop new ones. Exploiting these resources for func-tional development, however, requires researchers to con-nect theoretical ideas with analytic constructions, imple-mentations, numerical tests, and validation procedures distributed across the literature and software. Rapid advances in large language models (LLMs) 22–24 suggest that LLM agents could assist this process under human scientific guidance by navigating these resources and co-ordinating reasoning with computation. Recent studies indeed have shown that LLM agents can solve chemistry problems 25–30 . For example, Bran et al. used ChemCrow to autonomously plan and execute the syntheses of an insect repellent and three organocat-alysts 25 . Boiko et al. demonstrated autonomous experi-mental design and execution, including optimization of palladium-catalyzed cross-coupling reactions 26 . Most re-cently, Google DeepMind and collaborators demonstrated a multi-agent system that iteratively generates, critiques, and refines scientific hypotheses, with experimental valida-tion in biomedical applications 27 . Similarly, MLIPilot 31 ,following the closed-loop agentic workflow introduced by Karpathy 32 , demonstrates its application to atomistic machine learning. Despite decades of accumulated litera-ture and well-documented computational infrastructure, agentic applications remain scarce in the DFT community. The ideal use of agentic artificial intelligence (AI) in DFT would be to assist the development of improved exchange–correlation approximations. Functional con-struction broadly follows three routes: optimization against benchmark properties (empirical) 33,34 , construc-tion from exact constraints and physical norms without fit-ting to properties of bonded systems (nonempirical) 35–38 ,or a mixture of these strategies (semi-empirical) 39–41 .Regardless of the route and the advances made within it, functional development remains laborious and time-consuming because researchers must acquire and syn-thesize substantial domain knowledge distributed across decades of literature and computational infrastructure, then perform the associated scientific reasoning and com-putational operations. LLM agents can now assist with much of this intellectual integration. In this work, we demonstrate this division of labor through a prototype agentic revision of a functional at the meta-generalized-1arXiv:2609.19419v1 [physics.chem-ph] 16 Sep 2026 gradient approximation (meta-GGA) level 42 : we define the essential scientific objectives and admissible physical boundaries, while an LLM agent reasons over candidate forms, uses accumulated feedback to prioritize promising hypotheses, diagnoses failures, and coordinates coefficient optimization. Meta-GGAs are especially attractive for such devel-opment because the kinetic-energy density provides flex-ibility to distinguish density environments that lower semilocal rungs cannot. Nonempirical meta-GGAs such as SCAN 37 and r2SCAN 38 consequently provide broadly useful molecular and solid-state energetics and structures at semilocal cost 43 . Their generalized-Kohn–Sham band gaps, however, remain substantially underestimated for many semiconductors and insulators 44,45 . Reliable band structures are particularly relevant to optoelectronic en-gineering 46,47 and catalytic applications 48,49 .Many-body (GW) calculations 50 and screened hybrids such as HSE06 51,52 often improve gaps, but at substan-tially greater cost than semilocal DFT. The semilocal mBJ potential 53,54 can also yield accurate solid-state gaps, but as a model potential without a correspond-ing exchange–correlation energy functional it does not consistently provide total energies, forces, or structural optimization. TASK 55,56 instead showed that strengthen-ing the response of meta-GGA exchange to the iso-orbital indicator can enlarge bulk band gaps at semilocal cost; mTASK 57 extended this strategy to low-dimensional ma-terials while explicitly relaxing the tight one-/two-electron exchange bound. These studies established a useful band-gap control knob, although TASK and mTASK use PW92-LDA correlation 58 and were not developed as broad re-placements for the complete SCAN exchange–correlation construction 55,59 .The recent LAK construction 60,61 demonstrates how much further this flexible space can be taken. By rebalanc-ing density-gradient and kinetic-energy-density contribu-tions, LAK retains all 17 exact constraints available to a meta-GGA, achieves HSE06-like band-gap accuracy, and modestly improves a selected atomization-energy set over SCAN. Its LC20 lattice-constant error is nevertheless com-parable to PBE 35 rather than SCAN. Thus, meta-GGA ingredients can balance band-gap response and molecular energetics within a fully semilocal form, but navigating the associated property trade-offs remains a demanding design problem. In this work, we use physics-constrained agentic func-tional development to improve upon r2SCAN. Although r2SCAN misses one of the 17 exact constraints satisfied by SCAN, it preserves SCAN’s broad accuracy while providing greater numerical stability 38,43 . Our agentic workflow uses a human–agent interface: we define the scientific objective, admissible ingredients, physical tests, and acceptance rules, while the LLM agent uses pretrained knowledge, accumulated feedback, and an independent critique to select sparse exchange and correlation cor-rections, determine where they should act, and direct coefficient optimization. The agent thus handles part of the reasoning and decision-making, including hypothesis selection, search steering, and numerical optimization, to assist the research process. To assess the advantages and limitations of this agentic search, we also evaluated a uni-form random-search control within the same constrained workflow. Here, we follow a nonempirical route where no real bonded molecule or periodic solid enters the search objec-tive, and candidates are judged only by exact-constraint verification, physical norms, and the iso-orbital response targeted for band-gap enhancement. Remarkably, even within a candidate space deliberately restricted for sim-plicity and computational efficiency, the resulting agent-assisted functional, r2SCAN+, improves several external molecular subsets, suggesting that preserving r2SCAN’s exact-constraint structure supports transferability be-yond the band-gap target. Its principal trade-off is PBE-like lattice-constant accuracy. While this work was in preparation, Duston et al. 62 reported a complementary agentic search around the range-separated hybrid func-tional ωB97M-V 63 , in which candidate functionals were evaluated non-self-consistently on fixed ωB97M-V den-sities. Their workflow used molecular benchmark data directly during optimization, whereas ours keeps bench-mark molecules and solids outside the search loop and retains a fully nonempirical, semilocal meta-GGA frame-work. Consistent with recent meta-GGA optimization studies 60,61 , our results show that agentic AI can support functional optimization: researchers retain control of the governing physics, while agents share the scientific reason-ing and carry much of the computational optimization.  
+
+> II. PHYSICS-CONSTRAINED AGENTIC WORKFLOW
+
+The workflow integrates the policy we define with an LLM proposer, an LLM critic, and deterministic verifi-cation. We set the objective, ingredients, physical tests, and acceptance rules; the LLM agent, implemented here using the OpenAI GPT-5 reasoning model with medium reasoning effort 64 , selects forms and directs optimization, while the verifier decides feasibility. Below, we give an overview of the three central development steps: candi-date construction and physical verification, agentic search and optimization, and finalist selection. For completeness, using the same workflow, we also evaluate roughly the same number of candidates through a uniform random se-lection process to highlight the strengths and limitations of agentic search.  
+
+> A. Candidate construction and physical verification
+
+Candidate functionals begin from r2SCAN and may modify one or both channels, 
+
+εx = εr2SCAN  
+
+> x
+
++ ∆ εx, εc = εr2SCAN  
+
+> c
+
++ ∆ εc. (1) 2In Eq. (1), ∆εν is the correction to channel ν = x, c . The corresponding total energies are Ex = R n(r)εx(r) dr and 
+
+Ec = R n(r)εc(r) dr.The candidate construction and derivative-response analysis use the r2SCAN-regularized iso-orbital indica-tor αr2 = ( τ − τW )/(τunif + 10 −3τW ), where τ , τW , and 
+
+τunif have their standard meta-GGA meanings (see Sup-plementary Information (SI), Sec. S1.1, for terminology definitions). The curated catalogs of candidates contain 78 exchange and 90 correlation terms built from bounded transforms of (rs, s, p, α r2 , ζ ) using polynomial, exponen-tial, exponentially damped product, and ratio forms. Can-didate K combines one to three terms across either or both channels, P Kν = P 
+
+> j
+
+cKνj ϕνj (the admissible forms of 
+
+ϕνj are catalogued in SI, Sec. S1.2 and Tables S1–S2), with 1 ≤ mx,K + mc,K ≤ 3, where mν,K counts the active terms in channel ν. The selected algorithm determines the active coefficients cKνj . This deliberate curation and sparsity reduce cost and favor interpretable expressions. To confine a correction while preserving key r2SCAN limits, every active term in a candidate is multiplied by the same gating function 
+
+gα(αr2 ; η, σ ) = αr2 
+
+αr2 + ηαr2 − 11 + [( αr2 − 1) /σ ]2 . (2) Using this gate, the exchange and correlation expressions in Eq. (1) for candidate K are 
+
+εKx = εr2SCAN  
+
+> x
+
++ εunif  
+
+> x
+
+gα(αr2 ; ηK , σ K )P Kx ,εKc = εr2SCAN  
+
+> c
+
++ ¯ rs εr2SCAN  
+
+> c
+
+gα(αr2 ; ηK , σ K )P Kc . (3) Here, ¯rs = rs/(1 + rs). The corresponding exchange– correlation energy per electron and enhancement factor are 
+
+εK 
+
+> xc
+
+= εKx +εKc , F K 
+
+> xc
+
+= εK
+
+> xc
+
+εunif 
+
+> x
+
+, εunif  
+
+> x
+
+= − 34π (3 π2n)1/3.
+
+(4) The workflow constructs this complete candidate before verification and applies exchange-, correlation-, or com-bined exchange–correlation probes as required by each physical condition. In Eq. (2), a max(0 , α r2 ) filter is ap-plied to αr2 , so negative values caused by numerical noise are treated as zero. The gate vanishes at αr2 = 0 and 1, forcing the correction ∆εν to zero in the one-orbital and slowly varying limits, respectively, and thereby recovering r2SCAN in both limits. Because the gate parameters can themselves influence the response, we used the same fixed pair, (η, σ ) = (0 .6, 1.8) , in the agentic and uniform-random searches, ensuring that differences between them arise from candidate selection rather than gate tuning. Al-though these parameters could in principle be optimized, we selected them a priori and held them fixed throughout all reported experiments. In summary, these choices define the candidate space presented to the LLM agent: the admissible grammar and sparsity, together with the gate architecture and parameter bounds. The physical tests and acceptance criteria used to evaluate candidates are described next.  
+
+> B. Agentic search
+
+Within the candidate space defined in Section II A, the agentic search seeks corrections that increase the targeted iso-orbital response while preserving the physical behavior of r2SCAN (see step 2 below). Two LLM agents operate in the loop: a proposer and a critic. For each iteration, the workflow proceeds through the following steps. 1. Proposal and critique. The proposer selects a can-didate form from the available space, coefficient bounds and starting values for each selected term, and one of four listed algorithms to search those bounds for optimal coefficients; the shared gate pair remains fixed at (η, σ ) = (0 .6, 1.8) . Specifi-cally, available optimizers are a one-dimensional scan, Nelder–Mead 65 , covariance-matrix adapta-tion 66 , and Bayesian optimization 67 . Together, these choices fully specify the starting exchange, cor-relation, and combined exchange–correlation expres-sions in Eq. (3) and Eq. (4), allowing the workflow to perform the deterministic constraint precheck (see SI, Sec S1.3, and Table S3 for the list of constraints checked). The critic then reviews the complete pro-posal together with these initial feasibility results. The critic either rejects the proposal or allows it to proceed, possibly warning that the starting co-efficient vector is infeasible. Such a warning does not force rejection because the selected algorithm may locate a feasible vector elsewhere within the proposed bounds. Across the production runs, the critic rejected 330 of 1,738 proposals. The remaining 1,408 proposals advanced to coefficient optimization under the fixed gate used for both search modes. 2. Search objective. Coefficient optimization is guided by three quantities evaluated relative to r2SCAN. First, a physics-motivated surrogate for band-gap opening: the response of F K 
+
+> xc
+
+in Eq. (4) to the iso-orbital indicator. For functional K, we define 
+
+DKαr2 =
+
+*
+
+∂F K
+
+> xc
+
+∂α r2 
+
+> 2
+
++1/2
+
+> Gαr2
+
+, RKαr2 = DKαr2 
+
+Dr2SCAN 
+
+> αr2
+
+. (5) The average samples (rs, s, α r2 ) at ζ = 0 , making 
+
+DK the root-mean-square response and RK its ra-tio to r2SCAN. This choice follows TASK 55 and mTASK 57 , where increasing the exchange response to the kinetic-energy-density-dependent indicator promotes band-gap opening; those functionals origi-nally used the α-independent PW92-LDA correla-tion 58 . In this work, since both r2SCAN channels depend on the indicator and either or both may be corrected here, we optimize the response of Fxc .Second, the workflow evaluates four scaling relations retained by r2SCAN: exchange uniform and nonuni-form scaling and correlation high- and low-density scaling. We define LKγ as the aggregate normalized 3deviation of candidate K from their exact analytical targets. Because finite-grid asymptotic probes can retain small numerical residuals even for r2SCAN, we use its identically evaluated value as the baseline for interpreting each candidate’s aggregate scaling deviation. Third, we define LK 
+
+> ∆Fxc
+
+as the root-mean-square departure of the candidate enhancement fac-tor from r2SCAN over synthetic points representing slowly varying densities. All three quantities are analytic and inexpensive to evaluate; the nonempir-ical reference norms introduced in step 4 are not computed during coefficient optimization (see SI, Sec. S1.5, for details on the computation of RKαr2 ,
+
+LKγ , and LK 
+
+> ∆Fxc
+
+). These quantities are combined in the objective 
+
+J = − RKαr2 + 0 .1LK
+
+> ∆Fxc
+
++ 50 max 0, LKγ − L r2SCAN 
+
+> γ
+
+ , (6) evaluated for coefficient vectors that pass the de-terministic screening, while vectors that fail it are instead assigned 
+
+Jinfeasible = 10 3 (1 + nviol ) , (7) where nviol is the number of violated constraints. We chose the weights 0.1 and 50 manually; they pri-oritize enhancement of the iso-orbital response while discouraging substantial departures from r2SCAN in the two auxiliary measures. The third term of Eq. (6) is a hinge that vanishes whenever the candi-date’s aggregate scaling deviation does not exceed that of r2SCAN. Infeasible vectors are ranked by their number of violations rather than discarded, which steers the search toward feasible regions; be-cause r2SCAN itself corresponds to J = −1, the two branches are separated by roughly three orders of magnitude. 3. Coefficient optimization and constraint screening. 
+
+For each critic-approved proposal, the LLM-selected algorithm minimizes Eq. (6) over the coefficients 
+
+cKνj of the active terms within the proposed bounds; the gate pair (η, σ ) is held fixed, so only these lin-ear coefficients are varied. The algorithms differ in how they generate trial coefficient vectors: the one-dimensional method evaluates a uniform grid fol-lowed by a bounded refinement, the simplex method generates trial points by geometric updates of a sim-plex, and the evolutionary and Bayesian methods draw them stochastically. Every trial vector, how-ever generated, undergoes the same deterministic screening and receives a value from Eq. (6) or Eq. (7) accordingly; the accumulated values then guide the next search step. Optimization continues until the selected algorithm satisfies its convergence crite-rion or exhausts its evaluation budget. The policy specified a nominal 60 evaluations, while method-specific stopping and accounting produced 7–116 objective calls per optimized production proposal, with a mean of approximately 69. At termination, the lowest-J vector encountered is retained; it is necessarily feasible whenever any feasible vector was encountered, given the separation between Eq. (6) and Eq. (7). If no feasible vector is found, the pro-posal is excluded from the accepted candidate pool. No feasible coefficient vector was found for 9 of the 1,408 optimized proposals. Consequently, 1,399 proposals advanced to full physical verification. 4. Full physical verification. Because evaluating the full nonempirical norms is substantially more expensive, we promote only the lowest-J feasible coefficient vector for each proposed form to this stage. This cost-saving choice treats the inner objective as a screening surrogate; it does not guarantee that an-other feasible coefficient vector for the same form would not achieve a lower full norm loss. The de-terministic verifier of this step first repeats the con-straint checks and then computes the full norm loss. The loss contains six categories: scaling, comprising the same four scaling measures used above; rare-gas exchange and rare-gas correlation 68 ; large-Z coef-ficients; compressed Ar 269 ; and fractional-charge linearity (see SI, Sec. S1.4 for more details). We did not include jellium surface formation energies as a separate candidate-level norm in this study, although they were used as appropriate norms in constructing r2SCAN 38 . For reference quantity i in category g,
+
+ri = Pi − Ri
+
+si
+
+, Mg =
+
+P 
+
+> i∈g
+
+wir2
+
+> i
+
+P 
+
+> i∈g
+
+wi
+
+, Lnorm =
+
+P 
+
+> g
+
+Wg Mg
+
+P 
+
+> g
+
+Wg
+
+!1/2
+
+.
+
+(8) Here Pi, Ri, and si are the prediction, reference, and fixed scale; ri is the residual; wi weights quantity 
+
+i; Mg is the category mean square; and Wg weights category g (see SI, Table S4, for complete residual scales and category weights used in the loss terms). A candidate is accepted only if LK 
+
+> norm
+
+≤ L r2SCAN norm .For every accepted candidate, the workflow records its optimized coefficients, response, objective value, and norm loss. To reduce this cost further, each promoted candidate’s Ar 2 interaction energies are evaluated non-self-consistently on r2SCAN densi-ties. 5. Feedback and repetition. The workflow records ev-ery accepted or rejected outcome, including critic decisions, optimized coefficients, objective values, feasibility failures, derivative responses, and norm losses. For computational efficiency, the proposer generates forms in batches of up to ten. The first batch shares the same initial information; before each subsequent batch, the workflow provides a compact summary of all preceding results, includ-ing the best candidates by norm loss and derivative 4response and the most recent rejections, so that the proposer can use this accumulated feedback to guide its next forms and search settings. The sequence of proposal, critique, coefficient search, and verifi-cation repeats until convergence or the allocated compute or LLM-cost budget is reached. Throughout this workflow, no molecular or solid-state benchmark dataset enters candidate generation, coefficient optimization, or selection; these datasets are reserved for external validation of the finalists. We fix the architec-ture, catalogs, sparsity, gates, parameter ranges, objec-tive weights, grids, tolerances, and acceptance thresholds. Within these boundaries, the proposer chooses forms and search settings, the critic challenges them, the selected al-gorithm determines the coefficients, and the deterministic verifier alone determines feasibility and final survival. 
+
+C. Agentic finalists 
+
+Of the 1,399 proposals that reached full physical verifi-cation across the production runs, 1,150 met the full r2SCAN norm-loss budget. We compared these ac-cepted, agent-proposed candidates by their norm loss and derivative-response opening and retained the three candidates with the largest band-gap responses (Eq. (9)); all three were correlation-only by outcome. Throughout the manuscript, we label these candidates r2SCAN+, Fi-nalist 2, and Finalist 3 in decreasing order of derivative response. Their correction and analytic expansions are 
+
+∆εKc = ¯ rs|εr2SCAN  
+
+> c
+
+|gα(αr2 ; ηK , σ K )P Kc ,P r2SCAN+  
+
+> c
+
+= 0 .236802 e− ¯α + 0 .390769 e− ¯α2
+
++ 0 .498078 e− ¯α3
+
+,P Finalist 2  
+
+> c
+
+= 0 .485686 e− ¯α2
+
++ 0 .495912 e− ¯α3
+
++ 0 .193335¯ rse−¯rs ,P Finalist 3  
+
+> c
+
+= 0 .499610 e− ¯α + 0 .499965 e− ¯α3
+
++ 0 .199782 ¯rs
+
+1 + ¯ s .
+
+(9) In Eq. (9), ¯s = s/ (1+ s), ¯p = s2/(1+ s2), ¯α = αr2 /(1+ αr2 ),and (ηK , σ K ) = (0 .6, 1.8) . The search did not identify an exchange-containing candidate with comparably large re-sponse; for illustration, an exchange-containing candidate reached a response of only ∼ 1.22 .We summarize the finalists’ full-grid norm losses and derivative-response gains in Table I. Fig. 1 compares the smooth variation of Fxc and its iso-orbital response for r2SCAN, r2SCAN+, and uniform Random-Search Best. Additional response plots for representative (¯ rs, s, ζ ) slices are provided in Fig. S1 of the SI. The complete top-ten ranked lists and optimized expressions are given in the SI, Sec. S2.1 and Tables S5 and S6; the full search-funnel comparison is summarized in Table S7. Among the finalists, r2SCAN+ gives the largest re-sponse, 33.1% above r2SCAN. We use r2SCAN+ for the main-text comparisons with SCAN and r2SCAN. 
+
+TABLE I. Norm-loss gains relative to r2SCAN and derivative-response ratios for the three agentic finalists and three uniform random-search candidates; the r2SCAN reference is 0% and 1.0, respectively. Random-Search Best, Random-Search II, and Random-Search III are the first, second, and third best candidates from the uniform random search, respectively; de-tailed statistics are given in the SI.                                       
+
+> Agentic Search Random Search Candidate Norm-loss gain (%) Rαr2 Candidate Norm-loss gain (%) Rαr2
+> r2SCAN+ 0.44 1.331 Random-Search Best 0.01 1.263 Finalist 2 0.27 1.329 Random-Search II 1.11 1.261 Finalist 3 0.41 1.328 Random-Search III 0.87 1.241 1.00 1.05 1.10 1.15 1.20 1.25
+> Fxc
+> rs= 2, s= 0.5, ζ= 0 r2SCAN r2SCAN+ Random-Search Best 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 regularized iso-orbital indicator αr2
+> −0.15 −0.10 −0.05 0.00 ∂Fxc /∂ αr2
+> rs= 2, s= 0.5, ζ= 0
+
+FIG. 1. Fxc and its signed αr2 derivative for r2SCAN, r2SCAN+, and Random-Search Best at the representative slice rs = 2 .0, s = 0 .5, and ζ = 0 . The full diagnostic-grid RMS derivative ratios are reported in Table I. 
+
+D. Comparing Agentic and Uniform Random Search 
+
+To assess the benefit of agent-guided candidate selec-tion, we compared the agentic workflow with a uniform random search using the same 168-term menu, fixed gate (η, σ ) = (0 .6, 1.8) , coefficient objective, physical con-straints, norm-loss verifier, and proposal budget. Across the different initializations, the random search supplied 2,480 proposals, compared with 1,738 proposals supplied by the agentic search. Each search represented less than 
+
+0.3% of the available approximately 8 × 10 5-form combi-natorial space. The agentic workflow reached the r2SCAN norm-loss budget for 1,150 of 1,738 proposals (66.2%), compared with 1,270 of 2,480 random-search proposals (51.2%). The agentic search also led to stronger responses: 110 agentic proposals exceeded Rαr2 = 1 .20 , compared with 18 random-search proposals. The random-search best response of 1.263 was surpassed by 51 agentic candidates, 5while the best agentic candidate, r2SCAN+ in Eq. (9), achieved a response of 1.331. The norm-loss gains and opening responses of the three random-search candidates are listed in Table I. Examining the search candidates, the agentic arm in-cluded an explicit αr2 -dependent term in 70 .7% of pro-posals, compared with 32 .6% under uniform random sam-pling, consistent with the objective of increasing the re-sponse with respect to αr2 . The searches also differed in the distribution of correction types: exchange-only, correlation-only, and joint forms accounted for 12 .7% ,
+
+43 .6% , and 43 .7% of the agentic proposals, respectively, compared with 9.8% , 15 .9% , and 74 .3% of the random-search proposals. Together, these patterns are consistent with the agent using previous evaluations to guide sub-sequent proposals toward α-dependent correlation cor-rections that enhance the band-gap response. All three finalists, for example, contain exponential ¯α-dependent terms: r2SCAN+ includes e− ¯α, e− ¯α2
+
+, and e− ¯α3
+
+, while Finalists 2 and 3 each include two of these terms (Eq. (9)). This pattern extends beyond the finalists: all ten highest-response agentic candidates contain at least one of these 
+
+¯α-dependent exponential terms. By contrast, none of the ten highest-response random-search candidates con-tains an explicit α-dependent term, including the random-search candidate with the highest response. Thus, the random-search response enhancement arose from the shared gate architecture rather than deliberate selection of 
+
+α-dependent correction terms; the random search did not use the gate’s role as a criterion when selecting candidate forms. The agentic workflow also benefits from a critic agent that is absent from the random-search control. Across the 1,738 agentic proposals, the critic rejected 330 before co-efficient optimization, saving the associated optimization cost; among the 1,408 proposals that passed the critic, only 9 (0.6%) were subsequently found structurally infea-sible, while 1,150 (81.7%) remained within the r2SCAN norm-loss budget. We therefore identify three practical advantages of the agentic workflow: it prioritizes terms connected to the dominant loss objective, uses successive evaluations and log history to refine later proposals, and applies critic screening before coefficient optimization; consequently, 51 agentic candidates surpassed the best random-search response of 1.263, with r2SCAN+ reaching 1.331. At the same time, the shared gate architecture and the common r2SCAN-based workflow keep both searches competitive, with 66.2% of agentic proposals and 51.2% of random-search proposals remaining within the r2SCAN norm-loss budget. Since each search explored well below 0.5% of the available combinatorial space, these results yet do not establish that agentic search guarantees an optimal candidate. Rather, we find that its ability to make in-formed decisions, learn from accumulated logs, and follow user-defined rules makes agentic search an appealing and promising route for systematic functional exploration. Throughout the remainder of the manuscript, we focus on the performance of the agentic finalists. We also ex-ternally benchmarked the best random-search candidate; those results are reported in the SI and briefly compared with the agentic candidates in the Results section.  
+
+> III. COMPUTATIONAL DETAILS
+
+For external molecular validation, we selected a suite of 329 unique reactions from the most recent curated GSCDB137 dataset of Head-Gordon et al. 11,12 . The suite comprises 183 non-multireference and 17 multireference W4-17 atomization energies 70 ; 68 unique barrier heights from DBH22 71 and BH46 72 , with BH6 73 reported sepa-rately as a six-reaction representative subset of DBH22; and 25 G21EA electron affinities and 36 G21IP ioniza-tion potentials 72,74 . We performed the calculations with PySCF 2.9.0 5,6 , using RKS for closed-shell species and UKS for open-shell species. We used def2-QZVPPD 75,76 
+
+basis set for W4-17 and the barrier-height sets and aug-cc-pV5Z 77,78 for G21EA and G21IP, except that species containing Li, Be, Na, or Mg used def2-QZVPPD. For benchmark calculations, we used the PySCF level-6 inte-gration grid, an SCF energy threshold of 10 −7 Hartree, and at most 200 cycles. We evaluated SCAN, r2SCAN, and the three finalists self-consistently under these com-mon settings. To study numerical-integration sensitivity we also performed calculations for the complete molecular suite at grid levels 2–5. For comparison, we also computed PBE 35 and B3LYP 79,80 using the same dataset-specific basis sets and computational settings. We additionally optimized the 20 bond-lengths in MGBL20 81,82 , comprising nine bonds involving hydrogen in MGHBL9 81 and 11 bonds between heavier atoms in MGNHBL11 82 , distributed across 16 molecules. We used the def2-QZVPPD basis set, PySCF level-6 grid, an SCF threshold of 10 −10 Hartree, analytic nuclear gradients with grid response, and the geomeTRIC optimizer 83 .For periodic system validation, we considered the zero-point-corrected experimental lattice constants of the LC20 dataset reported in Ref. 84. This set contains six sim-ple metals, five semiconductors, five ionic crystals, and four late transition metals. Additionally, we considered a separate nonmetallic benchmark of 24 unique solids spanning elemental and compound semiconductors, ionic insulators, and rare-gas solids. It combines the 14-solid TASK benchmark 55 and SCBG15, the 15-solid benchmark of elemental and binary semiconductors used for LAK 60 ;the two sets share five solids. We took the experimental reference gaps from the MBPT benchmark repository wherever available 13,44 ; for MgS and CdO we retained the TASK values of 5.40 and 0.84 eV, respectively 55 , while ZnTe follows the LAK reference 60 . We likewise used the HSE06 gaps compiled in the MBPT repository wherever available. We supplied the missing MgS value, 4.48 eV, from Lucero et al. 85 , the CdO value, 0.76 eV, from Kim et al. 86 , and the ZnTe value, 2.19 eV, from LAK 60 .We performed the calculations with Quan-6tum ESPRESSO 7.5 7–9 and scalar-relativistic SG15 ONCV PBE norm-conserving pseudopotentials 87,88 . For every material and functional, we used wave-function and charge-density cutoffs of 160 and 640 Ry, respectively, and Γ-centered Monkhorst–Pack meshes targeting areciprocal-space spacing of 0.10 Å−1. We converged the self-consistent calculations to 10 −9 Ry with a mixing parameter of 0.4 and a maximum of 200 electronic steps. For metallic systems, we used Marzari–Vanderbilt (“mv”) smearing with a smearing width of 0.01 Ry; the small-gap Ge calculations used the same smearing with a width of 
+
+0.005 Ry. To determine each LC20 lattice constant, we sampled nine isotropically scaled cells spanning ±4% about the zero-point-corrected experimental reference lattice con-stant reported in Ref. 84. We fitted a third-order Birch– Murnaghan equation of state 89 . For the band gaps, we used the experimental MBPT/ICSD structures wherever available. For zincblende MgS and rocksalt CdO, we used the crystallographic phases and experimental lattice con-stants reported in TASK; for zincblende ZnTe, we used those reported in LAK. We generated primitive cells and high-symmetry paths with SeeK-path 90 , included 16 unoccupied bands, and omitted spin–orbit coupling. We used identical structures, pseudopotentials, cutoffs, and sampling settings for all directly compared functionals. 
+
+IV. RESULTS 
+
+Because the finalists were developed nonempirically, without fitting to molecular or solid-state benchmark data, we next assess their transferability across the molecular and periodic validation datasets described in Section III. In this section, we focus on r2SCAN+, comparing it pri-marily with its parent functional, r2SCAN, and with SCAN, while placing the results in the context of the broader literature. SI Sec. S3.2 and Tables S8–S11 provide all numerical values underlying the molecular-reaction, bond-length, band-gap, and lattice-constant analyses for the agentic finalists and Random-Search Best; the grid-convergence table in SI Sec. S3.1 reports subset and overall MAEs across PySCF grid levels 2–6, and Table S12 sum-marizes the benchmark comparison. For a brief overview, Table II summarizes performance across the molecular and periodic benchmark groups, while Fig. 2 and Fig. 3 show the detailed molecular and band-gap results, respectively. First, we report that all molecular calculations asso-ciated with the 329 unique reaction energies completed without an SCF convergence failure for SCAN, r2SCAN, r2SCAN+, Finalist 2, and Finalist 3. More importantly, like its parent r2SCAN, r2SCAN+ changes by about 0.02 
+
+kcal/mol in overall MAE across grid levels 2–6, whereas SCAN shows the largest drift, about 0.23 kcal/mol across levels 2–6 (top-left panel of Fig. 2). The numerical sen-sitivity of SCAN was a major motivation for the reg-ularization introduced in r2SCAN 38 . Our results show that r2SCAN+ and the other agentic finalists retain the smooth grid behavior of r2SCAN. Across all 329 molecular energetic data points, r2SCAN+ gives an MAE of 4.42 kcal/mol, close to the 4.56 
+
+kcal/mol MAE of B3LYP 79,80 ; SCAN and r2SCAN give 
+
+4.66 and 4.79 kcal/mol, respectively (Table II). Relative to r2SCAN, r2SCAN+ reduces the errors in atomization energies and barrier heights across every evaluated subset. The non-multireference and multireference W4-17 MAEs change from 3.60 and 11 .53 to 3.75 and 6.38 kcal/mol, respectively, lowering the aggregate W4-17 MAE from 
+
+4.28 to 3.97 kcal/mol. The BH6, DBH22, and BH46 MAEs decrease from 7.11 , 6.57 , and 6.98 to 7.00 , 5.55 ,and 5.85 kcal/mol. G21EA and G21IP remain close to r2SCAN, changing only from 3.52 to 3.77 and from 4.67 
+
+to 4.88 kcal/mol. Thus, the molecular results show broad improvement without a noticeable degradation in any evaluated category; Fig. 2 provides the detailed subset dis-tributions. Because none of the 329 molecular benchmark data points entered the candidate-generation or selec-tion procedure, these improvements provide encouraging evidence that preserving exact constraints and physical norms can support transferability beyond the targeted band-gap response. Bond-length accuracy also shows transferability at the geometry level. On MGBL20, r2SCAN+ gives an MAE of 3.3 mÅ, compared with 3.8 mÅ for r2SCAN. The MGHBL9 MAE changes from 2.0 to 2.2 mÅ, whereas the MGNHBL11 MAE improves from 5.2 to 4.3 mÅ. r2SCAN+ therefore remains comparatively balanced be-tween hydrogen-involving and heavy-atom bonds, broadly following r2SCAN and avoiding the larger SCAN subset contrast of 1.8 versus 6.4 mÅ. 
+
+TABLE II. MAEs for broad subsets of the external validation suite. Boldface marks the lowest MAE in each row. The TASK14 and SCBG15 gap sets share five solids; asterisks mark these overlapping sets and their 24-system union, in which each solid is counted once. At the aggregate category level, r2SCAN+ performs best among the methods evaluated here for reaction energies, bond lengths, and band gaps; lattice constants are the exception.                                                          
+
+> External validation set ( N)PBE SCAN r2SCAN r2SCAN+
+> Molecular thermochemistry and kinetics (kcal/mol)
+> Atomization energies (200) 18.63 3.84 4.28 3.97 Barrier heights (68) 8.95 7.37 6.85 5.75
+> G21EA and G21IP (61) 3.56 4.35 4.20 4.42 Overall (329) 13.84 4.66 4.79 4.42
+> MGBL20 bond lengths (mÅ)
+> MGHBL9 (9) 10.6 1.6 2.0 2.2 MGNHBL11 (11) 6.2 6.8 5.2 4.3
+> Overall (20) 8.2 4.4 3.8 3.3
+> LC20 lattice constants (mÅ)
+> All metals (10) 35.1 22.3 26.4 85.8 Insulators and semiconductors (10) 89.1 25.9 31.2 63.6 Overall (20) 62.1 24.1 28.8 74.7
+> Fundamental band gaps (eV)
+> TASK14 (14) ∗2.24 1.79 1.78 1.43
+> SCBG15 (15) ∗0.92 0.66 0.63 0.39
+> Overall (24) ∗1.68 1.29 1.26 0.96
+
+Next, we compare band gaps across 24 unique solids: the union of the 14-solid TASK benchmark 55,57 and the 72 3 4 5 6
+
+> PySCF grid level
+> 4.0 4.2 4.4 4.6 4.8 5.0
+> MAE (kcal/mol)
+
+Grid convergence (329)       
+
+> SCAN r2SCAN r2SCAN+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -50 050 100
+> E (kcal/mol)  17.63 4.94 3.35 3.60 3.75 MAE(kcal/mol)
+
+W4-17 non-MR (183)     
+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -30 030 60 90
+> E (kcal/mol)  29.46 6.19 9.06 11.53 6.37 MAE(kcal/mol)
+
+W4-17 MR (17)     
+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -15 -10 -5 0
+> E (kcal/mol)  9.25 4.61 7.46 7.11 7.00 MAE(kcal/mol)
+
+BH6 (6)     
+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -20 0
+> E (kcal/mol)  8.12 3.95 6.88 6.57 5.55 MAE(kcal/mol)
+
+DBH22 (22)     
+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -20 -10 010
+> E (kcal/mol)  9.34 4.49 7.60 6.98 5.85 MAE(kcal/mol)
+
+BH46 (46)     
+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -5 0510 15
+> E (kcal/mol)  3.18 2.47 3.63 3.52 3.77 MAE(kcal/mol)
+
+G21EA (25)     
+
+> PBE B3LYP SCAN r2SCAN r2SCAN+ -16 -8 0816
+> E (kcal/mol)  3.82 3.74 4.85 4.67 4.88 MAE(kcal/mol)
+
+G21IP (36) 
+
+> W4-17 non-MR W4-17 MR BH6 DBH22 BH46 G21EA G21IP 036912
+> MAE (kcal/mol)
+
+MAE by subset   
+
+> SCAN r2SCAN r2SCAN+
+
+FIG. 2. Molecular reaction-energy validation. The first panel shows the overall MAE of SCAN, r2SCAN, and r2SCAN+ across PySCF grid levels 2–6. The next seven panels show the level-6 signed-error distributions and subset MAEs for PBE, B3LYP, SCAN, r2SCAN, and r2SCAN+. The final panel compares the level-6 meta-GGA MAEs by subset. 
+
+15-solid SCBG15 benchmark used for LAK 60 , with their five shared systems counted once. Across this union, r2SCAN+ lowers the r2SCAN MAE from 1.26 to 0.96 
+
+eV; SCAN and PBE give 1.29 and 1.66 eV, respectively (Fig. 3). This improvement is consistent with our agen-tic design objective: increasing the response of Fxc to the regularized iso-orbital indicator, an established meta-GGA control knob for increasing generalized-Kohn–Sham ultranonlocality and promoting band-gap opening. On TASK14, r2SCAN+ lowers the r2SCAN MAE from 
+
+1.78 to 1.43 eV. Although this is a systematic improve-ment, the published TASK and mTASK MAEs of 0.39 
+
+and 0.47 eV, respectively, are substantially lower on this set 55,57 . The central difference lies in the design objective: TASK and mTASK were developed specifically to improve band gaps, whereas we ask whether an LLM agent can identify useful corrections within a restricted neighbor-hood of r2SCAN while retaining its exact constraints, regularized architecture, and physical-norm performance. The simultaneous improvement in band gaps and most external molecular subsets supports this broader balance, which was not tested for molecular transferability in the original TASK and mTASK studies. Recent work on the more general optimization of meta-GGAs provides a complementary reference 59–61 . LAK 60 
+
+demonstrates that stronger band-gap response can coexist with accurate atomization energies and bond lengths while retaining exact constraints. On SCBG15, LAK reports an MAE of 0.18 eV, close to the HSE06 range of 0.15 –
+
+0.17 eV compiled from the literature 13,44,60 . r2SCAN+ improves the r2SCAN MAE from 0.63 to 0.39 eV but remains less accurate than LAK for this set. For the MGBL20 bond-length set, however, r2SCAN+ and LAK give similar MAEs of 3.3 and 3.4 mÅ, respectively, both slightly better than 3.8 mÅ for r2SCAN and 4.4 mÅ for SCAN. Here, we focus on r2SCAN+ because it gives the largest derivative-response opening, the designated target of our search. Its 33 .1% response gain yields a 24-solid band-gap MAE of 0.96 eV. Finalists 2 and 3 perform similarly to r2SCAN+, consistent with their closely related correlation corrections and derivative-response gains of 32 .9% and 
+
+32 .8% , respectively. Their 24-solid band-gap MAEs are both 0.96 eV, with molecular reaction MAEs of 4.44 and 
+
+4.42 kcal/mol, respectively, compared with 4.42 kcal/mol for r2SCAN+. Random-Search Best has a slightly smaller 80 2 4 6 8 10 12 14             
+
+> Experimental reference Eg(eV)
+> 0246810 12 14
+> Theoretically computed  Eg (eV)
+> MAE (eV)
+> Reference PBE (1.66) SCAN (1.29) r2SCAN (1.26) r2SCAN+ (0.96) FIG. 3. Fundamental gaps for the 24 unique solids in the union of TASK14 55 and SCBG15 60 . Legend values are MAEs in eV over this union for the methods computed here. On TASK14, the reference HSE06 MAE compiled from values available in the literature is 1.02 eV 13,44,85,86 , while published TASK and mTASK predictions give 0.39 and 0.47 eV, respectively 55,57 .On SCBG15, the reference HSE06 MAE ranges from 0.15 to
+> 0.17 eV 13,44,60 .
+
+derivative response and correspondingly a slightly higher band-gap MAE of 1.02 eV, while giving a molecular MAE of 4.37 kcal/mol. These improvements in band gaps and molecular energetics come with a common structural trade-off: for the LC20 lattice-constant benchmark MAEs are 0.075 , 0.075 , 0.077 , and 0.069 Å for r2SCAN+, Fi-nalists 2 and 3, and Random-Search Best, respectively, compared with 0.062 Å for PBE (Table II). The nonempirical LAK functional 60 , designed to im-prove band gaps and electronic binding simultaneously, exhibits a similar structural trade-off. By contrast, the recently introduced bn-r2SCAN functional 91 achieves a notably better balance among band gaps, lattice constants, and several molecular properties, although it yields some-what less accurate atomization energies than r2SCAN. Consistent with our findings, its analysis shows that the correlation channel, in addition to exchange, can actively contribute to band-gap improvement. This balanced per-formance is obtained by fitting bn-r2SCAN to real bonded systems for both band gaps and lattice constants, whereas our work adopts a fully nonempirical fitting strategy. Our purpose here is not to identify an optimal func-tional, as any such claim would require broader molecular and materials validation. Moreover, even our combined agentic and uniform random searches explore only a small fraction of the available space, leaving substantial oppor-tunities for further development. Together with recent meta-GGA optimization studies 59–61,91 , our results sug-gest that this unexplored space offers considerable scope to rebalance electronic, structural, and molecular properties. For example, future searches could explicitly balance the iso-orbital response targeted here for band-gap opening with the reduced-gradient behavior important for lattice constants, as established by previous studies 36,60,84,91 .More broadly, our results show that agentic search pro-vides a promising route to explore this space more system-atically, by combining physical reasoning, accumulated search feedback, and numerical optimization.  
+
+> V. CONCLUSION
+
+In this work, we demonstrated a physics-constrained agentic workflow for developing density-functional ap-proximations, using correction on r2SCAN as a prototype. The resulting r2SCAN+ reduces the 24-solid band-gap MAE from 1.26 eV for r2SCAN to 0.96 eV and gives an overall 329-reaction MAE of 4.42 kcal/mol, with notable gains for several atomization and barrier-height subsets. Because the external molecular benchmark sets did not en-ter candidate generation, optimization, or selection, these gains provide encouraging evidence that preserving exact constraints and physical norms can support transferability beyond the targeted band-gap response. The molecular gains are broad, with electron affinities and ionization potentials remaining close to r2SCAN; the principal trade-off is the larger LC20 lattice-constant error, particularly for simple-metal and ionic solids. r2SCAN+ also does not yet reach the band-gap accuracy of meta-GGAs optimized specifically for that property. Never-theless, its simultaneous improvements across band gaps, atomization energies, and barrier heights show that a use-ful balance can be found around the regularized r2SCAN architecture. Wider molecular and materials benchmarks, including noncovalent, magnetic, and strongly correlated systems, will be needed to establish the generality of this balance and guide further refinement toward a more broadly improved meta-GGA. We also compared the agentic workflow with uniform random search within the same constrained setting. Un-like random exploration, the agent uses the search objec-tive, physical rules, critic review, and previous outcomes to guide its proposals. This is reflected in its preference for α-dependent terms, iterative addition and replace-ment of candidate terms, a substantially lower rejection rate during constraint checking ( 0.6% versus 24 .6% ), and stronger responses: 51 agentic candidates exceeded the best response obtained by uniform random search (1.26), while the best agentic candidate, r2SCAN+, reached 1.33. At the same time, the common gate already enforces im-portant physical behavior and introduces α dependence in both searches, allowing random forms to remain com-petitive. Random-Search Best, for example, contains no explicit α-dependent correction term yet gives MAEs of 
+
+4.37 kcal/mol for the 329-reaction molecular set, 1.02 eV for the 24-solid band gaps, and 0.069 Å for LC20. Thus, the comparison supports more informed exploration by the agent without implying universal superiority over 9uniform random search. More broadly, our results show that agentic AI can support density-functional development through the gen-eration, evaluation, and refinement of physically admissi-ble forms. Our prototype deliberately uses curated term menus, sparse expressions, a fixed gate architecture, and tightly bounded agentic choices, leaving substantial parts of the design space unexplored. Future workflows can broaden the available analytic forms, allow agents to con-struct and refine terms beyond a fixed catalog, optimize parameters fixed manually here, and incorporate reduced-gradient behavior relevant to lattice-constant accuracy. 
+
+ACKNOWLEDGMENTS 
+
+We thank Philipp T. Ernst and Sam Pallister for crit-ically reviewing the manuscript. We also thank Arpan Kundu, Stamatia Zavitsanou, and the broader quantum chemistry team at PsiQuantum for helpful discussions and feedback. 
+
+DATA AVAILABILITY 
+
+The Supplementary Information provides the complete set of exchange and correlation terms presented to the LLM. It also lists the exact constraints, physical norms, residual scales, and weights used to modify and evaluate r2SCAN. The explicit forms and optimized parameters of the selected candidates are reported, along with the procedures and inputs used for the calculations. Complete numerical results underlying the molecular and solid-state benchmarks and figures are also provided to support repro-ducibility. Further information and code related to this work may be obtained from the corresponding authors upon reasonable request. 
+
+> 1
+
+P. Hohenberg and W. Kohn, “Inhomogeneous Electron Gas,” Phys-ical Review 136 , B864–B871 (1964). 
+
+> 2
+
+W. Kohn and L. J. Sham, “Self-Consistent Equations Including Exchange and Correlation Effects,” Physical Review 140 , A1133– A1138 (1965). 
+
+> 3
+
+R. O. Jones, “Density functional theory: Its origins, rise to promi-nence, and future,” Reviews of Modern Physics 87 , 897–923 (2015). 
+
+> 4
+
+R. J. Maurer, C. Freysoldt, A. M. Reilly, J. G. Brandenburg, O. T. Hofmann, T. Björkman, S. Lebègue, and A. Tkatchenko, “Ad-vances in Density-Functional Calculations for Materials Modeling,” Annual Review of Materials Research 49 , 1–30 (2019). 
+
+> 5
+
+Q. Sun, T. C. Berkelbach, N. S. Blunt, G. H. Booth, S. Guo, Z. Li, J. Liu, J. D. McClain, E. R. Sayfutyarova, S. Sharma, S. Wouters, and G. K.-L. Chan, “PySCF: the Python-based simulations of chemistry framework,” WIREs Computational Molecular Science 
+
+8, e1340 (2018). 
+
+> 6
+
+Q. Sun, X. Zhang, S. Banerjee, P. Bao, M. Barbry, N. S. Blunt, N. A. Bogdanov, G. H. Booth, J. Chen, Z.-H. Cui, J. J. Eriksen, Y. Gao, S. Guo, J. Hermann, M. R. Hermes, K. Koh, P. Koval, S. Lehtola, Z. Li, J. Liu, N. Mardirossian, J. D. McClain, M. Motta, B. Mussard, H. Q. Pham, A. Pulkin, W. Purwanto, P. J. Robinson, E. Ronca, E. R. Sayfutyarova, M. Scheurer, H. F. Schurkus, J. E. T. Smith, C. Sun, S.-N. Sun, S. Upadhyay, L. K. Wagner, X. Wang, A. White, J. D. Whitfield, M. J. Williamson, S. Wouters, J. Yang, J. M. Yu, T. Zhu, T. C. Berkelbach, S. Sharma, A. Y. Sokolov, and G. K.-L. Chan, “Recent developments in the PySCF program package,” The Journal of Chemical Physics 153 , 024109 (2020). 
+
+> 7
+
+P. Giannozzi, S. Baroni, N. Bonini, M. Calandra, R. Car, C. Cavazzoni, D. Ceresoli, G. L. Chiarotti, M. Cococcioni, I. Dabo, A. Dal Corso, S. de Gironcoli, S. Fabris, G. Fratesi, R. Gebauer, U. Gerstmann, C. Gougoussis, A. Kokalj, M. Lazzeri, L. Martin-Samos, N. Marzari, F. Mauri, R. Mazzarello, S. Paolini, A. Pasquarello, L. Paulatto, C. Sbraccia, S. Scan-dolo, G. Sclauzero, A. P. Seitsonen, A. Smogunov, P. Umari, and R. M. Wentzcovitch, “QUANTUM ESPRESSO: a modular and open-source software project for quantum simulations of materials,” Journal of Physics: Condensed Matter 21 , 395502 (2009). 
+
+> 8
+
+P. Giannozzi, O. Andreussi, T. Brumme, O. Bunau, M. Buon-giorno Nardelli, M. Calandra, R. Car, C. Cavazzoni, D. Ceresoli, M. Cococcioni, N. Colonna, I. Carnimeo, A. Dal Corso, S. de Gironcoli, P. Delugas, R. A. DiStasio, A. Ferretti, A. Floris, G. Fratesi, G. Fugallo, R. Gebauer, U. Gerstmann, F. Giustino, T. Gorni, J. Jia, M. Kawamura, H.-Y. Ko, A. Kokalj, E. Küçük-benli, M. Lazzeri, M. Marsili, N. Marzari, F. Mauri, N. L. Nguyen, H.-V. Nguyen, A. Otero-de-la Roza, L. Paulatto, S. Poncé, D. Rocca, R. Sabatini, B. Santra, M. Schlipf, A. P. Seitsonen, A. Smogunov, I. Timrov, T. Thonhauser, P. Umari, N. Vast, X. Wu, and S. Baroni, “Advanced capabilities for materials mod-elling with QUANTUM ESPRESSO,” Journal of Physics: Con-densed Matter 29 , 465901 (2017). 
+
+> 9
+
+P. Giannozzi, O. Baseggio, P. Bonfà, D. Brunato, R. Car, I. Carn-imeo, C. Cavazzoni, S. de Gironcoli, P. Delugas, F. Ferrari Ruffino, A. Ferretti, N. Marzari, I. Timrov, A. Urru, and S. Baroni, “QUAN-TUM ESPRESSO toward the exascale,” The Journal of Chemical Physics 152 , 154105 (2020). 
+
+> 10
+
+S. Lehtola, C. Steigemann, M. J. Oliveira, and M. A. Marques, “Recent developments in libxc — A comprehensive library of func-tionals for density functional theory,” SoftwareX 7, 1–5 (2018). 
+
+> 11
+
+J. Liang and M. Head-Gordon, “Gold-Standard Chemical Database 137 (GSCDB137): A Diverse Set of Accurate Energy Differences for Assessing and Developing Density Functionals,” Journal of Chemical Theory and Computation 21 , 12601–12621 (2025). 
+
+> 12
+
+J. Liang and M. Head-Gordon, “GSCDB137: Gold-Standard Chemical Database,” GitHub repository (2025), version 1.0.0; accessed 2026-06-03. 
+
+> 13
+
+M. Grossmann et al. , “mbpt_benchmark: a revised band-gap benchmark dataset,” GitHub repository (2024), accessed 2026. 
+
+> 14
+
+R. Pederson, “DFT_exconditions: Exact Conditions in Density Functional Theory Approximations,” GitHub repository (2023), accessed 2026-08-05. 
+
+> 15
+
+A. M. Teale, T. Helgaker, A. Savin, C. Adamo, B. Aradi, A. V. Ar-buznikov, P. W. Ayers, E. J. Baerends, V. Barone, P. Calaminici, E. Cancès, E. A. Carter, P. K. Chattaraj, H. Chermette, I. Ciofini, T. D. Crawford, F. De Proft, J. F. Dobson, C. Draxl, T. Frauen-heim, E. Fromager, P. Fuentealba, L. Gagliardi, G. Galli, J. Gao, P. Geerlings, N. Gidopoulos, P. M. W. Gill, P. Gori-Giorgi, A. Gör-ling, T. Gould, S. Grimme, O. Gritsenko, H. J. A. Jensen, E. R. Johnson, R. O. Jones, M. Kaupp, A. M. Köster, L. Kronik, A. I. Krylov, S. Kvaal, A. Laestadius, M. Levy, M. Lewin, S. Liu, P.-F. Loos, N. T. Maitra, F. Neese, J. P. Perdew, K. Pernal, P. Pernot, P. Piecuch, E. Rebolini, L. Reining, P. Romaniello, A. Ruzsinszky, D. R. Salahub, M. Scheffler, P. Schwerdtfeger, V. N. Staroverov, J. Sun, E. Tellgren, D. J. Tozer, S. B. Trickey, C. A. Ullrich, A. Vela, G. Vignale, T. A. Wesolowski, X. Xu, and W. Yang, “DFT exchange: sharing perspectives on the workhorse of quantum chemistry and materials science,” Physical Chemistry Chemical Physics 24 , 28700–28781 (2022). 
+
+> 16
+
+K. Burke, “Perspective on density functional theory,” The Journal of Chemical Physics 136 , 150901 (2012). 
+
+> 17
+
+A. J. Cohen, P. Mori-Sánchez, and W. Yang, “Challenges for Density Functional Theory,” Chemical Reviews 112 , 289–320 (2012). 
+
+10 18 A. D. Becke, “Perspective: Fifty years of density-functional the-ory in chemical physics,” The Journal of Chemical Physics 140 ,18A301 (2014). 
+
+> 19
+
+J. P. Perdew, “Climbing the ladder of density functional approxi-mations,” MRS Bulletin 38 , 743–750 (2013). 
+
+> 20
+
+A. D. Kaplan, M. Levy, and J. P. Perdew, “The Predictive Power of Exact Constraints and Appropriate Norms in Density Func-tional Theory,” Annual Review of Physical Chemistry 74 , 193–218 (2023). 
+
+> 21
+
+R. Pederson and K. Burke, “The difference between molecules and materials: Reassessing the role of exact conditions in density functional theory,” The Journal of Chemical Physics 159 , 214113 (2023). 
+
+> 22
+
+D. Rein, B. L. Hou, A. C. Stickland, J. Petty, R. Y. Pang, J. Dirani, J. Michael, and S. R. Bowman, “GPQA: A Graduate-Level Google-Proof Q&A Benchmark,” in Proceedings of the Conference on Language Modeling (2024). 
+
+> 23
+
+J. Lee and Y. Edelman, “AI developers accurately report GPQA Diamond scores for recent models,” Epoch AI (2025), accessed 2026-08-03. 
+
+> 24
+
+Vals AI, “GPQA Diamond,” Vals AI Benchmarks (2026), updated and accessed 2026-08-03. 
+
+> 25
+
+A. M. Bran, S. Cox, O. Schilter, C. Baldassari, A. D. White, and P. Schwaller, “Augmenting large language models with chemistry tools,” Nature Machine Intelligence 6, 525–535 (2024). 
+
+> 26
+
+D. A. Boiko, R. MacKnight, B. Kline, and G. Gomes, “Au-tonomous chemical research with large language models,” Nature 
+
+624 , 570–578 (2023). 
+
+> 27
+
+J. Gottweis, W.-H. Weng, A. Daryin, T. Tu, P. Sirkovic, A. Myaskovsky, G. Glowaty, F. Weissenberger, A. Orlandi, D. Popovici, A. Palepu, K. Rong, R. Tanno, K. Saab, F. Zhang, J. Blum, A. Carroll, K. Kulkarni, N. Tomašev, D. Zverinski, I. Rendulic, E. Vedadi, F. Hasler, L. Rimanic, M. Boia, I. Budis-elic, B. Feinstein, M. Bellaiche, T. Sheffer, J. Freyberg, J. Rat-cliff, O. Bertolli, K. Chou, A. Hassidim, B. Gokturk, A. Vahdat, Y. Guan, V. Dhillon, E. D. Vaishnav, B. Lee, T. R. D. Costa, J. R. Penadés, G. Peltz, Y. Matias, J. Manyika, D. Hassabis, Y. Xu, P. Kohli, A. Pawlosky, A. Karthikesalingam, and V. Natarajan, “Accelerating scientific discovery with Co-Scientist,” Nature 655 ,487–496 (2026). 
+
+> 28
+
+B. Burger, P. M. Maffettone, V. V. Gusev, C. M. Aitchison, Y. Bai, X. Wang, X. Li, B. M. Alston, B. Li, R. Clowes, N. Rankin, B. Harris, R. S. Sprick, and A. I. Cooper, “A mobile robotic chemist,” Nature 583 , 237–241 (2020). 
+
+> 29
+
+B. P. MacLeod, F. G. L. Parlane, T. D. Morrissey, F. Häse, L. M. Roch, K. E. Dettelbach, R. Moreira, L. P. E. Yunker, M. B. Rooney, J. R. Deeth, V. Lai, G. J. Ng, H. Situ, R. H. Zhang, M. S. Elliott, T. H. Haley, D. J. Dvorak, A. Aspuru-Guzik, J. E. Hein, and C. P. Berlinguette, “Self-driving laboratory for accelerated discovery of thin-film materials,” Science Advances 6, eaaz8867 (2020). 
+
+> 30
+
+N. J. Szymanski, B. Rendy, Y. Fei, R. E. Kumar, T. He, D. Milsted, M. J. McDermott, M. Gallant, E. D. Cubuk, A. Merchant, H. Kim, A. Jain, C. J. Bartel, K. Persson, Y. Zeng, and G. Ceder, “An autonomous laboratory for the accelerated synthesis of inorganic materials,” Nature 624 , 86–91 (2023). 
+
+> 31
+
+E. Osaro, S. Adhikari, S. Zavitsanou, K. Parker, and D. Rocca, “MLIPilot: LLM-Driven Auto-Research for Machine-Learned In-teratomic Potentials,” arXiv preprint arXiv:2605.30889 (2026), 10.48550/arXiv.2605.30889. 
+
+> 32
+
+A. Karpathy, “autoresearch: AI agents running research on single-GPU nanochat training automatically,” GitHub repository (2026), accessed 2026-08-18. 
+
+> 33
+
+Y. Zhao and D. G. Truhlar, “The M06 suite of density functionals for main group thermochemistry, thermochemical kinetics, nonco-valent interactions, excited states, and transition elements: two new functionals and systematic testing of four M06-class function-als and 12 other functionals,” Theoretical Chemistry Accounts 
+
+120 , 215–241 (2008). 
+
+> 34
+
+R. Peverati and D. G. Truhlar, “Quest for a universal density functional: the accuracy of density functionals across a broad spectrum of databases in chemistry and physics,” Philosophical Transactions of the Royal Society A: Mathematical, Physical and Engineering Sciences 372 , 20120476 (2014). 
+
+> 35
+
+J. P. Perdew, K. Burke, and M. Ernzerhof, “Generalized Gradient Approximation Made Simple,” Physical Review Letters 77 , 3865– 3868 (1996). 
+
+> 36
+
+J. P. Perdew, A. Ruzsinszky, G. I. Csonka, O. A. Vydrov, G. E. Scuseria, L. A. Constantin, X. Zhou, and K. Burke, “Restoring the Density-Gradient Expansion for Exchange in Solids and Surfaces,” Physical Review Letters 100 , 136406 (2008). 
+
+> 37
+
+J. Sun, A. Ruzsinszky, and J. P. Perdew, “Strongly Constrained and Appropriately Normed Semilocal Density Functional,” Physi-cal Review Letters 115 , 036402 (2015). 
+
+> 38
+
+J. W. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, “Accurate and Numerically Efficient r 2SCAN Meta-Generalized Gradient Approximation,” The Journal of Physical Chemistry Letters 11 , 8208–8215 (2020). 
+
+> 39
+
+A. D. Becke, “Density-functional thermochemistry. V. Systematic optimization of exchange-correlation functionals,” The Journal of Chemical Physics 107 , 8554–8560 (1997). 
+
+> 40
+
+S. Grimme, “Semiempirical GGA-type density functional con-structed with a long-range dispersion correction,” Journal of Computational Chemistry 27 , 1787–1799 (2006). 
+
+> 41
+
+K. Brown, Y. Maimaiti, K. Trepte, T. Bligaard, and J. Voss, “MCML: Combining physical constraints with experimental data for a multi-purpose meta-generalized gradient approximation,” Journal of Computational Chemistry 42 , 2004–2013 (2021). 
+
+> 42
+
+J. P. Perdew, “Jacob’s ladder of density functional approxima-tions for the exchange-correlation energy,” in AIP Conference Proceedings , Vol. 577 (AIP, 2001) pp. 1–20. 
+
+> 43
+
+R. Kingsbury, A. S. Gupta, C. J. Bartel, J. M. Munro, S. Dwarak-nath, M. Horton, and K. A. Persson, “Performance comparison of r2SCAN and SCAN metaGGA density functionals for solid mate-rials via an automated, high-throughput computational workflow,” Physical Review Materials 6, 013801 (2022). 
+
+> 44
+
+P. Borlido, T. Aull, A. W. Huran, F. Tran, M. A. L. Marques, and S. Botti, “Large-Scale Benchmark of Exchange–Correlation Functionals for the Determination of Electronic Band Gaps of Solids,” Journal of Chemical Theory and Computation 15 , 5069– 5079 (2019). 
+
+> 45
+
+P. Borlido, J. Schmidt, A. W. Huran, F. Tran, M. A. L. Marques, and S. Botti, “Exchange-correlation functionals for band gaps of solids: benchmark, reparametrization and machine learning,” npj Computational Materials 6, 96 (2020). 
+
+> 46
+
+E. F. Schubert and J. K. Kim, “Solid-State Light Sources Getting Smart,” Science 308 , 1274–1278 (2005). 
+
+> 47
+
+A. Polman, M. Knight, E. C. Garnett, B. Ehrler, and W. C. Sinke, “Photovoltaic materials: Present efficiencies and future challenges,” Science 352 , aad4424 (2016). 
+
+> 48
+
+B. A. Pinaud, Z. Chen, D. N. Abram, and T. F. Jaramillo, “Thin Films of Sodium Birnessite-Type MnO 2: Optical Properties, Electronic Band Structure, and Solar Photoelectrochemistry,” The Journal of Physical Chemistry C 115 , 11830–11838 (2011). 
+
+> 49
+
+S. Adhikari, J. Clary, R. Sundararaman, C. Musgrave, D. Vigil-Fowler, and C. Sutton, “Accurate Prediction of HSE06 Band Structures for a Diverse Set of Materials Using ∆-Learning,” Chemistry of Materials 35 , 8397–8405 (2023). 
+
+> 50
+
+L. Hedin, “New Method for Calculating the One-Particle Green’s Function with Application to the Electron-Gas Problem,” Physical Review 139 , A796–A823 (1965). 
+
+> 51
+
+J. Heyd, G. E. Scuseria, and M. Ernzerhof, “Hybrid functionals based on a screened Coulomb potential,” The Journal of Chemical Physics 118 , 8207–8215 (2003). 
+
+> 52
+
+A. V. Krukau, O. A. Vydrov, A. F. Izmaylov, and G. E. Scuseria, “Influence of the exchange screening parameter on the performance of screened hybrid functionals,” The Journal of Chemical Physics 
+
+125 , 224106 (2006). 
+
+11 12 
+
+> 53
+
+F. Tran and P. Blaha, “Accurate Band Gaps of Semiconductors and Insulators with a Semilocal Exchange-Correlation Potential,” Physical Review Letters 102 , 226401 (2009). 
+
+> 54
+
+A. Karolewski, R. Armiento, and S. Kümmel, “Electronic exci-tations and the Becke–Johnson potential: The need for and the problem of transforming model potentials to functional deriva-tives,” Physical Review A 88 , 052519 (2013). 
+
+> 55
+
+T. Aschebrock and S. Kümmel, “Ultranonlocality and accurate band gaps from a meta-generalized gradient approximation,” Phys-ical Review Research 1, 033082 (2019). 
+
+> 56
+
+T. Lebeda, T. Aschebrock, J. Sun, L. Leppert, and S. Kümmel, “Right band gaps for the right reason at low computational cost with a meta-GGA,” Physical Review Materials 7, 093803 (2023). 
+
+> 57
+
+B. Neupane, H. Tang, N. K. Nepal, S. Adhikari, and A. Ruzsinszky, “Opening band gaps of low-dimensional materials at the meta-GGA level of density functional approximations,” Physical Review Materials 5, 063803 (2021). 
+
+> 58
+
+J. P. Perdew and Y. Wang, “Accurate and simple analytic repre-sentation of the electron-gas correlation energy,” Physical Review B 45 , 13244–13249 (1992). 
+
+> 59
+
+T. Lebeda, T. Aschebrock, and S. Kümmel, “First steps towards achieving both ultranonlocality and a reliable description of elec-tronic binding in a meta-generalized gradient approximation,” Physical Review Research 4, 023061 (2022). 
+
+> 60
+
+T. Lebeda, T. Aschebrock, and S. Kümmel, “Balancing the Contri-butions to the Gradient Expansion: Accurate Binding and Band Gaps with a Nonempirical Meta-GGA,” Physical Review Letters 
+
+133 , 136402 (2024). 
+
+> 61
+
+T. Lebeda and S. Kümmel, “Meta-GGA that describes weak interactions in addition to bond energies and band gaps,” Physical Review B 111 , 155133 (2025). 
+
+> 62
+
+T. Duston, J. Liang, Y. Wang, W. Gao, X. Wen, N. Sheng, W. Ren, Y. Sun, and Y. Chen, “Agentic Discovery of Exchange–Correlation Density Functionals,” arXiv preprint arXiv:2605.05460 (2026), 10.48550/arXiv.2605.05460. 
+
+> 63
+
+N. Mardirossian and M. Head-Gordon, “ ωB97M-V: A combina-torially optimized, range-separated hybrid, meta-GGA density functional with VV10 nonlocal correlation,” The Journal of Chem-ical Physics 144 , 214110 (2016). 
+
+> 64
+
+OpenAI, “GPT-5 System Card,” OpenAI (2025), published August 7, 2025; accessed 2026-08-18. 
+
+> 65
+
+J. A. Nelder and R. Mead, “A Simplex Method for Function Minimization,” The Computer Journal 7, 308–313 (1965). 
+
+> 66
+
+N. Hansen and A. Ostermeier, “Completely Derandomized Self-Adaptation in Evolution Strategies,” Evolutionary Computation 
+
+9, 159–195 (2001). 
+
+> 67
+
+J. Snoek, H. Larochelle, and R. P. Adams, “Practical Bayesian Optimization of Machine Learning Algorithms,” in Advances in Neural Information Processing Systems , Vol. 25 (Curran Asso-ciates, Inc., 2012) pp. 2951–2959. 
+
+> 68
+
+K. Burke, A. Cancio, T. Gould, and S. Pittalis, “Atomic correlation energies and the generalized gradient approximation,” (2014), arXiv:1409.4834 [cond-mat.mtrl-sci]. 
+
+> 69
+
+K. Patkowski, G. Murdachaew, C.-M. Fou, and K. Szalewicz *, “Accurate ab initio potential for argon dimer including highly repulsive region,” Molecular Physics 103 , 2031–2045 (2005). 
+
+> 70
+
+A. Karton, N. Sylvetsky, and J. M. L. Martin, “W4-17: A di-verse and high-confidence dataset of atomization energies for benchmarking high-level electronic structure methods,” Journal of Computational Chemistry 38 , 2063–2075 (2017). 
+
+> 71
+
+J. Zheng, Y. Zhao, and D. G. Truhlar, “The DBH24/08 Database and Its Use to Assess Electronic Structure Model Chemistries for Chemical Reaction Barrier Heights,” Journal of Chemical Theory and Computation 5, 808–821 (2009). 
+
+> 72
+
+L. Goerigk and S. Grimme, “A General Database for Main Group Thermochemistry, Kinetics, and Noncovalent Interactions— Assessment of Common and Reparameterized (meta-)GGA Den-sity Functionals,” Journal of Chemical Theory and Computation 
+
+6, 107–126 (2010). 
+
+> 73
+
+B. J. Lynch and D. G. Truhlar, “Small Representative Bench-marks for Thermochemical Calculations,” The Journal of Physical Chemistry A 107 , 8996–8999 (2003). 
+
+> 74
+
+L. A. Curtiss, K. Raghavachari, G. W. Trucks, and J. A. Pople, “Gaussian-2 theory for molecular energies of first- and second-row compounds,” The Journal of Chemical Physics 94 , 7221–7230 (1991). 
+
+> 75
+
+F. Weigend and R. Ahlrichs, “Balanced basis sets of split valence, triple zeta valence and quadruple zeta valence quality for H to Rn: Design and assessment of accuracy,” Physical Chemistry Chemical Physics 7, 3297 (2005). 
+
+> 76
+
+D. Rappoport and F. Furche, “Property-optimized Gaussian basis sets for molecular response calculations,” The Journal of Chemical Physics 133 , 134105 (2010). 
+
+> 77
+
+T. H. Dunning, “Gaussian basis sets for use in correlated molecular calculations. I. The atoms boron through neon and hydrogen,” The Journal of Chemical Physics 90 , 1007–1023 (1989). 
+
+> 78
+
+R. A. Kendall, T. H. Dunning, and R. J. Harrison, “Electron affinities of the first-row atoms revisited. Systematic basis sets and wave functions,” The Journal of Chemical Physics 96 , 6796– 6806 (1992). 
+
+> 79
+
+A. D. Becke, “Density-functional thermochemistry. III. The role of exact exchange,” The Journal of Chemical Physics 98 , 5648–5652 (1993). 
+
+> 80
+
+P. J. Stephens, F. J. Devlin, C. F. Chabalowski, and M. J. Frisch, “Ab Initio Calculation of Vibrational Absorption and Circular Dichroism Spectra Using Density Functional Force Fields,” The Journal of Physical Chemistry 98 , 11623–11627 (1994). 
+
+> 81
+
+Y. Zhao and D. G. Truhlar, “Construction of a generalized gradient approximation by restoring the density-gradient expansion and enforcing a tight Lieb–Oxford bound,” The Journal of Chemical Physics 128 , 184109 (2008). 
+
+> 82
+
+R. Peverati and D. G. Truhlar, “Exchange–Correlation Functional with Good Accuracy for Both Structural and Energetic Properties while Depending Only on the Density and Its Gradient,” Journal of Chemical Theory and Computation 8, 2310–2319 (2012). 
+
+> 83
+
+L.-P. Wang and C. Song, “Geometry optimization made sim-ple with translation and rotation coordinates,” The Journal of Chemical Physics 144 , 214108 (2016). 
+
+> 84
+
+G. I. Csonka, J. P. Perdew, A. Ruzsinszky, P. H. T. Philipsen, S. Lebègue, J. Paier, O. A. Vydrov, and J. G. Ángyán, “Assessing the performance of recent density functionals for bulk solids,” Physical Review B 79 , 155107 (2009). 
+
+> 85
+
+M. J. Lucero, T. M. Henderson, and G. E. Scuseria, “Improved semiconductor lattice parameters and band gaps from a middle-range screened hybrid exchange functional,” Journal of Physics: Condensed Matter 24 , 145504 (2012). 
+
+> 86
+
+S. Kim, M. Lee, C. Hong, Y. Yoon, H. An, D. Lee, W. Jeong, D. Yoo, Y. Kang, Y. Youn, and S. Han, “A band-gap database for semiconducting inorganic materials calculated with hybrid functional,” Scientific Data 7, 387 (2020). 
+
+> 87
+
+D. R. Hamann, “Optimized norm-conserving Vanderbilt pseudopo-tentials,” Physical Review B 88 , 085117 (2013). 
+
+> 88
+
+M. Schlipf and F. Gygi, “Optimization algorithm for the generation of ONCV pseudopotentials,” Computer Physics Communications 
+
+196 , 36–44 (2015). 
+
+> 89
+
+F. Birch, “Finite Elastic Strain of Cubic Crystals,” Physical Review 
+
+71 , 809–824 (1947). 
+
+> 90
+
+Y. Hinuma, G. Pizzi, Y. Kumagai, F. Oba, and I. Tanaka, “Band structure diagram paths based on crystallography,” Computa-tional Materials Science 128 , 140–184 (2017). 
+
+> 91
+
+Y. Wang, C. Shahi, J. P. Perdew, and A. Ruzsin-szky, “Balanced and broadly-normed meta-generalized gradi-ent approximation,” arXiv preprint arXiv:2609.09034 (2026), 10.48550/arXiv.2609.09034. Supplementary Information for Agentic AI for Density-Functional Development: Revisiting r2SCAN 
+
+Santosh Adhikari, Kelsey A. Parker, Etinosa Osaro, Swagata Roy, and Dario Rocca 
+
+PsiQuantum, 700 Hansen Way, Palo Alto, California 94304, USA 
+
+> (*Electronic mail: drocca@psiquantum.com) (*Electronic mail: sadhikari@psiquantum.com) (Dated: 18 September 2026)
+
+1CONTENTS S1. Details on candidate construction and physical verification 2S1.1. Notation and terminology for candidate construction 2S1.2. Candidate construction and analytic term catalogs 3S1.3. Constraint checks for candidates 8S1.4. Nonempirical norms used for candidate verification 10 S1.5. Residual scales, grids, and weights 11 
+
+S2. Uniform random search implementation details and complete search statistics 13 S2.1. Top-response candidate lists 14 
+
+S3. Benchmark results 15 S3.1. Grid convergence of the molecular benchmarks 16 S3.2. Detailed benchmark values 17 
+
+References 35 
+
+S1. DETAILS ON CANDIDATE CONSTRUCTION AND PHYSICAL VERIFICATION 
+
+Here we provide the details of candidate construction and physical verification summarized in Sec. II A of the main manuscript. We first define the notation and meta-GGA ingredients, then introduce the r2SCAN-based analytic correction family and list the exact exchange and correlation terms presented to the LLM proposer. 
+
+S1.1. Notation and terminology for candidate construction 
+
+We use atomic units throughout. Let n↑(r) and n↓(r) be the spin densities and n = n↑ + n↓ the total electron density. The exchange, correlation, and exchange–correlation energies are 
+
+Ex[n↑, n↓] = 
+
+> Z
+
+n(r)εx(r) dr,
+
+Ec[n↑, n↓] = 
+
+> Z
+
+n(r)εc(r) dr,
+
+Exc = Ex + Ec =
+
+> Z
+
+n(r)εxc (r) dr, εxc = εx + εc.
+
+(S1) Here, εx, εc, and εxc are the corresponding energies per electron. 2The local meta-GGA ingredients are 
+
+rs =
+
+ 34πn
+
+1/3
+
+, kF = ( 3π2n)1/3,
+
+s = |∇n|
+
+2kF n, p = s2, ζ = n↑ − n↓
+
+n .
+
+(S2) Here, rs is the Wigner–Seitz radius, kF is the local Fermi wave vector, s is the reduced density gradient, p is its square, and ζ is the relative spin polarization. The positive Kohn–Sham kinetic-energy density is 
+
+τ = 12 ∑
+
+> iσ
+
+fiσ |∇ψiσ |2, τW = |∇n|2
+
+8n , τunif = 310 k2 
+
+> F
+
+n, (S3) where fiσ and ψiσ are orbital occupations and Kohn–Sham orbitals, τW is the von Weizsäcker kinetic-energy density, and τunif is the uniform-gas value. The iso-orbital input is r2SCAN’s regularized indicator 1,
+
+αr2 = τ − τW
+
+τunif + ηα τW
+
+, ηα = 10 −3. (S4) Here, ηα = 10 −3 is the fixed r2SCAN regularization parameter. Throughout the main text and this Supplementary Information, αr2 denotes this regularized indicator, distinguishing it from the conventional SCAN indicator α = ( τ − τW )/τunif 2.We further define the transformed variables ¯s = s
+
+1 + s, ¯p = p
+
+1 + p = s2
+
+1 + s2 , ¯α = αr2 
+
+1 + αr2 , ¯rs = rs
+
+1 + rs
+
+. (S5) In the implementation, negative values of αr2 caused by numerical noise are set to zero before these expressions are evaluated. Thus, ¯ s, ¯ p, ¯ α, and ¯ rs are bounded forms of the reduced gradient, its square, the regularized iso-orbital indicator, and the Wigner–Seitz radius, respectively. We use these transformed variables below to construct candidate forms. 
+
+S1.2. Candidate construction and analytic term catalogs 
+
+For candidate K, the exchange and correlation channels are corrected independently from r2SCAN, 
+
+εKx = εr2SCAN  
+
+> x
+
++ ∆εKx , εKc = εr2SCAN  
+
+> c
+
++ ∆εKc , εK 
+
+> xc
+
+= εKx + εKc . (S6) 3Here, ∆εKx and ∆εKc are the candidate corrections to the exchange and correlation energies per electron, respectively. The two channels are implemented as in Eq. (3) of the main manuscript, 
+
+εKx = εr2SCAN  
+
+> x
+
++ εunif  
+
+> x
+
+gα (αr2 ; ηK , σK )PKx ,
+
+εKc = εr2SCAN  
+
+> c
+
++ ¯rs εr2SCAN  
+
+> c
+
+gα (αr2 ; ηK , σK )PKc .
+
+(S7) Here, gα is the gate introduced in Eq. (2) of the main manuscript and shared by all selected terms in a proposal; its construction and parameter roles are discussed there. Its explicit form is 
+
+gα (αr2 ; η, σ ) = αr2 
+
+αr2 + ηαr2 − 11 + [( αr2 − 1)/σ ]2 . (S8) Because the gate and every α-dependent catalog term use αr2 , all candidate forms retain the r2SCAN regularization. The spin-unpolarized uniform-gas exchange energy per electron is 
+
+εunif  
+
+> x
+
+(n) = − 34π (3π2n)1/3. (S9) The resulting exchange–correlation energy per electron and enhancement factor are 
+
+εK 
+
+> xc
+
+= εKx + εKc , FK 
+
+> xc
+
+= εK
+
+> xc
+
+εunif 
+
+> x
+
+. (S10) The quantity PK 
+
+> ν
+
+, with ν ∈ { x, c}, in Eq. (S7) is defined as 
+
+PK 
+
+> ν
+
+=
+
+> mν,K
+
+# ∑
+
+> j=1
+
+cK 
+
+> νj
+
+φν j, 1 ≤ mx,K + mc,K ≤ 3. (S11) Here, mν,K is the number of selected terms in channel ν, cK  
+
+> νj
+
+is the corresponding coefficient, and 
+
+φν j is selected from the exchange or correlation catalog presented in Tables S1 and S2, respectively. Across the production runs, the proposer selected 54 of the 78 exchange terms and 48 of the 90 correlation terms at least once, as indicated by “yes” in the Selected columns of Tables S1 and S2. 
+
+TABLE S1: Exact 78-term exchange menu presented to the LLM proposer. No. Exact exchange term Selected No. Exact exchange term Selected 1 p – 40 s*exp(-s^3) yes 2 s – 41 s*p*exp(-p) yes 3 p^2 – 42 s*p*exp(-s) yes 4 p^3 – 43 s^2*exp(-p) yes Continued on next page 
+
+4TABLE S1 (continued) No. Exact exchange term Selected No. Exact exchange term Selected 5 s*p – 44 s^2*exp(-s) yes 6 s^2 – 45 exp(-p) yes 7 s^3 – 46 exp(-s) –8 alpha – 47 exp(-p^2) –9 s*p^2 – 48 exp(-p^3) yes 10 s^2*p – 49 exp(-s^2) yes 11 alpha^2 – 50 exp(-s^3) –12 alpha^3 – 51 exp(-alpha) yes 13 p*alpha yes 52 exp(-alpha^2) yes 14 s*alpha yes 53 exp(-alpha^3) yes 15 p*alpha^2 yes 54 p/(1+p) yes 16 p^2*alpha yes 55 p/(1+s) yes 17 s*alpha^2 yes 56 s/(1+p) –18 s*p*alpha yes 57 s/(1+s) –19 s^2*alpha yes 58 p/(1+p^2) yes 20 exp(-s*p) yes 59 p/(1+p^3) yes 21 p*exp(-p) yes 60 p/(1+s*p) yes 22 p*exp(-s) yes 61 p/(1+s^2) yes 23 s*exp(-p) yes 62 p/(1+s^3) –24 s*exp(-s) yes 63 p^2/(1+p) yes 25 exp(-s*p^2) yes 64 p^2/(1+s) yes 26 exp(-s^2*p) yes 65 p^3/(1+p) –27 p*exp(-p^2) yes 66 p^3/(1+s) yes 28 p*exp(-p^3) yes 67 s*p/(1+p) yes 29 p*exp(-s*p) yes 68 s*p/(1+s) yes 30 p*exp(-s^2) yes 69 s/(1+p^2) yes 31 p*exp(-s^3) yes 70 s/(1+p^3) –32 p^2*exp(-p) yes 71 s/(1+s*p) –Continued on next page 
+
+5TABLE S1 (continued) No. Exact exchange term Selected No. Exact exchange term Selected 33 p^2*exp(-s) yes 72 s/(1+s^2) yes 34 p^3*exp(-p) yes 73 s/(1+s^3) –35 p^3*exp(-s) yes 74 s^2/(1+p) yes 36 s*exp(-p^2) yes 75 s^2/(1+s) yes 37 s*exp(-p^3) yes 76 s^3/(1+p) –38 s*exp(-s*p) – 77 s^3/(1+s) yes 39 s*exp(-s^2) yes 78 alpha/(1+p) yes TABLE S2: Exact 90-term correlation menu presented to the LLM proposer. No. Exact correlation term Selected No. Exact correlation term Selected 1 p – 46 p^3*exp(-p) –2 s – 47 p^3*exp(-s) –3 rs – 48 rs*exp(-rs) yes 4 p^2 – 49 s*exp(-p^2) yes 5 p^3 – 50 s*exp(-p^3) –6 s*p – 51 exp(-p) –7 s^2 – 52 exp(-s) –8 s^3 – 53 exp(-rs) yes 9 rs*p – 54 exp(-p^2) –10 rs*s – 55 exp(-p^3) –11 rs^2 – 56 exp(-s^2) –12 rs^3 – 57 exp(-s^3) –13 alpha yes 58 exp(-rs^2) yes 14 s*p^2 – 59 exp(-rs^3) yes 15 s^2*p – 60 exp(-alpha) yes 16 zeta2 – 61 exp(-zeta2) yes 17 rs*p^2 – 62 exp(-alpha^2) yes 18 rs*s*p yes 63 exp(-alpha^3) yes Continued on next page 
+
+6TABLE S2 (continued) No. Exact correlation term Selected No. Exact correlation term Selected 19 rs*s^2 – 64 exp(-zeta2^2) yes 20 rs^2*p yes 65 exp(-zeta2^3) yes 21 rs^2*s yes 66 p/(1+p) yes 22 alpha^2 yes 67 p/(1+s) –23 alpha^3 yes 68 s/(1+p) yes 24 p*alpha yes 69 s/(1+s) yes 25 p*zeta2 yes 70 p/(1+rs) yes 26 exp(-s*p) – 71 rs/(1+p) yes 27 p*exp(-p) yes 72 rs/(1+s) yes 28 p*exp(-s) yes 73 s/(1+rs) yes 29 s*exp(-p) yes 74 p/(1+p^2) yes 30 s*exp(-s) yes 75 p/(1+p^3) yes 31 exp(-rs*p) – 76 p/(1+s*p) yes 32 exp(-rs*s) – 77 p/(1+s^2) yes 33 p*exp(-rs) yes 78 p/(1+s^3) yes 34 rs*exp(-p) yes 79 p^2/(1+p) –35 rs*exp(-s) yes 80 p^2/(1+s) yes 36 s*exp(-rs) yes 81 p^3/(1+p) –37 exp(-s*p^2) – 82 p^3/(1+s) –38 exp(-s^2*p) – 83 rs/(1+rs) yes 39 p*exp(-p^2) – 84 s*p/(1+p) yes 40 p*exp(-p^3) – 85 s*p/(1+s) yes 41 p*exp(-s*p) – 86 s/(1+p^2) yes 42 p*exp(-s^2) yes 87 s/(1+p^3) –43 p*exp(-s^3) – 88 s/(1+s*p) –44 p^2*exp(-p) yes 89 s/(1+s^2) yes 45 p^2*exp(-s) yes 90 s/(1+s^3) –
+
+Thus, a candidate contains one to three terms in total across either or both channels. For spin-polarized densities, the exchange channel is applied through exact spin scaling, while the 7correlation channel uses the total-density ingredients and may depend explicitly on ζ 2. Setting all coefficients to zero recovers r2SCAN exactly. 
+
+S1.3. Constraint checks for candidates 
+
+The agentic workflow requires every accepted correction to retain the 16 exact constraints sat-isfied by r2SCAN. Table S3 groups these conditions into exchange, correlation, and combined exchange–correlation blocks and summarizes how each is preserved. Here, “by construction” de-notes a consequence of the analytic correction form, whereas “checked” denotes a deterministic numerical test over the prescribed domains and tolerances. The complete fourth-order exchange gradient expansion (GE4X) is omitted because r2SCAN does not satisfy that SCAN constraint 1.At the proposal-and-critique stage, the workflow uses inexpensive, tolerance-based checks on fi-nite grids of synthetic density ingredients to screen the initial form and coefficient values. During coefficient optimization, it evaluates four scaling relations more tightly as continuous normalized residuals that enter candidate scoring: exchange uniform scaling, exchange nonuniform scaling, correlation high-density uniform scaling, and correlation low-density uniform scaling.               
+
+> TABLE S3: List of the 16 exact constraints retained by the candidates and a brief description of how they are treated in the candidate workflow. Constraint retained by r2SCAN Treatment in the candidate workflow
+> Exchange
+> Nonpositivity of exchange Checked by requiring εKx≤0 over a synthetic grid spanning (rs,s,αr2 ,ζ).Exact exchange spin scaling Satisfied by construction through exact spin scaling of the exchange channel. Uniform coordinate scaling of exchange Satisfied by the dimensionless exchange construction and checked along synthetic uniform-density scaling paths. Nonuniform coordinate scaling of exchange Checked along synthetic nonuniform-scaling paths that approach the large-gradient limit. Tight exchange bound for two-electron densities Checked by requiring FKx≤1.174 for synthetic one-orbital and two-electron densities. Continued on next page
+
+8TABLE S3 (continued) Constraint retained by r2SCAN Treatment in the candidate workflow 
+
+Correlation 
+
+Nonpositivity of correlation Checked by requiring εKc ≤ 0 over a synthetic grid spanning (rs, s, αr2 , ζ ).Second-order correlation gradient expansion (GE2C) Checked near the spin-unpolarized, high-density, slowly varying limit against β0 = 0.0667245506. High-density uniform scaling of correlation Checked along synthetic paths that increase the density while holding the dimensionless ingredients fixed. Low-density uniform scaling of correlation Checked along synthetic paths approaching the low-density limit. Zero correlation energy for one-electron densities Satisfied by construction because the gate vanishes at 
+
+αr2 = 0, recovering r2SCAN. Nonuniform coordinate scaling of correlation Checked using a synthetic two-electron density compressed along one coordinate. 
+
+Exchange–correlation 
+
+Size extensivity Satisfied by construction through the semilocal energy integral. General Lieb–Oxford bound Checked by integrating analytic one- and two-electron model densities and requiring Exc /ELDA  
+
+> x
+
+≤ 2.215. Weak spin-polarization dependence in the low-density limit Checked over a synthetic grid of large rs, reduced gradients, and spin polarizations. Uniform-electron-gas static linear response Checked from the combined second-order exchange–correlation response to a weak synthetic density modulation. Tight two-electron Lieb–Oxford bound Checked by integrating analytic two-electron model densities and requiring Exc /ELDA  
+
+> x
+
+≤ 1.67082. 
+
+The verifier additionally checks that the second-order exchange gradient coefficient remains 
+
+μ = 10 /81. For r2SCAN, this retained second-order coefficient is enforced while the fourth-order exchange-gradient condition is not imposed, because r2SCAN does not satisfy the latter. 9S1.4. Nonempirical norms used for candidate verification 
+
+After a candidate passes the constraint checks, the workflow evaluates six nonempirical norm categories. No molecular reaction energy, equilibrium bond length, lattice constant, or band gap enters any of these categories. We did not include jellium surface formation energies as a separate candidate-level norm in this study, although they were used as appropriate norms in constructing r2SCAN 1.1. Scaling. Coordinate-scaling relations are exact constraints enforced by the deterministic verifier described in Section S1.3 1,2 . Because their asymptotic limits are represented numerically by finite scaling factors, grids, and large-gradient windows, here we use the resulting residuals to measure how far each candidate drifts from the identically evaluated r2SCAN behavior at the sampled scales. The four scored relations are exchange uniform scaling, measured from the error in εx[nγ ]/εx[n] = γ at γ = 2; exchange nonuniform scaling, measured from the large-s slope of log Fx relative to −1/2; correlation high-density scaling, measured from the terminal slope of 
+
+εc relative to zero; and correlation low-density scaling, measured from the final relative change in εc/γ relative to zero. Their grids and normalization are given in Section S1.5; correlation nonuniform scaling remains a pass–fail verifier check and is not included in this continuous norm. 2. Rare-gas exchange. Candidate exchange energies are integrated on fixed restricted-Hartree– Fock densities using the PySCF level-6 grid. Ne, Ar, and Kr use def2-QZVPPD, whereas Xe uses a fully uncontracted all-electron ANO-RCC basis. The reference total exchange energies are (−12 .1050 , −30 .1752 , −93 .8340 , −179 .0640 ) Ha, obtained from the per-electron exact-exchange values tabulated by Burke et al. 3.3. Rare-gas correlation. Candidate correlation energies are integrated on the same fixed rare-gas Hartree–Fock densities. The corresponding benchmark reference energies are 
+
+(−0.3910 , −0.7254 , −1.8504 , −3.0024 ) Ha for Ne, Ar, Kr, and Xe, respectively 3.4. Large-Z coefficients. Using the candidate exchange and correlation energies for the same four atoms, the workflow fits 
+
+Ex − ELDA  
+
+> x
+
+= γx1Z + γx2Z2/3, Ec − ELDA  
+
+> c
+
+= γc1Z.
+
+10 The fitted coefficients are properties of candidate K. As fixed anchors, we use the SCAN-reported values 2
+
+(γx1, γx2, γc1) = ( −0.2259 , 0.2551 , 0.0388 ).
+
+Both r2SCAN and every candidate are compared with the same anchors. The resulting normal-ized residuals enter the aggregate norm loss used to decide whether a candidate remains within the r2SCAN loss budget. 5. Compressed Ar 2. At separations R = ( 3.023562 , 3.401507 , 3.779452 ) a0, the workflow evalu-ates candidate interaction energies non-self-consistently on fixed r2SCAN densities and forms their mean absolute error. The reference interaction energies from the high-accuracy Ar 2 poten-tial of Patkowski et al. 4 are 
+
+(0.5821383510 , 0.3159435766 , 0.1644855252 ) Ha .
+
+6. Fractional-charge linearity. For a fixed hydrogenic 1 s, Z = 1 ensemble, the workflow first evaluates EH + Exc at the integer occupations N = 0, 1, 2. These three endpoint values define one straight-line reference over 0 ≤ N ≤ 1 and a second over 1 ≤ N ≤ 2. The workflow then evaluates the same quantity at N = 0.25 , 0.50 , 0.75 , 1.25 , 1.50 , 1.75 and scores its departures from the corresponding interpolated reference. All evaluations use an 8000-point radial grid over [10 −5, 25 ]a0, so this category measures piecewise linearity within an internally defined fixed-potential ensemble rather than against an external bonded-system reference. 
+
+S1.5. Residual scales, grids, and weights 
+
+For the inexpensive coefficient search, the scaling loss L K 
+
+> γ
+
+in Eq. (6) of the main manuscript is 
+
+L K 
+
+> γ
+
+=
+
+"
+
+14
+
+> 4
+
+# ∑
+
+> a=1
+
+PKa − Ra
+
+sa
+
+2#1/2
+
+. (S12) Here, PKa is the finite-grid residual for scaling relation a, every exact target is Ra = 0, and the four relations have equal weight. Their fixed normalization scales are 
+
+a exchange uniform exchange nonuniform correlation high density correlation low density 
+
+sa 10 −5 0.05 10 −3 0.12 .
+
+(S13) 11 We prescribed these scales manually before the search from the characteristic numerical magni-tudes of the four diagnostics, placing them on comparable dimensionless footing; they were not optimized. We obtain L r2SCAN  
+
+> γ
+
+from the same equation, grids, and scales. The second auxiliary quantity in Eq. (6) of the main manuscript is 
+
+L K 
+
+> ∆Fxc
+
+=
+
+"
+
+130 ∑
+
+> rs
+
+# ∑
+
+> s
+
+ FK 
+
+> xc
+
+− Fr2SCAN xc 
+
+2
+
+#1/2
+
+, (S14) with equal point weights on rs = ( 2, 3, 4, 5, 6) and s = ( 0, 0.2, 0.5, 0.8, 1.2, 1.5) at ζ = 0 and αr2 =[1 + ( 5/3)10 −3s2]−1.The derivative-response ratio RK 
+
+> αr2
+
+uses equal point weights at ζ = 0 on 
+
+rs = ( 0.5, 1, 2, 5), s = ( 0, 0.2, 0.5, 1, 2), a = ( 0.5, 1, 2, 3, 5, 10 ).
+
+The regularized-indicator samples are αr2 = a/[1 + ( 5/3)10 −3s2], and centered differences use a step of 10 −4 in a.Finally, the full-verification loss Lnorm in Eq. (8) of the main manuscript uses the fixed resid-ual scales si and category weights Wg = 1/Mr2SCAN  
+
+> g
+
+in Table S4; every datum has weight wi = 1. The residual scales si convert deviations of different magnitudes into comparable dimensionless quantities before they are averaged within each category. For the atomic energies and large-Z coef-ficients, we set these scales from the magnitudes of the corresponding reference values; the other categories use fixed characteristic scales associated with their diagnostics. The category weights balance the six category mean squares so that they contribute equally at the r2SCAN baseline. These manually prescribed choices provide a simple and convenient normalization, but we do not claim that the scales or category weights are optimal. 
+
+TABLE S4. Residual scales and category weights used in the full physical-norm loss. Residual scales are listed in the quantity order specified in each row; all point weights are wi = 1.                                    
+
+> Category gQuantity order Residual scales siCategory weight Wg
+> Scaling Four relations in Eq. (S13) Values in Eq. (S13) 1.381132592333317 ×10 −3
+> Rare-gas exchange Ne, Ar, Kr, Xe (12 .1050 ,30 .1752 ,93 .8340 ,179 .0640 )3.295969653466588 ×10 5
+> Rare-gas correlation Ne, Ar, Kr, Xe (0.3910 ,0.7254 ,1.8504 ,3.0024 )2.377386485714671 ×10 2
+> Large Zγx1,γx2,γc1(0.2259 ,0.2551 ,0.0388 )7.198601861425271 ×10 1
+> Compressed Ar 2Three-point MAE 0.001593601437641 1.144459771386029 ×10 −1
+> Fractional charge Nine linearity residuals 0.5898124339 3.156819304122731 ×10 2
+
+12 −0.125 −0.100 −0.075 −0.050 −0.025 0.000                                     
+
+> ∂Fxc /∂ αr2
+> (a) rs= 0.5, s= 0, ζ= 0
+> −0.125 −0.100 −0.075 −0.050 −0.025 0.000 (b) rs= 1, s= 1, ζ= 0
+> 01234
+> regularized iso-orbital indicator αr2
+> −0.15 −0.10 −0.05 0.00
+> ∂Fxc /∂ αr2
+> (c) rs= 2, s= 0, ζ= 0
+> 01234
+> regularized iso-orbital indicator αr2
+> −0.2 −0.1 0.0 0.1 (d) rs= 5, s= 0, ζ= 0
+> r2SCAN r2SCAN+
+
+FIG. S1. Representative (rs, s) slices of the response of Fxc to the regularized iso-orbital indicator for r2SCAN and r2SCAN+. These slices complement the main-text slice used in Fig. 1 and sample distinct density and reduced-gradient regimes from the diagnostic space. 
+
+This normalization makes the six categories contribute equally at the r2SCAN baseline, 
+
+L r2SCAN norm = 0.004262577643. Applying this normalization retains 1,150 of the 1,399 proposals that reached full physical verification, including the five nondominated candidates from the agen-tic search. 
+
+S2. UNIFORM RANDOM SEARCH IMPLEMENTATION DETAILS AND COMPLETE SEARCH STATISTICS 
+
+The uniform random search used the same curated catalogs, fixed gate architecture, objec-tive, corrected norm protocol, and deterministic verifier as the agentic workflow, with random-ized proposal selection. Across all initializations, the uniform random search generated 2,480 13 proposals. This section provides the implementation details, complete search statistics, and the highest-response candidates; the main text discusses the interpretation. 
+
+S2.1. Top-response candidate lists 
+
+Tables S5 and S6 list the ten highest-response candidates in each search arm, ranked by the verified derivative-response opening among candidates within the r2SCAN norm-loss budget. The first three entries in the agentic list are r2SCAN+, Finalist 2, and Finalist 3, whose analytic forms are given in Eq. (9) of the main text. 
+
+TABLE S5. Ten highest-response agentic candidates. The first three are the finalists reported in Eq. (9) of the main text. Coefficients are the final optimized values multiplying the displayed basis terms. Rank Explicit form with optimized coefficients Rαr2 
+
+1 0.236802 e− ¯α + 0.390769 e− ¯α2
+
++ 0.498078 e− ¯α3
+
+(r2SCAN+) 1.3305 2 0.485686 e− ¯α2
+
++ 0.495912 e− ¯α3
+
++ 0.193335¯ rse−¯rs (Finalist 2) 1.3287 3 0.499610 e− ¯α + 0.499965 e− ¯α3
+
++ 0.199782¯ rs/(1 + ¯s) (Finalist 3) 1.3282 4 0.497308 e− ¯α2
+
++ 0.496218 e− ¯α3
+
++ 0.108661 ¯ α3 1.3127 5 0.596974 e− ¯α + 0.597699 e− ¯α2
+
++ 0.015050 ¯ pe − ¯s2
+
+1.3114 6 0.499963 e− ¯α2
+
++ 0.493624 e− ¯α3
+
++ 0.472644 ¯ p3/(1 + ¯s) 1.3107 7 0.499963 e− ¯α2
+
++ 0.493624 e− ¯α3
+
++ 0.283587 ¯ p2/(1 + ¯p) 1.3100 8 0.498134 e− ¯α2
+
++ 0.499929 e− ¯α3
+
++ 0.099386 ¯ pe − ¯s 1.3087 9 0.180132 ¯ p2e− ¯s + 0.499049 e− ¯α2
+
++ 0.498102 e− ¯α3
+
+1.3076 10 0.593078 e− ¯α + 0.598177 e− ¯α2
+
+− 0.065861 ¯ pe − ¯p2
+
+1.3049 
+
+14 TABLE S6. Ten highest-response candidates from the uniform random search. None contains an explicit 
+
+α-dependent term; coefficients are the optimized values multiplying the displayed basis terms. Rank Explicit form with optimized coefficients Rαr2 
+
+1 −0.030318 ¯ s2/(1 + ¯s) + 0.459912 e−¯rs ¯p + 0.399523¯ rse− ¯s (Random-Search Best) 1.2627 2 0.443706 e− ¯s + 0.054185 ¯ p3e− ¯s + 0.491249¯ rse− ¯p (Random-Search II) 1.2611 3 0.437086 e− ¯p + 0.267792 e− ¯s ¯p2
+
+− 0.007524 ¯ s/(1 + ¯s ¯p) (Random-Search III) 1.2412 4 0.374032 e−¯rs ¯p + 0.221813 ¯ pe − ¯p2
+
++ 0.393360¯ rse− ¯p 1.2340 5 0.005331 ¯ p/(1 + ¯p2) + 0.241997 e− ¯s ¯p + 0.434651 e− ¯s2
+
+1.2331 6 0.368095 e−¯rs ¯s + 0.292589 e− ¯s2 ¯p + 0.191446 ¯ p3/(1 + ¯s) 1.2292 7 0.318265 e− ¯p + 0.378716 e− ¯s ¯p2
+
+− 0.298330 ¯ pe − ¯s 1.2285 8 0.430335 e−ζ 2
+
++ 0.189431 ¯ p/(1 + ¯s ¯p) + 0.184077¯ rs/(1 + ¯p) 1.2213 9 0.413311 e− ¯s ¯p2
+
++ 0.403772¯ rs/(1 + ¯rs) + 0.070877 ¯ s/(1 + ¯rs) 1.2186 10 0.426349 e− ¯p − 0.093035 ¯ p3e− ¯p + 0.377279¯ r2 
+
+> s
+
+1.2180 TABLE S7. Comparison between the agentic search and the uniform random search. Percentages are evaluated over the complete funnel for the agentic search and over all proposals of the uniform random search. Failed precheck denotes structural infeasibility after the candidate reached the optimizer; NA means not applicable because the random search had no critic.                           
+
+> Search Proposals Rejected by critic Failed Precheck In budget Exchange-only With αr2 Best Rαr2
+> (%) (%) (%) (%) Agentic 1738 330 0.64 66.17 12.72 70.71 1.3305 Random-Search 2480 NA 24.56 51.21 9.76 32.58 1.2627
+
+S3. BENCHMARK RESULTS 
+
+We implemented each closed-form candidate independently in PySCF 5,6 and Quantum ESPRESSO 7–9 . The computational details are given in Sec. III (Computational Details) of the main manuscript. Here we report r2SCAN+, Finalist 2, Finalist 3, and Random-Search Best, the highest-band-gap-response candidate from the random search, alongside r2SCAN, SCAN, and PBE for most properties. BH6 contains six representative reactions from DBH22 and is reported 15 separately as a compact benchmark. Aggregate barrier-height ME and MAE values use only the 22 DBH22 and 46 BH46 reactions, for 68 unique reactions in total, thereby avoiding double counting. 
+
+S3.1. Grid convergence of the molecular benchmarks 
+
+Mean absolute errors, in kcal/mol, across PySCF grid levels 2–6. The W4-nMR, W4-MR, BH6, DBH22, BH46, G21IP, and G21EA subsets contain 183, 17, 6, 22, 46, 36, and 25 reactions, respectively; All contains 329 unique reactions and excludes the BH6 duplication. Method Grid W4-nMR W4-MR BH6 DBH22 BH46 G21IP G21EA All PBE 2 17.627 29.463 9.230 8.123 9.342 3.820 3.178 13.836 PBE 3 17.627 29.463 9.230 8.123 9.342 3.820 3.178 13.836 PBE 4 17.627 29.464 9.230 8.123 9.343 3.820 3.178 13.836 PBE 5 17.626 29.463 9.230 8.123 9.343 3.820 3.178 13.836 PBE 6 17.627 29.464 9.230 8.123 9.343 3.820 3.178 13.836 B3LYP 2 4.944 6.188 4.596 3.949 4.494 3.739 2.466 4.559 B3LYP 3 4.944 6.185 4.595 3.949 4.494 3.739 2.466 4.558 B3LYP 4 4.944 6.185 4.595 3.949 4.495 3.739 2.466 4.558 B3LYP 5 4.943 6.184 4.595 3.949 4.495 3.739 2.466 4.558 B3LYP 6 4.943 6.184 4.595 3.949 4.495 3.739 2.466 4.558 SCAN 2 3.105 8.266 7.354 6.854 7.551 4.965 3.811 4.501 SCAN 3 3.522 8.776 7.493 6.875 7.613 4.780 3.558 4.730 SCAN 4 3.393 9.099 7.512 6.886 7.621 4.863 3.686 4.696 SCAN 5 3.300 9.086 7.470 6.891 7.606 4.845 3.628 4.635 SCAN 6 3.355 9.060 7.465 6.881 7.603 4.852 3.632 4.664 r2SCAN 2 3.648 11.574 7.114 6.570 6.978 4.670 3.513 4.820 r2SCAN 3 3.601 11.496 7.110 6.565 6.980 4.674 3.520 4.791 r2SCAN 4 3.599 11.538 7.113 6.565 6.980 4.673 3.525 4.792 r2SCAN 5 3.602 11.525 7.114 6.566 6.980 4.672 3.523 4.793 r2SCAN 6 3.605 11.525 7.115 6.566 6.980 4.672 3.523 4.795 Continued on next page 
+
+16 Grid-convergence results (continued) Method Grid W4-nMR W4-MR BH6 DBH22 BH46 G21IP G21EA All r2SCAN+ 2 3.716 6.387 7.004 5.556 5.843 4.879 3.761 4.405 r2SCAN+ 3 3.746 6.353 7.000 5.550 5.847 4.881 3.767 4.421 r2SCAN+ 4 3.753 6.383 7.003 5.551 5.845 4.879 3.769 4.426 r2SCAN+ 5 3.748 6.376 7.002 5.551 5.846 4.879 3.769 4.423 r2SCAN+ 6 3.745 6.375 7.003 5.551 5.846 4.879 3.769 4.421 Finalist 2 2 3.745 6.409 6.975 5.545 5.832 4.880 3.765 4.420 Finalist 2 3 3.772 6.379 6.971 5.540 5.835 4.882 3.770 4.434 Finalist 2 4 3.778 6.408 6.974 5.540 5.834 4.881 3.772 4.439 Finalist 2 5 3.772 6.402 6.974 5.541 5.834 4.880 3.772 4.436 Finalist 2 6 3.771 6.400 6.975 5.541 5.834 4.880 3.772 4.435 Finalist 3 2 3.699 6.482 6.965 5.569 5.856 4.869 3.742 4.400 Finalist 3 3 3.727 6.449 6.962 5.564 5.859 4.871 3.747 4.415 Finalist 3 4 3.735 6.479 6.965 5.564 5.858 4.869 3.750 4.421 Finalist 3 5 3.729 6.472 6.965 5.565 5.858 4.869 3.750 4.418 Finalist 3 6 3.727 6.471 6.966 5.565 5.858 4.869 3.750 4.416 Random-Search Best 2 3.457 7.542 6.943 5.778 6.095 4.832 3.686 4.360 Random-Search Best 3 3.474 7.477 6.940 5.774 6.099 4.836 3.693 4.367 Random-Search Best 4 3.483 7.511 6.942 5.773 6.098 4.835 3.698 4.374 Random-Search Best 5 3.476 7.504 6.942 5.774 6.098 4.834 3.696 4.370 Random-Search Best 6 3.475 7.504 6.943 5.775 6.098 4.834 3.696 4.369 
+
+S3.2. Detailed benchmark values 
+
+The detailed molecular values in Table S8 use grid level 6 for every method. Throughout this subsection, Random-Search Best is represented as RS Best. 17 TABLE S8: Complete values for the 329-reaction GSCDB137 validation suite 10,11 , comprising 200 W4-17 atomization energies, 68 unique barrier heights, 36 ionization potentials, and 25 electron affinities. The six-reaction BH6 subset is also tabulated separately but excluded from aggregate values. Values are in kcal/mol, reaction labels reproduce the GSCDB137 identifiers, and all calculations use the PySCF level-6 grid. ME is calculated minus reference; statistics use unrounded values. Random-Search Best is represented as RS Best. Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+Atomization energies TAE-W4-17-nonMR (183) 
+
+TAE_W4-17_1 694.28 675.61 679.08 678.86 676.82 676.71 676.72 676.73 677.85 
+
+TAE_W4-17_2 827.70 798.42 806.96 806.95 803.07 802.97 802.98 803.35 803.97 
+
+TAE_W4-17_3 120.81 117.25 120.01 120.47 118.86 118.84 118.83 119.22 122.62 
+
+TAE_W4-17_4 306.44 294.55 313.02 314.56 313.09 313.02 312.80 312.87 312.64 
+
+TAE_W4-17_5 163.02 159.89 158.79 159.69 157.70 157.69 157.69 158.17 163.79 
+
+TAE_W4-17_6 426.94 416.96 423.01 426.15 425.64 425.60 425.38 425.42 430.96 
+
+TAE_W4-17_7 69.13 72.95 69.74 69.66 68.75 68.72 68.76 68.95 73.58 
+
+TAE_W4-17_8 203.46 212.85 212.27 211.92 210.84 210.77 210.80 210.89 213.17 
+
+TAE_W4-17_9 723.74 704.60 706.59 707.22 707.52 707.41 707.31 706.68 704.07 
+
+TAE_W4-17_10 783.77 767.85 775.98 773.67 773.12 772.98 772.93 772.45 766.86 
+
+TAE_W4-17_12 608.10 609.89 616.91 613.85 611.59 611.39 611.49 611.38 607.02 
+
+TAE_W4-17_13 1409.39 1361.90 1377.71 1377.67 1370.37 1370.28 1370.36 1371.29 1368.80 
+
+TAE_W4-17_14 1029.63 988.18 997.81 995.77 987.96 987.86 988.04 989.09 993.87 
+
+TAE_W4-17_15 186.73 180.26 180.20 180.88 178.86 178.86 178.91 179.46 182.53 
+
+TAE_W4-17_16 480.72 464.36 470.30 472.64 467.93 467.90 467.91 468.86 470.96 
+
+TAE_W4-17_17 81.13 83.91 79.59 79.42 78.29 78.27 78.34 78.67 84.98 
+
+TAE_W4-17_18 278.34 285.10 282.95 282.38 282.62 282.52 282.55 282.28 281.28 
+
+TAE_W4-17_19 417.72 408.51 411.60 412.66 408.73 408.70 408.75 409.55 410.96 
+
+TAE_W4-17_21 122.65 111.54 113.72 113.34 112.68 112.68 112.66 112.79 105.81 
+
+TAE_W4-17_22 1084.47 1051.28 1063.03 1062.13 1055.99 1055.88 1055.96 1056.73 1057.67 
+
+TAE_W4-17_23 327.82 316.41 314.92 315.06 313.61 313.54 313.57 313.64 317.64 Continued on next page 
+
+18 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_24 344.79 312.83 312.43 315.18 310.51 310.51 310.63 311.50 312.17 
+
+TAE_W4-17_25 270.61 234.64 241.33 244.33 239.46 239.47 239.61 240.63 233.07 
+
+TAE_W4-17_26 309.65 296.07 284.90 285.61 283.51 283.44 283.52 283.57 291.08 
+
+TAE_W4-17_28 374.92 342.98 350.57 353.93 350.08 350.14 350.15 351.18 350.59 
+
+TAE_W4-17_29 500.78 452.53 476.52 479.01 466.99 467.05 467.27 470.12 471.76 
+
+TAE_W4-17_30 587.14 523.18 563.79 566.15 544.74 544.78 545.19 549.77 561.31 
+
+TAE_W4-17_31 395.42 373.67 376.84 378.97 378.04 378.04 377.96 378.03 378.52 
+
+TAE_W4-17_32 557.42 539.81 545.13 545.59 543.37 543.29 543.30 543.47 544.32 
+
+TAE_W4-17_33 700.38 687.09 694.08 693.12 690.38 690.23 690.28 690.33 692.91 
+
+TAE_W4-17_34 629.99 583.42 596.64 597.12 585.45 585.54 585.83 588.35 590.07 
+
+TAE_W4-17_35 831.82 773.77 797.91 798.83 781.64 781.72 782.14 785.55 791.94 
+
+TAE_W4-17_36 414.76 403.30 401.67 402.70 404.50 404.44 404.30 403.45 405.54 
+
+TAE_W4-17_37 589.70 572.19 575.43 575.01 572.42 572.35 572.39 572.55 573.87 
+
+TAE_W4-17_38 571.43 563.47 563.00 562.95 563.51 563.39 563.34 562.69 564.10 
+
+TAE_W4-17_39 731.53 718.59 722.87 721.36 718.20 718.05 718.14 718.20 721.48 
+
+TAE_W4-17_40 716.60 711.83 713.42 712.25 712.82 712.61 712.59 711.72 713.04 
+
+TAE_W4-17_41 276.95 262.79 265.91 266.62 268.17 268.16 268.01 267.43 266.17 
+
+TAE_W4-17_42 194.24 171.35 179.60 181.23 177.05 177.07 177.14 178.19 177.32 
+
+TAE_W4-17_43 380.43 364.11 372.37 372.86 368.58 368.53 368.63 369.47 371.70 
+
+TAE_W4-17_44 372.66 339.34 351.80 354.29 348.52 348.57 348.65 350.06 347.09 
+
+TAE_W4-17_45 358.86 332.44 346.73 348.03 340.50 340.49 340.66 342.34 345.42 
+
+TAE_W4-17_46 333.00 296.00 316.92 319.10 307.92 307.95 308.19 310.75 315.42 
+
+TAE_W4-17_47 399.91 392.91 395.99 395.82 394.64 394.55 394.57 394.54 396.05 
+
+TAE_W4-17_48 144.96 133.82 134.25 134.77 132.72 132.74 132.79 133.22 132.71 
+
+TAE_W4-17_49 276.22 255.46 258.46 259.26 254.32 254.35 254.48 255.55 258.77 
+
+TAE_W4-17_50 415.55 379.48 396.64 398.01 387.89 387.93 388.16 390.31 392.24 
+
+TAE_W4-17_51 502.12 467.94 480.49 482.10 472.56 472.61 472.83 474.70 478.74 
+
+TAE_W4-17_52 84.64 85.50 81.85 81.43 81.76 81.71 81.71 81.42 84.22 
+
+TAE_W4-17_53 178.85 180.92 175.43 174.92 175.86 175.76 175.74 175.19 181.44 Continued on next page 
+
+19 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_54 194.48 192.28 196.79 196.84 198.85 198.79 198.70 197.98 190.74 
+
+TAE_W4-17_55 369.45 359.87 357.71 357.83 358.35 358.27 358.22 357.70 359.92 
+
+TAE_W4-17_56 457.81 447.49 450.79 450.54 451.52 451.44 451.35 450.73 446.08 
+
+TAE_W4-17_57 414.20 398.04 404.16 404.04 399.40 399.36 399.49 400.33 402.84 
+
+TAE_W4-17_58 450.23 434.46 438.07 437.75 432.70 432.67 432.82 433.69 437.94 
+
+TAE_W4-17_59 451.98 441.97 436.63 436.50 435.75 435.65 435.66 435.37 439.45 
+
+TAE_W4-17_60 496.23 487.79 486.13 484.99 485.00 484.86 484.83 484.26 482.24 
+
+TAE_W4-17_61 309.91 310.11 312.43 311.58 313.79 313.69 313.60 312.69 307.87 
+
+TAE_W4-17_62 429.04 422.23 422.87 422.01 420.12 420.03 420.09 420.15 422.96 
+
+TAE_W4-17_63 487.41 480.28 479.42 477.76 477.03 476.89 476.91 476.50 474.60 
+
+TAE_W4-17_64 590.85 584.51 580.60 579.46 579.16 578.98 578.99 578.35 582.26 
+
+TAE_W4-17_65 540.35 539.79 539.71 538.09 536.55 536.36 536.41 536.06 539.30 
+
+TAE_W4-17_66 419.95 421.12 419.76 419.41 421.58 421.44 421.37 420.35 420.44 
+
+TAE_W4-17_67 477.94 452.88 460.77 461.28 453.75 453.76 453.95 455.40 459.56 
+
+TAE_W4-17_68 564.72 517.20 536.25 537.23 525.58 525.66 525.91 528.55 529.02 
+
+TAE_W4-17_69 65.72 55.62 58.21 59.76 56.49 56.51 56.63 57.57 59.75 
+
+TAE_W4-17_71 306.62 282.99 282.06 284.26 281.90 281.93 281.92 282.39 285.42 
+
+TAE_W4-17_72 410.06 377.31 387.77 389.64 383.76 383.81 383.91 385.27 383.38 
+
+TAE_W4-17_73 72.23 60.78 61.49 62.30 58.46 58.48 58.64 59.60 62.80 
+
+TAE_W4-17_76 224.57 193.56 196.02 198.55 194.07 194.10 194.21 195.20 191.96 
+
+TAE_W4-17_77 81.41 66.34 69.60 70.76 67.57 67.61 67.71 68.61 65.44 
+
+TAE_W4-17_81 197.46 179.43 177.37 178.39 178.63 178.64 178.54 178.23 181.36 
+
+TAE_W4-17_82 268.85 255.35 254.25 255.57 254.92 254.94 254.91 254.98 259.73 
+
+TAE_W4-17_83 415.93 387.72 392.41 394.93 393.17 393.21 393.15 393.61 390.14 
+
+TAE_W4-17_84 179.57 166.30 167.46 168.85 168.68 168.68 168.61 168.55 172.21 
+
+TAE_W4-17_85 301.21 276.72 285.95 288.53 287.27 287.29 287.19 287.47 280.76 
+
+TAE_W4-17_86 844.89 811.39 818.22 817.30 812.98 812.92 812.97 813.39 820.84 
+
+TAE_W4-17_87 1167.05 1142.11 1153.73 1150.78 1145.98 1145.76 1145.88 1145.95 1150.40 
+
+TAE_W4-17_88 1023.87 994.65 1004.54 1002.74 998.39 998.26 998.34 998.56 1001.54 Continued on next page 
+
+20 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_89 1212.28 1173.15 1186.27 1185.65 1179.90 1179.78 1179.84 1180.32 1181.90 
+
+TAE_W4-17_90 868.06 849.94 856.62 855.88 854.57 854.40 854.40 853.97 853.97 
+
+TAE_W4-17_91 701.45 678.92 682.77 683.90 683.25 683.16 683.10 682.74 681.94 
+
+TAE_W4-17_92 757.03 736.65 746.30 745.78 744.77 744.64 744.62 744.28 737.72 
+
+TAE_W4-17_93 791.73 744.69 760.10 759.65 749.67 749.70 749.95 751.95 753.12 
+
+TAE_W4-17_94 773.03 742.99 753.18 750.82 741.84 741.78 742.07 743.59 750.00 
+
+TAE_W4-17_95 433.52 405.40 412.43 411.81 405.77 405.77 405.99 407.18 410.01 
+
+TAE_W4-17_96 699.56 671.73 685.98 685.03 676.94 676.85 677.06 678.56 684.39 
+
+TAE_W4-17_97 821.19 806.95 811.54 810.08 807.92 807.72 807.75 807.48 811.20 
+
+TAE_W4-17_98 52.76 36.86 37.15 38.61 35.25 35.28 35.43 36.16 39.05 
+
+TAE_W4-17_99 447.31 415.44 423.71 425.28 419.32 419.37 419.47 420.78 420.61 
+
+TAE_W4-17_101 415.63 383.50 386.85 387.53 382.55 382.61 382.69 383.81 386.06 
+
+TAE_W4-17_102 249.60 217.22 217.51 220.13 215.09 215.13 215.28 216.35 215.43 
+
+TAE_W4-17_105 591.58 570.51 570.04 569.87 567.34 567.26 567.27 567.43 568.15 
+
+TAE_W4-17_106 522.11 498.70 503.22 503.84 500.85 500.81 500.83 501.30 501.87 
+
+TAE_W4-17_107 795.30 751.54 762.28 762.97 755.16 755.17 755.31 756.87 757.01 
+
+TAE_W4-17_108 1031.16 988.03 1002.17 1001.45 993.92 993.89 994.02 995.12 995.13 
+
+TAE_W4-17_109 662.89 630.77 635.47 636.17 631.14 631.13 631.21 632.19 635.05 
+
+TAE_W4-17_110 104.65 110.33 107.66 107.66 107.66 107.66 107.66 107.66 109.50 
+
+TAE_W4-17_111 537.30 516.39 517.46 517.01 516.31 516.27 516.21 515.98 512.65 
+
+TAE_W4-17_112 359.51 348.89 346.54 345.92 345.30 345.24 345.24 345.01 343.71 
+
+TAE_W4-17_113 385.79 373.63 373.21 373.58 372.37 372.33 372.34 372.42 374.65 
+
+TAE_W4-17_114 296.38 282.40 278.72 279.26 277.64 277.59 277.63 277.75 274.97 
+
+TAE_W4-17_115 234.26 231.06 228.99 229.96 232.19 232.10 231.97 231.22 232.98 
+
+TAE_W4-17_116 182.16 182.26 182.34 182.54 183.66 183.57 183.52 182.98 183.91 
+
+TAE_W4-17_117 418.15 396.14 397.55 398.41 397.05 397.05 397.00 397.06 398.45 
+
+TAE_W4-17_118 106.49 105.17 105.54 106.30 107.50 107.45 107.39 106.97 107.49 
+
+TAE_W4-17_119 378.18 318.55 344.94 349.48 338.83 338.90 339.15 341.64 335.41 
+
+TAE_W4-17_120 326.22 313.37 307.18 308.24 308.40 308.38 308.31 307.93 313.42 Continued on next page 
+
+21 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_121 354.13 341.43 338.28 338.20 337.94 337.88 337.85 337.53 336.21 
+
+TAE_W4-17_122 400.89 369.27 367.57 370.94 369.08 369.10 369.07 369.30 364.91 
+
+TAE_W4-17_123 295.12 280.50 281.99 282.65 281.88 281.87 281.84 281.91 279.43 
+
+TAE_W4-17_124 423.51 401.05 405.09 405.85 402.09 402.09 402.16 402.92 403.72 
+
+TAE_W4-17_125 142.00 139.30 137.07 138.29 139.72 139.67 139.58 139.14 141.64 
+
+TAE_W4-17_126 311.36 299.54 293.28 293.92 294.07 294.03 293.97 293.60 298.18 
+
+TAE_W4-17_127 464.35 438.09 437.76 439.43 438.18 438.17 438.10 438.19 434.68 
+
+TAE_W4-17_128 373.12 342.12 332.80 334.95 331.93 331.92 331.98 332.26 331.72 
+
+TAE_W4-17_129 223.29 206.47 199.83 201.47 198.93 198.91 199.01 199.41 205.90 
+
+TAE_W4-17_130 175.38 163.08 164.13 165.46 162.87 162.85 162.92 163.50 166.23 
+
+TAE_W4-17_131 230.92 200.39 207.09 210.36 204.80 204.82 204.98 206.41 204.29 
+
+TAE_W4-17_132 311.26 264.48 280.57 284.88 276.69 276.74 276.94 278.95 273.18 
+
+TAE_W4-17_133 433.97 409.45 406.90 408.26 406.62 406.61 406.56 406.69 410.02 
+
+TAE_W4-17_134 172.26 157.27 157.30 158.42 155.90 155.88 155.97 156.41 158.66 
+
+TAE_W4-17_135 376.55 350.87 346.95 349.02 346.65 346.64 346.65 346.92 350.11 
+
+TAE_W4-17_136 195.04 177.81 179.43 180.57 178.37 178.36 178.42 178.86 175.54 
+
+TAE_W4-17_137 282.08 267.12 266.80 268.07 266.51 266.45 266.48 266.59 269.08 
+
+TAE_W4-17_138 88.04 88.29 88.82 88.81 89.45 89.40 89.37 89.08 87.73 
+
+TAE_W4-17_139 557.94 533.90 537.63 538.93 538.53 538.49 538.40 538.20 533.44 
+
+TAE_W4-17_140 519.89 511.76 512.59 511.87 511.11 510.98 510.98 510.68 513.47 
+
+TAE_W4-17_141 1312.82 1295.55 1304.71 1301.94 1299.25 1298.93 1298.97 1298.31 1302.63 
+
+TAE_W4-17_142 1610.88 1587.37 1600.26 1596.70 1592.41 1592.03 1592.10 1591.55 1597.31 
+
+TAE_W4-17_143 243.63 229.62 219.03 220.24 218.74 218.74 218.77 218.81 228.48 
+
+TAE_W4-17_144 247.31 232.86 224.42 224.77 223.12 223.10 223.14 223.20 224.82 
+
+TAE_W4-17_145 453.04 444.28 434.31 433.83 432.83 432.67 432.71 432.25 438.24 
+
+TAE_W4-17_146 310.67 275.95 271.80 275.50 272.24 272.28 272.34 272.93 270.85 
+
+TAE_W4-17_147 559.98 478.46 488.72 496.74 485.82 485.93 486.18 488.59 471.67 
+
+TAE_W4-17_148 538.37 503.24 496.10 498.30 495.59 495.63 495.60 495.90 501.96 
+
+TAE_W4-17_149 88.49 88.08 84.74 84.39 85.03 84.98 84.96 84.56 83.09 Continued on next page 
+
+22 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_150 188.67 188.09 184.38 183.71 184.98 184.89 184.84 184.17 182.58 
+
+TAE_W4-17_151 258.39 248.68 245.63 246.16 244.08 244.00 244.07 244.28 248.04 
+
+TAE_W4-17_152 270.66 259.75 255.13 254.92 252.51 252.43 252.54 252.72 256.47 
+
+TAE_W4-17_153 373.29 361.81 356.79 356.99 355.64 355.52 355.56 355.40 359.72 
+
+TAE_W4-17_154 301.99 301.18 294.50 294.56 296.71 296.57 296.48 295.49 298.01 
+
+TAE_W4-17_155 172.06 155.13 150.81 152.39 150.12 150.14 150.21 150.68 152.75 
+
+TAE_W4-17_156 269.75 232.79 235.46 238.84 234.65 234.71 234.81 235.81 227.87 
+
+TAE_W4-17_157 143.62 123.75 127.28 129.85 127.67 127.70 127.76 128.43 120.82 
+
+TAE_W4-17_160 359.30 333.12 339.90 342.43 340.91 340.94 340.87 341.22 335.73 
+
+TAE_W4-17_162 109.89 108.25 108.54 108.51 109.49 109.45 109.39 109.04 107.20 
+
+TAE_W4-17_163 758.17 706.38 711.10 712.43 701.95 701.98 702.29 704.18 706.07 
+
+TAE_W4-17_164 968.67 941.32 952.00 948.89 941.86 941.72 941.94 942.78 948.14 
+
+TAE_W4-17_165 669.78 647.88 654.54 653.69 649.89 649.81 649.92 650.33 651.49 
+
+TAE_W4-17_166 479.45 452.47 456.27 456.76 453.86 453.84 453.88 454.32 456.03 
+
+TAE_W4-17_167 121.78 116.03 111.78 113.02 112.38 112.36 112.32 112.13 117.61 
+
+TAE_W4-17_168 309.32 279.74 291.80 294.33 287.03 287.05 287.18 288.66 290.57 
+
+TAE_W4-17_169 374.87 358.72 361.72 362.86 353.13 353.13 353.34 355.30 365.60 
+
+TAE_W4-17_170 567.08 540.08 554.82 557.82 543.38 543.35 543.56 546.02 561.57 
+
+TAE_W4-17_171 239.21 244.92 241.53 240.33 239.85 239.72 239.77 239.38 242.27 
+
+TAE_W4-17_172 1014.75 1003.73 1009.08 1007.11 1006.04 1005.78 1005.78 1005.02 1007.89 
+
+TAE_W4-17_173 873.45 858.95 862.23 861.46 860.70 860.52 860.49 859.90 861.55 
+
+TAE_W4-17_174 720.76 702.78 704.36 704.82 705.47 705.36 705.24 704.49 705.57 
+
+TAE_W4-17_175 1110.96 1069.62 1078.52 1077.97 1071.38 1071.30 1071.39 1072.11 1072.80 
+
+TAE_W4-17_176 115.27 103.50 109.54 111.45 109.71 109.73 109.73 110.36 104.25 
+
+TAE_W4-17_177 228.54 200.84 211.07 213.57 208.73 208.77 208.86 210.21 208.75 
+
+TAE_W4-17_180 507.83 457.81 488.73 491.22 470.97 471.03 471.51 475.36 485.43 
+
+TAE_W4-17_181 520.23 531.24 536.07 533.49 529.51 529.32 529.44 529.56 535.88 
+
+TAE_W4-17_182 145.75 141.51 140.57 141.21 138.49 138.48 138.52 139.05 142.72 
+
+TAE_W4-17_183 571.60 557.55 567.15 570.76 565.29 565.23 565.10 565.83 577.76 Continued on next page 
+
+23 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_184 71.82 74.95 72.44 72.25 72.29 72.24 72.24 72.00 73.93 
+
+TAE_W4-17_185 373.40 378.27 379.01 378.98 375.48 375.38 375.43 375.79 382.74 
+
+TAE_W4-17_186 313.57 324.12 323.54 322.18 320.45 320.33 320.40 320.32 324.95 
+
+TAE_W4-17_187 1118.70 1089.14 1103.39 1102.43 1095.10 1094.95 1095.01 1095.73 1100.91 
+
+TAE_W4-17_188 196.39 187.98 187.20 188.05 186.87 186.88 186.85 187.01 193.04 
+
+TAE_W4-17_189 141.14 126.86 131.90 132.99 130.31 130.34 130.39 131.22 126.47 
+
+TAE_W4-17_190 280.38 252.04 260.38 262.40 256.96 257.02 257.13 258.59 260.58 
+
+TAE_W4-17_191 374.75 333.69 350.43 353.56 346.37 346.44 346.55 348.41 346.89 
+
+TAE_W4-17_192 173.52 163.60 168.76 169.62 167.49 167.46 167.50 168.04 165.14 
+
+TAE_W4-17_193 1034.39 1010.01 1015.34 1015.01 1012.75 1012.59 1012.57 1012.32 1013.07 
+
+TAE_W4-17_194 332.25 321.14 319.70 319.82 318.36 318.29 318.32 318.39 322.46 
+
+TAE_W4-17_195 345.65 313.57 313.31 315.98 311.57 311.57 311.69 312.51 312.61 
+
+TAE_W4-17_196 271.80 234.74 242.10 245.02 240.52 240.53 240.65 241.60 233.27 
+
+TAE_W4-17_197 314.70 301.46 290.39 290.97 288.85 288.78 288.87 288.91 296.49 
+
+TAE_W4-17_198 828.49 787.02 799.19 801.40 799.21 799.16 799.12 799.17 793.49 
+
+TAE_W4-17_199 996.70 954.56 971.29 972.14 965.38 965.33 965.40 966.45 964.99 
+
+TAE_W4-17_200 565.26 517.92 536.79 537.84 526.36 526.44 526.69 529.30 529.39 TAE-W4-17-nonMR ME 16.62 -3.07 0.99 1.62 -1.71 -1.75 -1.70 -1.24 –TAE-W4-17-nonMR MAE 17.63 4.94 3.35 3.60 3.75 3.77 3.73 3.47 –
+
+TAE-W4-17-MR (17) 
+
+TAE_W4-17_11 76.65 59.97 69.60 70.69 73.26 73.22 73.04 72.20 67.47 
+
+TAE_W4-17_20 111.92 92.39 90.85 91.41 91.78 91.76 91.65 91.36 105.24 
+
+TAE_W4-17_27 143.87 119.63 121.00 122.42 124.17 124.17 123.95 123.24 147.03 
+
+TAE_W4-17_70 119.42 96.70 101.69 103.55 96.29 96.33 96.59 98.42 101.43 
+
+TAE_W4-17_74 165.21 128.43 139.21 141.34 130.82 130.90 131.26 133.82 128.55 
+
+TAE_W4-17_75 245.02 182.77 208.76 212.85 196.13 196.25 196.76 200.45 186.79 
+
+TAE_W4-17_78 214.77 163.34 183.68 188.13 179.88 180.00 180.20 182.45 169.84 
+
+TAE_W4-17_79 161.25 127.19 136.39 138.71 133.77 133.82 133.95 135.19 126.34 
+
+TAE_W4-17_80 183.25 144.96 154.69 157.52 147.23 147.29 147.65 150.14 149.13 Continued on next page 
+
+24 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+TAE_W4-17_100 123.37 93.47 97.39 99.74 93.39 93.43 93.69 95.11 93.78 
+
+TAE_W4-17_103 174.85 136.07 144.55 147.77 142.73 142.78 142.93 144.11 134.69 
+
+TAE_W4-17_104 205.98 153.51 165.82 169.31 160.73 160.80 161.11 163.00 152.34 
+
+TAE_W4-17_158 184.88 140.34 147.57 151.91 146.39 146.45 146.64 147.95 147.43 
+
+TAE_W4-17_159 161.37 126.05 136.63 140.57 134.83 134.91 135.07 136.71 128.09 
+
+TAE_W4-17_161 71.86 55.43 57.67 58.41 55.19 55.22 55.35 56.11 53.07 
+
+TAE_W4-17_178 185.40 159.97 171.13 174.25 169.88 169.92 169.97 171.27 168.35 
+
+TAE_W4-17_179 259.38 220.03 240.46 244.34 236.21 236.26 236.36 238.59 234.33 TAE-W4-17-MR ME 29.09 -5.51 4.30 7.00 1.10 1.15 1.31 2.72 –TAE-W4-17-MR MAE 29.46 6.19 9.06 11.53 6.37 6.40 6.47 7.50 –W4-17 overall ME 17.68 -3.28 1.27 2.08 -1.47 -1.51 -1.45 -0.90 –W4-17 overall MAE 18.63 5.05 3.84 4.28 3.97 3.99 3.96 3.82 –
+
+Barrier heights BH6 (6) 
+
+DBH24_10 -5.21 2.36 -1.29 -0.61 0.30 0.29 0.30 0.02 6.13 
+
+DBH24_11 3.71 4.12 3.26 3.23 3.16 3.18 3.18 3.24 10.65 
+
+DBH24_12 -1.13 -0.49 -2.68 -2.43 -2.86 -2.83 -2.80 -2.67 3.77 
+
+DBH24_22 9.13 14.17 11.84 13.01 15.21 15.20 15.12 14.54 19.36 
+
+DBH24_23 -1.51 6.21 2.53 2.53 1.49 1.56 1.61 2.02 12.90 
+
+DBH24_24 9.41 15.89 11.45 11.48 10.58 10.65 10.70 11.09 17.09 BH6 ME -9.25 -4.61 -7.46 -7.11 -7.00 -6.97 -6.97 -6.94 –BH6 MAE 9.25 4.61 7.46 7.11 7.00 6.97 6.97 6.94 –
+
+DBH22 (22) 
+
+DBH24_1 10.07 11.50 9.47 10.46 11.41 11.43 11.39 11.17 17.19 
+
+DBH24_2 9.60 12.41 9.13 9.37 9.82 9.83 9.82 9.62 17.60 
+
+DBH24_3 -5.54 -0.66 -3.52 -2.83 -0.14 -0.14 -0.20 -0.80 6.90 
+
+DBH24_4 7.27 9.35 7.09 8.14 10.31 10.31 10.25 9.79 13.53 
+
+DBH24_5 -0.21 0.68 -1.16 -0.38 0.97 0.97 0.92 0.69 3.50 Continued on next page 
+
+25 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+DBH24_6 -7.72 -3.73 -7.98 -7.16 -3.94 -3.92 -3.99 -4.55 -2.40 
+
+DBH24_7 5.27 7.59 4.30 4.69 4.90 4.92 4.92 4.85 14.32 
+
+DBH24_8 -0.15 -0.17 -4.45 -3.17 -2.13 -2.12 -2.15 -2.41 1.83 
+
+DBH24_9 45.55 47.40 46.24 46.23 45.92 45.93 45.94 46.06 48.14 
+
+DBH24_10 -5.21 2.36 -1.29 -0.61 0.30 0.29 0.30 0.02 6.13 
+
+DBH24_11 3.71 4.12 3.25 3.21 3.15 3.17 3.16 3.22 10.65 
+
+DBH24_12 -1.13 -0.49 -2.70 -2.45 -2.87 -2.85 -2.82 -2.68 3.77 
+
+DBH24_13 53.14 73.38 65.30 63.79 67.50 67.43 67.31 66.19 82.14 
+
+DBH24_15 41.38 50.72 45.47 45.34 47.74 47.74 47.67 47.08 59.33 
+
+DBH24_17 21.11 26.32 24.60 24.52 26.48 26.48 26.44 25.96 29.53 
+
+DBH24_18 12.06 16.10 11.38 12.44 15.89 15.90 15.83 15.24 17.77 
+
+DBH24_19 8.94 10.75 9.60 9.15 9.22 9.20 9.21 9.17 10.70 
+
+DBH24_20 40.25 41.80 43.06 42.89 44.28 44.26 44.22 43.81 41.88 
+
+DBH24_21 30.68 33.53 32.31 31.87 31.55 31.55 31.56 31.70 32.92 
+
+DBH24_22 9.13 14.17 11.84 13.01 15.21 15.20 15.12 14.54 19.36 
+
+DBH24_23 -1.51 6.21 2.37 2.37 1.32 1.39 1.44 1.85 12.90 
+
+DBH24_24 9.41 15.89 11.45 11.48 10.58 10.65 10.70 11.09 17.09 DBH22 ME -8.12 -3.89 -6.77 -6.47 -5.33 -5.32 -5.35 -5.60 –DBH22 MAE 8.12 3.95 6.88 6.57 5.55 5.54 5.56 5.77 –
+
+BH46 (46) 
+
+BH76_3 27.21 31.14 28.75 29.15 30.12 30.13 30.09 29.82 42.10 
+
+BH76_7 18.29 21.62 19.86 19.22 19.10 19.13 19.14 19.15 30.50 
+
+BH76_8 41.15 48.76 46.44 47.04 52.48 52.45 52.21 50.82 56.90 
+
+BH76_9 -9.48 -7.12 -11.10 -9.44 -8.74 -8.72 -8.73 -8.89 1.50 
+
+BH76_10 79.88 95.20 88.74 90.13 95.63 95.58 95.32 94.01 104.80 
+
+BH76_13 -5.49 -2.01 -6.14 -5.40 -2.09 -2.08 -2.15 -2.69 -0.60 
+
+BH76_15 7.43 10.48 8.37 8.76 10.69 10.69 10.62 10.24 13.40 
+
+BH76_17 -3.13 -0.02 -4.41 -2.91 0.47 0.49 0.42 -0.24 2.50 
+
+BH76_21 -16.25 -14.26 -19.28 -17.87 -15.01 -14.99 -15.04 -15.46 -12.30 Continued on next page 
+
+26 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+BH76_22 12.45 18.34 15.13 15.34 18.44 18.45 18.41 17.74 19.80 
+
+BH76_27 4.44 8.18 5.61 6.06 7.92 7.92 7.85 7.48 11.00 
+
+BH76_28 42.77 45.01 43.73 44.42 46.57 46.58 46.53 46.20 47.70 
+
+BH76_31 -1.73 -0.60 -3.70 -3.32 -3.05 -3.04 -3.03 -3.10 3.20 
+
+BH76_32 24.51 24.53 24.02 23.74 23.89 23.87 23.88 23.81 22.80 
+
+BH76_35 1.58 6.10 0.71 2.50 5.28 5.28 5.21 4.52 6.40 
+
+BH76_36 29.69 29.40 30.71 31.09 30.31 30.32 30.37 30.57 33.00 
+
+BH76_39 0.50 -0.81 -1.52 -0.21 0.37 0.38 0.35 0.24 6.10 
+
+BH76_40 -1.33 4.35 0.60 1.16 0.53 0.59 0.62 0.93 8.00 
+
+BH76_41 -6.11 0.80 -1.81 -1.25 -1.65 -1.59 -1.57 -1.29 5.20 
+
+BH76_42 13.62 13.29 10.98 12.54 13.40 13.41 13.35 13.22 21.60 
+
+BH76_43 3.90 8.85 7.29 7.70 6.93 7.01 7.03 7.43 11.90 
+
+BH76_44 9.30 9.53 6.96 7.87 7.07 7.11 7.14 7.43 15.00 
+
+BH76_47 3.68 4.29 2.41 2.55 0.10 0.21 0.27 1.30 9.70 
+
+BH76_49 -11.51 -2.17 -6.95 -6.38 -4.83 -4.84 -4.85 -5.27 3.40 
+
+BH76_50 -0.45 7.54 3.38 4.23 6.15 6.13 6.09 5.59 13.70 
+
+BH76_51 -5.58 -1.20 -2.83 -2.48 -0.97 -0.98 -1.01 -1.46 1.80 
+
+BH76_52 -2.02 4.65 -1.04 -0.94 -0.68 -0.67 -0.63 -0.77 6.80 
+
+BH76_53 -8.57 -0.59 -4.45 -3.95 -3.13 -3.13 -3.12 -3.37 3.50 
+
+BH76_54 11.04 15.87 13.14 14.31 16.70 16.70 16.61 16.02 20.40 
+
+BH76_55 -12.59 -5.62 -7.39 -6.89 -6.49 -6.44 -6.46 -6.38 1.60 
+
+BH76_56 24.76 23.35 22.01 23.74 25.56 25.57 25.45 25.10 33.80 
+
+BH76_57 -0.13 7.47 2.32 3.13 3.65 3.65 3.68 3.45 14.40 
+
+BH76_58 -0.30 4.70 3.52 3.80 5.35 5.34 5.30 4.83 8.90 
+
+BH76_59 -1.68 -0.98 -3.16 -3.13 -3.79 -3.77 -3.73 -3.52 2.90 
+
+BH76_60 18.34 23.18 19.57 20.14 19.96 20.03 20.03 20.26 24.70 
+
+BH76_65 -10.03 1.44 -3.49 -3.47 -1.88 -1.90 -1.91 -2.41 10.40 
+
+BH76_66 -6.65 4.51 -0.49 -1.26 0.10 0.09 0.09 -0.33 9.90 
+
+BH76_67 0.90 6.33 4.74 4.87 5.99 5.99 5.98 5.62 8.90 Continued on next page 
+
+27 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+BH76_68 10.78 17.33 12.43 13.38 13.83 13.83 13.87 13.67 22.00 
+
+BH76_69 3.15 8.46 6.31 6.42 7.62 7.62 7.60 7.27 9.80 
+
+BH76_70 7.75 14.80 9.53 10.29 10.53 10.54 10.58 10.44 19.40 
+
+BH76_71 1.69 8.98 4.98 5.59 6.08 6.08 6.12 5.94 11.30 
+
+BH76_72 10.24 15.74 12.24 13.24 14.94 14.94 14.90 14.47 17.80 
+
+BH76_73 4.62 11.50 7.81 8.61 9.21 9.22 9.24 9.03 13.90 
+
+BH76_74 7.89 13.60 10.60 11.62 13.15 13.15 13.12 12.69 16.90 
+
+BH76_75 31.25 38.88 33.73 33.19 33.57 33.57 33.60 33.54 39.70 BH46 ME -9.27 -4.42 -7.55 -6.94 -5.80 -5.79 -5.81 -6.05 –BH46 MAE 9.34 4.49 7.60 6.98 5.85 5.83 5.86 6.10 –Barrier-height overall ME -8.90 -4.25 -7.30 -6.79 -5.65 -5.64 -5.66 -5.91 –Barrier-height overall MAE 8.95 4.32 7.37 6.85 5.75 5.74 5.76 5.99 –
+
+G21IP (36) 
+
+G21IP_1 313.75 315.28 313.86 313.86 313.86 313.86 313.86 313.86 314.90 
+
+G21IP_2 128.81 129.77 124.49 124.27 123.93 123.90 123.89 123.86 124.21 
+
+G21IP_3 207.46 210.09 203.01 202.76 202.57 202.54 202.54 202.33 214.86 
+
+G21IP_4 200.04 201.60 203.02 202.24 203.48 203.42 203.38 202.74 191.50 
+
+G21IP_5 266.14 266.18 269.25 269.07 270.26 270.20 270.16 269.78 259.71 
+
+G21IP_6 339.69 338.09 341.00 341.39 343.67 343.63 343.49 342.84 335.59 
+
+G21IP_7 324.26 326.10 317.20 316.27 317.05 317.01 316.96 316.49 314.03 
+
+G21IP_8 407.09 408.78 404.52 404.40 405.38 405.34 405.27 404.96 402.15 
+
+G21IP_9 123.52 125.10 119.32 118.80 116.89 116.87 116.91 117.33 118.13 
+
+G21IP_10 175.55 178.13 170.50 170.01 169.12 169.08 169.11 168.82 175.81 
+
+G21IP_11 140.20 138.95 142.88 142.49 143.08 143.04 143.00 142.55 137.85 
+
+G21IP_12 189.07 187.13 191.94 191.82 192.93 192.89 192.83 192.36 188.21 
+
+G21IP_13 241.88 239.49 244.93 245.04 247.34 247.30 247.18 246.37 242.85 
+
+G21IP_14 240.50 243.39 239.99 239.35 240.49 240.44 240.38 239.71 238.40 
+
+G21IP_15 299.08 301.30 300.04 299.87 301.27 301.22 301.13 300.61 299.39 
+
+G21IP_16 287.24 292.91 287.37 287.46 287.27 287.25 287.26 287.21 296.91 Continued on next page 
+
+28 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+G21IP_17 235.50 236.00 229.53 230.44 231.59 231.54 231.47 231.03 235.87 
+
+G21IP_18 304.18 305.72 301.48 301.23 302.20 302.16 302.09 301.74 301.11 
+
+G21IP_19 291.80 292.47 286.30 287.26 288.52 288.48 288.39 287.99 292.68 
+
+G21IP_20 371.51 372.19 366.04 367.17 368.45 368.41 368.31 367.96 371.70 
+
+G21IP_21 248.05 253.45 251.02 250.20 249.82 249.78 249.80 249.66 255.33 
+
+G21IP_22 236.14 234.43 239.97 240.23 242.44 242.41 242.29 241.54 234.94 
+
+G21IP_23 229.90 228.83 234.72 234.53 236.40 236.37 236.27 235.59 226.72 
+
+G21IP_24 225.42 226.77 223.44 222.98 223.90 223.84 223.79 223.26 227.91 
+
+G21IP_25 239.36 241.51 239.45 239.13 240.31 240.26 240.19 239.67 240.14 
+
+G21IP_26 292.42 293.95 291.84 292.41 294.02 293.97 293.87 293.31 295.46 
+
+G21IP_27 259.88 259.91 256.04 256.87 258.48 258.44 258.34 257.76 264.56 
+
+G21IP_28 239.44 238.99 236.03 236.26 237.53 237.50 237.41 236.87 243.80 
+
+G21IP_29 319.57 326.66 319.25 318.85 319.27 319.22 319.22 318.86 323.12 
+
+G21IP_30 354.47 365.30 359.58 359.28 359.74 359.71 359.71 359.49 359.61 
+
+G21IP_31 281.82 288.93 287.87 287.04 287.59 287.55 287.50 287.41 278.29 
+
+G21IP_32 238.61 238.03 238.82 239.84 241.83 241.79 241.67 240.92 243.03 
+
+G21IP_33 217.13 219.89 222.23 221.62 222.38 222.34 222.29 222.04 216.43 
+
+G21IP_34 256.50 261.75 259.91 259.10 259.80 259.75 259.70 259.35 265.94 
+
+G21IP_35 284.51 290.07 286.69 286.25 286.94 286.89 286.84 286.49 292.61 
+
+G21IP_36 259.28 263.06 257.40 257.21 257.63 257.58 257.58 257.25 261.15 G21IP ME -0.42 1.54 -0.67 -0.78 0.07 0.03 -0.02 -0.41 –G21IP MAE 3.82 3.74 4.85 4.67 4.88 4.88 4.87 4.83 –
+
+G21EA (25) 
+
+G21EA_1 36.83 31.82 33.84 34.39 36.26 36.24 36.12 35.53 29.44 
+
+G21EA_2 41.26 38.93 34.96 34.97 35.23 35.20 35.14 35.06 33.98 
+
+G21EA_3 84.41 81.35 75.07 76.17 76.61 76.58 76.51 76.43 79.21 
+
+G21EA_4 34.51 31.01 34.81 35.24 37.34 37.32 37.20 36.48 32.70 
+
+G21EA_5 20.49 22.23 18.57 18.26 19.26 19.22 19.16 18.63 17.06 
+
+G21EA_6 49.97 50.80 49.07 48.91 50.01 49.97 49.89 49.50 48.21 Continued on next page 
+
+29 TABLE S8 (continued) Reaction PBE B3LYP SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best Reference 
+
+G21EA_7 84.17 84.67 82.69 83.24 84.66 84.62 84.51 84.08 84.40 
+
+G21EA_8 35.58 31.36 34.49 35.08 36.95 36.94 36.80 36.26 27.77 
+
+G21EA_9 17.19 17.34 11.63 11.25 11.68 11.63 11.58 11.29 13.83 
+
+G21EA_10 2.95 1.39 -4.59 -3.95 -3.40 -3.45 -3.50 -3.80 0.19 
+
+G21EA_11 13.53 11.97 8.02 7.81 8.27 8.24 8.18 7.97 8.37 
+
+G21EA_12 19.87 17.68 12.01 12.78 13.44 13.41 13.33 13.10 17.29 
+
+G21EA_13 45.71 42.80 37.00 37.95 38.34 38.32 38.25 38.16 42.46 
+
+G21EA_14 32.13 29.16 33.55 33.77 35.46 35.44 35.35 34.78 29.07 
+
+G21EA_15 29.14 26.72 31.49 31.36 32.68 32.65 32.57 32.05 24.77 
+
+G21EA_16 31.32 31.60 28.14 27.63 28.37 28.31 28.26 27.74 31.19 
+
+G21EA_17 24.61 25.50 22.80 22.69 23.62 23.58 23.52 23.10 23.38 
+
+G21EA_18 28.70 28.81 25.72 25.86 26.95 26.90 26.83 26.36 28.90 
+
+G21EA_19 53.64 53.77 51.04 51.58 52.81 52.77 52.68 52.26 53.94 
+
+G21EA_20 9.46 11.87 4.86 4.34 3.79 3.75 3.75 3.73 9.79 
+
+G21EA_21 6.25 7.29 6.56 6.25 6.33 6.30 6.26 6.27 0.27 
+
+G21EA_22 86.72 93.22 87.01 87.12 87.48 87.44 87.44 87.22 89.09 
+
+G21EA_23 28.68 28.62 30.52 30.32 30.71 30.68 30.63 30.49 25.40 
+
+G21EA_24 35.85 38.26 34.45 34.13 34.20 34.16 34.14 33.96 38.25 
+
+G21EA_25 58.76 63.54 62.15 61.52 63.19 63.14 62.99 62.33 54.99 G21EA ME 2.71 2.31 0.08 0.19 1.05 1.02 0.95 0.60 –G21EA MAE 3.18 2.47 3.63 3.52 3.77 3.77 3.75 3.70 –All 329 reactions ME 9.07 -2.53 -0.80 -0.21 -1.97 -2.00 -1.98 -1.77 –All 329 reactions MAE 13.84 4.56 4.66 4.79 4.42 4.44 4.42 4.37 –
+
+30 TABLE S9: Complete MGBL20 12,13 signed bond-length errors, in Å, for the nine hydrogen-containing MGHBL9 bonds and 11 heavy-atom MGNHBL11 bonds; values are truncated to three decimal places be-fore subtraction and the experimental lengths are in the final column. Errors are calculated minus reference. Aggregate ME and MAE values below are reported in mÅ. Starred LAK values are from Ref. 15 and were not calculated here. Random-Search Best is represented as RS Best. Molecule Bond PBE SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best LAK ∗ Reference (Å) 
+
+MGHBL9 (9) 
+
+C2H2 C–H +0.007 -0.002 -0.001 +0.000 +0.000 +0.000 +0.000 +0.000 1.063 CH 4 C–H +0.009 +0.000 +0.001 +0.001 +0.001 +0.001 +0.001 +0.003 1.086 H2 H–H +0.009 +0.000 +0.000 +0.000 +0.000 +0.000 +0.000 +0.000 0.741 H2CO C–H +0.015 +0.005 +0.007 +0.009 +0.009 +0.009 +0.008 +0.008 1.102 H2O O–H +0.011 +0.002 +0.002 +0.002 +0.002 +0.002 +0.002 +0.003 0.957 HCN C–H +0.009 +0.001 +0.002 +0.003 +0.003 +0.003 +0.002 +0.002 1.065 HF H–F +0.013 +0.003 +0.003 +0.003 +0.003 +0.003 +0.003 +0.003 0.917 NH 3 N–H +0.009 +0.000 +0.000 +0.000 +0.000 +0.000 +0.000 +0.002 1.012 OH O–H +0.013 +0.001 +0.002 +0.002 +0.002 +0.002 +0.002 +0.005 0.970 ME +10.6 +1.1 +1.8 +2.2 +2.2 +2.2 +2.0 +2.9 –MAE 10.6 1.6 2.0 2.2 2.2 2.2 2.0 2.9 –
+
+MGNHBL11 (11) 
+
+C2H2 C–C +0.003 -0.007 -0.006 -0.004 -0.004 -0.004 -0.005 -0.004 1.203 Cl 2 Cl–Cl +0.016 +0.006 +0.003 +0.004 +0.004 +0.004 +0.004 +0.005 1.988 CO 2 C–O +0.010 -0.002 +0.000 +0.001 +0.001 +0.001 +0.001 +0.002 1.160 CO C–O +0.007 -0.004 -0.002 -0.002 -0.002 -0.002 -0.002 +0.001 1.128 F2 F–F +0.000 -0.014 -0.015 -0.014 -0.014 -0.014 -0.015 -0.009 1.412 H2CO C–O +0.004 -0.007 -0.005 -0.004 -0.004 -0.004 -0.004 -0.002 1.203 HCN C–N +0.004 -0.007 -0.005 -0.004 -0.004 -0.004 -0.005 -0.003 1.153 MgS Mg–S +0.008 -0.012 -0.007 -0.002 -0.001 -0.002 -0.002 -0.012 2.143 N2 N–N +0.004 -0.007 -0.006 -0.005 -0.005 -0.005 -0.006 -0.003 1.098 N2O N–N +0.008 -0.004 -0.003 -0.002 -0.002 -0.002 -0.002 +0.000 1.128 Continued on next page 
+
+31 TABLE S9 (continued) Molecule Bond PBE SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best LAK ∗ Reference (Å) N2O N–O +0.004 -0.005 -0.005 -0.005 -0.005 -0.005 -0.005 -0.001 1.184 ME +6.2 -5.7 -4.6 -3.4 -3.3 -3.4 -3.7 -2.4 –MAE 6.2 6.8 5.2 4.3 4.2 4.3 4.6 3.8 –MGBL20 ME +8.2 -2.6 -1.7 -0.8 -0.8 -0.8 -1.1 +0.0 –MGBL20 MAE 8.2 4.4 3.7 3.3 3.3 3.3 3.4 3.4 –
+
+32 TABLE S10: Fundamental gaps, in eV, for the 24-solid union of TASK14 14 (asterisks) and SCBG15 15 (dag-gers); doubly marked systems occur in both. The TASK, mTASK, and LAK values were not calculated here but were taken from the respective papers cited in the column headings; dashes indicate unavailable values. TASK used the all-electron BAND code, mTASK used VASP with PAW datasets, and LAK used scalar-relativistic all-electron BAND, whereas our calculations used Quantum ESPRESSO with SG15 pseu-dopotentials. The comparison therefore aligns systems and experimental references but is not a same-code or same-protocol ranking. Experimental and HSE06 16,17 values follow the revised MBPT benchmark 18,19 ,except that CdO and MgS use TASK experiments and HSE06 values from Refs. 22 and 23, respectively, while ZnTe follows Ref. 15. Random-Search Best is represented as RS Best. Solid PBE SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best TASK 14 mTASK 20 LAK 15 HSE06 Expt. Ge ∗† 0.08 0.12 0.00 0.00 0.00 0.00 0.00 0.85 1.00 0.83 0.86 0.74 CdO ∗ 0.00 0.00 0.00 0.34 0.34 0.33 0.25 0.89 0.75 – 0.76 0.84 Si ∗† 0.56 0.83 0.70 0.72 0.71 0.72 0.72 1.12 1.46 1.15 1.20 1.17 GaAs ∗† 0.52 0.45 0.60 0.76 0.75 0.75 0.68 1.72 2.07 1.57 1.46 1.52 SiC ∗† 1.39 1.70 1.72 1.95 1.95 1.95 1.90 2.06 2.05 2.14 2.25 2.42 ZnS ∗† 2.13 2.59 2.64 3.10 3.10 3.09 2.98 3.84 3.96 3.18 3.38 3.72 MgS ∗ 3.55 4.16 4.18 4.70 4.70 4.70 4.62 5.74 6.23 – 4.48 5.40 C∗ 4.17 4.48 4.25 4.26 4.26 4.27 4.28 4.36 4.98 – 5.34 5.50 BN ∗ 4.53 4.93 4.97 5.25 5.25 5.25 5.20 5.50 5.58 – 5.79 6.36 MgO ∗ 4.73 5.49 5.50 6.07 6.07 6.06 5.99 7.33 7.60 – 6.44 7.67 LiCl ∗ 6.34 7.11 7.14 7.69 7.69 7.69 7.61 9.55 9.82 – 7.74 9.40 Kr ∗ 7.25 7.87 7.94 8.42 8.42 8.42 8.30 11.45 12.81 – 8.67 11.59 LiF ∗ 9.13 10.02 10.11 10.69 10.69 10.68 10.60 12.93 13.32 – 11.39 13.60 Ar ∗ 8.70 9.46 9.54 10.03 10.03 10.02 9.90 13.28 14.86 – 10.34 14.15 InP † 0.69 0.68 0.74 0.97 0.97 0.96 0.89 – – 1.69 1.52 1.42 CdTe † 0.78 1.02 1.06 1.47 1.46 1.45 1.32 – – 1.53 1.65 1.48 AlSb † 1.21 1.58 1.63 2.00 2.00 1.99 1.91 – – 1.63 1.70 1.69 CdSe † 0.71 0.97 1.02 1.43 1.43 1.41 1.31 – – 1.55 1.72 1.74 AlAs † 1.43 1.68 1.70 1.99 1.99 1.98 1.93 – – 2.14 2.07 2.23 Continued on next page 
+
+33 TABLE S10 (continued) Solid PBE SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best TASK 14 mTASK 20 LAK 15 HSE06 Expt. GaP † 1.60 1.78 1.82 2.02 2.02 2.01 1.96 – – 2.29 2.30 2.35 ZnTe † 1.25 1.64 1.70 2.14 2.13 2.11 1.98 – – 2.18 2.19 2.39 AlP † 1.58 1.88 1.89 2.19 2.18 2.18 2.13 – – 2.40 2.28 2.45 BeTe † 1.99 2.43 2.48 2.86 2.86 2.85 2.78 – – 2.54 2.61 2.80 ZnSe † 1.26 1.73 1.78 2.22 2.21 2.20 2.08 – – 2.39 2.42 2.82 24-solid ME -1.66 -1.29 -1.26 -0.92 -0.93 -0.93 -1.01 – – – -0.62 –24-solid MAE 1.66 1.29 1.26 0.96 0.96 0.96 1.02 – – – 0.66 –TABLE S11: Calculated equilibrium lattice constants and zero-point-vibrational-energy-corrected exper-imental references for the 20-solid LC20 set, in Å. Reference values are taken from the assessment of Csonka et al. 21 . ME is calculated minus experiment; statistics use unrounded fitted values. Random-Search Best is represented as RS Best. Solid PBE SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best ZPVE-corrected reference Li 3.436 3.414 3.432 3.463 3.464 3.465 3.466 3.449 Na 4.200 4.200 4.228 4.316 4.317 4.318 4.314 4.210 Ca 5.524 5.550 5.569 5.679 5.680 5.679 5.671 5.553 Sr 6.025 6.077 6.090 6.264 6.265 6.264 6.248 6.045 Ba 5.019 5.036 5.061 5.244 5.244 5.239 5.205 4.995 Al 4.043 4.000 3.997 4.001 4.001 4.002 4.005 4.020 C 3.568 3.556 3.560 3.568 3.568 3.568 3.566 3.543 Si 5.478 5.447 5.459 5.485 5.485 5.485 5.481 5.416 SiC 4.381 4.366 4.366 4.379 4.379 4.379 4.378 4.342 Ge 5.769 5.589 5.619 5.666 5.666 – 5.657 5.640 GaAs 5.751 5.659 5.664 5.685 5.685 5.684 5.684 5.638 Cu 3.633 3.562 3.579 3.591 3.591 3.589 3.588 3.595 Rh 3.831 3.778 3.790 3.795 3.794 3.794 3.793 3.793 Continued on next page 
+
+34 TABLE S11 (continued) Solid PBE SCAN r2SCAN r2SCAN+ Finalist 2 Finalist 3 RS Best ZPVE-corrected reference Pd 3.942 3.887 3.898 3.916 3.915 3.913 3.911 3.875 Ag 4.147 4.079 4.093 4.134 4.133 4.129 4.125 4.056 LiF 4.062 3.964 3.970 4.002 4.002 4.002 4.000 3.964 LiCl 5.152 5.098 5.113 5.188 5.188 5.188 5.181 5.056 NaF 4.703 4.598 4.615 4.659 4.659 4.658 4.655 4.579 NaCl 5.699 5.599 5.622 5.703 5.703 5.702 5.693 5.565 MgO 4.256 4.207 4.211 4.229 4.229 4.229 4.228 4.184 LC20 ME 0.055 0.007 0.021 0.072 0.073 0.074 0.067 –LC20 MAE 0.062 0.024 0.029 0.075 0.075 0.077 0.069 –TABLE S12. Benchmark summary for r2SCAN, r2SCAN+, and Random-Search Best.                      
+
+> Benchmark r2SCAN r2SCAN+ Random-Search Best SCBG15 band-gap MAE (eV) 0.63 0.39 0.45 TASK14 band-gap MAE (eV) 1.78 1.43 1.50 24-solid band-gap MAE (eV) 1.26 0.96 1.02 MGBL20 bond-length MAE (mÅ) 3.7 3.3 3.4 LC20 lattice-constant MAE (Å) 0.029 0.075 0.069 All 329 molecular reactions MAE (kcal/mol) 4.79 4.42 4.37
+
+REFERENCES 
+
+> 1
+
+J. W. Furness, A. D. Kaplan, J. Ning, J. P. Perdew, and J. Sun, “Accurate and Numerically Effi-cient r 2SCAN Meta-Generalized Gradient Approximation,” The Journal of Physical Chemistry Letters 11 , 8208–8215 (2020). 
+
+> 2
+
+J. Sun, A. Ruzsinszky, and J. P. Perdew, “Strongly Constrained and Appropriately Normed Semilocal Density Functional,” Physical Review Letters 115 , 036402 (2015). 
+
+> 3
+
+K. Burke, A. Cancio, T. Gould, and S. Pittalis, “Atomic correlation energies and the generalized gradient approximation,” (2014), arXiv:1409.4834 [cond-mat.mtrl-sci]. 35 4K. Patkowski, G. Murdachaew, C.-M. Fou, and K. Szalewicz *, “Accurate ab initio potential for argon dimer including highly repulsive region,” Molecular Physics 103 , 2031–2045 (2005). 
+
+> 5
+
+Q. Sun, T. C. Berkelbach, N. S. Blunt, G. H. Booth, S. Guo, Z. Li, J. Liu, J. D. McClain, E. R. Sayfutyarova, S. Sharma, S. Wouters, and G. K.-L. Chan, “PySCF: the Python-based simulations of chemistry framework,” WIREs Computational Molecular Science 8, e1340 (2018). 
+
+> 6
+
+Q. Sun, X. Zhang, S. Banerjee, P. Bao, M. Barbry, N. S. Blunt, N. A. Bogdanov, G. H. Booth, J. Chen, Z.-H. Cui, J. J. Eriksen, Y. Gao, S. Guo, J. Hermann, M. R. Hermes, K. Koh, P. Ko-val, S. Lehtola, Z. Li, J. Liu, N. Mardirossian, J. D. McClain, M. Motta, B. Mussard, H. Q. Pham, A. Pulkin, W. Purwanto, P. J. Robinson, E. Ronca, E. R. Sayfutyarova, M. Scheurer, H. F. Schurkus, J. E. T. Smith, C. Sun, S.-N. Sun, S. Upadhyay, L. K. Wagner, X. Wang, A. White, J. D. Whitfield, M. J. Williamson, S. Wouters, J. Yang, J. M. Yu, T. Zhu, T. C. Berkelbach, S. Sharma, A. Y. Sokolov, and G. K.-L. Chan, “Recent developments in the PySCF program package,” The Journal of Chemical Physics 153 , 024109 (2020). 
+
+> 7
+
+P. Giannozzi, S. Baroni, N. Bonini, M. Calandra, R. Car, C. Cavazzoni, D. Ceresoli, G. L. Chiarotti, M. Cococcioni, I. Dabo, A. Dal Corso, S. de Gironcoli, S. Fabris, G. Fratesi, R. Gebauer, U. Gerstmann, C. Gougoussis, A. Kokalj, M. Lazzeri, L. Martin-Samos, N. Marzari, F. Mauri, R. Mazzarello, S. Paolini, A. Pasquarello, L. Paulatto, C. Sbraccia, S. Scandolo, G. Sclauzero, A. P. Seitsonen, A. Smogunov, P. Umari, and R. M. Wentzcovitch, “QUANTUM ESPRESSO: a modular and open-source software project for quantum simulations of materials,” Journal of Physics: Condensed Matter 21 , 395502 (2009). 
+
+> 8
+
+P. Giannozzi, O. Andreussi, T. Brumme, O. Bunau, M. Buongiorno Nardelli, M. Calandra, R. Car, C. Cavazzoni, D. Ceresoli, M. Cococcioni, N. Colonna, I. Carnimeo, A. Dal Corso, S. de Gironcoli, P. Delugas, R. A. DiStasio, A. Ferretti, A. Floris, G. Fratesi, G. Fugallo, R. Gebauer, U. Gerstmann, F. Giustino, T. Gorni, J. Jia, M. Kawamura, H.-Y. Ko, A. Kokalj, E. Küçükbenli, M. Lazzeri, M. Marsili, N. Marzari, F. Mauri, N. L. Nguyen, H.-V. Nguyen, A. Otero-de-la Roza, L. Paulatto, S. Poncé, D. Rocca, R. Sabatini, B. Santra, M. Schlipf, A. P. Seitsonen, A. Smogunov, I. Timrov, T. Thonhauser, P. Umari, N. Vast, X. Wu, and S. Baroni, “Ad-vanced capabilities for materials modelling with QUANTUM ESPRESSO,” Journal of Physics: Condensed Matter 29 , 465901 (2017). 
+
+> 9
+
+P. Giannozzi, O. Baseggio, P. Bonfà, D. Brunato, R. Car, I. Carnimeo, C. Cavazzoni, S. de Giron-coli, P. Delugas, F. Ferrari Ruffino, A. Ferretti, N. Marzari, I. Timrov, A. Urru, and S. Baroni, “QUANTUM ESPRESSO toward the exascale,” The Journal of Chemical Physics 152 , 154105 36 (2020). 
+
+> 10
+
+J. Liang and M. Head-Gordon, “Gold-Standard Chemical Database 137 (GSCDB137): A Di-verse Set of Accurate Energy Differences for Assessing and Developing Density Functionals,” Journal of Chemical Theory and Computation 21 , 12601–12621 (2025). 
+
+> 11
+
+J. Liang and M. Head-Gordon, “GSCDB137: Gold-Standard Chemical Database,” GitHub repos-itory (2025), version 1.0.0; accessed 2026-06-03. 
+
+> 12
+
+Y. Zhao and D. G. Truhlar, “Construction of a generalized gradient approximation by restor-ing the density-gradient expansion and enforcing a tight Lieb–Oxford bound,” The Journal of Chemical Physics 128 , 184109 (2008). 
+
+> 13
+
+R. Peverati and D. G. Truhlar, “Exchange–Correlation Functional with Good Accuracy for Both Structural and Energetic Properties while Depending Only on the Density and Its Gradient,” Journal of Chemical Theory and Computation 8, 2310–2319 (2012). 
+
+> 14
+
+T. Aschebrock and S. Kümmel, “Ultranonlocality and accurate band gaps from a meta-generalized gradient approximation,” Physical Review Research 1, 033082 (2019). 
+
+> 15
+
+T. Lebeda, T. Aschebrock, and S. Kümmel, “Balancing the Contributions to the Gradient Ex-pansion: Accurate Binding and Band Gaps with a Nonempirical Meta-GGA,” Physical Review Letters 133 , 136402 (2024). 
+
+> 16
+
+J. Heyd, G. E. Scuseria, and M. Ernzerhof, “Hybrid functionals based on a screened Coulomb potential,” The Journal of Chemical Physics 118 , 8207–8215 (2003). 
+
+> 17
+
+A. V. Krukau, O. A. Vydrov, A. F. Izmaylov, and G. E. Scuseria, “Influence of the exchange screening parameter on the performance of screened hybrid functionals,” The Journal of Chemi-cal Physics 125 , 224106 (2006). 
+
+> 18
+
+M. Grossmann et al. , “mbpt_benchmark: a revised band-gap benchmark dataset,” GitHub repos-itory (2024), accessed 2026. 
+
+> 19
+
+P. Borlido, T. Aull, A. W. Huran, F. Tran, M. A. L. Marques, and S. Botti, “Large-Scale Bench-mark of Exchange–Correlation Functionals for the Determination of Electronic Band Gaps of Solids,” Journal of Chemical Theory and Computation 15 , 5069–5079 (2019). 
+
+> 20
+
+B. Neupane, H. Tang, N. K. Nepal, S. Adhikari, and A. Ruzsinszky, “Opening band gaps of low-dimensional materials at the meta-GGA level of density functional approximations,” Physical Review Materials 5, 063803 (2021). 
+
+> 21
+
+G. I. Csonka, J. P. Perdew, A. Ruzsinszky, P. H. T. Philipsen, S. Lebègue, J. Paier, O. A. Vydrov, and J. G. Ángyán, “Assessing the performance of recent density functionals for bulk solids,” 37 38 
+
+Physical Review B 79 , 155107 (2009). 
+
+> 22
+
+S. Kim, M. Lee, C. Hong, Y. Yoon, H. An, D. Lee, W. Jeong, D. Yoo, Y. Kang, Y. Youn, and S. Han, “A band-gap database for semiconducting inorganic materials calculated with hybrid functional,” Scientific Data 7, 387 (2020). 
+
+> 23
+
+M. J. Lucero, T. M. Henderson, and G. E. Scuseria, “Improved semiconductor lattice parameters and band gaps from a middle-range screened hybrid exchange functional,” Journal of Physics: Condensed Matter 24 , 145504 (2012).

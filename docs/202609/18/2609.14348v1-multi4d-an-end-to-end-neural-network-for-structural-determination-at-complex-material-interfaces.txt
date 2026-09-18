@@ -1,0 +1,1617 @@
+Multi4D: an end-to-end neural network for structural
+determination at complex material interfaces
+Haoran Zhang1,2†, Zian Mao1,2†, Shufen Chu1,3, Xiaoya He1,3, Yuyan Guan1,
+Antong Yang1,2, Mingze Li1, Xiaoqin Zeng3*, Yujun Xie1*
+1 Global Institute of Future Technology, Shanghai Jiao Tong University, 200240,
+Shanghai, China .
+2 Global College, Shanghai Jiao Tong University, 200240, Shanghai, China .
+3 School of Materials Science and Engineering, Shanghai Jiao Tong University, 200240,
+Shanghai, China .
+*Corresponding author(s). E-mail(s): xqzeng@sjtu.edu.cn; yujun.xie@sjtu.edu.cn;
+Contributing authors: zhr20040823@sjtu.edu.cn; asakura kukii@sjtu.edu.cn;
+shfchu@sjtu.edu.cn; hexiaoya@sjtu.edu.cn; Gyy0608@sjtu.edu.cn;
+snowynight@sjtu.edu.cn; mingze.l@sjtu.edu.cn;
+†These authors contributed equally to this work.
+Abstract
+Heterogeneous interfaces dictate the performance and degradation of functional materials, making it
+essential to link local structural variations with macroscopic failure mechanisms to guide future mate-
+rials design. Yet structural heterogeneity, phase overlap, and local disorder produce highly convoluted
+diffraction signatures, making extended transition regions difficult to interpret at atomic resolution
+across large fields of view. Here, we introduce Multi4D, a physics-informed neural network frame-
+work for automated multi-component crystallographic identification using four-dimensional scanning
+transmission electron microscopy (4D-STEM). By combining a latent-space Diffusion Transformer
+for physics-constrained style translation with a rotation-invariant convolutional neural network for
+orientation-agnostic classification, this approach translates multi-components diffraction datasets into
+deterministic crystallographic maps with 98.82% accuracy. In addition, we introduce Diffraction-
+Inferred Structural Complexity as an information-theoretic entropy metric derived from classifier
+predictive uncertainty that quantifies local structural ambiguity. We apply Multi4D to generate high-
+fidelity structural maps of complex superconducting heterostructures, corroded alloy surfaces, and
+degraded solid-state battery interfaces down to single-nanometer spatial resolution. This framework
+establishes a statistically robust analytical paradigm for automated microscopy, facilitating both
+industrial quality control and the data-driven discovery of interfacial design principles.
+Keywords: Four-dimensional scanning transmission electron microscopy, Simulation-to-experiment domain
+adaptation, Rotation-invariant neural networks, Predictive uncertainty
+1
+arXiv:2609.14348v1  [cond-mat.mtrl-sci]  13 Sep 2026
+
+
+Introduction
+The
+performance,
+degradation
+kinetics,
+and
+longevity of advanced functional materials are
+fundamentally governed by atomic-scale hetero-
+geneities at their complex interface[1, 2] For
+instance,
+in
+advanced
+semiconductor
+device,
+buried interfaces determine the electronic trans-
+port, charge carrier density, and overall device
+functionality or stability[3–5]. Similarly, in struc-
+tural alloys, localized corrosion evolution that is
+strongly shaped by nanoscale chemical and micro-
+structural heterogeneity governs pit growth and
+can promote crack initiation[6]. Because macro-
+scopic performance and failure modes originate
+at these internal boundaries, establishing predic-
+tive structure–property relationships require the
+precise identification of the underlying microstruc-
+tural constituents at atomic level[1, 2]. However,
+characterizing these regions is exceedingly chal-
+lenging due to the highly heterogeneous nature
+of complex interfaces, which often contain over-
+lapping crystalline domains or chemically distinct
+constituents[1–3]. Therefore, probing these buried
+and heterogeneous interfaces with high spatial and
+structural sensitivity remains a critical objective
+and foster continuous advancements in character-
+ization tools across both academia and industry.
+An ideal characterization modality must simul-
+taneously provide a wide field of view to cap-
+ture collective thermodynamic phenomena and
+enable statistically robust analysis, while main-
+taining the near-atomic spatial resolution required
+to resolve individual phases. Yet, conventional
+analytical techniques present inherent trade-offs.
+Bulk averaging methods such as X-ray and neu-
+tron scattering deliver highly precise crystallo-
+graphic information over large volumes but lack
+the spatial resolution needed to resolve nanoscale
+heterogeneity[7, 8]. Conversely, localized probes
+including atomic force microscopy-infrared spec-
+troscopy (AFM-IR) and high-resolution transmis-
+sion electron microscopy (HRTEM), resolve struc-
+tural features down to the atomic scale but are
+typically restricted to limited viewing areas[9]. In
+such case, overcoming the challenges would require
+new and robust analytical techniques that can
+decouples the trade-off between field of view and
+structural precision[10, 11].
+Recently,
+four-dimensional
+scanning
+trans-
+mission
+electron
+microscopy
+(4D-STEM)
+has
+emerged as a powerful route toward resolving the
+challenges[10, 11]. By raster scanning a convergent
+electron probe across a sample, a high-speed pixe-
+lated detector records a complete two-dimensional
+diffraction pattern at each probe position during
+the process as shown in Fig. 1a. This gener-
+ates a position-resolved, 4D diffraction data cube
+from which local crystallinity, phase distribution,
+and structural defect can be reconstructed[12–
+14]. Furthermore, the integration of direct electron
+detectors has expanded the practical scope of 4D-
+STEM by enabling rapid acquisition, low-dose
+operation, and larger-area mapping. In addition,
+because scattering information is recorded inde-
+pendently at each scan coordinate, 4D-STEM can
+survey comparatively large spatial areas while pre-
+serving the nanoscale sampling resolution dictated
+by the probe size and scanning step[10, 14]. There-
+fore, 4D-STEM is by nature an ideal technique for
+probing the complex material interfaces.
+Despite
+these
+advantages,
+the
+application
+of 4D-STEM, particularly for high-throughput
+industrial
+workflows,
+remains
+constrained
+by
+the
+absence
+of
+automated
+data
+analysis
+architectures[15–18].
+This
+is
+because
+modern
+direct
+electron
+detectors
+capture
+diffraction
+patterns (DPs) at kilohertz-to-tens-of-kilohertz
+frame rates, routinely generating raw datasets
+ranging from tens to hundreds of gigabytes during
+a single scan, equivalent to millions of DPs[15–
+17]. Consequently, the scale and dimensionality
+of this data far exceed the limits of tradi-
+tional analysis creating a severe computational
+bottleneck[15, 16].
+To address this issue, recent studies have
+employed
+unsupervised
+machine-learning
+approaches, including non-negative matrix fac-
+torization and hierarchical clustering, to segment
+and interpret 4D-STEM datasets[19–21]. While
+these methods group mathematically similar pat-
+terns and reveal spatially coherent domains, they
+do
+not
+provide
+deterministic
+crystallographic
+labels without subsequent manual interpretation
+or comparison with diffraction databases[20–22].
+Furthermore, such workflows often depend on
+multi-step offline pipelines involving preprocess-
+ing, dimensionality reduction, clustering, and
+qualitative evaluation, with performance that is
+highly sensitive to user-specified hyperparameters
+such as the expected number of clusters[21, 22].
+These limitations are particularly remarkable
+2
+
+
+when DPs overlap or subtle structural differences
+must be distinguished in complex heterogeneous
+systems.
+We believe establishing a fully autonomous
+end-to-end supervised architecture for phase iden-
+tification in 4D-STEM dataset is currently hin-
+dered by three major reasons[23]. First, physical-
+informed deep learning is constrained by a pro-
+nounced simulation-to-experiment domain gap,
+as experimental datasets exhibit dynamical scat-
+tering, point defects, thickness variations, and
+low-dose Poisson noise that cause models trained
+exclusively on synthetic simulations to degrade
+upon experimental transfer[23–26]. Second, stan-
+dard convolutional neural network (CNN) archi-
+tectures lack the physical inductive biases to
+handle geometric symmetries. This is saying they
+could misidentify the rotational variance of Bragg
+reflections under arbitrary crystal orientations as
+distinct structural phases[27, 28]. Third, the trans-
+mitted electron diffraction along the z-axis means
+that complex interfaces project overlapping sig-
+natures from mixed or disordered phases into a
+single diffraction pattern. This projection violates
+the mutually exclusive and single-label assump-
+tion of traditional classification networks, which
+highlights a critical need for information-theoretic
+uncertainty metrics to quantify structural diver-
+sity beyond discrete classification.
+Here, we introduce Multi4D, an end-to-end
+neural network workflow designed to automate
+sub-nanometer multi-component phase mapping.
+Multi4D resolves the Sim2real domain gap by inte-
+grating a physics-constrained, latent-space Diffu-
+sion Transformer (DiT) that translates idealized
+simulations into experimental-style patterns while
+preserving crystallographic geometry[29, 30]. Con-
+currently, it employs a rotation-invariant coor-
+dinate convolutional neural network (RIC-CNN)
+backbone to enforce geometric symmetry, facil-
+itating orientation agnostic phase identification
+without rotational data augmentation[31]. We
+further introduce diffraction-inferred structural
+complexity (DISC), an entropy-based descrip-
+tor derived from classifier probability outputs
+designed to quantify local structural ambiguity
+in complex interfaces. We demonstrate the effi-
+cacy of Multi4D across standard nanoparticle
+benchmarks and three experimental interfacial
+systems ranging from a commercial superconduct-
+ing heterostructure, a corroded magnesium-alloy
+interface, and a moisture-degraded, sulfur-based
+solid-electrolyte interface.
+Results
+Overview of Multi4D
+Multi4D is an end-to-end multi-component clas-
+sification framework for 4D-STEM data, as sum-
+marized in Fig. 1b. The overall architecture takes
+as input an unlabeled experimental diffraction
+dataset and a candidate set of crystal structures
+represented by crystallographic information files
+(CIFs) (see Supplementary Table 1). These candi-
+date structures are enumerated from prior knowl-
+edge, complementary characterization, or physi-
+cally motivated hypotheses regarding the interface
+composition. Multi-slice simulations are then per-
+formed over random crystal orientations to gen-
+erate a labeled diffraction dataset. By integrating
+experimental measurements with the simulation-
+derived prior, Multi4D assigns each diffraction
+pattern to one candidate component and thereby
+produces a spatially resolved component map of
+the interface.
+It is worth to emphasize that before entering
+the neural network workflow, experimental DPs
+are preprocessed to correct tractable experimen-
+tal variations. This preprocessing includes beam-
+center
+and
+elliptical-distortion
+corrections[32],
+together with denoising[26], to reduce system-
+atic geometric artifacts and experimental noise
+while preserving the diffraction features required
+for downstream domain alignment and multi-
+component classification. After these corrections,
+the DPs are examined for signals beyond the
+transmitted central disk. Probe positions showing
+neither off-center diffraction spots nor a diffuse
+amorphous ring is treated as empty, while patterns
+containing only an amorphous ring and no discrete
+Bragg reflections are labeled as purely amorphous.
+These patterns are removed before candidate-
+component analysis. Because this screening is
+based on directly observable diffraction features,
+rather than a learned model, the neural network
+can focus on the more difficult task of identifying
+overlapping crystalline components in heteroge-
+neous regions.
+Next, we illustrate the two modules in Multi4D
+in details. The first module of Multi4D, termed
+Sim2real, is designed to address the first challenge
+3
+
+
+CIF
+Sample
+Sim DP
+Style-translated DP Dataset
+RIC-CNN
+Classifier
+Latent Space
+DiT Sim2real
+Generated DP
+Retrieved Exp DP
+Exp DP Dataset
+a
+b
+c
+Sample
+Direct
+Electron Detector
+Converged
+Electron Beam
+Classification Map
+Label A
+Label D
+Label C
+Label B
+Output
+Multi4D
+Input
++
+Fig. 1 Overview of the Multi4D framework for 4D-STEM phase and component analysis. a, Schematic of
+4D-STEM data acquisition showing the converged electron beam scanning the sample and recording diffraction patterns
+(DPs) onto a direct electron detector. b, Architecture of the Multi4D framework. Simulated DPs (Sim DP) derived from
+candidate crystal structures and experimental reference patterns (Retrieved Exp DP) from the experimental dataset (Exp
+DP Dataset) are fed into a latent-space Diffusion Transformer (DiT) Sim2real module. This module performs domain/style
+translation to generate realistic DPs (Generated DP), constructing a large-scale style-translated DP dataset. A rotation-
+invariant coordinate convolutional neural network (RIC-CNN) classifier is then trained on this dataset to perform pixel-level
+classification across the scanned area. c, Inputs and outputs of Multi4D. The framework takes experimental 4D-STEM scan
+datasets and crystallographic information files (CIFs) of candidate crystal structures as inputs, processes them through
+Multi4D, and outputs a spatially resolved multicomponent classification map along with phase/grain identification labels.
+The illustrated output classes are schematic examples and do not restrict the number of candidate components.
+outlined above related to the domain gap between
+idealized diffraction simulations and experimental
+data (Fig. 2a). In experimental 4D-STEM, DPs
+essentially are the scattering information arise
+from not only the underlying crystallographic
+structure, but also the dynamical scattering, ori-
+entational overlap, reduced crystallinity, crystal
+defects, thickness variation, and low-dose acqui-
+sition. Taken together, these effects can weaken,
+broaden, or obscure high-frequency Bragg features
+that are critical for reliable component identifica-
+tion. By contrast, multi-slice simulations remain
+comparatively idealized and merely encode the
+diffraction response of the presumable structure
+under controlled conditions. In our experiments,
+we found that classifiers trained directly on simu-
+lated DPs are poorly generalized to experimental
+data. Multi4D therefore introduces a dedicated
+Sim2real module that translates labeled simu-
+lated DPs into experimental-style counterparts.
+We formulated the translation as a physics-
+preserving domain alignment problem rather than
+generic image stylization. Although experimen-
+tal diffraction appearance can vary across mate-
+rial systems, microscopes, specimen thicknesses,
+and acquisition conditions, the Bragg config-
+uration that encodes structural identity must
+remain unchanged. The Sim2real module is there-
+fore designed to include experimental appearance
+statistics while preserving the diffraction geometry
+required for downstream classification.
+In addition, because simulated and experimen-
+tal DPs are not naturally paired, Multi4D con-
+structs pseudo-paired guidance through retrieval
+4
+
+
+100
+200
+300
+FID (↓)
+44.1
+54.1
+161.9
+201.9
+326.3
+Distribution Quality
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+KID (↓)
+0.03960.0500
+0.1646
+0.2719
+0.4669
+Kernel Inception Distance
+0.2
+0.4
+0.6
+0.8
+LPIPS to Real (↓)
+0.262
+0.354 0.356
+0.693 0.725
+Perceptual Similarity
+0.0
+0.2
+0.4
+0.6
+0.8
+LPIPS Sim Gap
+0.301
+0.453
+0.000
+0.741 0.705
+Perceptual Shift from Sim
+Ours (Sim2real)
+InstructPix2Pix
+Original Sim
+ControlNet
+Sim + Random Noise
+RIC-CNN
+Sim2real
+Attention Retrieving
+a
+e
+b
+c
+d
+f
+Latent Input
+AE Encoder
+AE Decoder
+Latent Space
+...
+RIC
+Blocks
+Classification Head
+Time Embedding
+Style Embedding
+DiT Blocks
+...
+Generated
+Latent Output
+Exp Style
+Translation
+Sim
+Sim
+Exp
+Exp
+Sim
+Sim
+Physics-based Constraints
+Dual Style Embedding
+Rotation-Invariant Coordinate
+Standard Conv
+RIC Conv
+Background
+Dynamic
+Scattering
+Intensity
+Distribution
+Spatial
+Texture
+Sim
+Exp
+Exp
+Exp
+Exp
+Feature
+Matching
+Sim
+Sim
+Sim
+Peak-value L1 Loss
+Encoder
+Decoder
+Gram Loss
+Sim Peak
+Gen Peak
+Exp
+Sim
+Gen
+k
+l
+m
+n
+g
+h
+i
+j
+10
+20
+30
+40
+50
+Epoch
+40
+60
+80
+100
+Validation Accuracy (%)
+5-class Validation Accuracy
+10
+20
+30
+40
+50
+Epoch
+20
+40
+60
+80
+100
+Validation Accuracy (%)
+20-class Validation Accuracy
+0
+20
+40
+60
+80
+Parameters (M)
+50
+60
+70
+80
+90
+100
+Best Validation Accuracy (%)
+Model Size vs Accuracy
+0
+45
+90 135 180 225 270 315
+Rotation angle (°)
+0
+20
+40
+60
+80
+100
+Invariance score (%)
+Rotation invariance
+Ours (RIC-CNN)
+ConvNeXtV2-Tiny
+ViT-Tiny
+ViT-Base
+Swin-Small
+Fig. 2 Architecture and independent benchmarking of the Sim2real and RIC-CNN modules. a, Schematic
+of the Sim2real module, which maps simulated diffraction patterns (DPs) to experimental-style outputs in a shared latent
+space. b, Attention-based retrieval of experimentally matched references for Sim2real conditioning. c, Dual style embedding
+capturing complementary spatial and textural characteristics of experimental diffraction. d, Physics-based constraints for
+preserving experimental appearance while maintaining Bragg peak geometry during translation. e, Schematic of the RIC-
+CNN classifier for final component identification. f, Illustration of rotation-invariant coordinate convolution. g, Comparison
+of distribution quality measured by Fr´echet inception distance (FID). h, Comparison of distribution quality measured by
+kernel inception distance (KID). i, Comparison of perceptual similarity to real experimental patterns measured by LPIPS.
+j, Comparison of perceptual shift from the original simulated patterns measured by LPIPS. k, Validation accuracy curves
+for the five-class task. l, Validation accuracy curves for the twenty-class task. m, Model size versus best validation accuracy.
+n, Rotation invariance analysis across input rotation angles.
+5
+
+
+and a shared latent diffraction representation as
+shown in Fig. 2b. For each simulated input, the
+model uses attention-based matching in a global
+feature space to retrieve the most similar experi-
+mental reference.
+The retrieved examples thus guide the trans-
+lation toward the target experimental domain
+by capturing its specific imaging characteristics,
+without introducing arbitrary peak displacements.
+To further constrain the process within a physi-
+cal framework, both simulated and experimental
+DPs are encoded into a shared latent space using
+a diffraction-specialized autoencoder.
+A retrieval-conditioned latent Diffusion Trans-
+former
+then
+performs
+the
+translation
+under
+explicit physics-based constraints. Within this
+shared latent space, dual style embeddings encode
+complementary spatial and textural characteris-
+tics of experimental diffraction, including back-
+ground statistics, dynamical scattering, and inten-
+sity distributions (Fig. 2d). The translation is fur-
+ther constrained by Gram loss and peak-value L1
+loss, which align higher-order appearance statis-
+tics with the experimental domain while preserv-
+ing Bragg peak geometry (Fig. 2e). In this way, the
+Sim2real module achieves domain alignment while
+maintaining the structural fidelity of the simulated
+DPs.
+The second module of Multi4D performs final
+component recognition using a rotation-invariant
+classifier, termed RIC-CNN (Fig. 2e)[31]. This
+module is designed to handle the strong rotational
+variation commonly observed in DPs, which can
+be difficult for standard vision models. Once the
+patterns are recentered, rotating DPs usually indi-
+cates a change in local crystal orientation rather
+than a different material component. The classifier
+must therefore remain insensitive to orientation
+while retaining the Bragg-pattern features needed
+to distinguish crystallographic components.
+Specifically, RIC-CNN replaces standard con-
+volutions with rotation-invariant coordinate con-
+volutions defined with respect to the diffraction
+centre (Fig. 2f)[31, 33]. Rather than relying on a
+fixed Cartesian sampling grid, these operations are
+formulated in a centre-referenced coordinate sys-
+tem, allowing equivalent diffraction structures to
+remain comparable under arbitrary in-plane rota-
+tion. By stacking such rotation-aware operations,
+RIC-CNN learns feature representations that are
+robust to rotational variation while preserving
+structurally informative diffraction geometry.
+Together, these two modules define the core
+logic
+of
+Multi4D.
+Sim2real
+aligns
+simulated
+diffraction patterns with the experimental domain
+while preserving diffraction structure, whereas
+RIC-CNN enables robust component recognition
+despite rotational variation. Their integration
+allows direct, automated, and spatially resolved
+identification of local crystallographic components
+in complex 4D-STEM datasets.
+Independent benchmarking of the
+Sim2real and RIC-CNN modules
+To benchmark the two core modules of Multi4D,
+we performed separate evaluations of Sim2real and
+RIC-CNN. For Sim2real, domain alignment was
+quantified using Fr´echet inception distance (FID),
+kernel inception distance (KID), and LPIPS
+against experimental diffraction data in Fig. 2g–
+i. To assess whether the translation preserved the
+crystallographic information in the original sim-
+ulation without introducing spurious diffraction
+features, we further measured LPIPS between the
+translated outputs and the simulated inputs (Fig.
+2j). We compared our method against Instruct-
+Pix2Pix and ControlNet in addition to the unmod-
+ified simulated patterns (Origin) and a simple
+noise-augmented baseline (+Noise) as references.
+Overall, Sim2real outperformed other models on
+all three metrics of experimental-domain align-
+ment, while ranking second to the simulated input
+in source-consistency comparison. These results
+confirm that Sim2real narrows the simulation–
+experiment gap while preserving the crystallo-
+graphic content of the DPs.
+In
+addition,
+RIC-CNN
+was
+benchmarked
+against
+representative
+convolutional
+and
+transformer-based architectures on both five-class
+and twenty-class classification tasks using the
+Sim2real-aligned diffraction dataset. The vali-
+dation curves show that RIC-CNN consistently
+outperformed the baseline models in both set-
+tings, particularly in twenty-class regime in Fig.
+2k,l). We further compared best validation accu-
+racy against parameter count on the twenty-class
+task and found that RIC-CNN exceeds several
+substantially larger baseline models, indicating
+an advantage in parameter efficiency (Fig. 2m).
+Finally, we evaluated rotation robustness by
+6
+
+
+Fig. 3 Experimental benchmarking and ablation analysis of Multi4D. a–d, Representative Multi4D results for
+Au, ZnO, Pd + Co3O4, and TiO2, respectively, showing experimental real-space images, predicted component maps, and
+matched simulated and experimental diffraction patterns. e, Accuracy comparison for Multi4D and ablation baselines. f,
+Macro F1 comparison for Multi4D and ablation baselines. g, Training-data efficiency comparison across different workflows.
+In e–g, bars and data points represent the mean of five runs (n = 5), and error bars indicate ± one standard deviation
+(SD). Scale bars: 100 nm in the real-space images and component maps in a, b, and d; 500 nm in c.
+7
+
+
+rotating input DPs over a full angular range and
+measuring the consistency of the resulting latent
+representations relative to the unrotated input.
+RIC-CNN exhibited the strongest rotation invari-
+ance among the compared models (Fig. 2n). Taken
+together, these results validate the effectiveness
+of the two core modules underlying Multi4D.
+Accurate multi-component
+classification of experimental
+4D-STEM diffraction patterns
+We next benchmark Multi4D as an end-to-end
+workflow on 4D-STEM dataset acquired from var-
+ious nanoparticles comprising Au, ZnO, TiO2,
+Pd, and Co3O4. This dataset serves as a stan-
+dard test for crystallographic classification, as it
+represents a diverse range of crystal structures
+and varying nanoparticle morphologies under real-
+istic conditions. On this experimental bench-
+mark, Multi4D achieved a classification accu-
+racy of 98.82%. Notably, the model occasionally
+fails to correctly classify highly symmetric DPs,
+representing a limitation in orientation-agnostic
+mapping. Nonetheless, the representative results,
+illustrated in Fig. 3a–d, show precise agreement
+between the translated experimental diffraction
+patterns and their simulated crystallographic tem-
+plates along with accurate identification of the
+nanoparticle boundaries.
+To determine whether these performance gains
+require our integrated architecture, we com-
+pared the full Multi4D workflow against stan-
+dard computer vision backbones and individual
+ablation baselines under identical training condi-
+tions. Specifically, we compared the full frame-
+work against a conventional backbone trained
+directly on simulated DPs, an RIC-CNN classi-
+fier without Sim2real alignment, and a Sim2real-
+enhanced backbone lacking RIC-CNN. The com-
+plete Multi4D model achieved the highest accu-
+racy and macro F1 score on the five-class bench-
+mark shown in Fig. 3e,f, demonstrating that
+neither domain alignment nor rotation-invariant
+recognition alone is sufficient. A robust multi-
+component classification requires the synergistic
+integration of both modules within a unified work-
+flow.
+Beyond peak performance, we examined how
+each model responded to increasing amounts of
+simulated training data in Fig. 3g. The full
+Sim2real + RIC-CNN workflow achieved the high-
+est experimental-domain accuracy at every train-
+ing fraction, with the clearest advantage in the
+low-data regime. Trained on the same Sim2real-
+aligned dataset, RIC-CNN substantially outper-
+formed ConvNeXtV2 when only 5% of the training
+data were available and remained more accurate
+as the dataset increased, although the gap grad-
+ually narrowed. Because the domain-alignment
+component was identical in this comparison, the
+result points to the classifier architecture as the
+main source of the difference. In particular, the
+rotation-invariant design of RIC-CNN is better
+suited to the rotational variability of diffraction
+patterns, enabling the network to learn crystal-
+lographic features from fewer training examples
+than a general-purpose vision backbone.
+A different trend emerged when the classi-
+fiers were trained directly on unaligned simulated
+data. Neither model showed a consistent improve-
+ment in experimental-domain accuracy as more
+simulated data were added. Instead, their per-
+formance fluctuated and declined at larger train-
+ing fractions, indicating negative scaling under
+simulation-to-experiment domain shift. This pat-
+tern is consistent with the models becoming
+increasingly dependent on simulation-specific cues
+that do not transfer reliably to experimental
+diffraction patterns. Although the result does not
+by itself prove simulation-domain overfitting, it
+shows that increasing the amount of unaligned
+simulated data is not sufficient to improve cross-
+domain
+generalization
+and
+may
+even
+reduce
+it. Taken together, these findings indicate that
+Sim2real alignment is necessary for additional
+simulated data to translate into better experi-
+mental performance, while the diffraction-specific
+design of RIC-CNN provides a further advantage,
+particularly when training data are limited.
+Resolving a complex
+superconducting interface with
+Multi4D
+We further apply the Multi4D on a commer-
+cialized superconductor device with structurally
+complex superconducting interface that dictate
+its performance. Unlike the controlled benchmark
+8
+
+
+setting of which the sample is structurally sim-
+ple in Fig. 4, the focus ion beam (FIB) cross-
+section of the device exhibits highly heteroge-
+neous landscape with crystalline and amorphous
+regions mixed at nanoscale. As shown in Fig. 4,
+Multi4D resolves different phases across the inter-
+face, identifying an upper CeO2 layer, ultrathin
+LaMnO3/MgO interfacial regions, a buried Y2O3
+layer, and a lower amorphous Al-containing layer.
+More important, a close examination of the
+interface shows an unprecedented spatial resolu-
+tion down to single pixel that is approximately 1
+nm2. Within the Y2O3 layer, Multi4D successfully
+identifies several embedded CeO2 nanodomains in
+Fig. 4c. These nanoscale features are difficult to
+resolve using conventional imaging techniques and
+fall below the detection limit of energy-dispersive
+X-ray spectroscopy (EDX) due to their small vol-
+ume fraction and projection overlap. Resolving
+the embedded domains is of high physical and
+technological significance because such secondary-
+phase impurities can act as localized defects or
+flux-pinning centers deteriorate the superconduct-
+ing property. This phase mapping is supported by
+three validations. First, the reconstructed compo-
+nents are consistent with prior structural knowl-
+edge and the real-space Z-contrast observed in the
+bright-field image. Second, representative diffrac-
+tion patterns extracted from each layer closely
+match the simulated diffraction patterns of the
+corresponding crystal structures, while the lower
+Al-containing layer exhibits the diffuse halo char-
+acteristic of an amorphous AlOX phase. Third, the
+classification is corroborated by energy dispersive
+X-ray spectrometer (EDX) elemental mapping in
+Fig. 4d and e, where Ce is enriched in the upper
+layer, La, Mn and Mg are localized near the buffer
+interface, Y is concentrated in the seed layer,
+and Al and O dominate the lower region. This
+high consistency among structural prior knowl-
+edge, diffraction-pattern matching, and chemical
+mapping provides strong orthogonal validation for
+the recovered phase assignments.
+Taken together, these results demonstrate that
+Multi4D can robustly disentangle multiple adja-
+cent phases in a real superconducting interface
+rather than only in standard reference specimens,
+extending the validation of the framework to
+experimentally heterogeneous engineering materi-
+als. Notably, within the reconstructed phase map-
+ping in Fig. 4b, while bulk-like regions are assigned
+as well-defined single phases, the interfacial transi-
+tion zones exhibit remarkable local variation with
+overlapping yet faint Bragg peaks as shown in Fig.
+4c. This indicates that hard phase labels alone
+are insufficient to fully describe the structural
+heterogeneity along the projection direction. This
+physical limitation of standard classification mod-
+els motivates the introduction of a quantitative
+descriptor for local interfacial complexity in the
+following section.
+Predictive uncertainty reveals local
+interfacial structural complexity
+Although the superconductor served as an effec-
+tive model system, its diffraction patterns at each
+probe position typically originate from only a sin-
+gle constituent. In more complex heterogeneous
+interfaces, overlapping diffraction patterns from
+multiple phases along the beam direction (z-axis)
+are frequently observed, which poses a major chal-
+lenge for resolving individual components. How-
+ever, Multi4D provides a mathematically natural
+route to quantify this complexity because the clas-
+sifier outputs a probability distribution over the
+physically plausible candidate phases. Rather than
+treating this distribution solely as a confidence
+score, we interpret its spread as predictive uncer-
+tainty within the candidate structural space. To
+project this uncertainty into a spatially resolved
+descriptor of interfacial heterogeneity, we define
+diffraction-inferred structural complexity (DISC)
+as the normalized predictive entropy of the classi-
+fier output.
+In fact, the rationale for defining such a quan-
+tity from the network output is rooted in the
+structure of the Multi4D pipeline. For each diffrac-
+tion pattern, the RIC-CNN classifier outputs a
+class-probability vector:
+p = (p1, p2, . . . , pK),
+(1)
+where K is the number of candidate compo-
+nents and pk denotes the predicted probability
+assigned to the kth component. The largest entry
+in this vector determines the primary compo-
+nent assignment, but the full distribution contains
+additional information about how decisively the
+diffraction signal favors that assignment over com-
+peting alternatives. The DISC is thereby defined
+as:
+9
+
+
+Fig. 4 Multiphase identification and spatial mapping of an oxide heterostructure using Multi4D. a, Cross-
+sectional bright-field STEM image of the multilayer oxide thin film. b, Multi4D-predicted spatial phase classification map,
+resolving layers of CeO2 (pink), LaMnO3 (blue), MgO (green), and Y2O3 (cyan), along with amorphous (grey) and vacu-
+um/empty (black) regions. White boxes (1 and 2) mark regions chosen for closer inspection. c, Magnified views of regions 1
+and 2 (left) with representative experimental diffraction patterns (right) sampled from single-pixel positions (white squares).
+Red circles and overlays indicate indexed Bragg reflections corresponding to CeO2, MgO, LaMnO3, and Y2O3, while diffuse
+scattering identifies the amorphous region. These results highlight nanoscale spatial resolution and the detection of localized
+CeO2 nanodomains embedded within the Y2O3 layer. d, Composite energy-dispersive X-ray spectroscopy (EDX) elemen-
+tal map combining signals from Al, Ce, La, Mn, Mg, Y, and O. e, Individual EDX elemental maps of each corresponding
+element, corroborating the structural phase boundaries and layer assignments identified by Multi4D. Scale bars: 50 nm in
+a, b, d, and e; 20 nm in c.
+DISC = −
+PK
+k=1 pk log pk
+log K
+,
+(2)
+Under this formulation, DISC approaches 0
+when the classifier assigns most of the pre-
+dicted probability to a single component, indicat-
+ing a decisive structural assignment. Conversely,
+DISC approaches 1 when the predicted proba-
+bility is distributed more evenly across multiple
+plausible components, indicating greater assign-
+ment uncertainty within the candidate structural
+space. The distribution of DISC can be calcu-
+lated across the entire dataset, reflecting how
+uniquely the measured diffraction signal supports
+the principal structural assignment. Therefore,
+this parameter provides a quantitative and spa-
+tially resolved description of local interfacial het-
+erogeneity derived directly from predictive uncer-
+tainty.
+We emphasize that the classifier is trained
+on physically grounded simulated diffraction pat-
+terns from a restricted candidate set rather than
+random one. Consequently, the output probabil-
+ity vector does not merely represent an abstract
+confidence score, but provides an operational esti-
+mate of how strongly the measured signal can be
+10
+
+
+Fig. 5 Multiphase mapping and structural complexity analysis of a corroded interface. a, Large-area Multi4D
+phase classification map across the corroded interface. White boxes (1 and 2) indicate interfacial regions selected for detailed
+analysis. b,c, Magnified views of regions 1 and 2 (left) alongside representative single-pixel experimental diffraction patterns
+(right). Red circles indicate indexed Bragg reflections corresponding to Mg(OH)2, W, MgO, and metallic Mg; the amorphous
+region (Amor) is identified by diffuse scattering. d,e, Violin plots showing class-wise distributions of classification confidence
+(d) and diffraction-inferred structural complexity (DISC; e) across candidate phases: Mg(OH)2, Mg, MgCO3, MgO, Y2O3,
+and Y(OH)3. f, Cross-sectional bright-field STEM image of the corrosion layer. The black rectangle denotes the interfacial
+region analyzed in g–i. g–i, Spatially resolved analysis of the boxed region in f, showing the Multi4D phase classification
+map (g), the corresponding predictive confidence map (h), and the normalized predictive entropy/DISC map (i) highlighting
+localized interfacial mixing and structural heterogeneity. Scale bars: 500 nm in a and f; 200 nm in b and c; 100 nm in g–i.
+attributed to each candidate phase. For instance,
+in bulk-like regions, the diffraction signal matches
+a single component, producing a sharply peaked
+probability distribution (DISC=0). Conversely, at
+transition zones or disordered boundaries, the sig-
+nal shares similarities with multiple candidates,
+distributing the probability mass more broadly
+when DISC closed to 1. Rather than measuring
+phase fractions or compositional mixing ratios,
+DISC quantifies the degree to which a diffrac-
+tion response can be uniquely assigned to a single
+structural class under the candidate set consid-
+ered.
+This entropy-based descriptor is validated by
+nanoparticle references and independently corrob-
+orated on the superconducting interface via prior
+structural knowledge, diffraction-pattern match-
+ing, and EDX mapping. Based on these results, we
+propose that DISC can serve as a standard param-
+eter in 4D-STEM structural identification. Visu-
+alizing the spatial distribution of DISC alongside
+classification maps ensures the fidelity of the phase
+assignments while revealing local variations that
+are invisible to hard, discrete classification alone.
+Incorporating this parameter enables Multi4D to
+offer a quantitative, spatially resolved description
+of structural complexity across diverse material
+systems, moving automated microscopy closer to
+high-throughput industrial quality control.
+11
+
+
+Generalization across diverse
+interfacial material systems
+To extend the generality of Multi4D as a uni-
+fied framework for complex interfacial analysis, we
+further applied it to material systems with fun-
+damentally different chemistries, crystallographic
+motifs, and degrees of structural heterogene-
+ity. Beyond the superconducting interface, we
+examined two representative cases: a corroded
+Mg-alloy interface and a degraded sulfur-based
+solid-electrolyte interface. Together, these systems
+encompass markedly different crystal structures
+and interfacial morphologies, providing a strin-
+gent test of the framework’s transferability across
+material classes. In both cases, Multi4D produced
+spatially coherent component classification maps
+and corresponding DISC distributions. This con-
+sistent performance across distinct material envi-
+ronments indicates that the framework is not lim-
+ited to a particular chemical system or interfacial
+geometry.
+As shown in the Fig. 5, for the Mg-alloy
+case, we examined corrosion products formed on
+a stainless magnesium alloy (Mg–11 wt.% Y–1
+wt.% Al) after 1.5 h of exposure to a 3.5 wt.%
+NaCl solution. The cross-sectional structure con-
+sists of the protective W layer deposited during
+focused ion beam preparation, a surface corrosion-
+product layer, an amorphous passivation layer,
+and the underlying substrate from top to bottom
+in Fig. 5a. Multi4D identifies the surface corro-
+sion products as primarily MgO and Mg(OH)2
+with good crystallinity, as indicated by the red
+and cyan regions in the classification map. An
+enlarged view of region 1 is shown in Fig. 5b
+overlays representative experimental diffraction
+patterns with the Bragg reflections identified by
+the framework, confirming the accuracy of phase
+assignment. Similarly, in region 2 from Fig. 5c,
+Multi4D detected diffraction signatures of MgO
+alongside the primary magnesium lattice, indicat-
+ing localized oxidation during sample preparation
+or environmental exposure. These results demon-
+strate that the framework distinguishes multiple
+adjacent corrosion products and maps their spatial
+distribution across the interface.
+We also applied Multi4D to observe moisture-
+induced degradation process of sulfur-based argy-
+rodite solid electrolyte, which is a widely used
+solid-state battery material as shown in Fig. 6.
+The framework successfully resolves a complex
+degradation layer, identifying the spatial distri-
+butions of eight distinct decomposition products
+including hydrated lithium compounds, phospho-
+rus sulfides, metal sulfides, and lithium chloride
+derivatives that previous not possible to observe.
+Notably, the amorphous fraction, which is typi-
+cally overlooked in conventional crystallographic
+mapping, was reliably separated and mapped
+along grain boundaries and near the exposed
+surface. The spatial mapping reveals the correla-
+tion among diverse degradation products, poten-
+tially providing insight into the reaction sequence
+and the role of local structural heterogeneity in
+facilitating water penetration along the moisture-
+driven failure pathway.
+We want to point out that the spatial distri-
+bution of DISC reveals a consistent qualitative
+trend: bulk regions far from interfaces exhibit low
+structural complexity, whereas phase boundaries,
+degradation fronts, and transition zones display
+significantly elevated complexity. This observation
+is reasonable as single-phase bulk regions yield
+stable, highly defined diffraction signatures, while
+transition layers contain overlapping or locally
+perturbed Bragg reflections that broaden the clas-
+sifier’s probability distribution. The recurrence of
+this spatial trend across diverse material systems
+indicates that DISC is not an artifact of a specific
+dataset, but a generalizable physical descriptor
+of local structural ambiguity. By jointly mapping
+dominant phases and quantifying structural com-
+plexity, the framework captures the spatial extent
+and internal disorder of interfacial transition zones
+where discrete classification labels are insufficient.
+In conclusion, these results demonstrate that
+Multi4D
+generalizes
+effectively
+across
+diverse
+material classes, establishing a unified frame-
+work for multi-component identification and spa-
+tially resolved structural complexity analysis. By
+combining physics-preserving style translation,
+rotation-invariant coordinate convolutions, and
+predictive entropy mapping, Multi4D extends 4D-
+STEM from qualitative visualization to robust,
+quantitative analysis of complex material inter-
+faces.
+12
+
+
+Fig. 6 Spatial phase mapping and degradation complexity analysis in a solid-state electrolyte particle. a,
+Overview Multi4D phase classification map of an individual degraded solid electrolyte particle (Li6PS5Cl). White boxes
+(1 and 2) mark regions selected for localized nanoscale inspection. b,c, Enlarged views of regions 1 and 2 (left) alongside
+representative single-pixel experimental diffraction patterns (right), with indexed Bragg reflections corresponding to degra-
+dation and reaction products, including LiCl·H2O (LiH2ClO), LiCl, Li3PS4, LiOH, Li2S, and Li3PO4. An amorphous region
+(Amor) and a vacuum region (Empty) are also shown. d,e, Violin plots showing the class-wise distributions of predictive
+confidence (d) and diffraction-inferred structural complexity (DISC; e) across the candidate phases: Li2S, Li3PO4, Li3PS4,
+Li6PS5Cl, LiCl, LiCl·H2O, LiOH·H2O, and LiOH. f, STEM overview image showing the morphology of the degraded parti-
+cle. The black rectangle indicates the region selected for detailed interfacial mapping in g–i. g–i, Spatially resolved analysis
+of the boxed region in f, presenting the Multi4D multicomponent phase classification map (g), the predictive confidence map
+(h), and the DISC map (i) highlighting local phase coexistence and structural heterogeneity at the degradation boundary.
+Scale bars: 200 nm in a and f; 100 nm in b and c; 50 nm in g–i.
+Discussion
+Multi4D
+demonstrates
+that
+large
+4D-STEM
+datasets can be converted into spatially coher-
+ent multi-component maps without reducing the
+analysis to manual pattern matching or purely
+data-driven clustering. By linking experimental
+diffraction signals to a physically constrained
+structural library, it produces assignments with
+direct crystallographic meaning across interfaces
+containing several adjacent components. This is
+the main practical advance of the classification
+framework: it preserves a discrete, interpretable
+map while remaining scalable to datasets that
+would be difficult to examine pattern by pattern.
+The resulting label, however, represents the dom-
+inant candidate at each probe position. It should
+not be read as a complete decomposition of every
+structure contributing along the beam direction.
+This distinction changes how the classification
+map should be interpreted. A discrete label can
+identify the dominant component even when the
+diffraction signal is not uniquely described by that
+component alone. DISC supplies the missing con-
+text by indicating how strongly the selected class
+is preferred over the other physically plausible
+candidates. The recurring concentration of ele-
+vated DISC around interfacial transition regions
+suggests that these regions are better understood
+13
+
+
+as spatially extended zones of assignment non-
+uniqueness rather than as perfectly sharp bound-
+aries between discrete phases. Multi-component
+classification and DISC therefore serve comple-
+mentary purposes: one organizes the most likely
+structural identities, while the other marks where
+a single-label representation becomes incomplete.
+There are important limits to this interpreta-
+tion. DISC depends on the composition of the can-
+didate library and on the calibration of the clas-
+sifier probabilities. An elevated value cannot, on
+its own, tell whether the underlying cause is phase
+coexistence, local disorder, experimental noise,
+domain shift, or similarity among candidate struc-
+tures. Conversely, a low value does not establish
+that an assignment is correct when the relevant
+structure is missing from the library or the model
+is overconfident. DISC should not be used to esti-
+mate phase fractions, and comparisons between
+experiments require comparable candidate spaces
+and probability calibration. These constraints are
+particularly relevant to the present single-label
+implementation. Although an amorphous-like cat-
+egory can be recognized from diffuse scattering,
+the framework does not yet resolve distinct forms
+of short-range order or separate strongly over-
+lapping crystalline signals into their constituent
+contributions. Multi-label mixture models, repre-
+sentations tailored to diffuse scattering, and a ded-
+icated out-of-library score would address different
+aspects of these limitations.
+The practical value of combining the two
+outputs is that classification provides a work-
+ing structural map, while DISC indicates where
+that map deserves closer examination. Regions
+with non-unique assignments can then be pri-
+oritized for complementary spectroscopy, higher-
+resolution acquisition, additional simulations, or
+revision of the candidate library. Predictive uncer-
+tainty becomes part of the experimental decision
+process rather than a by-product of classifica-
+tion. With improved probability calibration and
+explicit detection of structures outside the can-
+didate space, each map could inform the next
+measurement or model update. The longer-term
+contribution of Multi4D may therefore lie not
+only in accelerating multi-component mapping,
+but also in showing where the current structural
+interpretation requires additional evidence.
+Data availability
+The datasets generated and analyzed during the
+current study are not publicly available due to
+the internal data sharing policies of the partic-
+ipating institutions, but are available from the
+corresponding author on reasonable request.
+Code availability
+The code will be released via a public GitHub
+repository upon publication to support repro-
+ducibility and community use.
+References
+[1] Vahidi, H., Syed, K., Guo, H., Wang, X., War-
+dini, J.L., Martinez, J., Bowman, W.J.: A
+review of grain boundary and heterointerface
+characterization in polycrystalline oxides by
+(scanning) transmission electron microscopy.
+Crystals 11(8), 878 (2021) https://doi.org/
+10.3390/cryst11080878
+[2] Lin, Y., Zhou, M., Tai, X., Li, H., Han,
+X., Yu, J.: Analytical transmission electron
+microscopy for emerging advanced materials.
+Matter 4(7), 2309–2339 (2021) https://doi.
+org/10.1016/j.matt.2021.05.005
+[3] Smyth,
+C.M.,
+Cain,
+J.M.,
+Boehm,
+A.,
+Ohlhausen, J.A., Lam, M.N., Yan, X., Liu,
+S.E., Zeng, T.T., Sangwan, V.K., Hersam,
+M.C., Chou, S.S., Ohta, T., Lu, T.-M.:
+Direct characterization of buried interfaces
+in 2D/3D heterostructures enabled by GeO2
+release layer. ACS Appl. Mater. Interfaces
+16(2), 2847–2860 (2024) https://doi.org/10.
+1021/acsami.3c12849
+[4] Zhang, S., Ye, F., Wang, X., Chen, R., Zhang,
+H., Zhan, L., Jiang, X., Li, Y., Ji, X., Liu, S.,
+Yu, M., Yu, F., Zhang, Y., Wu, R., Liu, Z.,
+Ning, Z., Neher, D., Han, L., Lin, Y., Tian,
+H., Chen, W., Stolterfoht, M., Zhang, L.,
+Zhu, W.-H., Wu, Y.: Minimizing buried inter-
+facial defects for efficient inverted perovskite
+solar cells. Science 380(6643), 404–409 (2023)
+https://doi.org/10.1126/science.adg3755
+14
+
+
+[5] Maggiora, J., Wang, X., Zheng, R.: Supercon-
+ductivity and interfaces. Phys. Rep. 1076, 1–
+49 (2024) https://doi.org/10.1016/j.physrep.
+2024.05.001
+[6] Choudhary, S., Kelly, R.G.: Nanoscale het-
+erogeneities dictate corrosion pathways in
+a high-strength aluminum alloy. npj Mater.
+Degrad. 8, 103 (2024) https://doi.org/10.
+1038/s41529-024-00520-3
+[7] Jeffries, C.M., Ilavsky, J., Martel, A., Hin-
+richs, S., Meyer, A., Pedersen, J.S., Sokolova,
+A.V.,
+Svergun,
+D.I.:
+Small-angle
+X-ray
+and neutron scattering. Nat. Rev. Meth-
+ods Primers 1, 70 (2021) https://doi.org/10.
+1038/s43586-021-00064-9
+[8] Wang, Y.-D., Wang, Y., Li, S., Li, R.:
+Synchrotron-based high-energy X-ray diffrac-
+tion and microdiffraction investigations on
+the mechanical heterogeneity of heterostruc-
+tured
+metals.
+Scr.
+Mater.
+224,
+115144
+(2023) https://doi.org/10.1016/j.scriptamat.
+2022.115144
+[9] Egerton, R.F., Watanabe, M.: Spatial reso-
+lution in transmission electron microscopy.
+Micron 160, 103304 (2022) https://doi.org/
+10.1016/j.micron.2022.103304
+[10] Rakita, Y., Hart, J.L., Das, P.P., Shahrezaei,
+S., Foley, D.L., Mathaudhu, S.N., Nicolopou-
+los,
+S.,
+Taheri,
+M.L.,
+Billinge,
+S.J.L.:
+Mapping
+structural
+heterogeneity
+at
+the
+nanoscale with scanning nano-structure elec-
+tron
+microscopy
+(SNEM).
+Acta
+Mater.
+242, 118426 (2023) https://doi.org/10.1016/
+j.actamat.2022.118426
+[11] Pidaparthy, S., Ni, H., Hou, H., Abraham,
+D.P., Zuo, J.-M.: Fluctuation cepstral scan-
+ning transmission electron microscopy of
+mixed-phase amorphous materials. Ultrami-
+croscopy 248, 113718 (2023) https://doi.org/
+10.1016/j.ultramic.2023.113718
+[12] Peters, J.J.P., Mullarkey, T., Hedley, E.,
+M¨uller, K.H., Porter, A., Mostaed, A., Jones,
+L.: Electron counting detectors in scan-
+ning transmission electron microscopy via
+hardware signal processing. Nat. Commun.
+14,
+5184
+(2023)
+https://doi.org/10.1038/
+s41467-023-40875-w
+[13] Chatterjee, D., Huang, S., Gu, K., Ju, J., Yu,
+J., Bock, H., Yu, L., Ediger, M.D., Voyles,
+P.M.: Using 4D STEM to probe mesoscale
+order in molecular glass films prepared by
+physical vapor deposition. Nano Lett. 23(5),
+2009–2015 (2023) https://doi.org/10.1021/
+acs.nanolett.3c00197
+[14] Robinson, A.W., Moshtaghpour, A., Wells,
+J., Nicholls, D., Chi, M., MacLaren, I., Kirk-
+land, A.I., Browning, N.D.: High-speed 4-
+dimensional scanning transmission electron
+microscopy using compressive sensing tech-
+niques. J. Microsc. 295(3), 278–286 (2024)
+https://doi.org/10.1111/jmi.13315
+[15] Mukherjee,
+D.,
+Roccapriore,
+K.M.,
+Al-
+Najjar,
+A.,
+Ghosh,
+A.,
+Hinkle,
+J.D.,
+Lupini,
+A.R.,
+Vasudevan,
+R.K.,
+Kalinin,
+S.V.,
+Ovchinnikova,
+O.S.,
+Ziatdinov,
+M.A.,
+Rao,
+N.S.:
+A
+roadmap
+for
+edge
+computing enabled automated multidimen-
+sional
+transmission
+electron
+microscopy.
+Microsc. Today 30(6), 10–19 (2022) https:
+//doi.org/10.1017/S1551929522001286
+[16] Annys, A., Robert, H.L.L., Gholam, S.,
+Hadermann, J., Verbeeck, J.: Removing con-
+straints of 4D-STEM with a framework
+for event-driven acquisition and processing.
+Ultramicroscopy 277, 114206 (2025) https:
+//doi.org/10.1016/j.ultramic.2025.114206
+[17] Ercius, P., Johnson, I.J., Pelz, P., Savitzky,
+B.H., Hughes, L., Brown, H.G., Zeltmann,
+S.E., Hsu, S.-L., Pedroso, C.C.S., Cohen,
+B.E., Ramesh, R., Paul, D., Joseph, J.M.,
+Stezelberger, T., Czarnik, C., Lent, M., Fong,
+E., Ciston, J., Scott, M.C., Ophus, C., Minor,
+A.M., Denes, P.: The 4D Camera: An 87
+kHz direct electron detector for scanning/-
+transmission electron microscopy. Microsc.
+Microanal. 30(5), 903–912 (2024) https://
+doi.org/10.1093/mam/ozae086
+[18] Liu, M., Mao, Z., Liu, Z., Guo, J., Zhang,
+H., Huang, X., Cheng, C., Ding, J., Hui,
+J., Chu, S., Zeng, X., Xie, Y.: A unified
+preprocessing framework for high-throughput
+15
+
+
+diffraction pattern analysis. npj Comput.
+Mater. 12, 145 (2026) https://doi.org/10.
+1038/s41524-026-01993-3
+[19] Uesugi, F., Koshiya, S., Kikkawa, J., Nagai,
+T., Mitsuishi, K., Kimoto, K.: Non-negative
+matrix factorization for mining big data
+obtained
+using
+four-dimensional
+scanning
+transmission electron microscopy. Ultrami-
+croscopy 221, 113168 (2021) https://doi.org/
+10.1016/j.ultramic.2020.113168
+[20] Shi,
+C.,
+Cao,
+M.C.,
+Rehn,
+S.M.,
+Bae,
+S.-H.,
+Kim,
+J.,
+Jones,
+M.R.,
+Muller,
+D.A.,
+Han,
+Y.:
+Uncovering
+material
+deformations
+via
+machine
+learning
+com-
+bined
+with
+four-dimensional
+scanning
+transmission
+electron
+microscopy.
+npj
+Comput.
+Mater.
+8,
+114
+(2022)
+https:
+//doi.org/10.1038/s41524-022-00793-9
+[21] Kimoto, K., Kikkawa, J., Harano, K., Cretu,
+O., Shibazaki, Y., Uesugi, F.: Unsupervised
+machine learning combined with 4D scan-
+ning transmission electron microscopy for
+bimodal nanostructural analysis. Sci. Rep.
+14,
+2901
+(2024)
+https://doi.org/10.1038/
+s41598-024-53289-5
+[22] Kho, Z., Bridger, A., Butler, K., Duran,
+E.C., Danaie, M., Eggeman, A.S.: On the
+use of clustering workflows for automated
+microstructure segmentation of analytical
+STEM datasets. APL Mater. 13(1), 010901
+(2025) https://doi.org/10.1063/5.0246329
+[23] Kalinin, S.V., Mukherjee, D., Roccapriore,
+K., Blaiszik, B.J., Ghosh, A., Ziatdinov,
+M.A., Al-Najjar, A., Doty, C., Akers, S., Rao,
+N.S., Agar, J.C., Spurgeon, S.R.: Machine
+learning for automated experimentation in
+scanning transmission electron microscopy.
+npj Comput. Mater. 9, 227 (2023) https://
+doi.org/10.1038/s41524-023-01142-0
+[24] Munshi, J., Rakowski, A., Savitzky, B.H.,
+Zeltmann, S.E., Ciston, J., Henderson, M.,
+Cholia, S., Minor, A.M., Chan, M.K.Y.,
+Ophus, C.: Disentangling multiple scattering
+with deep learning: application to strain map-
+ping from electron diffraction patterns. npj
+Comput. Mater. 8, 254 (2022) https://doi.
+org/10.1038/s41524-022-00939-9
+[25] Wang, S., Eldred, T.B., Smith, J.G., Gao, W.:
+AutoDisk: Automated diffraction processing
+and strain mapping in 4D-STEM. Ultrami-
+croscopy 236, 113513 (2022) https://doi.org/
+10.1016/j.ultramic.2022.113513
+[26] Sadri,
+A.,
+Petersen,
+T.C.,
+Terzoudis-
+Lumsden, E.W.C., Esser, B.D., Etheridge,
+J.,
+Findlay,
+S.D.:
+Unsupervised
+deep
+denoising
+for
+four-dimensional
+scanning
+transmission
+electron
+microscopy.
+npj
+Comput.
+Mater.
+10,
+243
+(2024)
+https:
+//doi.org/10.1038/s41524-024-01428-x
+[27] Oxley, M.P., Ziatdinov, M., Dyck, O., Lupini,
+A.R., Vasudevan, R., Kalinin, S.V.: Probing
+atomic-scale symmetry breaking by rotation-
+ally invariant machine learning of multidi-
+mensional electron scattering. npj Comput.
+Mater. 7, 65 (2021) https://doi.org/10.1038/
+s41524-021-00527-3
+[28] Nathani, A., McCray, A.R.C., Liu, Y., Ding,
+H., Kazempoor, P., Xu, S., Ophus, C.,
+Ghamarian, I.: Accelerating electron diffrac-
+tion analysis using graph neural networks
+and attention mechanisms. npj Comput.
+Mater. 12, 56 (2026) https://doi.org/10.
+1038/s41524-025-01927-5
+[29] Peebles,
+W.,
+Xie,
+S.:
+Scalable
+diffu-
+sion
+models
+with
+transformers.
+In:
+2023
+IEEE/CVF
+International
+Confer-
+ence
+on
+Computer
+Vision
+(ICCV),
+pp.
+4172–4182.
+IEEE
+Computer
+Society,
+Los
+Alamitos,
+CA,
+USA
+(2023).
+https:
+//doi.org/10.1109/ICCV51070.2023.00387
+[30] Rombach, R., Blattmann, A., Lorenz, D.,
+Esser, P., Ommer, B.: High-resolution image
+synthesis with latent diffusion models. In:
+2022 IEEE/CVF Conference on Computer
+Vision and Pattern Recognition (CVPR), pp.
+10674–10685. IEEE Computer Society, Los
+Alamitos, CA, USA (2022). https://doi.org/
+10.1109/CVPR52688.2022.01042
+[31] Mo, H., Zhao, G.: RIC-CNN: Rotation-
+invariant
+coordinate
+convolutional
+neural
+network.
+Pattern
+Recognit.
+146,
+109994
+16
+
+
+(2024)
+https://doi.org/10.1016/j.patcog.
+2023.109994
+[32] Savitzky,
+B.H.,
+Zeltmann,
+S.E.,
+Hughes,
+L.A., Brown, H.G., Zhao, S., Pelz, P.M.,
+Pekin,
+T.C.,
+Barnard,
+E.S.,
+Donohue,
+J.,
+DaCosta,
+L.R.,
+Kennedy,
+E.,
+Xie,
+Y., Janish, M.T., Schneider, M.M., Her-
+ring, P., Gopal, C., Anapolsky, A., Dhall,
+R.,
+Bustillo,
+K.C.,
+Ercius,
+P.,
+Scott,
+M.C.,
+Ciston,
+J.,
+Minor,
+A.M.,
+Ophus,
+C.: py4DSTEM: A software package for
+four-dimensional scanning transmission elec-
+tron
+microscopy
+data
+analysis.
+Microsc.
+Microanal.
+27(4),
+712–743
+(2021)
+https:
+//doi.org/10.1017/S1431927621000477
+[33] Dai, J., Qi, H., Xiong, Y., Li, Y., Zhang, G.,
+Hu, H., Wei, Y.: Deformable convolutional
+networks. In: Proceedings of the IEEE Inter-
+national Conference on Computer Vision
+(ICCV), pp. 764–773. IEEE, Piscataway, NJ,
+USA (2017). https://doi.org/10.1109/ICCV.
+2017.89
+Acknowledgments
+The authors thank the Instrumental Analysis Cen-
+ter of Shanghai Jiao Tong University for the
+support.
+Author contributions
+H.Z. Z.M and Y.X. conceived and designed the
+study. X.H. and S. c. prepared the specimens
+and performed the experimental 4D-STEM acqui-
+sitions. H.Z., M.L. A.Y. conducted and devel-
+oped the model. X.Z. supervised the research and
+contributed to the interpretation of the results.
+Y.G. and Y.X. drafted the paper. X.Z. and Y.X.
+supervised the project. All authors reviewed and
+approved the final paper.
+Funding
+National Natural Science Foundation of China
+grant 12474186
+Competing interests
+Authors declare that they have no competing
+interests.
+17

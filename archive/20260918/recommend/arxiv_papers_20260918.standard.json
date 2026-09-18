@@ -1,0 +1,717 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-18T17:48:25.461811+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 5,
+    "deep_cap": 7,
+    "deep_selected": 5,
+    "quick_candidates": 32,
+    "quick_skim_target": 12,
+    "quick_selected": 12
+  },
+  "deep_dive": [
+    {
+      "id": "2609.14906v1",
+      "source": "arxiv",
+      "title": "Neural-Network Solutions to Real-Space Charge Density and Generalization",
+      "abstract": "The Hohenberg-Kohn theorem establishes that, in principle, the ground state (GS) charge density contains all GS information of a many-electron system, such that all GS observables can be expressed as functionals of the GS charge density. Conventional Kohn-Sham density functional theory requires iterative solution of the self-consistent-field equations at substantial computational cost, motivating the development of deep learning surrogates for electronic structure calculations and, in turn, accelerating computer-aided materials design. Here, we propose \\textbf{AIDEN}, an \\underline{A}tomic-\\underline{I}nteraction \\underline{D}ensity \\underline{E}quivariant \\underline{N}etwork for solving real-space charge density. AIDEN separates the element-dependent one-center density from environment-induced density redistribution and represents the latter through complementary atom- and edge-centered tensor correlations. A continuous low-rank Gaussian decoder then reconstructs the density at arbitrary spatial coordinates while reusing atomic encodings independently of the evaluation grid. AIDEN achieves state-of-the-art accuracy on periodic crystal benchmarks while remaining competitive for molecular systems, and further demonstrates zero-shot transferability across several structurally distinct out-of-distribution case studies. Furthermore, AIDEN provides substantially faster inference than both baseline models and full SCF calculations, enabling efficient charge density reconstruction for large-scale electronic structure calculations.",
+      "authors": [
+        "Yuxuan Zeng",
+        "Taoyuze Lv",
+        "Zhicheng Zhong"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.AI"
+      ],
+      "published": "2026-09-14T01:51:52+00:00",
+      "link": "https://arxiv.org/pdf/2609.14906v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "equivariant network surrogate for DFT charge density to accelerate computer-aided materials design",
+      "llm_evidence_cn": "用于 DFT 电荷密度的等变网络替代模型，加速计算机辅助材料设计",
+      "llm_evidence": "用于 DFT 电荷密度的等变网络替代模型，加速计算机辅助材料设计",
+      "canonical_evidence": "用于 DFT 电荷密度的等变网络替代模型，加速计算机辅助材料设计",
+      "llm_tldr_en": "AIDEN is an Atomic-Interaction Density Equivariant Network that solves real-space ground-state charge density by separating element- and structure-dependent parts, offering a fast deep-learning surrogate to accelerate DFT-based materials design.",
+      "llm_tldr_cn": "针对 Kohn-Sham 密度泛函理论需迭代求解自洽场方程、计算代价高昂的问题，作者提出 AIDEN，一种原子相互作用密度等变网络，通过分离元素相关与结构相关成分直接求解实空间基态电荷密度。实验关注其预测精度与跨体系泛化能力，表明该网络可作为电子结构计算的快速替代模型。该工作将等变深度学习引入密度泛函领域，有望加速计算机辅助材料设计。",
+      "llm_tldr": "针对 Kohn-Sham 密度泛函理论需迭代求解自洽场方程、计算代价高昂的问题，作者提出 AIDEN，一种原子相互作用密度等变网络，通过分离元素相关与结构相关成分直接求解实空间基态电荷密度。实验关注其预测精度与跨体系泛化能力，表明该网络可作为电子结构计算的快速替代模型。该工作将等变深度学习引入密度泛函领域，有望加速计算机辅助材料设计。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.17646v1",
+      "source": "arxiv",
+      "title": "Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction",
+      "abstract": "This thesis develops robust and efficient AI frameworks for accelerating crystalline materials discovery by addressing both major stages of the materials-design pipeline: crystal property prediction and crystal structure generation. Motivated by the high computational cost of Density Functional Theory (DFT) and the limited availability of labeled materials data, the thesis explores graph representation learning, pretraining, multimodal learning, and generative modeling for scalable materials design.   For property prediction, the thesis first introduces CrysXPP, which learns transferable crystal representations through unsupervised graph autoencoding, reducing dependence on large property-labeled datasets. It then proposes CrysGNN, a large-scale self-supervised graph pretraining framework that captures atomic connectivity, chemical attributes, and global structural information and transfers this knowledge to downstream property predictors through knowledge distillation. CrysMMNet further enriches crystal representations by jointly modeling graph structure and textual descriptions, thereby incorporating both local chemical and global structural knowledge.   For crystal generation, the thesis introduces TGDMat, a text-guided joint diffusion framework that jointly models lattice parameters, atomic types, and atomic coordinates while incorporating textual structural knowledge during denoising. This enables the generation of more valid and stable periodic materials while also supporting conditional generation from natural-language descriptions.   Overall, the thesis establishes a unified AI-based framework for data-efficient property prediction and controllable crystal generation, demonstrating how graph learning, multimodal representations, and generative models can reduce computational cost and improve the scalability of materials",
+      "authors": [
+        "Kishalay Das"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.LG"
+      ],
+      "published": "2026-09-15T15:15:21+00:00",
+      "link": "https://arxiv.org/pdf/2609.17646v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "graph representation learning and generative AI for scalable crystal materials design",
+      "llm_evidence_cn": "面向晶体材料设计的图表示学习与生成式AI框架",
+      "llm_evidence": "面向晶体材料设计的图表示学习与生成式AI框架",
+      "canonical_evidence": "面向晶体材料设计的图表示学习与生成式AI框架",
+      "llm_tldr_en": "This thesis develops robust AI frameworks for scalable crystalline materials discovery, using graph representation learning, pretraining, multimodal learning and generative modeling for property prediction and structure generation.",
+      "llm_tldr_cn": "密度泛函理论计算代价高且带标签材料数据稀缺，制约晶体材料的高效发现。该论文构建稳健高效的AI框架，结合图表示学习、预训练、多模态学习与生成建模，覆盖晶体性质预测与结构生成两大阶段。其中CrysXPP通过无监督图自编码学习可迁移晶体表示，CrysGNN等模型减少了对大规模标注数据的依赖。工作为可扩展的晶体材料设计与性质预测提供了统一的AI方法体系，是AI用于材料发现与模拟的核心研究。",
+      "llm_tldr": "密度泛函理论计算代价高且带标签材料数据稀缺，制约晶体材料的高效发现。该论文构建稳健高效的AI框架，结合图表示学习、预训练、多模态学习与生成建模，覆盖晶体性质预测与结构生成两大阶段。其中CrysXPP通过无监督图自编码学习可迁移晶体表示，CrysGNN等模型减少了对大规模标注数据的依赖。工作为可扩展的晶体材料设计与性质预测提供了统一的AI方法体系，是AI用于材料发现与模拟的核心研究。",
+      "llm_tags": [
+        "query:ai-materials:composite"
+      ],
+      "matched_query_tag": "query:ai-materials:composite",
+      "matched_query_text": "Papers central to AI for Materials：重点追踪 GNN/等变网络、机器学习原子间势、MACE 及 AI 加速 DFT/MD 原子模拟。, especially work that connects or combines: a; geometric deep learning for molecules and materials; machine learning interatomic potentials for molecular dynamics and DFT; foundation models for materials and atomistic systems; artificial intelligence methods for materials discovery and simulation; machine learning accelerated molecular dynamics simulations; machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics; equivariant graph neural networks for materials modeling, energy prediction, and force prediction; MACE, NequIP, CHGNet and related machine learning potentials for materials simulation.",
+      "matched_requirement_id": "req-composite-ai-materials",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.15938v1",
+      "source": "arxiv",
+      "title": "HypoEvolve: Genetic Algorithms Enable Multi-Agent LLMs to Discover Scientific Hypotheses",
+      "abstract": "Scientific agents contribute to hypothesis discovery by synthesizing evidence, assessing proposals, and developing new explanations. Recent systems combine scientific agents with evolutionary search through critique, comparison, and revision. However, how different forms of agent collaboration affect hypothesis quality remains an open question. Answering this question requires separating the effects of agents' scientific capabilities from those of their collaboration. A framework must therefore preserve agents' scientific roles and support rules for combining, revising, and retaining hypotheses. Building on this view, we introduce HypoEvolve, which makes collaboration explicit through successive updates to a hypothesis population. Specifically, we propose a generational genetic algorithm to coordinate specialized large language model (LLM) agents that integrate mechanistic arguments, reconsider assumptions, and assess evidence and testability. Each generation specifies how scientific judgments and new proposals reshape the population, making collaboration effects on hypothesis quality directly testable. Moreover, we design our evaluation around scientifically meaningful hypotheses that explain how a proposed intervention could work. Drug repurposing links these explanations to target-level biological claims assessed against external evidence. Specifically, we adapt DepMap and Open Targets into complementary external measures grounded in experimental, genetic, and clinical evidence. Across 34 cancer types, HypoEvolve achieves the highest scores against six baselines on both measures. DepMap selectivity reaches 0.171, versus 0.115 for the strongest baseline. Gains over single-pass generation also generalize to held-out cancer types. HypoEvolve advances a vision of autonomous science in which AI research teams achieve a capacity for discovery beyond that of individual models.",
+      "authors": [
+        "Jieyuan Liu",
+        "Mengzhou Hu",
+        "Jefferson Chen",
+        "JungHo Kong",
+        "Pratibha Jagannatha",
+        "Yiming Gao",
+        "Dexter Pratt",
+        "Hsin-Yuan Lee",
+        "Zhiting Hu",
+        "Trey Ideker",
+        "Wei Wang",
+        "Eric P. Xing",
+        "Zhen Wang"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.CE",
+        "cs.MA",
+        "cs.NE"
+      ],
+      "published": "2026-09-14T17:44:49+00:00",
+      "link": "https://arxiv.org/pdf/2609.15938v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "multi-agent LLMs discovering scientific hypotheses via evolutionary search",
+      "llm_evidence_cn": "多智能体LLM通过进化搜索发现科学假设",
+      "llm_evidence": "多智能体LLM通过进化搜索发现科学假设",
+      "canonical_evidence": "多智能体LLM通过进化搜索发现科学假设",
+      "llm_tldr_en": "How different forms of agent collaboration affect hypothesis quality remains open. HypoEvolve makes collaboration explicit through genetic-algorithm updates to a hypothesis population, preserving agents' scientific roles and combining, revising, and retaining hypotheses.",
+      "llm_tldr_cn": "科学智能体通过综合证据、评估提案来发现假设，但不同智能体协作形式如何影响假设质量尚不明确，需要分离科学能力与协作方式的作用。本文提出HypoEvolve，借助遗传算法对假设种群进行连续更新，显式建模协作规则并保留各智能体的科学角色。实验表明显式的协作与进化搜索可提升科学假设的发现质量。该工作为多智能体科学假设发现提供了可分解、可优化的协作框架。",
+      "llm_tldr": "科学智能体通过综合证据、评估提案来发现假设，但不同智能体协作形式如何影响假设质量尚不明确，需要分离科学能力与协作方式的作用。本文提出HypoEvolve，借助遗传算法对假设种群进行连续更新，显式建模协作规则并保留各智能体的科学角色。实验表明显式的协作与进化搜索可提升科学假设的发现质量。该工作为多智能体科学假设发现提供了可分解、可优化的协作框架。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "automated hypothesis generation",
+      "matched_requirement_id": "req-12",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.19419v1",
+      "source": "arxiv",
+      "title": "Agentic AI for Density-Functional Development: Revisiting r2SCAN",
+      "abstract": "We demonstrate physics-constrained agentic development of a meta-generalized gradient approximation (meta-GGA) functional using a large language model (LLM) to assist the search and optimization of a band-gap-oriented revision of r2SCAN. No real bonded systems were fitted, preserving r2SCAN's nonempirical philosophy. Across the finalist set, band gaps and several molecular subsets improve relative to r2SCAN; the top finalist, r2SCAN+, reduces the band-gap MAE on a benchmark comprising 24 solids from 1.26 to 0.96 eV and the aggregate MAE on 329 molecular properties from 4.79 to 4.42 kcal/mol. We first curated 78 exchange and 90 correlation candidate correction terms from r2SCAN's dimensionless ingredients, spanning polynomial terms through third degree, exponentials, exponentially damped products, and ratios. Allowing each candidate to combine one to three correction terms from the exchange catalog, the correlation catalog, or both yields about 8 x 10^5 distinct forms, making exhaustive high-throughput screening impractical. We defined the search criteria for the LLM agent using r2SCAN's exact constraints, physical norms, and the targeted iso-orbital derivative response. The agent then combined these criteria with its pretrained knowledge and accumulated search feedback to propose and refine sparse forms, prioritizing terms tied to the iso-orbital response; a second LLM critic screened proposals before deterministic verification. Compared with uniform random search, the workflow learned from prior evaluations, incurred far fewer downstream rejections (0.6% versus 24.6%), and located stronger high-response candidates: 51 agentic candidates exceeded the best random-search response of 1.263, with the overall best reaching 1.331. These results show that agentic search can support density-functional development when flexible hypothesis generation is coupled to automated physical verification.",
+      "authors": [
+        "Santosh Adhikari",
+        "Kelsey A. Parker",
+        "Etinosa Osaro",
+        "Swagata Roy",
+        "Dario Rocca"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-16T20:54:42+00:00",
+      "link": "https://arxiv.org/pdf/2609.19419v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM-assisted agentic development of a DFT functional",
+      "llm_evidence_cn": "LLM辅助的DFT泛函智能体开发",
+      "llm_evidence": "LLM辅助的DFT泛函智能体开发",
+      "canonical_evidence": "LLM辅助的DFT泛函智能体开发",
+      "llm_tldr_en": "This paper demonstrates physics-constrained agentic development of a meta-GGA functional, using an LLM to search and optimize a band-gap-oriented revision of r2SCAN without fitting real bonded systems, yielding r2SCAN+ improvements.",
+      "llm_tldr_cn": "传统密度泛函开发依赖经验拟合，难以兼顾非经验性与带隙等性质精度。本文展示物理约束下的智能体式泛函开发，用大语言模型辅助搜索与优化面向带隙的 r2SCAN 修正，不拟合真实成键体系以保持非经验哲学。从78个交换与90个相关候选修正项中筛选，最优者 r2SCAN+ 将24种固体的带隙MAE从1.26降至0.96 eV，并改善分子性质，表明LLM智能体可有效辅助DFT泛函开发。",
+      "llm_tldr": "传统密度泛函开发依赖经验拟合，难以兼顾非经验性与带隙等性质精度。本文展示物理约束下的智能体式泛函开发，用大语言模型辅助搜索与优化面向带隙的 r2SCAN 修正，不拟合真实成键体系以保持非经验哲学。从78个交换与90个相关候选修正项中筛选，最优者 r2SCAN+ 将24种固体的带隙MAE从1.26降至0.96 eV，并改善分子性质，表明LLM智能体可有效辅助DFT泛函开发。",
+      "llm_tags": [
+        "query:ai-materials:composite"
+      ],
+      "matched_query_tag": "query:ai-materials:composite",
+      "matched_query_text": "Papers central to AI for Materials：重点追踪 GNN/等变网络、机器学习原子间势、MACE 及 AI 加速 DFT/MD 原子模拟。, especially work that connects or combines: a; geometric deep learning for molecules and materials; machine learning interatomic potentials for molecular dynamics and DFT; foundation models for materials and atomistic systems; artificial intelligence methods for materials discovery and simulation; machine learning accelerated molecular dynamics simulations; machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics; equivariant graph neural networks for materials modeling, energy prediction, and force prediction; MACE, NequIP, CHGNet and related machine learning potentials for materials simulation.",
+      "matched_requirement_id": "req-composite-ai-materials",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.17846v1",
+      "source": "arxiv",
+      "title": "PrimeScientist: Strategic Allocation of Research Effort in Autonomous Research",
+      "abstract": "Autonomous research agents aim to automate scientific workflows, from proposing ideas to conducting experiments and analyzing results. Yet current AI and research agents can propose more directions than available resources allow them to pursue. Moreover, each attempt could consume substantial resources, requiring agents to reconsider how to invest in subsequent research. Thus, deciding how to invest research effort strategically should be a defining capability of autonomous research agents. Accordingly, we introduce PrimeScientist, which jointly determines research direction and resource investment across successive research attempts. Specifically, we formulate this challenge of strategic research effort allocation as a sequential decision problem where remaining resources should explicitly guide the research policy. We first introduce an executable plan tree that preserves competing plans and their outcomes across attempts. Building on this representation, we propose an adaptive MCTS-based allocation policy that balances exploration and exploitation using experimental feedback and remaining resources. Comprehensive evaluations across AI research, systems and code optimization, and machine learning engineering show that strategic allocation improves research quality and sample efficiency together. Across 12 AI research tasks, PrimeScientist improves average reward by 10.3% with 50.6% fewer research attempts than AutoResearch under the same resource budget. We believe making research effort allocation an explicit optimization target establishes effective resource use as a core research capability for autonomous agents to drive scientific breakthroughs at scale.",
+      "authors": [
+        "Xinle Yu",
+        "Fan Bai",
+        "Kaiser Sun",
+        "Hengshuo Miao",
+        "Abhay Anand",
+        "Zhongyan Luo",
+        "Kun Zhou",
+        "Zhen Wang"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI",
+        "cs.LG"
+      ],
+      "published": "2026-09-15T21:04:56+00:00",
+      "link": "https://arxiv.org/pdf/2609.17846v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "autonomous research agent that decides research direction and resource investment across successive attempts",
+      "llm_evidence_cn": "自主科研智能体在连续研究尝试中决定研究方向与资源投入",
+      "llm_evidence": "自主科研智能体在连续研究尝试中决定研究方向与资源投入",
+      "canonical_evidence": "自主科研智能体在连续研究尝试中决定研究方向与资源投入",
+      "llm_tldr_en": "Autonomous research agents propose more directions than resources allow. PrimeScientist formulates strategic research effort allocation as a sequential decision problem, jointly choosing research direction and resource investment across successive attempts to spend limited budget wisely.",
+      "llm_tldr_cn": "自主科研智能体能够提出远超资源所能支撑的研究方向，且每次尝试消耗巨大，如何在连续尝试中战略性分配科研投入成为关键能力。作者提出PrimeScientist，将研究方向选择与资源投入联合建模为序贯决策问题，在多次研究尝试中动态权衡投入与方向。该方法让智能体根据已有结果重新规划后续研究，从而在有限预算下更高效地推进自主科学发现。",
+      "llm_tldr": "自主科研智能体能够提出远超资源所能支撑的研究方向，且每次尝试消耗巨大，如何在连续尝试中战略性分配科研投入成为关键能力。作者提出PrimeScientist，将研究方向选择与资源投入联合建模为序贯决策问题，在多次研究尝试中动态权衡投入与方向。该方法让智能体根据已有结果重新规划后续研究，从而在有限预算下更高效地推进自主科学发现。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.10509v1",
+      "source": "arxiv",
+      "title": "Avatar: Toward Autonomous End-to-End Orchestration of Scientific Workflows using LLMs",
+      "abstract": "Scientific workflow management (WMSs) systems automate execution, yet orchestrate using fixed, hand-tuned rules. LLM agents promise more autonomous orchestration, but it remains unclear where to introduce agentic reasoning, how to bound its risk, and when it actually helps. We present Avatar, an actor-based architecture comprising an orchestrator, an executor, and a provenance monitor. Each actor's decision policy is pluggable (rule-based or LLM-backed) via a single adapter-validated action catalog, so conventional and agentic control run on the same core across different WMSs. We present an implementation using the Academy framework and evaluate Avatar across three workloads. We observe that Avatar's rule mode reproduces native execution, with a single unchanged core running all three. Moreover, LLM-backed Avatar reports a reduction of compute wastage by $55\\%$ and cuts GPU-busy time by $40\\%$. Overall, we envision Avatar as a step toward workflow systems that reason about their own orchestration rather than follow pre-fixed rules.",
+      "authors": [
+        "Suman Raj",
+        "Hai Duc Nguyen",
+        "Haochen Pan",
+        "Ryan Chard",
+        "Kyle Chard",
+        "Ian Foster"
+      ],
+      "primary_category": "cs.DC",
+      "categories": [
+        "cs.DC",
+        "cs.MA"
+      ],
+      "published": "2026-09-09T17:45:36+00:00",
+      "link": "https://arxiv.org/pdf/2609.10509v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM agents autonomously orchestrating end-to-end scientific workflows",
+      "llm_evidence_cn": "LLM 智能体自主编排端到端科学工作流",
+      "llm_evidence": "LLM 智能体自主编排端到端科学工作流",
+      "canonical_evidence": "LLM 智能体自主编排端到端科学工作流",
+      "llm_tldr_en": "Avatar is an actor-based architecture with orchestrator, executor, and provenance monitor that lets LLM agents autonomously orchestrate scientific workflows, with pluggable rule-based or LLM-backed decision policies.",
+      "llm_tldr_cn": "科学工作流管理系统虽能自动执行任务，但编排依赖固定的人工规则，LLM 智能体的引入位置与风险边界尚不明确。本文提出 Avatar，一种由编排器、执行器与溯源监视器组成的演员式架构，各角色的决策策略可通过统一动作目录在规则与 LLM 之间插拔。系统基于 Academy 框架实现，并在三类工作负载上评测。结果显示其规则模式可复现原生执行，而智能体模式在合适场景下带来增益，为自主科学工作流编排提供了可控方案。",
+      "llm_tldr": "科学工作流管理系统虽能自动执行任务，但编排依赖固定的人工规则，LLM 智能体的引入位置与风险边界尚不明确。本文提出 Avatar，一种由编排器、执行器与溯源监视器组成的演员式架构，各角色的决策策略可通过统一动作目录在规则与 LLM 之间插拔。系统基于 Academy 框架实现，并在三类工作负载上评测。结果显示其规则模式可复现原生执行，而智能体模式在合适场景下带来增益，为自主科学工作流编排提供了可控方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
+      "matched_requirement_id": "req-18",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.12438v1",
+      "source": "arxiv",
+      "title": "ForkSCOPE: Charting the Agentic Garden of Forking Paths",
+      "abstract": "Even with a fixed dataset and research question, data analysis involves many defensible decisions. Understanding how these choices influence the results is scientifically important but remains challenging. Crowdsourcing and agentic AI can generate hundreds of end-to-end analyses, but scaling generation alone can create a processing bottleneck and an analytic ``black hole.'' A common workaround is to impose a shared fixed decision taxonomy, which can limit insight and understate uncertainty. We present ForkSCOPE, a human-AI collaboration framework that induces structure bottom-up from the code corpus of end-to-end analyses, without a taxonomy fixed before or after generation, so the organization and evaluation of the garden can scale with the corpus. ForkSCOPE surfaces the charted garden of forking paths through a human-AI collaboration pipeline and an evidence-linked interactive viewer for steering and verification: it spotlights organically identified forks and structures and produces a derived taxonomy and decision map compatible with existing multiverse tools.",
+      "authors": [
+        "Arjun Balaji",
+        "Batuhan Duru Yeltekin",
+        "Tian Zheng"
+      ],
+      "primary_category": "cs.HC",
+      "categories": [
+        "cs.HC",
+        "stat.AP"
+      ],
+      "published": "2026-09-11T04:58:23+00:00",
+      "link": "https://arxiv.org/pdf/2609.12438v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "agentic AI generates end-to-end data analyses",
+      "llm_evidence_cn": "智能体生成端到端数据分析",
+      "llm_evidence": "智能体生成端到端数据分析",
+      "canonical_evidence": "智能体生成端到端数据分析",
+      "llm_tldr_en": "ForkSCOPE is a human-AI framework that induces decision structure bottom-up from code corpora of end-to-end analyses, avoiding fixed taxonomies so organization and evaluation scale with the corpus.",
+      "llm_tldr_cn": "即便数据集和研究问题固定，数据分析仍涉及大量可辩护的决策，而众包与智能体生成的大量端到端分析会造成处理瓶颈。作者提出ForkSCOPE人机协作框架，从分析代码语料中自下而上地归纳决策结构，无需预设固定分类体系。该方法使分叉路径花园的组织与评估可随语料规模扩展，为理解分析选择对结果的影响提供了可扩展方案。",
+      "llm_tldr": "即便数据集和研究问题固定，数据分析仍涉及大量可辩护的决策，而众包与智能体生成的大量端到端分析会造成处理瓶颈。作者提出ForkSCOPE人机协作框架，从分析代码语料中自下而上地归纳决策结构，无需预设固定分类体系。该方法使分叉路径花园的组织与评估可随语料规模扩展，为理解分析选择对结果的影响提供了可扩展方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.13139v1",
+      "source": "arxiv",
+      "title": "RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals",
+      "abstract": "Screened hybrid functionals such as HSE06 improve the description of band gaps, charge localization, and redox energetics relative to semilocal approximations, but their explicit Hartree-Fock exchange term is computationally costly for large, periodic systems, especially in plane-wave basis set calculations. Here we present RS-CIDER, a machine-learned non-local exchange functional that approximates the short-range Hartree-Fock exchange term in HSE06 by explicitly fitting both ground-state energies and single-particle energy levels. RS-CIDER combines scale-invariant semilocal and non-local density descriptors and can be evaluated self-consistently without explicitly applying the short-range Hartree-Fock exchange operator. RS-CIDER shows close agreement with HSE06 for molecular reaction energies and solid-state band gaps. Further tests across distinct materials show agreement between RS-CIDER and HSE06 for local magnetism, Cu-O phase competition, polaron localization, and neutral-defect energetics. For an Fe olivine, chemistry-specific fine-tuning recovers the HSE06 Li intercalation voltage. A timing benchmark shows that RS-CIDER reduces the measured per-SCF-step wall time by more than an order of magnitude relative to HSE06. Together, these molecular and solid-state results establish RS-CIDER as an efficient self-consistent machine-learned surrogate for HSE06.",
+      "authors": [
+        "Zhuotao Jin",
+        "Mohamed S. Abdallah",
+        "Boris Kozinsky",
+        "Kyle Bystrom"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-11T17:57:35+00:00",
+      "link": "https://arxiv.org/pdf/2609.13139v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "machine-learned non-local exchange functional approximating hybrid DFT",
+      "llm_evidence_cn": "机器学习非局域交换泛函近似杂化DFT",
+      "llm_evidence": "机器学习非局域交换泛函近似杂化DFT",
+      "canonical_evidence": "机器学习非局域交换泛函近似杂化DFT",
+      "llm_tldr_en": "Screened hybrid functionals like HSE06 are accurate but costly due to explicit exact exchange. RS-CIDER is a machine-learned non-local exchange functional that reproduces HSE06 energies and levels self-consistently in periodic systems.",
+      "llm_tldr_cn": "HSE06等屏蔽杂化泛函能更准确描述带隙、电荷局域与氧化还原能，但显式Hartree-Fock交换项对大规模周期体系尤其是平面波基组计算代价高昂。本文提出RS-CIDER，一种机器学习非局域交换泛函，通过同时拟合基态能量与单粒子能级来近似短程交换项。它结合尺度不变的半局域与非局域密度描述符，可自洽求解而无需显式应用短程交换算符，为大规模周期体系提供低成本近似杂化泛函的方案。",
+      "llm_tldr": "HSE06等屏蔽杂化泛函能更准确描述带隙、电荷局域与氧化还原能，但显式Hartree-Fock交换项对大规模周期体系尤其是平面波基组计算代价高昂。本文提出RS-CIDER，一种机器学习非局域交换泛函，通过同时拟合基态能量与单粒子能级来近似短程交换项。它结合尺度不变的半局域与非局域密度描述符，可自洽求解而无需显式应用短程交换算符，为大规模周期体系提供低成本近似杂化泛函的方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.12616v1",
+      "source": "arxiv",
+      "title": "Fast and Accurate Excitation Energies from Density Matrix Renormalization Group Calculations Improved by Machine Learning",
+      "abstract": "An estimation of optoelectronic properties is a crucial necessity and an ongoing challenge in modern functional material science. This involves accurate accessing of ground and excited states in systems with complex electronic structure that are often too computationally expensive for accurate many-body methods. Building on our previous work on ground states [J. Phys. Chem. Lett. 2025, 16, 3295-3301], we present an efficient and cost-effective approach for evaluating electronic excitations in functional materials, combining the density matrix renormalization group method as a complete active space solver with machine learning techniques. We demonstrate its performance on π-electron-correlated systems, namely polycyclic aromatic compounds. The transferability and effectiveness of the derived machine learning model are demonstrated on a number of challenging examples with up to 34 π-electrons.",
+      "authors": [
+        "Pavlo Golub",
+        "Libor Veis"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-11T09:14:07+00:00",
+      "link": "https://arxiv.org/pdf/2609.12616v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "machine learning combined with DMRG for materials electronic excitations",
+      "llm_evidence_cn": "机器学习结合DMRG计算材料电子激发",
+      "llm_evidence": "机器学习结合DMRG计算材料电子激发",
+      "canonical_evidence": "机器学习结合DMRG计算材料电子激发",
+      "llm_tldr_en": "Accurate excited states in strongly correlated materials are expensive for many-body methods. Combining DMRG as a complete active space solver with machine learning yields fast, accurate excitation energies for pi-correlated systems.",
+      "llm_tldr_cn": "功能材料的光电性质依赖对基态与激发态的精确刻画，但复杂电子结构体系对精确多体方法而言计算代价过高。该工作将密度矩阵重正化群作为完整活性空间求解器，并引入机器学习技术来估计电子激发，从而以较低成本获得激发能。在π电子关联体系上的结果表明该方法兼顾速度与精度，为功能材料光电性质的高效计算提供了可行路线。",
+      "llm_tldr": "功能材料的光电性质依赖对基态与激发态的精确刻画，但复杂电子结构体系对精确多体方法而言计算代价过高。该工作将密度矩阵重正化群作为完整活性空间求解器，并引入机器学习技术来估计电子激发，从而以较低成本获得激发能。在π电子关联体系上的结果表明该方法兼顾速度与精度，为功能材料光电性质的高效计算提供了可行路线。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.13437v1",
+      "source": "arxiv",
+      "title": "LabAgent: Customize Any Research Hubs for Scientific Discoveries Using AI Agents",
+      "abstract": "Scientific research is a continuous process that emphasizes inheritance. Methods developed by predecessors are often expanded upon by new researchers to explore more novel and in-depth scientific questions. However, the change of lab staff, such as student graduation, leads to a lack of personnel capable of replicating methods. Methods that have been developed with significant effort and resources cannot be continued. To address these limitations, we propose LabAgent, a reproduce and discovery harness tailored for a lab's continuous work. LabAgent employs two mechanisms to guarantee that all skills can be executed and verified and to record the corrective methods and experiences, allowing for direct correction or avoidance of similar errors. We applied LabAgent to drug property prediction, biomedical problem analysis, protein variant effect prediction, and statistical genetics in life science domains. LabAgent ranks first over commercial generalist agents in every domain, and demonstrates accurate reproduction of a published figure. Overall, these results demonstrate that LabAgent can effectively integrate and reasonably expand laboratory knowledge.",
+      "authors": [
+        "Lei Liu",
+        "Yikun Zhang",
+        "Jialin Chen",
+        "Wanjia Zhao",
+        "Rex Ying",
+        "Wengong Jin",
+        "Hua Xu",
+        "James Zou",
+        "Tianyu Liu",
+        "Hongyu Zhao"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "q-bio.BM"
+      ],
+      "published": "2026-09-11T18:53:18+00:00",
+      "link": "https://arxiv.org/pdf/2609.13437v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "AI agent harness for continuous scientific discovery",
+      "llm_evidence_cn": "面向持续科学发现的AI智能体框架",
+      "llm_evidence": "面向持续科学发现的AI智能体框架",
+      "canonical_evidence": "面向持续科学发现的AI智能体框架",
+      "llm_tldr_en": "LabAgent is a research agent harness that reproduces and verifies lab skills and records corrective experience so that scientific methods can be inherited and continued across personnel changes.",
+      "llm_tldr_cn": "针对实验室人员更替导致已开发方法难以复现与延续的问题，作者提出LabAgent这一面向科研延续性的复现与发现框架。该框架通过两种机制保证所有技能可被执行与验证，并记录纠错方法与经验，从而直接修正或规避类似错误。工作强调科研的继承性，使智能体能够在实验室场景中自主复用既有方法并支持新发现，为研究型智能体的长期运行提供了工程化方案。",
+      "llm_tldr": "针对实验室人员更替导致已开发方法难以复现与延续的问题，作者提出LabAgent这一面向科研延续性的复现与发现框架。该框架通过两种机制保证所有技能可被执行与验证，并记录纠错方法与经验，从而直接修正或规避类似错误。工作强调科研的继承性，使智能体能够在实验室场景中自主复用既有方法并支持新发现，为研究型智能体的长期运行提供了工程化方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.13468v1",
+      "source": "arxiv",
+      "title": "Symmetry- and Property-Aware Crystal Generation with Reinforcement Learning for Inverse Materials Design",
+      "abstract": "The inverse design of crystalline materials ultimately seeks structures with desired physical properties. However, for many functional responses, a favorable numerical value is meaningful only when supported by the symmetry of the underlying crystal. Without the appropriate crystallographic constraints, an apparent response may be ill defined, accidental, or not symmetry protected. Here we introduce SPARC, a symmetry- and property-aware reinforcement learning framework that optimizes physical objectives while preserving the structural conditions required for their realization. We demonstrate SPARC on two complementary tasks. The first targets strong uniaxial dielectric anisotropy, a tensorial response that is well defined only within appropriate crystal classes. The second maximizes the spectroscopic limited maximum efficiency, a scalar device-level objective without a prescribed symmetry class, allowing the framework to identify favorable crystallographic motifs. These results show that symmetry is not merely an additional design constraint, but a physical foundation for generating candidates with meaningful, robust, and realizable functional properties.",
+      "authors": [
+        "Ting-Wei Hsu",
+        "Arun Bansil",
+        "Qimin Yan"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.AI",
+        "physics.comp-ph",
+        "physics.optics"
+      ],
+      "published": "2026-09-11T19:42:19+00:00",
+      "link": "https://arxiv.org/pdf/2609.13468v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "symmetry-aware RL for inverse crystal design",
+      "llm_evidence_cn": "对称性感知强化学习用于晶体逆向设计",
+      "llm_evidence": "对称性感知强化学习用于晶体逆向设计",
+      "canonical_evidence": "对称性感知强化学习用于晶体逆向设计",
+      "llm_tldr_en": "SPARC is a symmetry- and property-aware reinforcement learning framework that optimizes physical objectives for crystalline materials while preserving the crystallographic conditions needed for those responses to be meaningful.",
+      "llm_tldr_cn": "晶体材料的逆向设计追求具有目标物理性质的结构，但许多功能响应只有在合适晶体对称性支撑下才有意义，缺乏晶体学约束时响应可能是偶然或非对称保护的。作者提出SPARC，一个兼顾对称性与性质的强化学习框架，在优化物理目标的同时保持结构条件。在单轴介电各向异性等任务上验证，为对称性约束下的逆向材料设计提供了可行路径。",
+      "llm_tldr": "晶体材料的逆向设计追求具有目标物理性质的结构，但许多功能响应只有在合适晶体对称性支撑下才有意义，缺乏晶体学约束时响应可能是偶然或非对称保护的。作者提出SPARC，一个兼顾对称性与性质的强化学习框架，在优化物理目标的同时保持结构条件。在单轴介电各向异性等任务上验证，为对称性约束下的逆向材料设计提供了可行路径。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.14738v1",
+      "source": "arxiv",
+      "title": "AppliedScientist: Automated Scientific Revision Through Iterative AI Reviewing",
+      "abstract": "Automated reviewing systems are increasingly evaluated based on the quality of the reviews they produce. Yet a review is only useful if acting on it leads to a measurable improvement in the paper. We present AppliedScientist, a closed-loop system that couples an autonomous AI scientist with an AI reviewer, and evaluate it by iteratively revising rejected papers from a range of research subfields. To mirror how human authors build on earlier drafts, the AI scientist has access to its previous versions during revision. To avoid bias from prior judgments, however, each review is generated independently, with the reviewer having no memory of earlier feedback or scores. We compare three revision settings: one initialized with the original venue reviews, one initialized with AI-generated reviews, and autonomous self-revision using the same fixed prompt in every round. Because the reviewer both guides and evaluates the revision, we also assess the human-initialized revisions using Stanford Reviewer as an independent evaluator. Reviewer-guided revision consistently improves more than fixed-prompt self-revision, and Stanford Reviewer also assigns higher scores to later revisions. AppliedScientist resolves 128 of 150 execution-related weaknesses (85.3%), but only 2 of 18 idea-related weaknesses (11.1%), suggesting that iterative revision is effective at improving experiments and implementation, but rarely changes concerns about novelty or significance.",
+      "authors": [
+        "Vidushee Vats",
+        "Karun Sharma",
+        "Shengzhi Li",
+        "Shichao Pei"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-13T18:59:10+00:00",
+      "link": "https://arxiv.org/pdf/2609.14738v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "closed-loop autonomous AI scientist with AI reviewer that iteratively improves scientific manuscripts",
+      "llm_evidence_cn": "自主 AI 科学家与 AI 评审构成闭环，迭代改进科学稿件",
+      "llm_evidence": "自主 AI 科学家与 AI 评审构成闭环，迭代改进科学稿件",
+      "canonical_evidence": "自主 AI 科学家与 AI 评审构成闭环，迭代改进科学稿件",
+      "llm_tldr_en": "AppliedScientist couples an autonomous AI scientist with an AI reviewer in a closed loop, iteratively revising rejected papers while the reviewer stays memory-free, and measures whether acting on reviews yields measurable paper improvement.",
+      "llm_tldr_cn": "现有自动评审系统多以评审文本质量衡量，却忽视据此修改能否真正提升论文。作者提出 AppliedScientist，一个把自主 AI 科学家与独立、无记忆的 AI 评审耦合的闭环系统，让 AI 科学家在修改时可访问自身历史版本，同时避免评审记忆带来的偏见。系统在多个研究子领域的被拒论文上比较三种修改设置，验证迭代 AI 评审可带来可测量的改进。该工作为自主科学写作与闭环迭代改进提供了新范式。",
+      "llm_tldr": "现有自动评审系统多以评审文本质量衡量，却忽视据此修改能否真正提升论文。作者提出 AppliedScientist，一个把自主 AI 科学家与独立、无记忆的 AI 评审耦合的闭环系统，让 AI 科学家在修改时可访问自身历史版本，同时避免评审记忆带来的偏见。系统在多个研究子领域的被拒论文上比较三种修改设置，验证迭代 AI 评审可带来可测量的改进。该工作为自主科学写作与闭环迭代改进提供了新范式。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
+      "matched_requirement_id": "req-18",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.13519v1",
+      "source": "arxiv",
+      "title": "Fraglingo: Molecular Design via Attachment-Aware Autoregressive Fragment Generation",
+      "abstract": "Molecular design is most effective when generation mirrors the edits chemists actually make: extending a scaffold, replacing a substituent, or decorating a scaffold at a specified attachment site while optimizing molecular properties. Fragment-based molecular design naturally supports this workflow, yet existing approaches often separate fragment selection from attachment prediction, first choosing a fragment from a fixed vocabulary and then predicting how it should be connected. This decoupling restricts generation to a closed fragment vocabulary and treats attachment as a separate prediction problem. We introduce Fraglingo, an autoregressive fragment-based molecular generator that jointly models fragment identity and attachment in a continuous latent space. Fraglingo predicts an attachment-aware fragment embedding and retrieves the next fragment through latent-space nearest-neighbor search. To encode attachment context, we introduce a wildcard-anchored readout that represents the growing molecule from the perspective of its active attachment site, enabling the predicted embedding to capture both the molecular context and the required attachment. Because generation operates in a continuous embedding space rather than over fixed fragment identifiers, new fragments can be added to the inference-time vocabulary without retraining, provided their embeddings can be computed by the trained fragment encoder. This retrieval-based formulation provides a unified generation primitive for molecule generation, scaffold generation, scaffold decoration, and molecular optimization. On controlled property-conditional benchmarks, Fraglingo achieves stronger joint property control than comparably trained baselines while maintaining competitive validity, uniqueness, and novelty. Furthermore, Fraglingo generalizes to fragment libraries up to 4x larger than those used during training without retraining.",
+      "authors": [
+        "Thao Nguyen",
+        "Jeonghwan Kim",
+        "Zhenhailong Wang",
+        "Heng Ji"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-11T20:42:04+00:00",
+      "link": "https://arxiv.org/pdf/2609.13519v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "AI-driven fragment-based molecular design and property optimization",
+      "llm_evidence_cn": "基于AI的片段式分子设计与性质优化",
+      "llm_evidence": "基于AI的片段式分子设计与性质优化",
+      "canonical_evidence": "基于AI的片段式分子设计与性质优化",
+      "llm_tldr_en": "Fraglingo is an autoregressive fragment-based molecular generator that jointly models fragment identity and attachment site, overcoming the decoupled selection and closed vocabulary limits of prior fragment design methods.",
+      "llm_tldr_cn": "现有片段式分子设计方法将片段选择与连接位点预测分离，且受限于固定片段词表，难以贴合化学家真实的编辑操作。本文提出 Fraglingo，一种自回归片段生成器，联合建模片段身份与连接方式，支持脚手架延伸、取代基替换与位点装饰。实验表明该模型在性质优化任务上能生成连接合理且性质更优的分子，突破封闭词表限制。该工作为片段式分子设计提供了更灵活统一的生成框架。",
+      "llm_tldr": "现有片段式分子设计方法将片段选择与连接位点预测分离，且受限于固定片段词表，难以贴合化学家真实的编辑操作。本文提出 Fraglingo，一种自回归片段生成器，联合建模片段身份与连接方式，支持脚手架延伸、取代基替换与位点装饰。实验表明该模型在性质优化任务上能生成连接合理且性质更优的分子，突破封闭词表限制。该工作为片段式分子设计提供了更灵活统一的生成框架。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.14846v1",
+      "source": "arxiv",
+      "title": "Prescreening Point Defects in Semiconductors With Machine Learning",
+      "abstract": "High-throughput calculations using density-functional theory (DFT) are commonly used to explore point defects for applications in power electronics and quantum technologies. There is currently a major shift away from these traditional simulation techniques towards machine learning (ML) methods. We explore a class of physics-guided ML models for predicting defect formation energies and zero-phonon lines (ZPL) to identify point defects for quantum applications. The models are specifically targeted for use in a prescreening step for accelerated high-throughput workflows, and are therefore designed to avoid the costly relaxation step typically present with ML interatomic potentials (MLIPs). We compare performance for single and double point defect systems in 4H-SiC with ridge, kernel ridge, and multilayer perceptron (MLP) models using three different descriptors representing the defect systems. For vacancies and substitutions, the optimized models give mean absolute errors (MAEs) of 0.437 eV for the formation energy and 0.202 eV for ZPLs, which is just above the level at which such predictions can be useful even beyond the targeted prescreening, i.e., in some applications they may completely replace the need for costly DFT calculations. For interstitials the MAEs are larger, 1.101 eV for the formation energy and 0.230 eV for the ZPL, which, while still useful for prescreening, will not generally be useful for more detailed characterization. Hence, while the results may be further improved by model design and optimization, the models presented in this work are already useful for prescreening in high-throughput characterization of point defects.",
+      "authors": [
+        "Paul Karlsson",
+        "Joel Davidsson",
+        "Rickard Armiento"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.LG"
+      ],
+      "published": "2026-09-13T23:41:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.14846v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "physics-guided ML for defect prescreening, avoids MLIP relaxation",
+      "llm_evidence_cn": "物理引导机器学习预筛选缺陷，规避MLIP弛豫",
+      "llm_evidence": "物理引导机器学习预筛选缺陷，规避MLIP弛豫",
+      "canonical_evidence": "物理引导机器学习预筛选缺陷，规避MLIP弛豫",
+      "llm_tldr_en": "Physics-guided ML models predict defect formation energies and zero-phonon lines for semiconductor point defects, deliberately avoiding costly MLIP relaxation to serve as a fast prescreening step in high-throughput DFT workflows.",
+      "llm_tldr_cn": "高通量密度泛函理论计算常用于探索半导体点缺陷，但传统模拟成本高昂，机器学习方法正逐渐兴起。作者研究一类物理引导的机器学习模型，用于预测缺陷形成能与零声子线，并专门设计为无需机器学习原子间势中昂贵的弛豫步骤，以服务加速的高通量预筛选流程。研究比较了四类体系中单、双点缺陷的表现，为量子应用相关的缺陷筛选提供高效方案。",
+      "llm_tldr": "高通量密度泛函理论计算常用于探索半导体点缺陷，但传统模拟成本高昂，机器学习方法正逐渐兴起。作者研究一类物理引导的机器学习模型，用于预测缺陷形成能与零声子线，并专门设计为无需机器学习原子间势中昂贵的弛豫步骤，以服务加速的高通量预筛选流程。研究比较了四类体系中单、双点缺陷的表现，为量子应用相关的缺陷筛选提供高效方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.14211v1",
+      "source": "arxiv",
+      "title": "ECAS: An Edge-Controlled Agentic System for Validation-Gated Scientific Application Execution",
+      "abstract": "Scientific applications increasingly rely on high-performance computing (HPC), yet translating a scientist's high-level goal into a correct target-scale execution remains brittle and labor-intensive. Large language model (LLM) agents promise to automate this, but two obstacles remain: granting a cloud-hosted model direct HPC access exposes credentials and execution authority, while withholding it demands continuous human supervision; and one-shot generation cannot adapt when generated artifacts fail in a site-specific HPC environment. We present \\textsc{ECAS}, an \\textbf{E}dge-\\textbf{C}ontrolled \\textbf{A}gentic \\textbf{S}ystem for closed-loop execution of scientific computing campaigns with limited human intervention. \\textsc{ECAS} separates \\emph{reasoning}, \\emph{control}, and \\emph{execution}: a cloud-hosted LLM proposes plans, artifacts, and repairs; a user-controlled edge agent retains credentials, workflow state, and execution authority while enforcing policy and resource constraints; and the HPC system computes. Its core mechanism is \\emph{validation-gated execution}: generated artifacts pass static checks and small-scale validation, failures trigger repairs from sanitized execution feedback, and target-scale execution is permitted only after validation and policy checks pass. \\textsc{ECAS} also draws on an edge-resident library of expert-distilled, site-specific skills that is never disclosed to the cloud. In preliminary experiments with three scientific applications on two production ALCF systems under six injected fault types, closed-loop repair improves application success from 0/6 to 6/6 over one-shot generation, validation gating prevents all three observed target-scale failures, and skill conditioning improves success from 4/6 to 6/6. These results show the feasibility of delegating adaptive reasoning to the cloud while retaining execution control at the edge.",
+      "authors": [
+        "Baixi Sun",
+        "Mingze Xia",
+        "Huihuo Zheng"
+      ],
+      "primary_category": "cs.DC",
+      "categories": [
+        "cs.DC",
+        "cs.AI"
+      ],
+      "published": "2026-09-13T00:41:19+00:00",
+      "link": "https://arxiv.org/pdf/2609.14211v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM agents closing the loop on scientific computing campaigns with tool use and adaptive re-execution",
+      "llm_evidence_cn": "LLM 智能体以工具使用与自适应重执行闭环完成科学计算活动",
+      "llm_evidence": "LLM 智能体以工具使用与自适应重执行闭环完成科学计算活动",
+      "canonical_evidence": "LLM 智能体以工具使用与自适应重执行闭环完成科学计算活动",
+      "llm_tldr_en": "ECAS is an edge-controlled agentic system that lets LLM agents run closed-loop scientific computing campaigns on HPC with limited human intervention, protecting credentials at the edge and adapting when generated artifacts fail.",
+      "llm_tldr_cn": "科学计算日益依赖高性能计算，但把科学家的高层目标转化为正确的大规模执行仍脆弱且费力，LLM 智能体又面临凭证暴露与一次性生成难以适应的问题。作者提出 ECAS，一个边缘控制的智能体系统，在有限人工干预下闭环执行科学计算活动，通过边缘控制保护凭证并允许生成物在失败时自适应重试。系统能在站点特定的 HPC 环境中完成闭环执行。该工作为 LLM 智能体安全、自适应地自动化科学计算提供了可行方案。",
+      "llm_tldr": "科学计算日益依赖高性能计算，但把科学家的高层目标转化为正确的大规模执行仍脆弱且费力，LLM 智能体又面临凭证暴露与一次性生成难以适应的问题。作者提出 ECAS，一个边缘控制的智能体系统，在有限人工干预下闭环执行科学计算活动，通过边缘控制保护凭证并允许生成物在失败时自适应重试。系统能在站点特定的 HPC 环境中完成闭环执行。该工作为 LLM 智能体安全、自适应地自动化科学计算提供了可行方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.15429v1",
+      "source": "arxiv",
+      "title": "Effect of Near-surface Thermal Spikes on Radiation Hardness of Gallium Oxide",
+      "abstract": "Gallium oxide (Ga$_{2}$O$_{3}$) stands out as an extraordinary high radiation-tolerant semiconductor, because its lattice displacements induce polymorph transitions, holding material crystalline instead of leading to amorphization. Meanwhile, under extremely severe irradiation conditions many crystals become amorphous, often starting from surfaces where the translation symmetry breaks. Here, we show that the surface amorphization may prevail over the crystallisation in Ga$_{2}$O$_{3}$, however only if the mass and energy of irradiated ions produce sufficiently dense heat spikes in the immediate vicinity of the free surface. Applying machine-learned molecular dynamics simulations together with experimental broad-beam and focused ion-beam irradiations, we conclude that the presence of the free surface enables asymmetric displacements of Ga and O atoms, leading to a local non-stoichiometry. Consequently, when the affected cascade volume is sufficiently large, this compositional imbalance suppresses recrystallization and promotes amorphization. As such, our results are ready to use for tailoring irradiation conditions to either prevent or induce surface amorphization, depending on the requirements of the intended applications in Ga$_{2}$O$_{3}$ or other compound semiconductors.",
+      "authors": [
+        "Tomás Fernández Bouvier",
+        "Umutcan Bektas",
+        "Alexander Azarov",
+        "Ru He",
+        "Nico Klingner",
+        "René Hübner",
+        "Paul Chekhonin",
+        "Aleksi Leino",
+        "Kai Nordlund",
+        "Javier García Fernández",
+        "Andrej Kuznetsov",
+        "Gregor Hlawacek",
+        "Flyura Djurabekova"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-14T11:55:36+00:00",
+      "link": "https://arxiv.org/pdf/2609.15429v1",
+      "tags": [
+        "keyword:AI-Materials"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "machine-learned molecular dynamics simulations of irradiation-induced surface amorphization",
+      "llm_evidence_cn": "机器学习分子动力学模拟辐照诱导表面非晶化",
+      "llm_evidence": "机器学习分子动力学模拟辐照诱导表面非晶化",
+      "canonical_evidence": "机器学习分子动力学模拟辐照诱导表面非晶化",
+      "llm_tldr_en": "Machine-learned molecular dynamics combined with broad and focused ion-beam experiments reveal that near-surface thermal spikes control whether surface amorphization dominates crystallization in gallium oxide.",
+      "llm_tldr_cn": "氧化镓虽以抗辐照著称，但自由表面在极端辐照下易发生非晶化，其机制缺乏原子尺度理解。本文采用机器学习势驱动的分子动力学模拟，并结合宽束与聚焦离子束辐照实验，系统考察入射离子质量与能量对近表面热尖峰的影响。结果表明，只有在表面附近形成足够密集热尖峰时，表面非晶化才会超过结晶化占据主导。该工作凸显了热尖峰密度在决定辐照诱导表面相变中的关键作用。",
+      "llm_tldr": "氧化镓虽以抗辐照著称，但自由表面在极端辐照下易发生非晶化，其机制缺乏原子尺度理解。本文采用机器学习势驱动的分子动力学模拟，并结合宽束与聚焦离子束辐照实验，系统考察入射离子质量与能量对近表面热尖峰的影响。结果表明，只有在表面附近形成足够密集热尖峰时，表面非晶化才会超过结晶化占据主导。该工作凸显了热尖峰密度在决定辐照诱导表面相变中的关键作用。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.14348v1",
+      "source": "arxiv",
+      "title": "Multi4D: an end-to-end neural network for structural determination at complex material interfaces",
+      "abstract": "Heterogeneous interfaces dictate the performance and degradation of functional materials, making it essential to link local structural variations with macroscopic failure mechanisms to guide future materials design. Yet structural heterogeneity, phase overlap, and local disorder produce highly convoluted diffraction signatures, making extended transition regions difficult to interpret at atomic resolution across large fields of view. Here, we introduce Multi4D, a physics-informed neural network framework for automated multi-component crystallographic identification using four-dimensional scanning transmission electron microscopy (4D-STEM). By combining a latent-space Diffusion Transformer for physics-constrained style translation with a rotation-invariant convolutional neural network for orientation-agnostic classification, this approach translates multi-components diffraction datasets into deterministic crystallographic maps with 98.82% accuracy. In addition, we introduce Diffraction-Inferred Structural Complexity as an information-theoretic entropy metric derived from classifier predictive uncertainty that quantifies local structural ambiguity. We apply Multi4D to generate high-fidelity structural maps of complex superconducting heterostructures, corroded alloy surfaces, and degraded solid-state battery interfaces down to single-nanometer spatial resolution. This framework establishes a statistically robust analytical paradigm for automated microscopy, facilitating both industrial quality control and the data-driven discovery of interfacial design principles.",
+      "authors": [
+        "Haoran Zhang",
+        "Zian Mao",
+        "Shufen Chu",
+        "Xiaoya He",
+        "Yuyan Guan",
+        "Antong Yang",
+        "Mingze Li",
+        "Xiaoqin Zeng",
+        "Yujun Xie"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.CV"
+      ],
+      "published": "2026-09-13T07:12:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.14348v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "physics-informed neural network for automated crystallographic identification of material interfaces",
+      "llm_evidence_cn": "用于材料界面晶体结构自动解析的物理信息神经网络",
+      "llm_evidence": "用于材料界面晶体结构自动解析的物理信息神经网络",
+      "canonical_evidence": "用于材料界面晶体结构自动解析的物理信息神经网络",
+      "llm_tldr_en": "Multi4D is a physics-informed neural network for automated multi-component crystallographic identification from 4D-STEM, combining a latent-space Diffusion Transformer with physics-constrained style translation to resolve complex material interfaces.",
+      "llm_tldr_cn": "论文针对异质界面结构异质性强、相重叠与局部无序导致衍射信号难以在原子尺度解读的问题，提出物理信息神经网络框架Multi4D，利用四维扫描透射电镜实现多组分晶体结构的自动识别。方法将潜空间扩散Transformer与物理约束的风格迁移结合，在大视场内解析扩展过渡区。该工作把AI方法用于材料界面结构解析，有助于连接局部结构与宏观失效机制以指导材料设计。",
+      "llm_tldr": "论文针对异质界面结构异质性强、相重叠与局部无序导致衍射信号难以在原子尺度解读的问题，提出物理信息神经网络框架Multi4D，利用四维扫描透射电镜实现多组分晶体结构的自动识别。方法将潜空间扩散Transformer与物理约束的风格迁移结合，在大视场内解析扩展过渡区。该工作把AI方法用于材料界面结构解析，有助于连接局部结构与宏观失效机制以指导材料设计。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

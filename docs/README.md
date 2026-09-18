@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-09 ~ 2026-09-18</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-18</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 20 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 17 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>8</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>5</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>12</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-18 16:47:25 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-18 17:52:27 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>2026-09-09至09-18共筛出20篇文献（精读8篇、速读12篇），聚焦机器学习原子势与智能体驱动的自主模拟。最值得看的是满分精读《Benchmarking Machine-Learning Interatomic Potentials for Dynamical Stability in Inorganic Semiconductor Nanocrystals: A CdSe Case Study》，以及9分的《El Agente Potente: High-Throughput Agentic Atomistic Simulations》。普通读者可先读这两篇，再顺带浏览速读中的RS-CIDER与自主化学机理发现两篇。</p>
+<p>9月18日日报扫完17篇，精读5篇、速读12篇，高分亮点集中在AI for Science与科学智能体。</p>
+<p>最值得看：神经网络求解实空间电荷密度与泛化（8.0），以及遗传算法驱动多智能体LLM发现科学假设（8.0）。</p>
+<p>普通读者可先精读这两篇，再按兴趣速览Avatar、RS-CIDER、LabAgent等7分工作。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">8 篇</strong>
+    <strong class="dpr-home-dashboard-count">5 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Benchmarking Machine-Learning Interatomic Potentials for Dynamical Stability in Inorganic Semiconductor Nanocrystals: A CdSe Case Study">Benchmarking Machine-Learning Interatomic Potentials for Dynamical Stability in Inorganic Semiconductor Nanocrystals: A CdSe Case Study</span></li><li><span class="dpr-home-dashboard-paper-title" title="El Agente Potente: High-Throughput Agentic Atomistic Simulations">El Agente Potente: High-Throughput Agentic Atomistic Simulations</span></li><li><span class="dpr-home-dashboard-paper-title" title="Neural-Network Solutions to Real-Space Charge Density and Generalization">Neural-Network Solutions to Real-Space Charge Density and Generalization</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Neural-Network Solutions to Real-Space Charge Density and Generalization">Neural-Network Solutions to Real-Space Charge Density and Generalization</span></li><li><span class="dpr-home-dashboard-paper-title" title="HypoEvolve: Genetic Algorithms Enable Multi-Agent LLMs to Discover Scientific Hypotheses">HypoEvolve: Genetic Algorithms Enable Multi-Agent LLMs to Discover Scientific Hypotheses</span></li><li><span class="dpr-home-dashboard-paper-title" title="Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction">Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>6</strong></span><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,9 +96,9 @@
     <strong class="dpr-home-dashboard-count">12 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Autonomous Chemical Mechanistic Discovery through Agentic Reasoning and Validation">Autonomous Chemical Mechanistic Discovery through Agentic Reasoning and Validation</span></li><li><span class="dpr-home-dashboard-paper-title" title="Autonomous Research for Open-Ended Problems: A Case Study on Telecom Ticket Retrieval">Autonomous Research for Open-Ended Problems: A Case Study on Telecom Ticket Retrieval</span></li><li><span class="dpr-home-dashboard-paper-title" title="RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals">RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Avatar: Toward Autonomous End-to-End Orchestration of Scientific Workflows using LLMs">Avatar: Toward Autonomous End-to-End Orchestration of Scientific Workflows using LLMs</span></li><li><span class="dpr-home-dashboard-paper-title" title="RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals">RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals</span></li><li><span class="dpr-home-dashboard-paper-title" title="LabAgent: Customize Any Research Hubs for Scientific Discoveries Using AI Agents">LabAgent: Customize Any Research Hubs for Scientific Discoveries Using AI Agents</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>6</strong></span><span class="dpr-home-dashboard-tag">ar <strong>6</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>7</strong></span><span class="dpr-home-dashboard-tag">ar <strong>5</strong></span></div>
 </section>
 </div>
 
