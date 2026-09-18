@@ -3,7 +3,7 @@ name: daily-paper-reader
 on:
   schedule:
     # - cron: "30 18 * * *" # 北京时间次日 02:30（UTC 18:30）
-    - cron: "0 8 * * *"
+    - cron: "17 7 * * *"
       timezone: "America/Edmonton"
   workflow_dispatch:
     inputs:
