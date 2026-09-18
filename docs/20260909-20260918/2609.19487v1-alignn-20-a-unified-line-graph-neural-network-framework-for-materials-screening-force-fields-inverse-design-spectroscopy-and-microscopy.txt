@@ -1,0 +1,1437 @@
+Title: ALIGNN 2.0: A Unified Line-Graph Neural Network Framework for Materials Screening, Force Fields, Inverse Design, Spectroscopy, and Microscopy
+
+URL Source: https://arxiv.org/pdf/2609.19487v1
+
+Published Time: Fri, 18 Sep 2026 00:22:08 GMT
+
+Number of Pages: 56
+
+Markdown Content:
+# ALIGNN 2.0: A Unified Line-Graph Neural Network Framework for Materials Screening, Force Fields, Inverse Design, Spectroscopy, and Microscopy 
+
+Jaehyung Lee 1, Charles Rhys Campbell 1, Akshaya Ajith 1, Sergei V. Kalinin 3, Christopher Wolverton 4, and Kamal Choudhary 1,2,* 1Department of Materials Science and Engineering, Johns Hopkins University, Baltimore, Maryland 21218, USA 
+
+> 2
+
+Department of Electrical and Computer Engineering, Johns Hopkins University, Baltimore, Maryland 21218, USA 
+
+> 3
+
+Department of Materials Science and Engineering, University of Tennessee, Knoxville, Tennessee 37996, USA 
+
+> 4
+
+Department of Materials Science and Engineering, Northwestern University, Evanston, Illinois 60208, USA 
+
+> *
+
+Corresponding author: kchoudh2@jhu.edu September 18, 2026 
+
+Abstract 
+
+Graph neural networks are central to materials property prediction and machine-learning in-teratomic potentials, yet their reliance on specialized graph libraries hampers portability and reproducibility, and property and force-field models have historically required separate graph pipelines. We present ALIGNN 2.0 , a dependency-free, pure-PyTorch reimplementation of the Atomistic Line Graph Neural Network, with the line graph and its batching built from scratch, running on current-generation accelerators and unifying scalar, spectral, tensorial, per-atom, and force-field prediction behind a single graph, a combination that to our knowledge no ex-isting framework provides. Comparing radius and k-nearest-neighbor (kNN) graphs, the wider kNN graph is more accurate for properties while the smoothly varying radius graph is required for energy-conserving molecular dynamics. On the JARVIS-Leaderboard, ALIGNN 2.0 leads on 26 of 30 single-property benchmarks against the original ALIGNN, with large gains for piezo-electric and dielectric maxima, exfoliation energy, moduli, and superconducting Tc, and extends to densities of states, charges, moments, and elastic, dielectric, and piezoelectric tensors. The LAMMPS- and OpenMM-compatible ALIGNN-FF matches leading universal potentials on the Matbench-Discovery and CHIPS-FF benchmarks at a small fraction of their parameters while scaling to hundred-thousand-atom cells. We further use ALIGNN 2.0 as the denoiser in a con-ditional crystal-diffusion model, where explicit line-graph message passing consistently lowers structural denoising loss. We also show, as work in progress, that an independently diffused, redundant bond-angle state is learnable but does not uniformly improve reconstruction or com-bine additively with the line graph. Finally, from a single relaxed structure the same framework reconstructs infrared, Raman, optical-dielectric, and neutron spectra in agreement with exper-iment and DFT, and drives frozen-phonon electron-microscopy image simulation. Web app: 
+
+https://atomgpt.org/alignn . Code: https://github.com/atomgptlab/alignn .
+
+1arXiv:2609.19487v1 [cond-mat.mtrl-sci] 16 Sep 2026 1 Introduction 
+
+Machine learning has become a routine component of computational materials discovery, provid-ing rapid surrogates for density functional theory (DFT) and, increasingly, interatomic potentials capable of driving molecular dynamics [1]. Graph neural networks (GNNs) have been particularly influential because they operate directly on the atomistic structure, respect its permutation sym-metry, and learn representations that transfer across chemistries; early crystal and molecular GNNs such as CGCNN [2], SchNet [3], and MEGNet [4] established the paradigm, and directional and higher-body message passing subsequently improved it [5]. Among these models, the Atomistic Line Graph Neural Network (ALIGNN) [6] occupies a distinctive place: by augmenting the conven-tional atom graph with a line graph that encodes bond angles, it captures three-body correlations that are essential for many structural, electronic, elastic, and vibrational properties. ALIGNN has been applied successfully across an unusually broad task spectrum, including formation and total energies, electronic band gaps, elastic and dielectric response, thermoelectric descriptors [6], super-conducting critical temperatures [7], and, through ALIGNN-FF [8], energy-force-stress interatomic potentials for molecular dynamics. A number of variants have since built on the line-graph idea, for example incorporating attention over the line graph to reweight angular messages [9], reflecting sustained interest in improving the ALIGNN family. Despite this success, two practical obstacles limit how far such models can be deployed and trusted. The first is a software-engineering problem with scientific consequences. Most high-performing atomistic GNNs, ALIGNN included, have historically been built on specialized graph libraries [10] whose release cadence lags that of the underlying deep-learning frameworks [11] and accelerator toolkits. As a result, published models become progressively harder to install, to run on newer hardware, and ultimately to reproduce; a model that was state of the art at publication time can fail to build only a year or two later when the graph library has not kept pace with the current compiler or driver stack. This fragility sits uncomfortably with the community’s emphasis on reproducibility, and it also complicates the coupling of trained potentials to molecular-dynamics engines where a heavyweight graph runtime becomes an awkward dependency. The second obstacle is conceptual rather than technical. Property prediction and force-field construction have tradition-ally been treated as separate modeling problems, each with its own graph construction, neighbor list, and preprocessing pipeline. This separation duplicates engineering effort, introduces subtle inconsistencies between the graphs used for different tasks, and stands in the way of an interactive workflow in which a single user-supplied structure yields all quantities of interest at once. In this work we address both obstacles with ALIGNN 2.0, a dependency-free, pure-PyTorch reimplementation of ALIGNN. Rather than delegate graph operations to an external library, we implement the atom graph, the angular line graph, the neighbor search, and, critically, the batching of both graphs directly in native PyTorch tensors. The line graph and its batching are the techni-cally demanding part of this exercise as batching a line graph requires consistent offsetting of node and edge indices across structures of different sizes so that angular messages never cross molecular boundaries. Doing this efficiently in vectorized tensor operations, without a bespoke graph run-time, is what makes the dependency-free design practical at training scale. The resulting model runs unmodified on current-generation accelerators, including the newest Blackwell-class GPUs, on which the legacy stack does not build at all, and ALIGNN 2.0 is light enough to embed directly alongside a molecular-dynamics driver. Having removed the library dependency, we exploit the freedom it affords to unify property and force-field modeling behind a single graph construction. From one cached graph we obtain graph-level scalar properties, full spectral outputs such as electronic and phonon densities of states, tensorial responses, per-atom quantities such as atomic charges and magnetic moments, and the 2INPUT 
+
+> Crystal structure (atoms + lattice)
+
+GRAPH CONSTRUCTION   
+
+> native PyTorch, no graph library
+> Atom graph G
+> radius 5 Å, ≤12 neighbours (or kNN 8 Å) · 92-dim CGCNN G→L(G)
+> Line graph L(G)
+> 3-body cutoff 3.5 Å ABCθbond AB bond BC edge: θ
+
+MESSAGE PASSING   
+
+> 4 × ALIGNN layers
+> edge-gated, alternating
+> 4 × GCN layers
+> (atom graph only) Shared representation per-atom →mean pool
+
+OUTPUT HEADS   
+
+> Scalars
+> formation energy, band gap, superconducting critical temperature
+> Spectra & tensors
+> DOS, IR / Raman, dielectric, elastic
+> Per-atom
+> atomic charges, magnetic moments
+> Energy →gradients
+> forces F = −dE/dr, stress (autograd) MD: LAMMPS / OpenMM / ASE
+> Conditional diffusion
+> ALIGNN 2.0 as denoiser
+
+INVERSE DESIGN  
+
+> Crystal structure prediction: fixed composition, diffuse lattice + fractional coordinates autograd
+
+Figure 1: Overview of ALIGNN 2.0. A crystal structure is converted in native PyTorch into an atom graph G and a line graph L(G), whose nodes are the bonds of G and whose edges carry the angle between them. Four edge-gated ALIGNN layers alternate between the two graphs and are followed by four graph convolutions on G alone, producing one shared per-atom representation. The scalar, spectral and energy heads read it after mean pooling while the per-atom heads read it unpooled. Forces and stress follow from a single backward pass of the energy through the interatomic displacement vectors, so the forces are conservative. The same representation conditions a diffusion denoiser that generates structures at fixed composition, closing the inverse-design loop. total energy together with its analytic forces and stress. This “one graph, many outputs” design (Fig. 1) is the organizing principle of the paper. To our knowledge, no existing framework spans this range within a single model. Universal interatomic potentials [12, 13, 14, 15] provide energies, forces, and stresses but not spectral, tensorial, or per-atom targets. Property-prediction models are trained one task at a time and provide no conservative force field, and generative models for structure are separate again. The design also forces the question of “what graph should the single construction use?” We therefore compare head-to-head and under identical training conditions a force-field-compatible radius graph and a wider k-nearest-neighbor (kNN) graph. The comparison is consequential because the two constructions have complementary strengths. First, we find that the kNN graph, with its fixed coordination and wider angular reach, is the more accurate choice for property prediction, but its neighbor list changes discontinuously as atoms move across the k-th-neighbor boundary, producing energy jumps that are incompatible with conservative dynamics. The radius graph, whose neighbor list varies smoothly, is the construction that a force field requires, and we show that it still remains competitive for property prediction while serving both roles. The remainder of the paper reports what this unified, dependency-free model achieves and what it reveals. Using the JARVIS-Leaderboard evaluation protocol [16] and its fixed train, validation, and test splits, we benchmark ALIGNN 2.0 against the original ALIGNN and CGCNN across thirty single-property tasks and a naive statistical baseline, and extend the same architecture to spectral, tensorial, and per-atom targets to demonstrate the generality of the shared graph. We evaluate the ALIGNN-FF force field against pretrained universal potentials (UMA, M3GNet, MACE-MP-0, CHGNet) on the Matbench-Discovery discovery set [17], the CHIPS-FF material-property suite [18], and large-cell inference scaling. Finally, we show that the single framework 3reconstructs a material’s infrared, Raman, optical-dielectric, and inelastic-neutron spectra directly from one relaxed structure, and we find that these results align closely with experiment and DFT with a speedup in computational cost. We also show that the framework couples to frozen-phonon multislice simulation to reach scanning transmission electron microscopy. Because the associated ALIGNN-FF potential is LAMMPS- and OpenMM-compatible [19, 20], the model is immediately usable for large-scale simulation, and its shared graph makes database-scale property screening inexpensive. 
+
+## 2 Results and Discussion 
+
+We first benchmark accuracy on single scalar-property prediction, using the JARVIS DFT-3D database (Table 1) and a range of additional datasets (Table 2). We then show that the same architecture predicts many scalar properties at once, spanning spectra, per-atom quantities, and tensors (Table 3). We turn next to interatomic force fields (Table 4), which we evaluate on the WBM (Wang-Botti-Marques) discovery set, on the CHIPS-FF suite of defect, surface, and interface properties (Table 5), and on inference timing and scaling to large cells (Table 6). Then, ALIGNN 2.0 is integrated as a denoiser into a generative crystal diffusion model, and we benchmark the degree to which angular inductive bias improves model performance on crystal structure prediction. We close the paper with two additional applications: reconstructing vibrational spectra and simulating electron microscopy each from a single structure. 
+
+2.1 Single-property prediction 
+
+We begin with single-property prediction, the numerical results of which can be found in Ta-ble 1. Each row reports the test mean absolute error (MAE) on the JARVIS-Leaderboard fixed splits for two ALIGNN 2.0 graphs, the first on the wider 8 ˚ A kNN graph and the second on the force-field-compatible radius graph (both trained with the improved recipe that adds exponential-moving-average weight averaging), alongside the original pre-2.0 ALIGNN [6] and coNGN [21], a connectivity-optimized line-graph network reported on the JARVIS-Leaderboard and included here for comparison. The last two columns give a predict-the-mean Baseline (its MAE equals the mean absolute deviation, MAD) and the Skill = 100(1 − MAE /MAD). Measured against the original ALIGNN on the same splits, an ALIGNN 2.0 variant attains the lower error on 26 of the 30 JARVIS DFT-3D and superconducting tasks [22, 7]. coNGN is a strong baseline: it reaches the lowest MAE on a number of the property tasks (total energy, energy above hull, bulk and shear moduli, mag-netic moment, several dielectric components, the thermoelectric Seebeck coefficient, and phonon heat capacity), while ALIGNN 2.0 leads on formation energy, both band gaps, the piezoelectric and maximum-dielectric response, exfoliation energy, carrier masses, and the electric-field gradi-ent. The largest improvements seen by ALIGNN 2.0 against ALIGNN 1.0 appear for the tensorial and response properties that most depend on faithful three-body information. Specifically, the maximum piezoelectric modulus improves from around 20 in the ALIGNN 1.0 to about 12.5 in ALIGNN 2.0, the maximum dielectric response and the exfoliation energy improve substantially, and the elastic and shear moduli, the band gaps computed with both the OptB88vdW [23] and modified Becke-Johnson treatments, and the formation and total energies all improve by several to tens of percent. The superconducting critical temperature is predicted more accurately than by the original model, and the improvement persists on the separately distributed high-pressure hydride sets [7]. Expressed against the statistical baseline, skill scores exceed ninety percent for the energy-like targets and remain substantial for the harder tensorial and transport properties, quanti-fying how much structure the model captures beyond the mean. Importantly, because ALIGNN 2.0 4unifies the graph construction step between the force-field and property prediction functions, the property prediction algorithm is modified when compared to the original ALIGNN 1.0. We posit that this algorithmic modification is what is generating the improved performance of ALIGNN 2.0 against ALIGNN 1.0, and we discuss the specific algorithmic differences in the Methods section. Additionally, we benchmark property prediction using ALIGNN 2.0 on tasks derived from the QM9, QMOF, C2DB, and hMOF materials datasets to increase the statistical diversity of the benchmarks performed. The results are found in Table 2. It is worth being explicit about where the ALIGNN 1.0 retains a narrow advantage. On a small number of dielectric-tensor components, maximum electric-field gradient, average hole mass, and thermoelectric power factor, the original model edges out ALIGNN 2.0 by margins that are, in the worst case, of order one percent, and in several instances smaller than a thousandth of the property value. These are tasks on which the wider property-only graph of the original model has a slight edge that the force-field-compatible construction does not fully recover. The fact that the gap is so small, and that the unified model nonetheless wins the large majority of tasks, is the substantive point. CGCNN, which lacks the angular line graph entirely, wins none of the tasks. This underlines the value of three-body information for the property spectrum. The comparison between the radius and kNN graphs deserves emphasis because it is both a practical recommendation and a mechanistic observation. Holding the model, optimizer, and training budget fixed and varying only the graph construction, we find that the wider kNN graph, with its larger angular receptive field, is consistently more accurate for property prediction, whereas the force-field-compatible radius graph is slightly less accurate but shares its single cached graph with the force field. The choice between them is dictated by the intended use. The kNN graph is the stronger option when only property accuracy matters, but its neighbor list changes discontinuously as atoms cross the k-th-neighbor boundary, generating energy discontinuities that are fatal to energy conservation in molecular dynamics. The radius graph, whose neighbor set enters and leaves smoothly with distance, is therefore the correct default for any workflow that must serve both property inference and dynamics, and the modest accuracy cost relative to the kNN graph is the price of that unification. 
+
+2.1.1 Data scale: one million structures from OQMD v1.8 
+
+The JARVIS benchmarks above train on tens of thousands of structures. To test whether the same architecture continues to profit from data at a scale two orders of magnitude larger, we trained ALIGNN 2.0 on the OQMD v1.8 release [24], extracted directly from the February 2026 SQL dis-tribution. Canonical entries were selected using OQMD’s own duplicate marking, giving 1,259,145 structures with uncorrected PBE formation energies, split 1,133,231/62,957/62,957. Trained with the published default recipe at its stock width of 256 hidden features, the model reaches a test MAE of 0 .0120 eV /atom, a skill of 98.6 percent against the predict-the-mean baseline and the highest skill of any model in this work, achieved with its smallest architecture. The two databases also permit a direct test of transferability. Evaluated on a common 5,572-structure sample, the JARVIS-trained model gives a MAE of 0.0284 on its own test set and 0.1064 on OQMD, while the OQMD-trained model gives 0.0120 on its own test set and 0.0878 on JARVIS. The smaller OQMD model therefore travels better, so breadth of chemistry outweighs width of network once the domain changes. A global bias correction barely improves either figure, indicating that the PBE-to-OptB88vdW discrepancy is composition dependent rather than a constant offset, and both off-diagonal errors are comparable to a zero-shot universal potential on the same benchmark. 50 5 10 15 20 25 30 35 40 Predicted Tc (K) 10 0              
+
+> 10 1
+> 10 2
+> 10 3
+> 10 4
+> count
+> (a) Alexandria-hull Tcscreening (N=116,712)
+> radius graph kNN graph
+> 020 40 60 80 100 (meV)
+> 0.0 0.2 0.4 0.6 0.8 1.0 1.2
+> 2F( )
+> (b) 2F(): MoB 2(DFT vs ALIGNN)
+> DFT (QE): =2.77, Tc=19 K
+> ALIGNN 2.0: =2.70, Tc=18 K
+
+Figure 2: Superconductor screening and α2F (ω) prediction with ALIGNN 2.0. (a) Pre-dicted Tc distribution over the 116 ,712-material Alexandria-PBE hull for the radius- and kNN-graph superconductor models. The kNN graph enhances the high-Tc tail while agreeing elsewhere. (b) Eliashberg spectral function α2F (ω) for strong-coupling MoB 2: DFT (Quantum ESPRESSO DFPT; filled blue) versus the ALIGNN 2.0 prediction (dashed orange). The prediction tracks the DFT spectrum across the full frequency range, recovering λ = 2 .70 (vs 2 .77) and an Allen–Dynes 
+
+Tc (μ∗ = 0 .1) of 18 K (vs 19 K), so λ and Tc follow directly without electron–phonon DFPT. Superconductor training data from [7]. 
+
+2.1.2 Application: superconductor screening 
+
+Because a single ALIGNN 2.0 architecture supplies scalar Tc predictors and a force field, it can drive an end-to-end superconductor-screening workflow (Fig. 2). We screened all 116 ,712 Alexandria-PBE convex-hull structures with two independently trained superconducting-Tc models, one on a radius graph (5 .0 ˚ A) and one on a k-nearest-neighbor graph (8 .0 ˚ A). The two constructions agree across the bulk of the distribution, but the kNN graph populates the high-Tc tail more densely ( ∼16% more materials above 10 K and roughly twice as many above 20 K; Fig. 2a). This is a systematic, second-order effect of the graph representation on a genuine screening task. Ranking by both models recovers known high-Tc entries already present in the Alexandria superconductor database (e.g. TcN, predicted Tc = 17 .7 K versus a DFT reference of 17 .7 K), confirming the screen is well calibrated. Beyond a scalar Tc, the same shared graph predicts the full electron–phonon Eliashberg spectral function α2F (ω) directly (Fig. 2b): for strong-coupling MoB 2 the ALIGNN 2.0 prediction reproduces the density-functional perturbation theory (DFPT) α2F (ω) across the entire frequency range, recovering λ = 2 .70 (versus 2 .77) and an Allen–Dynes Tc of 18 K (versus 19 K). The coupling strength and Tc therefore follow from a single architecture ahead of any electron–phonon DFPT, tempering scalar-only screening with a physically grounded spectral prediction. 
+
+2.2 Multi-property prediction 
+
+Table 3 demonstrates that the same architecture, with only a change of output head, addresses targets well beyond scalar regression. Two spectral models predict the electronic density of states on a three-hundred-bin energy grid and the phonon density of states on a two-hundred-bin frequency grid, in each case mapping a structure to a fixed-length curve through a graph-level vector head trained with an averaged absolute-error loss over bins. The electronic density of states is predicted 6an order of magnitude more tightly than the phonon density of states, a difference consistent with the smoother, broader electronic curves relative to the sharp van Hove structure of phonon spectra. A third spectral head predicts the two-hundred-bin Raman spectrum, where the k-nearest-neighbor graph again outperforms the radius graph (held-out mean absolute error 0 .0326 versus 0.0378), the wider graph recovering roughly a third of the mean-absolute-deviation baseline (radius, 23 .9%; Table 3). Two further families of targets exercise the model’s flexibility in complementary directions. Per-atom quantities, namely atomic charges from a Bader decomposition [25] and site-projected magnetic moments, are fit with a one-dimensional per-atom head and the graph-level loss disabled, reusing the same atomwise machinery that produces forces. Full response tensors, including the nine-component dielectric tensor, Born effective charges, the eighteen-component piezoelectric tensor from density-functional perturbation theory [26], and the thirty-six-component elastic stiffness tensor, are fit with a vector head of the appropriate dimension. That a single architecture spans scalars, curves, per-atom fields, and tensors without structural change is the clearest expression of the unified design, and it means that adding a new property to the suite is a matter of choosing an output head rather than engineering a new pipeline. These heads regress a target directly from geometry and do not expose the underlying electronic structure by themselves. Questions of band character, orbital contributions, or magnetic ordering (for instance, telling a ferromagnetic from an antiferromagnetic state, information not contained in a single crystal structure) lie outside this framing. We address them with a complementary tight-binding model, SlakoNet [27], which predicts Slater-Koster electronic-structure parameters (band structure and density of states) directly and shares the same AtomGPT interface, so structure-property regression and electronic-structure prediction are available side by side. The shared architecture also lets us ask where the network specializes across tasks. Comparing the learned weights of all twenty-six radius property models by the permutation-invariant Frobenius norm ∥W ∥F of each architecture block (Fig. S2), the final read-out ( fc ) varies roughly three times more across properties ( ≈138%) than the message-passing backbone ( ≈45%). The radial and angular geometry encoders are the most universal ( ≈34%). Clustering each property by its per-block weight fingerprint recovers physically coherent families, dielectric-tensor components, elastic moduli, and carrier effective masses by each group. Because specialization concentrates in the read-out, a single shared backbone with lightweight per-property heads is a natural route to predicting many properties, and, as we show next, energies and forces, from one model at a fraction of the parameter and inference cost of independent networks. 
+
+2.3 Unified force field 
+
+2.3.1 Training accuracy and generalization to discovery 
+
+Table 4 turns to interatomic force fields, which we train on datasets spanning several orders of magnitude in size. The ALIGNN-FF database [8] and the MATPES set [28] contain of order hun-dreds of thousands of configurations with energies, forces, and stresses, and two further potentials, a finite-displacement force field trained on more than a million configurations and a Materials-Project-trajectory model of comparable scale, probe the large-data regime. All share the unified graph, the atom-embedding features, and the one-cycle training schedule. The dominant design choice for these potentials is the atom representation. On the MATPES set, replacing a scalar atomic-number embedding with the ninety-two-dimensional atom-embedding feature vector reduces the validation energy error roughly fourfold and the force error by tens of percent at matched model width and training budget. Increasing model width alone yields only modest gains, and, contrary to a common assumption, a smooth cutoff envelope does not help and often hurts early training. 7The MATPES model reaches a force accuracy competitive with strong contemporary universal po-tentials [15, 14, 13] on the same test partition. On the WBM discovery set (Table 4), the pretrained UMA [12] and M3GNet [15] universal potentials are included as external baselines: UMA attains the lowest geometry-optimization RMSD (0 .067 ˚ A), while the ALIGNN-FF potentials remain com-petitive (MATPES-PBE at 0 .101 ˚ A) despite being far smaller (0 .55 M parameters versus UMA’s 147 M, a ∼250 × reduction). The diatomic-curve tortuosity shows that the smooth ALIGNN-FF and M3GNet potentials ( τ ≈ 1.0) yield more physical dissociation curves than UMA ( τ = 2 .5). The external baselines here are the current MatPES/2025 checkpoints scored with our identical pipeline, not the MP/MPtrj-trained versions on the public Matbench-Discovery leaderboard, so their absolute F1 and DAF run lower than the public-leaderboard numbers. 
+
+2.3.2 Molecular-dynamics stability and energy conservation 
+
+The molecular-dynamics behavior of these potentials leads to what we regard as the most trans-ferable mechanistic message of the study. Energy conservation in micro-canonical dynamics is governed primarily by training convergence, not by the form of the cutoff. A compact model, once its one-cycle learning-rate schedule [29] has fully annealed, drifts by only thousandths of a milli-electronvolt per atom per picosecond for silicon, comparable to established reference potentials. On the contrary, an under-converged checkpoint of the identical architecture drifts by more than two orders of magnitude more. Among the per-element potentials, close-packed metals are essentially energy-conserving, covalent solids are stable, and the body-centered-cubic metals exhibit a residual drift that tracks their higher force error, so that the difficulty ordering across chemistries is pre-served as training proceeds and the drift decreases monotonically with convergence. Taken with the atom-embedding result, this identifies two levers, learned atom features and schedule conver-gence, that between them account for the difference between an unusable and a production-quality potential. It cautions against attributing molecular-dynamics stability to cutoff smoothing that our controlled comparisons do not support. A natural way to reduce the residual drift of a potential trained only on near-equilibrium finite-displacement data is to broaden the sampled configuration space, and we are pursuing exactly this by augmenting the finite-displacement training set with energy-volume curves and with vacancy and surface relaxation trajectories, all computed with the same functional. That data-scaling experiment is underway and its molecular-dynamics evaluation will be reported when the augmented model has converged. Beyond dynamics, we probe the same potential on point and extended to defects and heterogeneous interfaces. 
+
+2.3.3 Material properties: defects, surfaces, and interfaces (CHIPS-FF) 
+
+Table 5 reports monovacancy formation and surface energies (MAE vs DFT, with the predict-the-mean MAD as baseline). Because these are far-from-equilibrium derived quantities, the equilibrium-trained ALIGNN force fields do not beat the baseline on vacancies (MAE 1 .90 vs MAD 1 .42 eV), although the MATPES model is competitive on surfaces (0 .68 vs MAD 0 .87 J/m 2). The larger CHGNet [14] and MACE-MP-0 [13] potentials lead on both. This vacancy gap is consistent with the near-equilibrium sampling noted above and motivates the defect-augmented finite-displacement set (Sec. 3). The Wad column of Table 5 shows that with a self-consistent split-slab evaluation in which the relaxed interface is separated into two slabs sharing its lateral cell, the same potential predicts physically reasonable works of adhesion (of order −1 to +7 J/m 2) across metal, ceramic, semiconductor, and two-dimensional interfaces (per-interface values in Table S4), including the technologically important Si/SiO 2 contact. This replaces a reference-cell mismatch in the default protocol that had inflated metallic adhesion energies by two orders of magnitude. 8Polymorph energetics make the provenance of a potential’s physics explicit (Fig. S3). Energy-volume curves for competing polymorphs of Si, SiO 2, Ni 3Al, and MoS 2 show that the MATPES-PBE-trained potential recovers the correct ground state for Si and Ni 3Al but reproduces its training functional’s known quartz-to-cristobalite inversion (by 35 meV/atom), and because it lacks inter-layer dispersion, lets the metastable 1T stacking of MoS 2 delaminate to nearly twice the physical volume, where it lands degenerate with 2H to within 2 meV/atom. The same architecture trained on OptB88vdW data recovers the expected ground state in all four families, as the original ALIGNN-FF did. A potential inherits its training functional’s physics, including its flaws, and the choice of training data, not the architecture, decides them. 
+
+2.3.4 Inference timing and scaling 
+
+Two further points bear on the practical value of the framework. First, because the associated ALIGNN-FF potential is compatible with the LAMMPS and OpenMM molecular-dynamics en-gines [19, 20], a trained model can be used directly for large-scale simulation without a bespoke driver, closing the loop from a property model to dynamics within a single dependency-free code-base. Second, because every trained property model consumes the same graph, applying the full model suite to a new structure costs one graph construction plus a forward pass per property. We exploit this to screen the on-hull entries of the Alexandria database [30] in a single batched, no-gradient pass, producing a database of GNN-predicted properties at a throughput that a per-model pipeline could not match. Together these observations argue that the benefits of a dependency-free, unified design are not confined to convenience: they change what is computationally feasible, both at the scale of an interactive single-structure query and at the scale of a database sweep, while keeping the entire workflow reproducible on current hardware. This efficiency is intrinsic to the compact force-field-compatible model: evaluated on a single CPU, the ALIGNN-FF potential used here (two ALIGNN and two GCN layers, 128 hidden features, smooth cutoff) is roughly 4 .5× faster than CHGNet and MACE-MP-0 at inference and scales more gently with system size (Fig. S4), so the same network that supplies conservative dynamics also supplies the throughput a database sweep requires. The same economy holds at the memory ceiling of a single GB10 (Table 6): the radius-graph property model completes single-point evaluations of silicon supercells up to 453,962 atoms within 96.4 gigabytes before the unified pool is exhausted, the kNN construction reaches roughly one hundred thousand atoms, and the UMA-S universal potential [12], evaluated as a full energy-force-stress single point, scales almost perfectly linearly but carries the largest per-call cost over most of the size range. The corresponding force-field comparison against MACE and CHGNet is given in Table 6.                                       
+
+> Table 1: Single-property prediction on JARVIS DFT-3D (JARVIS-Leaderboard protocol, test MAE); columns, metrics, and per-row winners are defined and discussed in the text. Data sources: JARVIS-DFT OptB88vdW energies, band gaps, magnetic moments, transport, and k-point/cutoff descriptors [22, 31]; elastic moduli KV, G V[32]; SLME [33]; spin-orbit spillage [34]; TBmBJ band gap and dielectric constants ( mbj ,eps ,meps ) [35]; DFPT piezoelectric and dielectric maxima [36]; electric-field-gradient max efg [37]. Task (unit) Ntr /N val /N te ALIGNN 2.0 ALIGNN 2.0 original coNGN Baseline Skill (kNN) (radius) ALIGNN (MAD) (%) 1) formation energy (eV/atom) 44569/5572/5572 0.0284 0.0316 0.0331 0.0291 0.876 96.8 2) optb88vdw total energy (eV/atom) 44569/5572/5572 0.0297 0.0321 0.0367 0.0273 1.786 98.3 3) optb88vdw bandgap (eV) 44569/5572/5572 0.1245 0.1314 0.1423 0.1267 0.999 87.5
+
+9Task (unit) Ntr /N val /N te ALIGNN 2.0 ALIGNN 2.0 original coNGN Baseline Skill (kNN) (radius) ALIGNN (MAD) (%) 4) mbj bandgap (eV) 14535/1817/1815 0.2576 0.2721 0.3104 0.2719 1.765 85.4 5) ehull (eV/atom) 44290/5537/5537 0.0508 0.0576 0.0763 0.0485 1.148 95.6 6) bulk modulus kv (GPa) 15744/1968/1968 9.497 9.885 10.399 8.702 53.76 82.3 7) shear modulus gv (GPa) 15744/1968/1968 9.208 9.063 9.476 8.488 27.06 66.0 8) magmom oszicar (μB )41766/5222/5222 0.2622 0.2608 0.2574 0.2437 1.254 79.1 9) slme (%) 7250/906/906 4.504 4.493 4.521 4.443 11.21 59.8 10) spillage 9101/1137/1137 0.3499 0.3527 0.3510 0.3463 0.518 32.5 11) kpoint length unit (˚ A) 44313/5540/5539 9.294 9.699 9.515 9.346 17.94 48.2 12) encut (eV) 44308/5539/5539 125.46 131.81 133.80 129.83 262.6 52.2 13) epsx 35592/4449/4449 19.853 20.705 20.394 18.574 57.45 65.4 14) epsy 35592/4449/4449 19.352 20.088 19.999 18.592 57.32 66.2 15) epsz 35592/4449/4449 19.503 19.633 19.568 17.810 55.79 65.0 16) mepsx 13447/1681/1681 24.148 24.646 24.046 18.574 63.39 61.9 17) mepsy 13447/1681/1681 23.840 23.823 23.648 18.592 63.68 62.6 18) mepsz 13447/1681/1681 23.572 23.247 23.731 17.810 60.71 61.2 19) dfpt piezo max dij (pC/N) 2677/334/334 13.426 12.603 20.570 13.887 22.69 40.8 20) dfpt piezo max dielectric 3764/470/470 25.175 26.823 28.151 25.555 43.91 42.7 21) exfoliation energy (meV/atom) 650/81/81 39.350 40.272 52.703 46.272 61.03 35.5 22) max efg (10 21 V/m 2)9493/1186/1186 18.834 19.802 19.121 19.549 44.46 57.6 23) avg elec mass (me)14114/1764/1764 0.0797 0.0837 0.0853 0.0876 0.225 64.6 24) avg hole mass (me)14114/1764/1764 0.1196 0.1299 0.1239 0.1285 0.399 70.0 25) n Seebeck ( μV/K) 18568/2321/2321 41.454 41.524 40.921 40.098 111.5 62.8 26) n powerfact (μW/mK 2)18568/2321/2321 482.84 469.07 442.30 456.61 709.2 31.9 27) ph heat capacity (J/mol/K) 9644/1205/1205 8.468 9.577 9.606 7.813 40.16 78.9 
+
+Beyond the JARVIS-DFT JARVIS DFT-3D database of Table 1, the same architecture trans-fers, without modification, to a range of other materials databases. Table 2 collects single-property results on molecular (QM9), metal–organic-framework (QMOF, hMOF), superconductor, two-dimensional (C2DB, MXene, twod matpd ), and polymer datasets: ALIGNN 2.0 again removes most of the naive-baseline error relative to the predict-the-mean baseline. The ALIGNN 2.0 col-umn reports the best-performing graph on each dataset, which is the base kNN model for most of these smaller transfer sets, the radius graph for QM9, and the improved training recipe for QMOF and the OQMD lattice thermal conductivity; the full radius/kNN/recipe ablation is in Table S2. For comparison we also list the original pre-2.0 ALIGNN wherever a JARVIS-Leaderboard entry exists on the identical benchmark (a dash marks the datasets, such as alex supercon and the OQMD thermal conductivity, for which no such entry is available). ALIGNN 2.0 attains the lower error on all of these benchmarks except the hydride-plus-bulk Tc set and the QM9 gap, where the original model is marginally ahead, and the QMOF gap, where the two are tied to the reported precision. Baseline (MAD) and Skill are defined as in Table 1. 10 Table 2: Single-property prediction on additional datasets beyond JARVIS DFT-3D (JARVIS-Leaderboard protocol, test MAE); columns and per-row winners are discussed in the text. Data sources: bulk superconductor Tc [7]; hydride Tc [38, 39]; the remaining datasets (QM9, QMOF, MXene, polymer, C2DB, 2D, OMDB, hMOF) via the JARVIS-Leaderboard [16, 31]; lattice ther-mal conductivity on OQMD structures and formation energies from the OQMD v1.8 SQL re-lease [24]. The OQMD v1.8 row (row 18) uses the default recipe at 256 hidden features rather than the wider recipe applied elsewhere. Task (unit) Ntr /N val /N te ALIGNN 2.0 original Baseline Skill (kNN) ALIGNN (MAD) (%) 1) Thermal conductivity (log 10 κL, OQMD) 3227/403/404 0.194 – 0.597 67.5 2) QMOF bandgap (eV) 16,340/2042/2042 0.202 0.202 0.946 78.6 3) Tc supercon (K) 556/30/30 1.490 2.032 2.723 45.3 4) Tc supercon hydride (K) 763/95/95 9.425 12.310 33.56 71.9 5) Tc supercon hydride plus bulk (K) 1595/199/199 8.407 7.962 22.33 62.4 6) alex supercon Tc (K) 6592/824/825 0.864 – 2.818 69.3 7) alex supercon N (EF )(states/eV) 6592/824/825 0.791 – 1.559 49.3 8) alex supercon θD (K) 6592/824/825 10.68 – 80.30 86.7 9) alex supercon λ 6592/824/825 0.0679 – 0.194 65.0 10) alex supercon ωlog (K) 6592/824/825 20.08 – 55.37 63.7 11) mxene275, formation energy (eV/atom) 220/27/27 0.0343 – 0.732 95.3 12) polymer genome, GGA gap (eV) 858/107/108 0.2273 – 1.101 79.4 13) c2db, band gap (eV) 2816/352/352 0.0802 – 0.641 87.5 14) twod matpd, band gap (eV) 5080/635/636 0.3660 – 1.234 70.3 15) omdb, band gap (eV) 10000/1250/1250 0.2411 – 0.783 69.2 16) hMOF, CO 2 uptake (mol/kg) 110,121/13,765/13,766 0.4687 – 2.232 79.0 17) QM9 HOMO–LUMO gap (eV) 110,000/10,000/10,829 0.031 0.030 0.834 96.3 18) OQMD, formation energy (eV/atom) 1,133,231/62,957/62,957 0.0120 – 0.830 98.6 Table 3: Multi-property outputs on the shared ALIGNN 2.0 graph (radius graph, held-out MAE; 
+
+D is the output dimension): spectra, per-atom, and tensor targets. Baseline (MAD) and Skill = 100(1 − MAE /MAD) as in Table 1; “–” where the baseline is ill-defined (e.g. Born/net charge). Data sources: electronic/phonon DOS, atomic charges, and magnetic moments from JARVIS-DFT [22]; Raman spectra [40]; IR, Born effective charges, dielectric and piezoelectric tensors from DFPT [36]; elastic tensor [32]. Task (unit) Ntr /N val /N te ALIGNN 2.0 Baseline Skill (MAE) (MAD) (%) 1) eDOS, electronic DOS ( D=300) 4103/227/229 0.0138 0.0213 35.2 2) pDOS, phonon DOS ( D=200) 4103/227/229 0.0819 0.117 29.8 3) Raman spectrum ( D=200) 4059/507/508 0.0378 0.0497 23.9 4) IR spectrum ( D=200) 3844/480/481 0.0232 0.0400 42.4 5) Bader charge, per atom ( e) 75,028/3000/3000 0.0192 2.124 99.1 6) Net charge, per atom ( e) 75,033/3000/3000 0.0167 2.980 99.4 7) Magnetic moment, per atom ( μB ) 89,231/3000/3000 0.0256 2.063 98.8 8) Dielectric tensor ( D=9) 4103/227/229 1.690 3.401 50.3 9) Born effective charge ( e) 4472/248/249 0.234 0.746 68.6 10) Piezoelectric tensor, C/m 2 (D=18) 4513/250/252 0.077 0.089 13.9 11) Elastic Cij tensor, GPa ( D=36) 15,936/885/886 5.593 18.73 70.1 
+
+Direct predictors versus the force field. The two model families in this work are comple-mentary rather than competing. A direct property model, trained end to end on labels for a single 11 Table 4: Universal force-field report card. Training energy/force MAE and Matbench-Discovery WBM metrics: stability F1, discovery acceleration factor DAF ( > 1 beats random), geometry-optimization RMSD, diatomic tortuosity τ (ideal 1), and trainable parameters (units in the header). The five ALIGNN-FF (AFF) variants share one architecture at two widths; UMA, M3GNet, MACE-MP-0 and CHGNet are external baselines (current MatPES/2025 checkpoints, our identical pipeline; see text). F1/DAF use per-model self-consistent elemental references over the full 256 ,963-material WBM set; coverage caveats and formation-energy MAE are in the SI (Ta-ble S3). Training data: MATPES [28], JARVIS-FF, MPtrj; metrics follow [41]; baselines UMA [12], M3GNet [15], MACE-MP-0 [13], CHGNet [14]. Bold : column best.                                                                                   
+
+> Model Params (M) Ntr /N val /N te EMAE FMAE F1 DAF WBM RMSD τ
+> AFF MATPES-R2SCAN 0.55 347,889/19,327/19,328 0.0487 0.163 0.380 1.51 0.102 1.02 AFF MATPES-PBE 0.55 391,241/21,735/21,736 0.0404 0.148 0.388 2.02 0.101 1.01
+> AFF JV-DFT-DB1 0.55 276,401/15,355/15,355 0.0324 0.0564 0.389 1.66 0.143 1.04 AFF JV-DFT-DB2 4.04 1,176,773/60,957/60,958 0.0289 0.0445 0.375 1.60 0.148 1.23 AFF MPtrj 0.55 1,376,739/76,485/76,485 0.0579 0.0721 0.453 1.86 0.118 1.03 UMA (uma-s-1p1, baseline) 146.6 –––0.575 3.58 0.067 2.53 M3GNet (MatPES-PBE, baseline) 0.29 –––0.401 1.81 0.101 1.05 MACE-MP-0 (baseline) 4.69 –––0.430 2.08 0.097 1.60 CHGNet (baseline) 0.41 –––0.459 1.84 0.101 9.63
+
+Table 5: CHIPS-FF material-property benchmark (MAE vs JARVIS-DFT; single relax-and-evaluate protocol, FrechetCellFilter ). Lattice a, c ; formation Ef ; elastic C11 , C 44 , K V ; mono-vacancy (Vac) and surface (Surf) energies; interface work of adhesion Wad ; amorphous-Si density 
+
+ρaSi ; phonon-band MAE ωph (units in the header). UMA-S [12], M3GNet [15], MACE-MP-0 [13], and CHGNet [14] are external universal-potential baselines (identical pipeline; their divergent c/KV
+
+relaxations excluded). “AFF”=ALIGNN-FF, “MPS”=MATPES; protocol, system counts, and self-consistent chemical potentials in Methods. References: JARVIS-DFT [22, 32, 42], InterMat [43], CHIPS-FF [18]. Bold : column best.                                                                                                                                    
+
+> Model Ntr acEfC11 C44 KVVac Surf Wad ρaSi ωph
+> struct. ˚A˚AeV/at GPa GPa GPa eV J/m 2J/m 2g/cm 3cm −1
+> AFF MPS-R2SCAN 347,889 0.056 0.094 0.159 41.5 33.9 128.1 0.790 0.418 1.742 2.324 62.6 AFF MPS-PBE 391,241 0.025 0.063 0.081 51.5 33.9 95.7 1.036 0.618 1.657 2.281 45.2 AFF JV-DFT-DB1 276,401 0.041 0.058 0.031 154.1 64.0 51.3 1.926 1.313 1.595 2.314 198.3 AFF JV-DFT-DB2 1,176,773 0.025 0.029 0.027 144.9 50.0 50.2 1.899 1.194 0.963 2.381 207.6 AFF MPtrj 1,376,739 0.031 0.047 0.190 68.9 46.9 105.4 1.630 0.948 1.226 2.975 161.4 MACE-MP-0 1,580,395 0.028 0.084 0.104 42.4 38.0 94.2 1.012 0.359 1.623 2.226 55.1 CHGNet 1,580,395 0.035 0.083 0.142 59.3 46.9 85.6 1.235 0.666 1.369 2.198 72.7 UMA-S ∼100 M 0.026 0.029 0.076 29.7 35.2 85.3 0.464 0.122 1.910 2.202 39.1
+> M3GNet-MatPES-PBE 434,712 0.038 0.049 0.148 49.3 33.2 83.5 0.928 0.297 1.667 2.944 94.8
+
+target, is the more accurate and cheaper choice wherever such labels exist: on formation energy it reaches 0 .0288 eV /atom (Table 1), against 0 .226 eV /atom for the same quantity obtained from relaxed force-field energies over the WBM set (Table 4). The force field trades this per-property accuracy for breadth and physical consistency: from one energy surface it yields elastic constants, phonons, thermal conductivity, defect and surface energetics, molecular dynamics, and formation energies for structures that carry no direct label, all from a single set of weights. Because errors propagate through the intervening relaxation or lattice-dynamics calculation, the practical guidance is to use a direct model when a well-populated label set is available. The force field is recommended when a property is tied to the potential energy surface, when many properties are needed at once, or when the target structures lie outside any labelled set. The two therefore occupy distinct roles 12 Table 6: Force-field inference scaling on one NVIDIA GB10 (Grace–Blackwell, 121 GB unified memory): median wall time for one energy + force evaluation of cubic Si supercells, the largest system reached before out-of-memory (OOM), and the limiting resource. Each model run GPU-exclusive. ALIGNN-FF (AFF) is fastest with a high memory ceiling, UMA reaches the largest system but is slowest per step, and MACE/CHGNet are memory-bound.                                
+
+> Model max atoms mem there t@ 21,952 OOM at bound by AFF-r2SCAN 54,872 107 GB 2.0 s ∼64,000 balanced (fastest) UMA-S 140,608 104 .1 GB 19 .1 s 175,616 compute (slowest) MACE-MP-0 21,952 79 .2 GB 7.4 s 27,000 memory CHGNet 21,952 101 .8 GB 5.6 s 27,000 memory M3GNet-MatPES-PBE 32,768 99 .7 GB 2.3 s 39,304 balanced (fast)
+
+in a screening pipeline: the force field is the generalist that relaxes and filters arbitrary candidates, and the direct models are the specialists that assign precise values once a labelled target is in reach. 
+
+Metal-ceramic interfaces. Heterogeneous metal-ceramic contacts are a demanding test, his-torically requiring charge-optimized many-body (COMB3) potentials fitted specifically to alu-minium oxide and nitride [44, 45]. The same ALIGNN 2.0 stack reaches this setting without any interface-specific training (Fig. S1, Supplementary Information): Al(111)/Al 2O3(0001) and Al(111)/AlN(0001) junctions are assembled with InterMat [43], which enumerates lattice-matched supercells, terminations, and in-plane registries. The lowest-energy stacking is relaxed with the MatPES-PBE force field, and a per-atom Born effective charge Z∗ is then read off the relaxed geometry with the ALIGNN 2.0 Born-tensor model. The predicted charge state is the physically expected one: the metallic Al slab stays near neutral ( Z∗ ≈ 0), while in the ceramic the cation Al is strongly positive ( Z∗ ≈ +1 .5 to +3) and the anions carry the compensating charge (O ≈ − 2.0, N ≈ − 2.6), with the transition confined to the first one or two atomic planes on either side of the contact. A single graph thus supplies the geometry, the energetics, and the local charge state that a dedicated reactive potential had to be parameterised for, recovering the qualitative picture of the COMB3 studies at a fraction of the fitting effort. The same components extend from a single contact to the three-material stacks that define real devices, and to a second per-atom field. Figure 3 shows two symmetric trilayers assembled by mirroring the InterMat contact about its central layer: an Fe/MgO/Fe magnetic tunnel junction and an MgB 2/MgO/MgB 2 superconductor-barrier junction, each coloured by both the Born effective charge and the per-atom magnetic moment predicted by the corresponding ALIGNN 2.0 models. The two fields report complementary physics from the same geometry. The charge field recovers the +2 / − 2 Mg/O dipole of the MgO barrier in both stacks, while the moment field is nonzero only in the tunnel junction. On either side of a magnetically dead MgO spacer, the two Fe electrodes carry 
+
+≈ 2.3 μB per atom, in line with bulk bcc iron, which is precisely the spin-filtering geometry the device relies on. That a charge model, a magnetic-moment model, and a force field, all sharing one graph, can be read off the same relaxed multilayer illustrates the practical payoff of the multi-task design for device modelling. 
+
+2.4 Generative inverse design 
+
+Every application above maps a crystal structure to one or more properties. We next ask whether the same ALIGNN 2.0 representation can be used in the inverse direction, with composition and a target property fixed while the crystal geometry is generated. We refer to this model as 13 Born charge  Z *   
+
+> (a) Fe/MgO/Fe magnetic tunnel junction (b) MgB 2/MgO/MgB 2
+> superconductor/barrier junction
+> Magnetic moment
+> Fe216Mg72O72 (360 atoms, 3×3×1) B180Mg162O72 (414 atoms, 3×3×1)
+> 2
+> 1
+> 012
+> Z * (e)
+> 2
+> 1
+> 012
+> ( B)
+
+Figure 3: Three-material device stacks with two per-atom fields from ALIGNN 2.0. 
+
+Fe/MgO/Fe (a magnetic tunnel junction) and MgB 2/MgO/MgB 2 (a superconductor-barrier junc-tion), built as symmetric trilayers with InterMat [43], expanded to 3 ×3×1 supercells (360 and 414 atoms), relaxed with the ALIGNN-FF, and coloured by the predicted per-atom Born effective charge Z∗ (top row) and magnetic moment μ (bottom row). Charge marks the ionic MgO barrier in both stacks; magnetism appears only on the Fe electrodes of the tunnel junction, with the MgO spacer non-magnetic. All fields come from public pretrained ALIGNN 2.0 models with no stack-specific fitting. ALIGNN Crystal Structure Prediction (ALIGNN-CSP). Crystal reconstruction is evaluated with AtomBench [46] on JARVIS Supercon-3D and Alexandria DS-A/B, containing 103 and 825 test structures, respectively. The experiment tests two questions motivated by the ALIGNN line graph. First, does explicit message passing over three-body geometry improve denoising of the lattice and fractional coordi-nates? Second, does independently corrupting and denoising bond angles improve reconstruction beyond ordinary ALIGNN angle features or direct supervision of the angular error? We compare six models. The angular treatment is either absent, directly supervised, or independently diffused, and each case is tested with and without the line graph. Across all three angular treatments and both datasets, adding the line graph lowers the valida-tion structural loss. With no angular objective, the reduction is 12.2% on JARVIS and 25.2% on Alexandria. With direct angular supervision, the reductions are 12.9% and 21.9%. With indepen-dent angle diffusion, they are 7.6% and 10.4%. Since the paired models use the same number of convolution stages and have closely matched parameter counts, the improvement is not explained by greater network depth or size. This provides an inverse-design counterpart to the role of the line graph in forward ALIGNN [6]. Explicit message passing over bonded atom triplets improves prediction of the noisy lattice and coordinates even though the structural loss contains no direct bond-angle term. The improvement in denoising does not consistently increase the final reconstruction match rate. On JARVIS, adding the line graph to the model with no angular objective lowers the structural loss from 7.149 to 6.279 while changing the match rate from 0.476 to 0.447. On Alexandria, the loss decreases from 5.718 to 4.278 while the match rate changes from 0.589 to 0.566. This distinction is expected because the validation loss measures the denoising model directly, whereas the reconstruction metrics are measured after stochastic generation, energy ranking, structural relaxation, and crystallographic post-processing. 14 Independent bond-angle diffusion. Directly supervising the angular displacement caused by coordinate and lattice corruption has little effect on the structural loss. Relative to the model with no angular objective, the change is +1.0% without the line graph and +0.2% with it on JARVIS, and -2.2% and +2.1% on Alexandria. The angular loss also reaches an early plateau near 0.28. Directly predicting the bond-angle error therefore does not consistently improve lattice and coordinate denoising. Independent angle diffusion behaves differently. Without the line graph, it lowers the JARVIS structural loss from 7.149 to 6.682, a 6.5% reduction. On Alexandria, the change is negligible, from 5.718 to 5.712. The independently corrupted angular variables are nevertheless learned. Across these experiments, the fitted angular score loss reaches approximately 0.29–0.62 times the loss obtained by always predicting zero. The benefit becomes smaller or disappears when the line graph is present. On JARVIS, indepen-dent angle diffusion reduces the structural loss by only 1.7% once the line graph has already been added. On Alexandria, it instead increases the loss from 4.278 to 5.118, or 19.6%. One possible explanation is that independently diffused angles provide useful three-body information when the main network contains only pair connections, whereas the same information can become redundant or conflicting when the line graph already propagates bonded-triplet geometry. 
+
+Reconstruction fidelity. On JARVIS, the independent-angle model without the line graph gives the lowest matched-coordinate RMSD among the six models, 0.0276 ˚ A, compared with 0.0502 ˚ A for the corresponding model with no angular objective. Its ccRMSD decreases from 0.540 to 0.492, while the number of matched structures changes only from 49 of 103 to 48 of 103. Independent angle diffusion therefore improves the coordinate accuracy of matched structures much more strongly than the number of structures satisfying the matching criterion. Direct angular supervision also lowers the JARVIS RMSD to 0.0322 ˚ A without the line graph, despite leaving the structural loss nearly unchanged. Direct supervision and independent diffusion therefore affect the model differently even though both introduce explicit angular information. On the larger Alexandria test set, the independent-angle model without the line graph gives the highest match rate and the lowest RMSD, lattice-length MAE, and KLD among the six models. The differences from the corresponding no-angle model are, however, extremely small. The match rate differs by one structure out of 825, the RMSD differs by 0.0018 ˚ A, and the mean KLD differs by 0.0001. We therefore do not interpret these results as evidence that independent angle diffusion improves Alexandria reconstruction. They instead show that the additional angular state can be introduced without meaningful degradation when the line graph is absent. The model combining independent angle diffusion with the ALIGNN line graph does not improve the post-relaxation metrics. Its match rates are 0.447 on JARVIS and 0.552 on Alexandria, with RMSDs of 0.0490 ˚ A and 0.0301 ˚ A, respectively. Together with its increased Alexandria structural loss, this result indicates that the two ways of providing angular information do not combine constructively in all settings. 
+
+Crystallographic post-processing. The symmetry idealization used by AtomBench mainly changes the reported lattice geometry rather than the Cartesian atomic positions. Averaged over the six models, symmetrization lowers the lattice-angle MAE by 37.7% on JARVIS and 35.9% on Alexandria, and lowers the mean lattice-parameter KLD by 29.1% and 24.2%, respectively. In comparison, lattice-length MAE changes by less than one percent and ccRMSD by approximately one-half of one percent on both datasets. This is consistent with the symmetry procedure described in Methods. Small symmetry-15 Table 7: Angular representation and line-graph ablation for ALIGNN-CSP. Validation structural loss is Lstruct and is directly comparable across all six models. Reconstruction metrics are evaluated after generation of 32 candidates, ALIGNN-FF energy prescreening and relaxation, and crystallographic symmetrization. RMSD is evaluated only for structures satisfying the AtomBench structure matcher. All models use seed 0.                                                                                                               
+
+> Angular state LG Lstruct Match RMSD (˚ A) ccRMSD MAE abc (˚ A) MAE αβγ (◦)KLD
+> JARVIS Supercon-3D (103 test targets) none no 7.1485 0.4757 0.0502 0.5398 0.5316 10.23 0.0234 none yes 6.2792 0.4466 0.0436 0.5429 0.4888 11.12 0.0233 direct no 7.2223 0.4757 0.0322 0.5095 0.4886 9.67 0.0199
+> direct yes 6.2919 0.4660 0.0403 0.5662 0.5102 11.24 0.0241 independent no 6.6815 0.4660 0.0276 0.4922 0.5019 10.73 0.0240 independent yes 6.1718 0.4466 0.0490 0.5573 0.5208 10.41 0.0231
+> Alexandria DS-A/B (825 test targets) none no 5.7178 0.5891 0.0266 0.3038 0.4845 8.28 0.0200 none yes 4.2778 0.5661 0.0253 0.3177 0.5332 8.82 0.0217 direct no 5.5913 0.5721 0.0304 0.2998 0.4897 8.70 0.0206 direct yes 4.3665 0.5758 0.0312 0.3118 0.5240 8.62 0.0211 independent no 5.7121 0.5903 0.0248 0.3071 0.4782 8.51 0.0199
+> independent yes 5.1182 0.5515 0.0301 0.3193 0.5131 9.47 0.0215
+
+breaking distortions can cause discrete changes in the reduced lattice under Niggli reduction, sub-stantially changing the reported lattice angles without a comparable change in Cartesian geometry. We therefore use the symmetrized metrics as the primary crystallographic evaluation and retain the unsymmetrized values as a check. 
+
+Computational cost. The six models differ in parameter count by only 2.8%, although they were not matched in GPU time. Independent angle diffusion increases total GPU time from 0.67 to 0.75 hours without the line graph and from 0.81 to 0.94 hours with it on JARVIS. On Alexandria, the corresponding changes are 2.40 to 2.86 and 3.81 to 4.08 GPU-hours. The line graph contributes the larger computational cost because message passing is performed over atom triplets in addition to bonded pairs. 
+
+Interpretation. The ablation supports three main conclusions. The ALIGNN line graph consis-tently improves lattice and coordinate denoising. Directly supervising the bond-angle error does not reproduce the effect of independently corrupting and denoising the angles. Independent angle diffusion can improve reconstruction when the line graph is absent, most clearly on JARVIS, but the benefit is not consistent across datasets and does not combine favorably with the line graph on Alexandria. A useful interpretation is that an independently corrupted angle can provide an additional measurement of local three-atom geometry when the network otherwise operates primarily on bonded pairs. Once the line graph already represents three-body geometry explicitly, a separately corrupted representation of the same geometry need not provide an additional benefit. 
+
+Comparison with contemporary crystal generators. We compare the complete ALIGNN-CSP reconstruction workflow with the four generative model families evaluated in AtomBench [46]: AtomGPT [47], CDVAE [48], FlowMM [49], and MatterGen [50]. The JARVIS Supercon-3D and Alexandria DS-A/B test sets used here are the same as those used in AtomBench, and the recon-struction metrics follow the same AtomBench definitions. For ALIGNN-CSP, we use the standard 16 Table 8: Crystal reconstruction comparison with contemporary models. ALIGNN-CSP values correspond to the complete 32-candidate generation, ALIGNN-FF ranking and relaxation, and crystallographic post-processing workflow. AtomGPT, CDVAE, FlowMM, and MatterGen values, as well as the statistical evaluation procedure, are taken from AtomBench [46]. Mean RMSD is evaluated over structures accepted by the AtomBench StructureMatcher criterion, while ccRMSD is evaluated over the full test set. Mean absolute error (MAE) is reported for lattice parameters and angles, and the mean Kullback-Leibler divergence (KLD) is given for ground truth and predicted histograms of lattice parameters.                                                                            
+
+> Dataset Model Match Mean RMSD (˚ A) ccRMSD MAE abc (˚ A) MAE αβγ (◦)Mean KLD Alexandria ALIGNN-CSP workflow 0.5661 0.0253 0.3177 0.5332 8.82 0.0217 AtomGPT Tc0.4939 0.0347 0.5228 0.541 9.262 0.0221 MatterGen Tc0.6352 0.0182 0.2440 0.400 11.851 0.0243 CDVAE 0.3564 0.4181 1.2218 0.177 8.351 0.0118 FlowMM 0.0897 0.3810 1.3998 1.066 17.883 0.0380 JARVIS ALIGNN-CSP workflow 0.4466 0.0436 0.5429 0.4888 11.12 0.0233 AtomGPT Tc0.4706 0.0376 0.7665 0.565 7.283 0.0235 MatterGen Tc0.4951 0.0446 0.4988 0.587 12.648 0.0312 CDVAE 0.3592 0.4083 1.1555 0.348 7.128 0.0110 FlowMM 0.0291 0.4077 1.5392 0.936 17.427 0.0356
+
+line-graph model without an auxiliary angular objective as the representative configuration. Be-cause ALIGNN-CSP conditions on composition and the target scalar property, the Tc-conditioned AtomGPT and MatterGen variants provide the closest comparison in terms of information available at inference. FlowMM is conditioned on composition only, whereas CDVAE reconstructs from a latent representation of the complete target structure, so comparisons involving those models also reflect differences in conditioning information. On Alexandria, the complete ALIGNN-CSP workflow attains a higher match rate and lower ccRMSD than AtomGPT Tc, while MatterGen Tc retains the higher match rate and lower coordinate error. ALIGNN-CSP also gives the lowest mean lattice-angle error among these three composition-and-property-conditioned workflows. On JARVIS, its match rate is slightly lower than those of AtomGPT Tc and MatterGen Tc, but its ccRMSD is substantially lower than that of AtomGPT Tc
+
+and close to that of MatterGen Tc. CDVAE gives the lowest lattice-distribution and lattice-length errors on both datasets, consistent with its access to a latent embedding of the target structure, while FlowMM has substantially larger reconstruction errors under the present benchmark. The ALIGNN-CSP numbers should be interpreted as performance of the reconstruction work-flow as a whole rather than as a controlled comparison of raw generator outputs. For each target, ALIGNN-CSP generates 32 candidates, ranks them using ALIGNN-FF energies, relaxes the four lowest-energy candidates, and retains the lowest-energy relaxed structure before crystallographic post-processing. This ranking and relaxation procedure is likely to improve reconstruction fidelity relative to an unrelaxed sample, whereas the AtomBench values characterize the corresponding standalone model reconstructions without the same ALIGNN-FF refinement procedure. We never-theless report the comparison because the generator, energetic prescreening, and relaxation stages are intended to operate together as the deployed ALIGNN-CSP workflow. 
+
+2.5 Spectroscopy 
+
+Beyond triaging a screening hit, the same set of ALIGNN 2.0 models reproduces the principal 
+
+spectroscopic observables of a material directly from its relaxed structure, and, because the probes are independent and have independent ground truths, the predictions can be validated against ex-17 periment and DFT at once. We assembled a validation set of seven crystals that appear in both the JARVIS density-functional-perturbation-theory infrared database [22], which tabulates experimen-tal IR frequencies, and the Raman database [16] of DFT Raman activities: ZnO, AlN, GaN, SnS, SnSe, LiNbO 3, and GeS. Figure 4 shows the representative case of wurtzite GaN (JVASP-30 / mp-804). The remaining six materials and the rutile TiO 2 reference are collected in the Supplementary Information. The wurtzite semiconductors ZnO and AlN (Figs. S6, S7) follow the same pattern as GaN, with predicted infrared bands within a few wavenumbers of experiment. The orthorhombic (Pnma ) chalcogenides SnS, SnSe, and GeS (Figs. S8, S9, S11) show richer multi-line spectra that the phonon-derived route reproduces mode by mode; and the ferroelectric oxide LiNbO 3 (Fig. S10) and rutile TiO 2 (Fig. S12) complete the set across polar chemistries. For each material, four independent probes are predicted from the single relaxed structure: the optical dielectric function ε(ω), with ε2(ω) from the TBmBJ dielectric model and ε1(ω) from a Kramers–Kronig transform, together with the infrared, Raman, and inelastic neutron scattering (INS) responses. The IR and INS spectra are built from the r2SCAN ALIGNN-FF Γ-point and Brillouin-zone phonons (IR intensities weighted by the predicted Born effective charges, INS by the neutron-weighted phonon density of states). The Raman activities follow from the derivatives of the predicted dielectric tensor along each mode, and for infrared and Raman we additionally overlay a direct end-to-end ALIGNN 2.0 spectrum predictor. For GaN the predicted optical dielectric tracks the TBmBJ reference across the full 0–15 eV window. The infrared response peaks at the correct transverse-optical mode near 530 cm −1, coincident with both the DFPT calculation and the experimental line at 531 cm −1; and the phonon-derived Raman activity reproduces the dominant 
+
+E2/A1 band near 520 cm −1 recorded in the DFT Raman database. A single framework thus delivers optical, infrared, Raman, and neutron spectra that are each directly comparable to experiment and DFT. 
+
+2.6 Microscopy 
+
+The same framework reaches a fourth experimental modality, scanning transmission electron mi-croscopy (STEM), by coupling ALIGNN 2.0 to image simulation and analysis (Fig. 5). Quantitative high-angle annular dark-field (HAADF) imaging depends on the thermal-diffuse scattering (TDS) produced by atomic vibrations, for which one normally supplies tabulated Debye–Waller factors. Here the anisotropic thermal-displacement amplitudes come directly from the ALIGNN-FF phonon spectrum. For SrTiO 3 the ALIGNN-FF phonons at 300 K give per-element root-mean-square dis-placements of 0 .11, 0 .07, and 0 .12 ˚ A for Sr, Ti and O, correctly ordered, with the light O and the loosely bound Sr “rattler” vibrating most and the stiff Ti least. A frozen-phonon multislice simula-tion [51] driven by these amplitudes reproduces the characteristic TDS brightening of the heavy Sr columns that a static calculation misses (Fig. 5a versus b). The loop then closes on the analysis side: AtomVision [52], running dependency-free within the same ALIGNN ecosystem, localizes the 61 atomic columns, and ALIGNN 2.0 predicts the material’s formation energy ( −3.42 eV/atom) and band gap (1 .84 eV) from the recovered structure (Fig. 5c). A single graph thus carries a structure to a simulated micrograph and back to a structure and its properties; the same pipeline extends across bonding types (covalent, 2D, metallic, and perovskite) in Fig. S5. 
+
+Outlook. A single line-graph network, built once and run on current accelerators, has here sup-plied direct property prediction, a transferable force field, spectra and microscopy from a relaxed structure, and a conditional generator, with the same angular channel earning its place in every mode. The value is not that any one of these beats a specialised model everywhere, but that they share one representation and compose: the force field relaxes and scores what the generator pro-18 0 2 4 6 8 10 12 14 Photon energy (eV) 2
+
+> 02468
+
+(a) Dielectric           
+
+> 1TBMBJ
+> 2TBMBJ
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(b) IR       
+
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(c) Raman       
+
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(d) INS 
+
+> FD-ELAST DFT ALIGNN-FF phonon
+
+GaN: ALIGNN 2.0 vs DFT/experiment Figure 4: Spectroscopy of wurtzite GaN (JVASP-30 / mp-804) from a single relaxed structure, versus experiment and DFT. ALIGNN 2.0 predictions (solid; direct end-to-end predictor dashed) against reference data (shaded/dashed). (a) Optical dielectric ε1, ε 2 vs TBmBJ. (b) Infrared (ALIGNN-FF phonons) vs DFPT and the experimental line, coinciding near 531 cm −1.(c) Raman vs the JARVIS DFT Raman database, reproducing the dominant E2/A1 band near 520 cm −1. (d) Inelastic neutron scattering vs the finite-displacement DFT reference. Reference data: TBmBJ dielectric [35], DFPT infrared [36], JARVIS Raman database [40]. poses, while the property models assign precise numbers once a labelled target is in reach. The open directions follow the same logic, pretraining the generator at scale, extending the force field to the reactive and finite-temperature regimes its spectroscopy already probes, and folding experimental conditioning, diffraction and micrographs, more tightly into the inverse-design loop. 
+
+## 3 Methods 
+
+ALIGNN 2.0 retains the alternating atom-graph and line-graph update structure of ALIGNN [6] but implements every graph operation in native PyTorch tensors [11] under a neighbor strategy we refer to as pure-torch, with no external graph runtime. Atoms are represented by ninety-two-dimensional atom-embedding vectors [2]; edges carry radial-basis-function distance features; and triplets, which are the nodes of the line graph, carry bond-angle features expanded in a radial basis. The model alternates edge-gated graph convolutions on the atom graph with convolutions on the line graph, so 19 (a) static (no TDS) (b) ALIGNN-FF frozen phonon, 300 K   
+
+> (c) AtomVision: 61 columns ALIGNN 2.0: Ef=-3.42 eV/at, gap=1.84 eV
+> SrTiO 3[001] STEM from ALIGNN 2.0: force-field phonons drive the image, ALIGNN reads it back
+
+Figure 5: Force-field-driven STEM with ALIGNN 2.0 (SrTiO 3 [001]; structure → image →
+
+structure → property). (a) Static HAADF multislice. (b) Frozen-phonon HAADF using 300 K thermal amplitudes from the ALIGNN-FF phonons; thermal-diffuse scattering brightens the heavy Sr columns. (c) AtomVision detects the 61 atomic columns, from which ALIGNN 2.0 predicts 
+
+Ef = −3.42 eV/atom and band gap 1 .84 eV. that angular information computed on the line graph modulates the messages passed on the atom graph. The line graph is constructed on the fly from the atom graph’s edges, and, because training proceeds over batches of structures of different sizes, both graphs are batched by concatenation with consistent index offsetting, so that atoms, edges, and triplets belonging to different structures never exchange messages. This batched line-graph construction, expressed entirely in vectorized tensor operations, is what allows the dependency-free implementation to train efficiently at the scale of more than a million configurations. Two model families are used throughout: a compact configuration with two atom-graph and two line-graph layers, at a hidden width of sixty-four for the controlled architecture comparisons and one hundred and twenty-eight for the deployed force field, and a production configuration with four atom-graph and four line-graph layers and a hidden width of two hundred and fifty-six. 
+
+3.1 Line-graph message passing 
+
+Each atom i carries a 92-dimensional atom-embedding feature vector [2] projected to the hidden width d, while edges and triplets (the line-graph nodes) carry radial-basis (RBF) expansions of the bond length and of the bond-angle cosine, 
+
+h(0)  
+
+> i
+
+= Wemb xi, e(0)  
+
+> ij
+
+= RBF  ∥rij ∥, t(0)  
+
+> ijk
+
+= RBF   cos θijk 
+
+, cos θijk = rij · rik 
+
+∥rij ∥ ∥ rik ∥ , (1) with rij = rj − ri + Tij L the minimum-image bond vector ( Tij the integer cell offset, L the lattice matrix). The core operation is the edge-gated graph convolution [6], 
+
+eij ← eij + SiLU  LN( Ah i + Bh j + Ce ij ), ˆσij = σ(eij )
+
+P  
+
+> k∈N (i)
+
+σ(eik ) + ϵ , (2) 
+
+hi ← hi + SiLU 
+
+
+
+LN  Dh i + P  
+
+> j∈N (i)
+
+ˆσij ⊙ Eh j
+
+
+
+, (3) where σ is the logistic gate, ⊙ the Hadamard product, LN layer normalization, and A–E learned weights. An ALIGNN layer applies this convolution first on the line graph, so updated triplet 20 features modulate the bond features, and then on the atom graph, (h, e) ← EGGC atom 
+
+ h, EGGC line (e, t). (4) After L such layers, mean pooling and a linear head give the graph-level output, 
+
+y = Wout 
+
+1
+
+N
+
+> N
+
+X
+
+> i=1
+
+h(L) 
+
+> i
+
+, (5) whose dimension is set per task (1 for a scalar, D for a D-bin spectrum or a flattened tensor); per-atom targets read out the node features h(L) 
+
+> i
+
+directly. Two graph constructions are compared under otherwise identical settings. The force-field-compatible radius graph uses a five-angstrom cutoff, retains at most twelve nearest neighbors, and builds the line graph from a three-and-a-half angstrom three-body cutoff; its neighbor set varies continuously with atomic displacement, which is the property required for conservative dynamics. The alternative kNN graph uses an eight-angstrom cutoff with twelve nearest neighbors and the full angular line graph, providing a wider angular receptive field at the cost of a neighbor list that changes discontinuously as atoms move. All other architectural and training settings are held fixed between the two constructions so that any difference in accuracy is attributable to the graph alone. For force-field training the total energy is predicted as a per-atom energy multiplied by the number of atoms. Atomic forces are obtained analytically as the negative gradient of the predicted energy with respect to atomic positions through automatic differentiation; and, where trained, the stress is obtained from the corresponding virial. The training loss combines a graph-level term for energy with a gradient term for forces and, when enabled, a stress term, with fixed relative weights. The same per-atom head that produces forces is reused, with the gradient disabled, to fit non-gradient per-atom targets such as atomic charges and magnetic moments, and a graph-level vector head of the appropriate output dimension is used for spectral and tensorial targets. 
+
+3.2 Force-field energies, forces, and training objective 
+
+The potential predicts a per-atom energy ϵθ(i) summed to the total energy; forces and the (optional) stress follow analytically by automatic differentiation, 
+
+E =
+
+> N
+
+X
+
+> i=1
+
+ϵθ(i), Fi = − ∂E ∂ri
+
+, σαβ = 1
+
+V∂E ∂η αβ 
+
+, (6) where V is the cell volume and ηαβ the symmetric strain. Because Fi and σ are exact gradients of the single scalar E, the potential is conservative by construction, the prerequisite for energy-conserving dynamics. Training minimizes a weighted energy–force–stress objective, 
+
+L = wE
+
+ E − EDFT 
+
+N
+
+2
+
++ wF
+
+3N
+
+> N
+
+X
+
+> i=1
+
+Fi − FDFT  
+
+> i
+> 2
+
++ wσ σ − σDFT 2, (7) with fixed relative weights ( wE , w F , w σ). Accuracy on the leaderboard is the test-set mean absolute error, and skill relative to the mean-predicting baseline (MAD) is Skill = 100 (1 − MAE /MAD). The property datasets are drawn from JARVIS-DFT [22, 53, 31], in which the underlying quan-tities are computed with the projector-augmented-wave method [54] using, for the JARVIS DFT-3D properties, the OptB88vdW van der Waals density functional [23]. Formation and total energies, 21 band gaps, and derived electronic descriptors follow from self-consistent calculations. Elastic stiff-ness tensors are obtained from finite strain-stress relations. Dielectric, Born-effective-charge, and piezoelectric tensors are obtained from density-functional perturbation theory [26]. Thermoelectric Seebeck coefficients and power factors follow from semiclassical Boltzmann transport. The lat-tice thermal conductivity, reported on a base-ten logarithmic scale, quantifies phonon transport. Electronic densities of states are taken directly from the self-consistent calculations, while phonon densities of states derive from force constants evaluated by the finite-displacement method and post-processed with phonopy [55]. Atomic charges are obtained by Bader decomposition of the charge density [25], and site magnetic moments from spin-polarized calculations. Superconduct-ing critical temperatures, including the separately distributed high-pressure hydride sets, follow the electron-phonon-coupling screening workflow of Ref. [7]. For force fields, the ALIGNN-FF database aggregates JARVIS-DFT relaxation trajectories [8], and the MATPES set provides of order four hundred thousand structures carefully sampled from a very large pool of molecular-dynamics snap-shots to span equilibrium and near-equilibrium configurations [28]. To broaden the configuration space sampled by a finite-displacement potential, we additionally harvest OptB88vdW configura-tions from energy-volume curves and from vacancy and surface relaxation trajectories generated in JARVIS-DFT workflows, parsing every ionic step of each converged calculation into an energy-per-atom-and-forces record consistent with the finite-displacement data’s reference, and merge these with the finite-displacement set while holding the original test partition fixed so that any change in accuracy is attributable to the added training data alone. All property and force-field evalua-tions follow the JARVIS-Leaderboard protocol and its fixed train, validation, and test splits and report the mean absolute error on the test partition [16]. The force-field discovery generalization is measured on the WBM set with the Matbench-Discovery protocol [41]: each candidate is relaxed and scored by its formation-energy error, a convex-hull stability F1, and the geometry-optimization root-mean-square displacement to the DFT-relaxed structure. 
+
+3.3 Material-property benchmarks 
+
+The CHIPS-FF suite [18] evaluates every potential under one relax-and-evaluate protocol against JARVIS-DFT references. The monovacancy formation energy for removing a species X from an 
+
+N -atom supercell is 
+
+Evac  
+
+> f
+
+= Edef   
+
+> N−1
+
+− Ebulk  
+
+> N
+
++ μX , (8) with Ebulk  
+
+> N
+
+the relaxed perfect-cell energy and μX the chemical potential of the removed species; the surface energy of a slab of area A and Ns atoms, and the interface work of adhesion ( InterMat 
+
+protocol [43]), are 
+
+γ = Eslab  
+
+> Ns
+
+− Ns Ebulk atom 
+
+2A , Wad = Eslab ,1 + Eslab ,2 − Einterface 
+
+A , (9) where the two free slabs are obtained by a self-consistent split of the relaxed interface (identical lat-eral cell and atom set). Elastic constants follow from the stress–strain response, Cijkl = ∂σ ij /∂η kl ,with the Voigt bulk modulus KV = 19 (C11 +C22 +C33 )+ 29 (C12 +C13 +C23 ); The benchmark covers, per property, 104 systems for the lattice constants and elastic moduli, 49 vacancies, 82 surfaces, and 15 interface work-of-adhesion pairs. formation energies and vacancies use per-model self-consistent references μX so each potential is scored against its own elemental states. 22 3.4 Spectroscopy from a single structure 
+
+Phonon frequencies ωm and eigenvectors emκ (atom κ, mass Mκ) are obtained from finite-displacement force constants on the relaxed structure. Infrared intensities weight each mode by the predicted Born effective charges Z∗
+
+> κ
+
+, and Raman activities by the derivative of the predicted electronic dielectric tensor along the mode (the Raman tensor Rm), 
+
+IIR (ωm) ∝ X
+
+> α
+
+X
+
+> κβ
+
+Z∗
+
+> κ,αβ
+
+emκβ 
+
+√Mκ
+
+> 2
+
+, Rmαβ = X
+
+> κγ
+
+∂ε ∞
+
+> αβ
+
+∂r κγ 
+
+emκγ 
+
+√Mκ
+
+, (10) the latter evaluated either by central finite differences of ε∞(r) or analytically by back-propagation through the dielectric head. The powder Raman activity uses the rotational invariants 
+
+IRaman  
+
+> m
+
+∝ 45 ¯ a2 
+
+> m
+
++ 7 γ2
+
+> m
+
+, ¯am = 13 Tr Rm, γ2 
+
+> m
+
+= 12
+
+X
+
+> α̸=β
+
+(Rmαα − Rmββ )2 + 3 ( Rmαβ )2. (11) The inelastic-neutron response is the neutron-weighted phonon density of states, and the opti-cal dielectric function is predicted as ε2(ω) (TBmBJ target) with the real part recovered by the Kramers–Kronig transform, 
+
+G(ω) ∝ X
+
+> m
+
+X
+
+> κ
+
+σκ
+
+Mκ
+
+emκ 
+
+> 2
+
+δ(ω − ωm), ε1(ω) = 1 + 2
+
+π P
+
+Z ∞
+
+> 0
+
+ω′ ε2(ω′)
+
+ω′2 − ω2 dω′, (12) with σκ the neutron cross-section and P the Cauchy principal value. 
+
+3.5 Superconductor screening 
+
+Candidate critical temperatures from the direct Tc predictors are refined, where indicated, through the Eliashberg spectral function α2F (ω), from which the electron–phonon coupling and logarithmic phonon frequency, 
+
+λ = 2 
+
+Z ∞
+
+> 0
+
+α2F (ω)
+
+ω dω, ωln = exp 
+
+ 2
+
+λ
+
+Z ∞
+
+> 0
+
+ln ωω α2F (ω) d ω
+
+
+
+, (13) give the Allen–Dynes critical temperature 
+
+Tc = ωln 
+
+1.2 exp 
+
+
+
+− 1.04 (1 + λ)
+
+λ − μ∗(1 + 0 .62 λ)
+
+
+
+, (14) with μ∗ the Morel–Anderson Coulomb pseudopotential. Alongside the model comparisons we report, for each single-property task where it is well defined, the mean absolute error of a baseline that predicts the mean of the training targets, evaluated on the test partition, and a skill score defined as one minus the ratio of the model error to this baseline error. The skill score is positive when the model outperforms the naive predictor and equals the fraction of the baseline error removed. For a small number of targets whose per-atom or reference conventions are still being reconciled, the corresponding baseline or skill entry is omitted rather than reported provisionally. Models are trained with a one-cycle learning-rate schedule [29] and the AdamW optimizer [56]. Because the schedule anneals the learning rate to near zero only at the final epoch, all results are reported at full convergence, with property models trained for one hundred and fifty to three hundred epochs and force fields for up to several tens to a few hundred epochs depending on dataset 23 size. Warm starting from a converged checkpoint is used when continuing a potential’s training on an augmented dataset. Training was performed on current-generation Blackwell-class GPUs and on Grace-Blackwell hardware; the dependency-free implementation runs on these accelerators without modification. Molecular-dynamics stability is assessed by micro-canonical integration with a one-femtosecond time step, using structures handled through the atomic simulation environment [57], initializing supercells at finite temperature and reporting the linear drift of the total energy per atom in milli-electronvolts per atom per picosecond together with its maximum absolute deviation. The pure-PyTorch ALIGNN implementation, the trained models, and the associated LAMMPS-compatible [19] ALIGNN-FF potential are openly available at https://github.com/atomgptlab/ alignn , with an interactive web application at https://atomgpt.org/alignn [58]; evaluations follow the JARVIS-Leaderboard protocol [16] and the contributions will be provided under the corresponding leaderboard entries. 
+
+3.6 Generative inverse design 
+
+ALIGNN-CSP is a conditional denoising diffusion model over the lattice, fractional coordinates, and a redundant bond-angle field. For a crystal with a fixed set of N atoms, where N is the number of atoms in the generated cell, let L ∈ R3×3 denote the lattice matrix and F ∈ [0 , 1) N ×3 denote the matrix of fractional coordinates. Here R denotes the real numbers, the rows of L are the three lattice vectors, and the ith row fi of F is the fractional position of atom i, with i ∈ { 1, . . . , N }. Joint diffusion of the lattice and fractional coordinates follows established crystal diffusion formulations [59, 50]. We augment these variables with an independently diffused bond-angle field. Unlike ordinary ALIGNN, where bond angles are computed from the current atomic geometry, this angular state is corrupted through its own forward process and therefore need not equal the angles reconstructed from the noisy lattice and coordinates at the same timestep. It provides a redundant representation of three-body structure rather than an additional physical degree of freedom and is discarded after sampling. The complete stochastic state at diffusion timestep t is 
+
+Xt = ( xt, Ft, Φt) , (15) where Xt denotes the complete noisy state, xt ∈ R6 is the rotationally invariant lattice state, 
+
+Ft ∈ [0 , 1) N ×3 contains the noisy fractional coordinates, and Φt denotes the collection of noisy bond-angle variables. The integer t ∈ { 0, . . . , T } is the diffusion timestep, with t = 0 denoting the clean state and T denoting the total number of diffusion steps. All three channels are denoised jointly by one ALIGNN-CSP network. 
+
+Lattice process. A lattice is defined only up to global Cartesian rotation: L → LR , where 
+
+R ∈ R3×3 is a rotation matrix satisfying RTR = I. Here the superscript T denotes matrix transpose and I is the 3 × 3 identity matrix. This rotation leaves the represented crystal unchanged. We remove this degree of freedom using 
+
+S =
+
+
+
+LL T1/2
+
+, (16) where S is the symmetric positive-definite lattice factor and ( ·)1/2 denotes the positive-definite matrix square root, consistent with invariant lattice representations used in crystal diffusion [60, 50]. The clean lattice variable is 
+
+x0 = vec 6
+
+h
+
+log 
+
+
+
+N −1/3S
+
+i 
+
+∈ R6, (17) 24 where x0 is the six-component clean lattice representation, log denotes the matrix logarithm, and 
+
+N −1/3 removes the leading dependence of linear cell dimensions on the number of atoms. The map vec 6 converts a symmetric 3 × 3 matrix into a six-component vector containing its three diagonal entries and its three off-diagonal entries multiplied by √2. This scaling preserves the Frobenius inner product under vectorization. The resulting six components are standardized using means and standard deviations computed from the training set. The matrix logarithm maps the symmetric positive-definite matrices to the unconstrained vector space of symmetric matrices [60], and the matrix exponential performs the inverse map when the lattice is decoded. After decoding, we use L = S as the representative lattice. A variance-preserving diffusion process [61] with a cosine cumulative noise schedule [62, 59] gives 
+
+xt = √¯αtx0 + √1 − ¯αtϵ, ϵ ∼ N (0, I6), (18) where xt is the noisy lattice state at timestep t, ϵ ∈ R6 is the Gaussian noise added to the lattice state, N denotes a normal distribution, 0 is the six-component zero vector, and I6 is the 6 × 6identity matrix. The cumulative signal-retention coefficient is ¯αt =
+
+> t
+
+Y
+
+> s=1
+
+αs, (19) where αs is the variance-preserving diffusion coefficient at step s, s is an integer indexing diffusion steps inside the product, and Q denotes multiplication over those steps. The lattice output head of the network predicts ϵ, with prediction denoted ˆ ϵ.
+
+Fractional-coordinate process. Fractional coordinates are periodic and occupy a three-dimensional torus for each atom. We use wrapped-normal score matching [59, 50] with ageometrically spaced variance-exploding noise ladder 
+
+σt ∈ [0 .005 , 0.5] , (20) where σt is the standard deviation of the coordinate noise at timestep t. The coordinate forward process is 
+
+Ft = w  F0 + σtZF  , ZFij 
+
+> iid
+
+∼ N (0 , 1) , (21) where F0 is the clean fractional-coordinate matrix, Ft is the noisy coordinate matrix, and ZF ∈
+
+RN ×3 is a matrix of independent standard-normal noise samples. The element ZFij is the noise applied to coordinate component j of atom i, with j ∈ { 1, 2, 3} in this equation. The notation iid 
+
+∼
+
+means independently and identically distributed according to the indicated probability distribution. The wrapping function is 
+
+w(u) = u − ⌊ u⌋, (22) where u is a real-valued coordinate and ⌊u⌋ is its floor, or greatest integer not exceeding u. Thus 
+
+w maps each component onto the unit-period interval [0 , 1). For one fractional-coordinate component, 
+
+δ = w±(ft − f0) ∈
+
+
+
+− 12 , 12
+
+
+
+(23) is the minimum signed periodic displacement between its noisy value ft and clean value f0. Here 
+
+w± denotes wrapping onto the centered unit-period interval [ −1/2, 1/2), and δ denotes the resulting signed displacement. 25 The training target for this component is the σt-scaled wrapped-normal score 
+
+SFt = σt
+
+∂∂δ log X
+
+> n∈Z
+
+N  δ + n; 0 , σ 2
+
+> t
+
+ , (24) where SFt is the target score for the selected coordinate component, ∂/∂δ denotes differentiation with respect to the periodic displacement, log is the natural logarithm, n ∈ Z is an integer periodic-image index, and Z denotes the integers. The quantity N (δ + n; 0 , σ 2 
+
+> t
+
+) is the normal probability density evaluated at δ + n with mean zero and variance σ2 
+
+> t
+
+. The infinite periodic-image sum is evaluated numerically using a finite number of image terms [59, 63]. Collecting the target scores for all atoms and coordinate components gives SFt ∈ RN ×3. The corresponding network prediction is denoted ˆSFt .
+
+Independent bond-angle process. Direct diffusion in internal angular coordinates has prece-dent in molecular and protein generative models [64, 65]. For a triplet of atoms ( i, j, k ) centered on atom j, the clean bond angle is 
+
+θijk, 0 = arccos 
+
+ rji, 0 · rjk, 0
+
+∥rji, 0∥∥ rjk, 0∥
+
+
+
+, (25) where i, j, and k are atom indices, θijk, 0 is the clean angle formed by atoms i-j-k, rji, 0 is the clean minimum-image Cartesian displacement vector from atom j to atom i, and rjk, 0 is the corresponding vector from atom j to atom k. The centered dot denotes the Euclidean dot product, ∥·∥ denotes the Euclidean vector norm, and arccos is the inverse cosine. We represent each angle in turns, 
+
+ϕijk, 0 = θijk, 0
+
+2π , (26) where ϕijk, 0 is the clean angle expressed as a fraction of one full rotation and π is the usual circle constant. This places the angular variable on the same unit-period domain as the fractional coordinates. The angular forward process is 
+
+ϕijk,t = w  ϕijk, 0 + σtZΘ
+
+> ijk
+
+ , ZΘ
+
+> ijk
+> iid
+
+∼ N (0 , 1) , (27) where ϕijk,t is the noisy angular variable for triplet ( i, j, k ) at timestep t, ZΘ 
+
+> ijk
+
+is its independent standard-normal noise sample, and the superscript Θ labels quantities belonging to the angular channel. The angular noise scale uses 
+
+σt ∈ [0 .005 , 0.5] . (28) The angular and fractional-coordinate channels therefore use the same values of σt but independent Gaussian noise draws. The complete forward transition probability is 
+
+q (xt, Ft, Φt | x0, F0, Φ0) = qL(xt | x0)qF (Ft | F0)qΘ (Φt | Φ0) , (29) where q denotes the joint forward corruption distribution, qL denotes the lattice forward distribu-tion, qF denotes the fractional-coordinate forward distribution, and qΘ denotes the angular forward distribution. The vertical bar denotes conditioning on the clean state. The factorization follows from the independent noise draws used by the three forward processes. 26 The collection Φ(F, L) denotes the bond angles obtained deterministically from a lattice L and fractional coordinates F. Since the angular channel is corrupted independently, 
+
+Φt̸ = Φ (Ft, Lt) (30) in general, where Lt is the lattice decoded from xt.The angular training target is also a wrapped-normal score. Define 
+
+δΘ 
+
+> ijk
+
+= w± (ϕijk,t − ϕijk, 0) , (31) where δΘ 
+
+> ijk
+
+is the minimum signed periodic displacement between the noisy and clean angular variables for triplet ( i, j, k ). The target angular score is 
+
+SΘ 
+
+> ijk,t
+
+= σt
+
+∂∂δ Θ
+
+> ijk
+
+log X
+
+> n∈Z
+
+N  δΘ 
+
+> ijk
+
++ n; 0 , σ 2
+
+> t
+
+ , (32) where SΘ 
+
+> ijk,t
+
+is the target score for triplet ( i, j, k ) at timestep t. The corresponding prediction of the angular output head is ˆSΘ
+
+> ijk,t
+
+. The collection of angular score predictions over all triplets is denoted ˆSΘ 
+
+> t
+
+.
+
+Persistent triplet field. Independent angular diffusion requires each angular variable to retain the same atom-triplet identity throughout the forward and reverse trajectories. Rebuilding the triplet list from a distance cutoff or a k-nearest-neighbor ranking would violate this requirement when neighbors enter, leave, or exchange rank. Here k in k-nearest-neighbor denotes the number of neighbors retained for each atom. We therefore use a fixed dense triplet set, denoted T , constructed from the ordered atom-pair graph. Each element ( i, j, k ) ∈ T identifies one persistent triplet centered on atom j.For N atoms, the number of ordered atom pairs scales as O(N 2) and the number of triplets as 
+
+O(N 3), where O denotes asymptotic computational scaling. On a representative 64-crystal JARVIS batch, the persistent construction contains 8722 triplets compared with 8124 for the geometry-derived construction, a factor of 1 .07, with approximately 8 .5 MiB of angular-state activations, where MiB denotes mebibytes. Each ordered pair receives a continuous geometric relevance 
+
+sij,t = u(rij,t ; rc), (33) where sij,t is the relevance weight of pair ( i, j ) at timestep t, rij,t is the minimum-image Cartesian distance between atoms i and j at that timestep, rc is the radial cutoff distance, and u(r; rc) is the polynomial cutoff envelope used in DimeNet [5]. We use 
+
+rc = 5 ˚ A, (34) where ˚ A denotes the angstrom, with envelope exponent five. The relevance of triplet ( i, j, k ) is 
+
+sijk,t = sji,t sjk,t , (35) where sijk,t is the product of the relevance weights of the two bonds meeting at central atom j.The angular variable remains defined when sijk,t = 0; this weight only controls its contribution to message passing and to the angular loss. 27 Angular representation. Geometric bond angles used as ordinary ALIGNN features are ex-panded with a 40-bin cosine radial basis. The independently diffused angular state instead uses the periodic harmonic features 
+
+{sin(2 πkϕ ijk,t ), cos(2 πkϕ ijk,t )}8 
+
+> k=1
+
+, (36) where sin and cos are the sine and cosine functions and, in this equation, k is the harmonic order rather than an atom index. The eight harmonic orders provide sixteen scalar angular features and respect the unit-period identification of ϕijk,t .
+
+Joint ALIGNN denoiser. All stochastic channels are denoised in one network pass, 
+
+Dψ (xt, Ft, Φt, t, c) −→ 
+
+
+
+ˆϵ, ˆSFt , ˆSΘ
+
+> t
+
+
+
+, (37) where Dψ denotes the ALIGNN-CSP denoising network, ψ denotes all trainable network parame-ters, and c denotes the conditioning information. The three outputs are the predicted lattice noise ˆϵ, the predicted fractional-coordinate score ˆSFt , and the predicted angular score ˆSΘ 
+
+> t
+
+.Each atom receives learned embeddings of its chemical species, the diffusion timestep t, the conditioning variables c, and the current lattice state xt. Pair features include radial basis functions of interatomic distance and periodic Fourier features of the fractional displacement, 
+
+{sin (2 πk ∆fij ) , cos (2 πk ∆fij )}10  
+
+> k=1
+
+, (38) where ∆ fij is the signed periodic fractional displacement vector between atoms i and j. Here 
+
+k ∈ { 1, . . . , 10 } is the Fourier harmonic order, and sine and cosine are applied componentwise to the three-component displacement vector. For models containing the line graph, the independently diffused angular state initializes a triplet hidden representation zijk . ALIGNN then uses the standard triplet-to-pair-to-atom message-passing sequence [6], 
+
+Φt → zijk → yij → hi, (39) where zijk is the learned hidden representation of triplet ( i, j, k ), yij is the learned hidden repre-sentation of ordered pair ( i, j ), and hi is the learned hidden representation of atom i. The arrows indicate the direction in which information is passed between these representations. The angular output head also reads the hidden pair representations belonging to the triplet, allowing information from the structural and angular channels to influence one another. Models without a line graph use nine pair-graph convolutions in place of the three ALIGNN layers and three subsequent pair convolutions. Their triplet representation for the angular output head is constructed after pair message passing as 
+
+zijk = Emb ( ϕijk,t ) + yji + yjk , (40) where Emb( ϕijk,t ) denotes the learned embedding of the noisy angular variable and yji and yjk 
+
+are the hidden representations of the two ordered pairs forming the triplet. These models have no forward angle →pair →atom message path, although the angular loss still updates the shared pair-processing parameters through backpropagation. The pooled atomic representation used for lattice prediction is ¯h = 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+hi, (41) 28 where ¯h is the mean of the N atom representations and P denotes summation over atoms. Amultilayer perceptron maps ¯h to ˆ ϵ ∈ R6.The fractional-coordinate score uses learned scalar coefficients and signed fractional displace-ments. For atom i,ˆsi =
+
+> C
+
+X
+
+> c=1
+
+ac
+
+X
+
+> j
+
+sij,t w(c) 
+
+> ij
+
+(hi, hj , yij ) ∆ fij , C = 32 , (42) where ˆ si ∈ R3 is the predicted coordinate-score vector for atom i, and the collection of these vectors over all atoms forms ˆSFt . The integer c ∈ { 1, . . . , C } indexes coordinate score channels and C = 32 is the number of such channels. The coefficient ac is a learned scalar associated with channel c. The function w(c) 
+
+> ij
+
+(hi, hj , yij ) is a learned scalar weight for pair ( i, j ) and channel c, computed from the two atomic hidden representations and their pair representation. The quantity sij,t is the geometric relevance weight defined above and ∆ fij supplies the signed direction of the predicted coordinate score. No explicit consistency loss or projection is imposed between the independently diffused angular state Φt and the angles Φ(Ft, Lt) reconstructed from the noisy structure. Their agreement is used only as a diagnostic. 
+
+Training objectives. The model predicts the noise or score associated with each diffused state. For the lattice state, the target is the Gaussian noise ϵ used to construct xt, and the network prediction is ˆ ϵ. The lattice loss is 
+
+LL = ∥ˆϵ − ϵ∥22 , (43) where LL denotes the lattice loss and ∥·∥ 2 denotes the Euclidean norm over the six lattice compo-nents. For the fractional-coordinate state, the target is the wrapped-normal score SFt and the prediction is ˆSFt . The fractional-coordinate loss is 
+
+LF = ˆSFt − SFt 
+
+> 2
+> F
+
+, (44) where LF denotes the coordinate loss and ∥·∥ F denotes the Frobenius norm over all atoms and all three fractional-coordinate components. For the independently diffused angular state, SΘ 
+
+> ijk,t
+
+is the target wrapped-normal score and ˆSΘ
+
+> ijk,t
+
+is its network prediction. The relevance-weighted angular loss is 
+
+Lind Θ =
+
+X
+
+> (i,j,k )∈T
+
+sijk,t 
+
+ ˆSΘ 
+
+> ijk,t
+
+− SΘ
+
+> ijk,t
+
+2
+
+X
+
+> (i,j,k )∈T
+
+sijk,t 
+
+, (45) where Lind Θ denotes the angular loss for the independent-angle model, T is the persistent triplet set, and sijk,t is the geometric relevance weight of triplet ( i, j, k ). The score residual itself is not wrapped because periodicity has already entered through the wrapped-normal target. The complete loss for the independent-angle model is 
+
+Lind = wLLL + wF LF + wΘLind Θ , (46) 29 where Lind is the total independent-angle training loss, wL is the lattice-loss weight, wF is the fractional-coordinate loss weight, and wΘ is the angular-loss weight. We use (wL, w F , w Θ) = (1 , 10 , 1) . (47) For models without an angular objective, the total loss is 
+
+Lnone = wLLL + wF LF , (48) where Lnone denotes the total loss for the no-angle model. 
+
+Direct angular-supervision comparator. To distinguish independent angular diffusion from direct angular supervision, we also train a model with no stochastic angular state. For triplet (i, j, k ), let θijk,t denote the angle reconstructed directly from the noisy lattice and fractional coor-dinates at timestep t. The target angular displacement is ∆θijk,t = w2π
+
+
+
+θijk,t − θ(t)
+
+> ijk, 0
+
+
+
+, (49) where ∆ θijk,t is the signed target angular displacement and θ(t) 
+
+> ijk, 0
+
+is the clean reference angle evaluated using the same periodic-image identity as the corresponding noisy triplet at timestep t.The angular wrapping function is 
+
+w2π(x) = mod( x + π, 2π) − π, (50) where x is an angular residual in radians and mod( a, b ) denotes a modulo b. Thus w2π maps an angular residual onto [ −π, π ). The network prediction of the target displacement is denoted c∆θijk,t . The direct angular loss is 
+
+Ldir Θ =
+
+X
+
+> (i,j,k )∈T
+
+sijk,t SmoothL1 
+
+h
+
+w2π
+
+ c∆θijk,t − ∆θijk,t 
+
+i X
+
+> (i,j,k )∈T
+
+sijk,t 
+
+, (51) where Ldir Θ denotes the direct angular loss and SmoothL1 denotes the standard piecewise quadratic and linear SmoothL1 regression loss applied to the wrapped prediction residual. The complete loss for the direct angular-supervision model is 
+
+Ldir = wLLL + wF LF + wΘLdir Θ , (52) where Ldir denotes the total direct-supervision loss. The same weights ( wL, w F , w Θ) = (1 , 10 , 1) are used. 
+
+Conditioning. The experiments condition on composition and one target scalar property. Com-position is represented by a 118-dimensional element-count vector, with one component for each chemical element represented by atomic number. The target scalar property is passed through a continuous learned embedding to the common hidden dimension of the network. These composition and property representations are added to the timestep and lattice embeddings. Classifier-free guidance is implemented by replacing the composition and property conditions with learned null embeddings during training [66]. The composition condition is dropped with probability 0 .10 and the target-property condition with probability 0 .15. At inference, all available diffusion channels use classifier-free guidance with 
+
+γ = 2 .0, (53) where γ is the classifier-free guidance scale. 30 Sampling. Sampling begins from a uniform distribution over fractional coordinates, a Gaussian distribution over the standardized lattice state, and, for the independent-angle model, a uniform distribution over the unit-period angular variables. Fractional coordinates use the predictor–corrector formulation for variance-exploding score mod-els [63, 59]. Each reverse predictor step is followed by one annealed Langevin corrector step with step lr = 10 −5, (54) where step lr is the step-size parameter used by the Langevin corrector. The independently diffused angular state uses the same predictor–corrector construction on its own wrapped-normal noise ladder. Each predictor or corrector substep evaluates the shared denoising network once to obtain all available score predictions. The lattice uses the ancestral reverse update of its variance-preserving DDPM process [61]. Before the posterior mean is formed, each component of the reconstructed standardized clean lattice state is clipped according to 
+
+|ˆx0,i | ≤ 4, (55) where ˆ x0,i is the reconstructed value of component i of the six-component clean lattice vector ˆ x0.Here i indexes a lattice-vector component rather than an atom, and | · | denotes absolute value. For the independent-angle model, the joint state (xt, Ft, Φt) (56) is propagated through all T = 1000 diffusion steps. After the final step, Φ0 is discarded and only the generated lattice, fractional coordinates, atomic species, and atom count are retained. 
+
+Candidate selection and relaxation. For each conditioning target, 32 candidate crystal struc-tures are generated and assigned single-point energies by ALIGNN-FF [8]. The four candidates with the lowest predicted energies are relaxed over both atomic positions and lattice parameters for at most 200 optimization steps. Relaxation terminates when the maximum residual atomic force satisfies 
+
+fmax = 0 .05 eV ˚ A−1, (57) where fmax is the maximum force magnitude over all atoms, eV denotes electronvolts, and ˚ A denotes angstroms. The relaxed candidate with the lowest energy per atom is retained. 
+
+Crystallographic post-processing and metrics. The primary reconstruction pipeline applies crystallographic idealization using spglib [67] with symprec = 0 .1 ˚ A, (58) where symprec is the Cartesian distance tolerance used by spglib when identifying crystallographic symmetry. Primitive-cell reduction is then applied. This tolerance was not tuned on the validation set. We also report an unsymmetrized evaluation performed directly after generation and relaxation. Lattice comparisons are performed after Niggli reduction [68]. Because Niggli reduction selects a canonical reduced lattice basis through discrete conditions, small symmetry-breaking perturbations can select different reduced bases and produce comparatively large changes in the reported lattice angles. Reconstruction is evaluated using AtomBench [46]. The structure-match rate uses the Atom-Bench StructureMatcher criterion with stol = 0 .5, where stol is the dimensionless site-position 31 tolerance used by the structure matcher. Additional metrics are Cartesian root-mean-square dis-placement over matched structures, normalized root-mean-square displacement over matched struc-tures, continuous corrected RMSE using average-minimum-distance descriptors with k = 100, mean absolute error of the three lattice lengths, mean absolute error of the three lattice angles, and the mean Kullback–Leibler divergence of the six lattice-parameter distributions. Here k = 100 de-notes the number of average-minimum-distance descriptor components retained for the continuous corrected RMSE calculation. 
+
+Ablations. Six models are compared. They are defined by the combination of one of three angular training objectives and either the presence or absence of a line graph. The three angular objectives are as follows: 1. none : no angular objective; when a line graph is present, geometric bond angles appear only as ordinary ALIGNN input features; 2. direct : supervised angular displacement without an independently diffused angular state; and 3. independent : an independently diffused bond-angle state with wrapped-normal forward and reverse processes. Models without a line graph use nine pair-graph convolutions. Models with a line graph use three ALIGNN layers, corresponding to six edge-gated graph convolutions across the atom and line graphs, followed by three pair-graph convolutions. All models therefore contain nine convolution operations. Parameter counts range from 3 .751 to 3 .856 million, a spread of 2 .8%. The direct and independent models are parameter matched between their line-graph and no-line-graph versions, while the two no-angle models differ by approximately 1%. Compute cost is not matched because constructing and propagating the line graph introduces additional triplet-level operations. The angular models use the smooth radius-based topology with rc = 5 ˚ A and the polynomial relevance envelope defined above, whereas the no-angle models use a hard k-nearest-neighbor graph with k = 12. Here k = 12 means that twelve neighbors are retained for each atom. The smooth topology is required because discontinuous changes in neighbor identity would make the supervised triplet field discontinuous. Comparisons between no-angle and angular models therefore include both the change in angular treatment and the associated change in graph topology. The direct-versus-independent comparison holds the topology fixed and isolates the effect of independently diffusing the angular state. The effect of smooth topology alone is measured separately. 
+
+Training protocol. The JARVIS-DFT Supercon-3D dataset contains 847 training, 105 valida-tion, and 103 test structures. Alexandria DS-A/DS-B contains 6603 training, 825 validation, and 825 test structures. Both use the AtomBench splits with split seed 123 and are stored in the primitive Niggli scoring basis. All denoisers use hidden dimension 256 and T = 1000 diffusion steps. Pair distances are expanded using 64 radial basis functions extending to 10 ˚ A. Fractional displacements use Fourier orders k = 1 , . . . , 10, where k again denotes Fourier harmonic order. Geometric angles in the direct model use 40 cosine radial basis functions. The independent angular state uses harmonic orders 
+
+k = 1 , . . . , 8. The fractional-coordinate score uses C = 32 learned score channels. Optimization uses AdamW [56] with peak learning rate 10 −3, weight decay 10 −5, batch size 64, and gradient clipping at 1 .0. A one-cycle learning-rate schedule [29] is used with a 5% warm-up fraction. An exponential moving average of the network parameters with decay 0 .999 is used for sampling. No structural data augmentation is applied. 32 JARVIS models are trained for 3000 epochs and Alexandria models for 1000 epochs. Because only four of the six model configurations contain an angular objective, all checkpoints are selected using the validation structural loss 
+
+Lstruct = LL + 10 LF , (59) where Lstruct is the checkpoint-selection loss, LL is the lattice loss defined above, and LF is the fractional-coordinate loss defined above. This quantity is available for all six models regardless of their angular objective. All twelve models across the two datasets are trained from random seed 0 on one NVIDIA GB10 GPU on the same compute node. The results therefore provide a controlled comparison at one training seed rather than an estimate of run-to-run variance. This limitation is most important for the 103-structure JARVIS test set; the 825-structure Alexandria test set provides greater resolution for reconstruction metrics. Rare sampling trajectories that leave the real-valued numerical domain are removed individu-ally. Approximately one trajectory in 10 4 diverges numerically, where 10 4 denotes ten thousand trajectories. Five candidates out of 26,400 were removed in the affected model configuration. All reported reconstruction metrics are measured after the complete 32-candidate generation, ALIGNN-FF prescreening, and relaxation procedure and therefore characterize the combined generator–force-field search procedure. 
+
+Use of AI tools. During the preparation of this work, the author(s) used large language models (LLMs) to assist with drafting and editing portions of this manuscript. After using this tool/service, the author(s) reviewed and edited the content as needed and take(s) full responsibility for the content of the published article. 
+
+## Acknowledgements 
+
+This work was supported by the National Science Foundation under Award No. 2607469 and the U.S. Department of Energy under Award No. DE-SC0026725. 
+
+## References 
+
+[1] Kamal Choudhary, Brian DeCost, Chi Chen, Anubhav Jain, Francesca Tavazza, Ryan Cohn, Cheol Woo Park, Alok Choudhary, Ankit Agrawal, Simon J L Billinge, Elizabeth Holm, Shyue Ping Ong, and Chris Wolverton. Recent advances and applications of deep learning methods in materials science. npj Computational Materials , 8(1):59, 2022. [2] Tian Xie and Jeffrey C Grossman. Crystal graph convolutional neural networks for an accurate and interpretable prediction of material properties. Physical Review Letters , 120(14):145301, 2018. [3] Kristof T Sch¨ utt, Huziel E Sauceda, P-J Kindermans, Alexandre Tkatchenko, and K-R M¨ uller. Schnet–a deep learning architecture for molecules and materials. The Journal of Chemical Physics , 148(24), 2018. [4] Chi Chen, Weike Ye, Yunxing Zuo, Chen Zheng, and Shyue Ping Ong. Graph networks as a universal machine learning framework for molecules and crystals. Chemistry of Materials ,31(9):3564–3572, 2019. 33 [5] Johannes Gasteiger, Janek Groß, and Stephan G¨ unnemann. Directional message passing for molecular graphs. In International Conference on Learning Representations , 2020. [6] Kamal Choudhary and Brian DeCost. Atomistic line graph neural network for improved materials property predictions. npj Computational Materials , 7(1):185, 2021. [7] Kamal Choudhary and Kevin Garrity. Designing high-tc superconductors with bcs-inspired screening, density functional theory, and deep-learning. npj Computational Materials , 8(1):244, 2022. [8] Kamal Choudhary, Brian DeCost, Lily Major, Keith Butler, Jeyan Thiyagalingam, and Francesca Tavazza. Unified graph neural network force-field for the periodic table: solid state applications. Digital Discovery , 2(2):346–355, 2023. [9] Liulei Shao, Menglin Huang, Jihui Yang, and Shiyou Chen. Attention mechanism in line graph neural network for material property prediction. Advanced Theory and Simulations , 9:e02059, 2026. [10] Minjie Wang, Da Zheng, Zihao Ye, et al. Deep graph library: A graph-centric, highly-performant package for graph neural networks. arXiv preprint arXiv:1909.01315 , 2019. [11] Adam Paszke, Sam Gross, Francisco Massa, et al. Pytorch: An imperative style, high-performance deep learning library. In Advances in Neural Information Processing Systems ,volume 32, 2019. [12] Brandon M Wood, Misko Dzamba, Xiang Fu, Meng Gao, Muhammed Shuaibi, Luis Barroso-Luque, Kareem Abdelmaqsoud, Vahe Gharakhanyan, John R Kitchin, Daniel S Levine, et al. UMA: A family of universal models for atoms. arXiv preprint arXiv:2506.23971 , 2025. [13] Ilyes Batatia, David P Kovacs, Gregor Simm, Christoph Ortner, and Gabor Csanyi. Mace: Higher order equivariant message passing neural networks for fast and accurate force fields. 
+
+Advances in Neural Information Processing Systems , 35:11423–11436, 2022. [14] Bowen Deng, Peichen Zhong, KyuJung Jun, Janosh Riebesell, Kevin Han, Christopher J Bartel, and Gerbrand Ceder. Chgnet as a pretrained universal neural network potential for charge-informed atomistic modelling. Nature Machine Intelligence , 5(9):1031–1041, 2023. [15] Chi Chen and Shyue Ping Ong. A universal graph deep learning interatomic potential for the periodic table. Nature Computational Science , 2(11):718–728, 2022. [16] Kamal Choudhary, Daniel Wines, Kang Li, Kevin F Garrity, et al. Jarvis-leaderboard: a large scale benchmark of materials design methods. npj Computational Materials , 10(1):93, 2024. [17] Janosh Riebesell, Rhys E. A. Goodall, Philipp Benner, Yuan Chiang, Bowen Deng, Gerbrand Ceder, Mark Asta, Alpha A. Lee, Anubhav Jain, and Kristin A. Persson. A framework to evaluate machine learning crystal stability predictions. Nature Machine Intelligence , 7:836– 847, 2025. [18] Daniel Wines and Kamal Choudhary. CHIPS-FF: Evaluating universal machine learning force fields for material properties. ACS Materials Letters , 7(6):2105–2114, 2025. [19] Aidan P Thompson, H Metin Aktulga, Richard Berger, et al. Lammps-a flexible simulation tool for particle-based materials modeling at the atomic, meso, and continuum scales. Computer Physics Communications , 271:108171, 2022. 34 [20] Peter Eastman, Raimondas Galvelis, Ra´ ul P. Pel´ aez, Charlles R. A. Abreu, Stephen E. Farr, Emilio Gallicchio, Anton Gorenko, Michael M. Henry, Frank Hu, Jing Huang, Andreas Kr¨ amer, Julien Michel, Joshua A. Mitchell, Vijay S. Pande, Jo˜ ao PGLM Rodrigues, Jaime Rodriguez-Guerra, Andrew C. Simmonett, Sukrit Singh, Jason Swails, Philip Turner, Yuanqing Wang, Ivy Zhang, John D. Chodera, Gianni De Fabritiis, and Thomas E. Markland. Openmm 8: Molecular dynamics simulation with machine learning potentials. The Journal of Physical Chemistry B , 128(1):109–116, 2024. [21] Robin Ruff, Patrick Reiser, Jan St¨ uhmer, and Pascal Friederich. Connectivity optimized nested line graph networks for crystal structures. Digital Discovery , 3(3):594–601, 2024. [22] Kamal Choudhary, Kevin F Garrity, Andrew CE Reid, Brian DeCost, et al. The joint auto-mated repository for various integrated simulations (jarvis) for data-driven materials design. 
+
+npj Computational Materials , 6(1):173, 2020. [23] Jiˇ r´ ı Klimeˇ s, David R Bowler, and Angelos Michaelides. Van der waals density functionals applied to solids. Physical Review B , 83(19):195131, 2011. [24] James E Saal, Scott Kirklin, Muratahan Aykol, Bryce Meredig, and Christopher Wolverton. Materials design and discovery with high-throughput density functional theory: the open quantum materials database (oqmd). JOM , 65(11):1501–1509, 2013. [25] Graeme Henkelman, Andri Arnaldsson, and Hannes J´ onsson. A fast and robust algorithm for bader decomposition of charge density. Computational Materials Science , 36(3):354–360, 2006. [26] Stefano Baroni, Stefano De Gironcoli, Andrea Dal Corso, and Paolo Giannozzi. Phonons and related crystal properties from density-functional perturbation theory. Reviews of Modern Physics , 73(2):515, 2001. [27] Kamal Choudhary. Slakonet: A unified slater-koster tight-binding framework using neural network infrastructure for the periodic table. The Journal of Physical Chemistry Letters ,16(43):11109–11119, 2025. [28] Aaron D Kaplan, Runze Liu, Ji Qi, Tsz Wai Ko, Bowen Deng, Janosh Riebesell, Gerbrand Ceder, Kristin A Persson, and Shyue Ping Ong. A foundational potential energy surface dataset for materials. arXiv preprint arXiv:2503.04070 , 2025. [29] Leslie N Smith and Nicholay Topin. Super-convergence: Very fast training of neural networks using large learning rates. In Artificial Intelligence and Machine Learning for Multi-Domain Operations Applications , volume 11006, pages 369–386. SPIE, 2019. [30] Jonathan Schmidt, Tiago FT Cerqueira, Aldo H Romero, et al. Improving machine learning force fields for materials discovery with the alexandria database. Materials Today Physics ,2024. [31] Kamal Choudhary. The jarvis infrastructure is all you need for materials design. Computational Materials Science , 259:114063, 2025. [32] Kamal Choudhary, Gowoon Cheon, Evan Reed, and Francesca Tavazza. Elastic properties of bulk and low-dimensional materials using van der waals density functional. Physical Review B, 98(1):014107, 2018. 35 [33] Kamal Choudhary, Marnik Bercx, Jie Jiang, Ruth Pachter, Dirk Lamoen, and Francesca Tavazza. Accelerated discovery of efficient solar cell materials using quantum and machine-learning methods. Chemistry of Materials , 31(15):5900–5908, 2019. [34] Kamal Choudhary, Kevin F Garrity, and Francesca Tavazza. High-throughput discovery of topologically non-trivial materials using spin-orbit spillage. Scientific Reports , 9(1):8534, 2019. [35] Kamal Choudhary, Qin Zhang, Andrew C E Reid, Sugata Chowdhury, Nhan Van Nguyen, Zachary Trautt, Marcus W Newrock, Faical Yannick Congo, and Francesca Tavazza. Compu-tational screening of high-performance optoelectronic materials using optb88vdw and tb-mbj formalisms. Scientific Data , 5:180082, 2018. [36] Kamal Choudhary, Kevin F Garrity, Vinit Sharma, Adam J Biacchi, Angela R Hight Walker, and Francesca Tavazza. High-throughput density functional perturbation theory and machine learning predictions of infrared, piezoelectric, and dielectric responses. npj Computational Materials , 6(1):64, 2020. [37] Kamal Choudhary, Jaafar N Ansari, Igor I Mazin, and Karen L Sauer. Density functional theory-based electric field gradient database. Scientific Data , 7(1):362, 2020. [38] Kamal Choudhary et al. Machine-learning and high-throughput screening of hydride super-conductors. Materials Futures , 2024. [39] Kamal Choudhary et al. Deep-learning-based prediction of superconducting transition tem-perature of hydrides. Advanced Functional Materials , 2024. [40] Kamal Choudhary et al. Density functional theory and machine learning based raman spec-troscopy database. Scientific Data , 10, 2023. [41] Janosh Riebesell, Rhys E A Goodall, Philipp Benner, Yuan Chiang, Bowen Deng, Alpha A Lee, Anubhav Jain, and Kristin A Persson. A framework to evaluate machine learning crystal stability predictions (matbench discovery). Nature Machine Intelligence , 2025. [42] Kamal Choudhary and Bobby G Sumit. Can a deep-learning model make fast predictions of vacancy formation in diverse materials? AIP Advances , 13(9):095109, 2023. [43] Kamal Choudhary and Francesca Tavazza. Intermat: accelerating band offset prediction in semiconductor interfaces with dft and deep learning. Digital Discovery , 3(7):1365–1377, 2024. [44] Kamal Choudhary, Tao Liang, Aleksandr Chernatynskiy, Simon R Phillpot, and Susan B Sinnott. Charge optimized many-body (comb) potential for al2o3 materials, interfaces, and nanostructures. Journal of Physics: Condensed Matter , 27(30):305004, 2015. [45] Kamal Choudhary, Tao Liang, Kiran Mathew, Benjamin Revard, Aleksandr Chernatynskiy, Simon R Phillpot, Richard G Hennig, and Susan B Sinnott. Dynamical properties of aln nanostructures and heterogeneous interfaces predicted using comb potentials. Computational Materials Science , 113:80–87, 2016. [46] Charles Rhys Campbell, Aldo H. Romero, and Kamal Choudhary. Atombench: A benchmark-ing framework for generative crystal reconstruction models in conventional superconductors. 
+
+Digital Discovery , 2026. 36 [47] Kamal Choudhary. Atomgpt: Atomistic generative pretrained transformer for forward and inverse materials design. The Journal of Physical Chemistry Letters , 15(27):6909–6917, 2024. [48] Tian Xie, Xiang Fu, Octavian-Eugen Ganea, Regina Barzilay, and Tommi Jaakkola. Crystal diffusion variational autoencoder for periodic material generation. In International Conference on Learning Representations (ICLR) , 2022. [49] Benjamin Kurt Miller, Ricky T. Q. Chen, Anuroop Sriram, and Brandon M. Wood. FlowMM: Generating materials with Riemannian flow matching. In Proceedings of the 41st International Conference on Machine Learning , volume 235 of Proceedings of Machine Learning Research ,pages 35664–35686. PMLR, 2024. [50] Claudio Zeni, Robert Pinsler, Daniel Z¨ ugner, Andrew Fowler, Matthew Horton, Xiang Fu, Zilong Wang, Aliaksandra Shysheya, Jonathan Crabb´ e, Shoko Ueda, Roberto Sordillo, Lixin Sun, Jake Smith, Bichlien Nguyen, Hannes Schulz, Sarah Lewis, Chin-Wei Huang, Ziheng Lu, Yichi Zhou, Han Yang, Hongxia Hao, Jielan Li, Chunlei Yang, Wenjie Li, Ryota Tomioka, and Tian Xie. A generative model for inorganic materials design. Nature , 639:624–632, 2025. [51] Jacob Madsen and Toma Susi. The abtem code: transmission electron microscopy from first principles. Open Research Europe , 1:24, 2021. [52] Kamal Choudhary, Ramya Gurunathan, Brian DeCost, and Adam Biacchi. Atomvision: Amachine vision library for atomistic images. Journal of Chemical Information and Modeling ,63(6):1708–1722, 2023. [53] Kevin F Garrity and Kamal Choudhary. Database of wannier tight-binding hamiltonians using high-throughput density functional theory. Scientific Data , 8(1):106, 2021. [54] Georg Kresse and J¨ urgen Furthm¨ uller. Efficient iterative schemes for ab initio total-energy calculations using a plane-wave basis set. Physical Review B , 54(16):11169, 1996. [55] Atsushi Togo and Isao Tanaka. First principles phonon calculations in materials science. 
+
+Scripta Materialia , 108:1–5, 2015. [56] Ilya Loshchilov and Frank Hutter. Decoupled weight decay regularization. In International Conference on Learning Representations , 2019. [57] Ask Hjorth Larsen, Jens Jørgen Mortensen, Jakob Blomqvist, et al. The atomic simulation environment—a python library for working with atoms. Journal of Physics: Condensed Matter ,29(27):273002, 2017. [58] Jaehyung Lee, Justin Ely, Kent Zhang, Akshaya Ajith, Charles Rhys Campbell, and Kamal Choudhary. AGAPI-agents: An open-access agentic AI platform for accelerated materials design on AtomGPT.org. The Journal of Physical Chemistry Letters , 17:7221–7231, 2026. [59] Rui Jiao, Wenbing Huang, Peijia Lin, Jiaqi Han, Pin Chen, Yutong Lu, and Yang Liu. Crys-tal structure prediction by joint equivariant diffusion. In Advances in Neural Information Processing Systems , volume 36, 2023. [60] Rui Jiao, Wenbing Huang, Yu Liu, Deli Zhao, and Yang Liu. Space group constrained crystal generation. In International Conference on Learning Representations , 2024. 37 [61] Jonathan Ho, Ajay Jain, and Pieter Abbeel. Denoising diffusion probabilistic models. In 
+
+Advances in Neural Information Processing Systems , volume 33, 2020. [62] Alexander Quinn Nichol and Prafulla Dhariwal. Improved denoising diffusion probabilistic models. In Proceedings of the 38th International Conference on Machine Learning , volume 139 of Proceedings of Machine Learning Research , pages 8162–8171. PMLR, 2021. [63] Yang Song, Jascha Sohl-Dickstein, Diederik P. Kingma, Abhishek Kumar, Stefano Ermon, and Ben Poole. Score-based generative modeling through stochastic differential equations. In 
+
+International Conference on Learning Representations , 2021. [64] Bowen Jing, Gabriele Corso, Jeffrey Chang, Regina Barzilay, and Tommi Jaakkola. Torsional diffusion for molecular conformer generation. In Advances in Neural Information Processing Systems , volume 35, 2022. [65] Kevin E. Wu, Kevin K. Yang, Rianne van den Berg, Sarah Alamdari, James Y. Zou, Alex X. Lu, and Ava P. Amini. Protein structure generation via folding diffusion. Nature Communications ,15(1):1059, 2024. [66] Jonathan Ho and Tim Salimans. Classifier-free diffusion guidance, 2022. [67] Atsushi Togo, Kohei Shinohara, and Isao Tanaka. Spglib: a software library for crystal sym-metry search. Science and Technology of Advanced Materials: Methods , 4(1):2384822–2384836, 2024. [68] Ralf W. Grosse-Kunstleve, Nicholas K. Sauter, and Paul D. Adams. Numerically stable algo-rithms for the computation of reduced unit cells. Acta Crystallographica Section A , 60(1):1–6, 2004. [69] Yunxing Zuo, Chi Chen, Xiangguo Li, Zhi Deng, Yiming Chen, J¨ org Behler, G´ abor Cs´ anyi, Alexander V Shapeev, Aidan P Thompson, Mitchell A Wood, and Shyue Ping Ong. Perfor-mance and cost assessment of machine learning interatomic potentials. The Journal of Physical Chemistry A , 124(4):731–745, 2020. 38 Supplementary Information 
+
+Table S1: Graph-and-recipe ablation for JARVIS DFT-3D single-property prediction 
+
+(test MAE), expanding the ALIGNN 2.0 column of Table 1. ALIGNN 2.0 on the radius graph, on the 8 ˚ A kNN graph, and the improved recipe (EMA weight averaging) on the kNN graph, against the original ALIGNN. Bold : row best among the three ALIGNN 2.0 variants. “–” marks a variant not run. Task (unit) 2.0 (radius) 2.0 (kNN) 2.0 (kNN, improved) orig. ALIGNN 1) formation energy (eV/atom) 0.0316 0.0307 0.0284 0.0331 2) optb88vdw total energy (eV/atom) 0.0321 0.0314 0.0297 0.0367 3) optb88vdw bandgap (eV) 0.1314 0.1306 0.1245 0.1423 4) mbj bandgap (eV) 0.2721 0.2730 0.2576 0.3104 5) ehull (eV/atom) 0.0576 0.0590 0.0508 0.0763 6) bulk modulus kv (GPa) 9.885 9.302 9.497 10.399 7) shear modulus gv (GPa) 9.063 8.825 9.208 9.476 8) magmom oszicar ( μB ) 0.2608 0.2567 0.2622 0.2574 9) slme (%) 4.493 4.447 4.504 4.521 10) spillage 0.3527 0.3456 0.3499 0.3510 11) kpoint length unit (˚ A) 9.699 9.342 9.294 9.515 12) encut (eV) 131.81 128.08 125.46 133.80 13) epsx 20.705 20.139 19.853 20.394 14) epsy 20.088 19.829 19.352 19.999 15) epsz 19.633 19.453 19.503 19.568 16) mepsx 24.646 23.847 24.148 24.046 17) mepsy 23.823 24.044 23.840 23.648 18) mepsz 23.247 23.531 23.572 23.731 19) dfpt piezo max dij (pC/N) 12.603 12.498 13.426 20.570 20) dfpt piezo max dielectric 26.823 24.305 25.175 28.151 21) exfoliation energy (meV/atom) 40.272 37.628 39.350 52.703 22) max efg (10 21 V/m 2) 19.802 19.248 18.834 19.121 23) avg elec mass ( me) 0.0837 0.0810 0.0797 0.0853 24) avg hole mass ( me) 0.1299 0.1240 0.1196 0.1239 25) n Seebeck ( μV/K) 41.524 40.346 41.454 40.921 26) n powerfact (μW/mK 2)469.07 451.90 482.84 442.30 27) ph heat capacity (J/mol/K) 9.577 – 8.468 9.606 Table S2: Graph-and-recipe ablation for the additional datasets (test MAE), expanding the ALIGNN 2.0 column of Table 2. Bold : row best among the three variants; “–” marks a variant not run. On these smaller and more diverse datasets the base kNN model is generally strongest, whereas the improved training recipe helps most on the large JARVIS DFT-3D tasks of Table S1. Task (unit) 2.0 (radius) 2.0 (kNN) 2.0 (kNN, improved) 1) Thermal conductivity (log 10 κL, OQMD) 0.386 0.375 0.194 
+
+2) QMOF bandgap (eV) 0.208 – 0.202 
+
+3) Tc supercon (K) 1.637 1.490 1.997 4) Tc supercon hydride (K) 9.937 9.425 –5) Tc supercon hydride plus bulk (K) 8.670 8.407 –6) alex supercon Tc (K) 0.883 0.864 0.850 
+
+7) alex supercon N (EF )(states/eV) 0.821 0.791 0.800 8) alex supercon θD (K) 11.33 10.68 –
+
+39 Task (unit) 2.0 (radius) 2.0 (kNN) 2.0 (kNN, improved) 9) alex supercon λ 0.0707 0.0679 0.0693 10) alex supercon ωlog (K) 20.31 20.08 –11) mxene275, formation energy (eV/atom) 0.0348 0.0343 0.0312                 
+
+> 12) polymer genome, GGA gap (eV) 0.2274 0.2273 –13) c2db, band gap (eV) 0.0971 0.0802 0.0980 14) twod matpd, band gap (eV) 0.3802 0.3660 –15) omdb, band gap (eV) 0.2428 0.2411 –16) hMOF, CO 2uptake (mol/kg) –0.4687 –17) QM9 HOMO–LUMO gap (eV)
+> 0.031 –0.0345
+
+Table S3: WBM formation-energy MAE (eV/atom), full coverage. Formation-energy MAE for every force field in Table 4, scored with per-model self-consistent elemental refer-ences. “84-element subset” is the common ∼222,000-material set that excludes the five heavy/ f -electron/alkali-earth elements Sr, Cs, Gd, Th, Np (whose model elemental references complete the periodic table); “full set” is the complete 256 ,963-material WBM set (identical to the pub-lic Matbench-Discovery coverage). The external baselines are essentially unchanged between the two, whereas the ALIGNN-FF potentials degrade on the five added elements, which are under-represented in their MATPES/JARVIS-FF training data. This is a coverage limitation, not a scoring artifact (the subset numbers reproduce exactly, and the stability F1/DAF of Table 4 re-main robust). 
+
+Model Ef MAE (84-element subset) Ef MAE (full set) AFF MATPES-R2SCAN 0.163 0.243 AFF MATPES-PBE 0.147 0.183 AFF JV-DFT-DB1 0.126 0.163 AFF JV-DFT-DB2 0.147 0.182 AFF MPtrj 0.131 0.174 UMA (uma-s-1p1) 0.120 0.125 M3GNet (MatPES-PBE) 0.128 0.129 MACE-MP-0 0.139 0.143 CHGNet 0.097 0.098 
+
+Full results table 
+
+40 Al45O36 (81 atoms) 
+
+(a) Al(111)/Al 2O3(0001)  
+
+> Al64N36 (100 atoms)
+
+(b) Al(111)/AlN(0001) 
+
+> 3
+> 2
+> 1
+> 0123
+> Born effective charge  Z * (e)
+
+Figure S1: Metal-ceramic interfaces from ALIGNN-FF, coloured by predicted Born effective charge. (a) Al(111)/Al 2O3(0001) and (b) Al(111)/AlN(0001), assembled with Inter-Mat [43], relaxed with the MatPES-PBE ALIGNN-FF, and coloured by the per-atom dynamical charge Z∗ = tr( Z∗)/3 from the ALIGNN 2.0 Born-tensor model (shared colour scale). The metallic Al slab is near-neutral; the ceramic cation Al is positive and the O/N anions negative, with charge transfer localised to the interfacial planes. No interface-specific fitting was used; models are loaded from the public pretrained registry. 
+
+Table S5: Unified ALIGNN 2.0 results (JARVIS-Leaderboard protocol), three sections; rows are numbered for reference. (a) Single-property prediction (test MAE): ALIGNN 2.0 on radius and 8 ˚ A kNN graphs, vs original ALIGNN and CGCNN. Baseline (MAD) is a predict-the-mean model’s test MAE; Skill = 100(1 − MAE 2.0/MAD) for the better variant. (b) Multi-property 
+
+(held-out MAE): spectral, per-atom, tensor outputs; D is output dimension; value in col. “radius”. 
+
+(c) Force fields : mlearn per-element energy/force in col. “radius”; large sets give energy / force. 
+
+> †
+
+still training. ‡mlearn MAE pending verification (per-atom normalization); mlearn Skill therefore omitted. For the large force-field sets, Skill is energy-only (the force MAD baseline is near zero, so force Skill is undefined, shown “–”). “–” otherwise marks a value that is unavailable or a baseline that is ill-defined (e.g. Born, net charge). Bold : row best. Task (unit) Ntr /N val /N te ALIGNN 2.0 ALIGNN 2.0 orig. CGCNN Baseline Skill (radius) (kNN) ALIGNN (MAD) (%) 
+
+(a) Single-property prediction — test MAE 1) formation energy (eV/atom) 44569/5572/5572 0.0316 0.0307 0.0331 0.0551 0.876 96.5 2) optb88vdw total energy (eV/atom) 44569/5572/5572 0.0321 0.0314 0.0367 0.0584 1.786 98.2 3) optb88vdw bandgap (eV) 44569/5572/5572 0.1314 0.1306 0.1423 0.1857 0.999 86.9 4) mbj bandgap (eV) 14535/1817/1815 0.2721 0.2730 0.3104 0.3261 1.765 84.6 
+
+41 Task (unit) Ntr /N val /N te ALIGNN 2.0 ALIGNN 2.0 orig. CGCNN Baseline Skill (radius) (kNN) ALIGNN (MAD) (%) 5) QM9 HOMO–LUMO gap (eV) 110,000/10,000/10,829 0.031 0.0345 0.834 96.3 6) QMOF bandgap (eV) 16,340/2042/2042 0.208 0.202 0.946 78.7 7) ehull (eV/atom) 44290/5537/5537 0.0576 0.0590 0.0763 0.0590 1.148 95.0 8) bulk modulus kv (GPa) 15744/1968/1968 9.885 9.302 10.399 11.015 53.76 82.7 9) shear modulus gv (GPa) 15744/1968/1968 9.063 8.825 9.476 10.079 27.06 67.4 10) magmom oszicar (μB )41766/5222/5222 0.2608 0.2567 0.2574 0.3065 1.254 79.5 11) slme (%) 7250/906/906 4.493 4.447 4.521 5.014 11.21 60.3 12) spillage 9101/1137/1137 0.3527 0.3456 0.3510 0.3844 0.518 33.3 13) kpoint length unit (˚ A) 44313/5540/5539 9.699 9.342 9.515 9.875 17.94 47.9 14) encut (eV) 44308/5539/5539 131.81 128.08 133.80 134.83 262.6 51.2 15) epsx 35592/4449/4449 20.705 20.139 20.394 22.199 57.45 64.9 16) epsy 35592/4449/4449 20.088 19.829 19.999 21.787 57.32 65.4 17) epsz 35592/4449/4449 19.633 19.453 19.568 21.121 55.79 65.1 18) mepsx 13447/1681/1681 24.646 23.847 24.046 26.929 63.39 62.4 19) mepsy 13447/1681/1681 23.823 24.044 23.648 26.556 63.68 62.6 20) mepsz 13447/1681/1681 23.247 23.531 23.731 26.629 60.71 61.7 21) dfpt piezo max dij (pC/N) 2677/334/334 12.603 12.498 20.570 18.392 22.69 44.9 22) dfpt piezo max dielectric 3764/470/470 26.823 24.305 28.151 30.961 43.91 44.7 23) exfoliation energy (meV/atom) 650/81/81 40.272 37.628 52.703 45.762 61.03 38.3 24) max efg (10 21 V/m 2)9493/1186/1186 19.802 19.248 19.121 22.957 44.46 56.7 25) avg elec mass ( me) 14114/1764/1764 0.0837 0.0810 0.0853 0.0921 0.225 64.1 26) avg hole mass ( me) 14114/1764/1764 0.1299 0.1240 0.1239 0.1406 0.399 68.9 27) n Seebeck ( μV/K) 18568/2321/2321 41.524 40.346 40.921 45.660 111.5 63.8 28) n powerfact (μW/mK 2)18568/2321/2321 469.07 451.90 442.30 485.59 709.2 36.3 29) ph heat capacity (J/mol/K) 9644/1205/1205 9.577 – 9.606 12.936 40.16 76.2 30) Thermal Cond. (log 10 κL)3227/403/404 0.376 0.362 – – 0.597 39.4 31) Tc supercon (K) 556/30/30 1.637 1.490 2.032 – 2.723 45.3 32) Tc supercon hydride (K) 763/95/95 9.937 9.425 – – 33.56 71.9 33) Tc supercon hydride plus bulk (K) 1595/199/199 8.670 8.407 – – 22.33 62.3 34) alex supercon Tc (K) 6592/824/825 0.883 0.864 2.818 69.3 35) alex supercon 
+
+N (EF ) (states/eV) 6592/824/825 0.821 0.791 1.559 49.3 36) alex supercon θD
+
+(K) 6592/824/825 11.33 10.68 80.30 86.7 37) alex supercon λ 6592/824/825 0.0707 0.0679 0.194 65.0 38) alex supercon ωlog 
+
+(K) 6592/824/825 20.31 20.08 55.37 63.7 
+
+(b) Multi-property — spectra / per-atom / tensor; held-out MAE (col. “radius”) 39) eDOS, electronic DOS ( D=300) 4103/227/229 0.0138 0.0213 35.2 40) pDOS, phonon DOS ( D=200) 4103/227/229 0.0819 0.117 29.8 41) Raman spectrum (D=200) 4059/507/508 0.0378 0.0326 0.0497 34.4 42) Bader charge, per atom ( e)75,028/3000/3000 0.0192 2.124 99.1 
+
+42 Task (unit) Ntr /N val /N te ALIGNN 2.0 ALIGNN 2.0 orig. CGCNN Baseline Skill (radius) (kNN) ALIGNN (MAD) (%) 43) Net charge, per atom ( e)75,033/3000/3000 0.0167 – –44) Magnetic moment, per atom ( μB )89,231/3000/3000 0.0256 2.063 98.8 45) Dielectric tensor (D=9) 4103/227/229 1.690 3.401 50.3 46) Born effective charge ( e)4472/248/249 0.234 – –47) Piezoelectric tensor, C/m 2 (D=18) 4513/250/252 0.077 0.089 13.9 48) Elastic Cij tensor, GPa ( D=36) 15,936/885/886 5.593 18.73 70.1 
+
+(c) Interatomic force fields — mlearn per-element energy/force; large sets energy / force 49) mlearn -Cu, energy (meV/atom) 262/–/31 1.32 ‡ 146.13 50) mlearn -Cu, force (eV/˚ A) 262/–/31 0.0179 ‡ 0.4514 51) mlearn -Ni, energy (meV/atom) 263/–/31 3.04 ‡ 167.48 52) mlearn -Ni, force (eV/˚ A) 263/–/31 0.0275 ‡ 0.4984 53) mlearn -Li, energy (meV/atom) 241/–/29 5.86 ‡ 49.26 54) mlearn -Li, force (eV/˚ A) 241/–/29 0.0264 ‡ 0.2062 55) mlearn -Ge, energy (meV/atom) 228/–/25 12.48 ‡ 221.34 56) mlearn -Ge, force (eV/˚ A) 228/–/25 0.0690 ‡ 0.4236 57) mlearn -Si, energy (meV/atom) 214/–/25 13.88 ‡ –58) mlearn -Si, force (eV/˚ A) 214/–/25 0.0872 ‡ –59) mlearn -Mo, energy (meV/atom) 194/–/23 9.86 ‡ 340.28 60) mlearn -Mo, force (eV/˚ A) 194/–/23 0.1121 ‡ 0.9496 61) ALIGNN-FF-DB (E/F) 276,401/15,355/15,355 32.4 † / 0.0564 † 1808 / 0.039 98.2 / – 62) MATPES-PBE (E/F) 391,241/21,735/21,736 40.4 / 0.1475 1508 / 0.467 97.3 / – 63) FD-FF, 1.1 M (E/F) 1,097,227/60,957/60,958 28.9 † / 0.0445 † 1742 / 0.241 98.3 / – 64) MPtrj (E/F) 1,376,739/76,485/76,485 56.7 † / 0.0707 † 1478 / 0.151 96.2 / – 
+
+Data and model availability 
+
+All trained ALIGNN 2.0 models are archived on figshare (project 279395) and, where amatching benchmark exists, mirrored as JARVIS-Leaderboard contributions (atomgptlab/ jarvis leaderboard , teams alignn2 radius and alignn2 knn ). Each “figshare” cell links to the archive DOI; each “Leaderboard” cell links to the benchmark page (live once the contributions are merged and the site is rebuilt). “–” marks a graph variant or benchmark not applicable to that model. Tables S6–S8 enumerate the archives for the single-output, multi-output, and force-field models respectively. 43 0 25 50 75 100 125 
+
+relative variation across properties (CV of W F, %) 
+
+geom_embed atom_embed gcn_0 alignn_2 gcn_1 alignn_1 alignn_3 alignn_0 gcn_2 gcn_3 fc_readout 
+
+(a) which blocks specialize 
+
+> epsz epsx epsy formation_energy_peratom optb88vdw_total_energy kpoint_length_unit ehull magmom_oszicar optb88vdw_bandgap dfpt_piezo_max_dij exfoliation_energy n_powerfact encut n_Seebeck mbj_bandgap avg_elec_mass avg_hole_mass mepsy bulk_modulus_kv shear_modulus_gv spillage max_efg slme dfpt_piezo_max_dielectric mepsx mepsz
+
+geom_embed atom_embed alignn_0 alignn_1 alignn_2 alignn_3 gcn_0 gcn_1 gcn_2 gcn_3 fc_readout 
+
+(b) layer-usage fingerprint, properties clustered 
+
+2.0 
+
+1.5 
+
+1.0 
+
+0.5 
+
+0.0 0.5 1.0 1.5 2.0 
+
+> z-scored  W F
+
+Figure S2: Where ALIGNN 2.0 specializes across properties. (a) Relative variation (coef-ficient of variation of the permutation-invariant Frobenius norm ∥W ∥F ) of each architecture block across the twenty-six radius property models: the read-out layer adapts far more than the message-passing backbone, and the radial/angular geometry encoders are the most universal. (b) Per-block weight fingerprint ( z-scored ∥W ∥F ) with properties ordered by hierarchical clustering. Physically related properties, dielectric-tensor components, elastic moduli, and carrier effective masses, share similar fingerprints. 18 20 22 24 5.4 
+
+5.2 
+
+5.0 
+
+4.8 
+
+4.6 
+
+4.4 
+
+4.2 
+
+4.0 
+
+> MATPES-PBE model Energy/atom (eV)
+> lowest: Diam.Cub.
+
+Si 
+
+> Diam.Cub. Mono. Cubic2 Cubic3
+
+11 12 13 14 15 7.8 
+
+7.6 
+
+7.4 
+
+7.2 
+
+7.0 
+
+> lowest: alpha-Cryst (exp. alpha-Qtz, +35 meV)
+
+SiO 2
+
+> alpha-Qtz alpha-Trid alpha-Cryst
+
+10 11 12 13 5.45 
+
+5.40 
+
+5.35 
+
+5.30 
+
+5.25 
+
+5.20 
+
+5.15 
+
+> lowest: L12
+
+Ni 3Al 
+
+> L12 Hex. FCC
+
+15 20 25 30 35 7.2 
+
+7.0 
+
+6.8 
+
+6.6 
+
+6.4 
+
+> lowest: 1T (exp. 2H, +2 meV)
+
+MoS 2
+
+> 2H 1T cubic
+
+18 20 22 24 Volume/atom (Å 3)4.00 
+
+3.75 
+
+3.50 
+
+3.25 
+
+3.00 
+
+2.75 
+
+> JARVIS-FF-DB model (OptB88vdW) Energy/atom (eV)
+> lowest: Diam.Cub.
+> Diam.Cub. Mono. Cubic2 Cubic3
+
+11 12 13 14 15 Volume/atom (Å 3)6.4 
+
+6.3 
+
+6.2 
+
+6.1 
+
+6.0 
+
+5.9 
+
+5.8 
+
+> lowest: alpha-Qtz
+> alpha-Qtz alpha-Trid alpha-Cryst
+
+9 10 11 12 Volume/atom (Å 3)2.05 
+
+2.00 
+
+1.95 
+
+1.90 
+
+1.85 
+
+1.80 
+
+1.75 
+
+> lowest: L12
+> L12 Hex. FCC
+
+15 20 25 30 35 Volume/atom (Å 3)5.2 
+
+5.0 
+
+4.8 
+
+4.6 
+
+4.4 
+
+> lowest: 2H
+> 2H 1T cubic
+
+Figure S3: Energy–volume curves for competing polymorphs of four materials under two ALIGNN 2.0 force fields (rows). Each panel labels the lowest-lying polymorph and the margin where it differs from the expected ground state. The MATPES-PBE potential (top) reproduces PBE’s quartz– cristobalite inversion and a near-degenerate, delaminating 1T-MoS 2 (missing interlayer dispersion). The OptB88vdW potential (bottom) recovers all four ground states. Per-row energy references differ; within-family orderings do not. 44 10 0 10 1 10 2
+
+Number of atoms 10 2
+
+10 1
+
+10 0
+
+> Single-point time (s)
+> 4.4× faster than CHGNet 4.5× faster than MACE (512 atoms)
+
+ALIGNN-FF inference scaling vs CHGNet / MACE (Cu supercells, CPU, 4 threads) 
+
+> MACE-MP (medium) CHGNet ALIGNN-FF (this work, 2/2/128)
+
+Figure S4: Inference cost of the ALIGNN 2.0 force field versus CHGNet and MACE-MP-0. Single-point energy-and-force evaluation wall-time on cubic Cu supercells (1–512 atoms, CPU, 4 threads). The compact force-field-compatible model (two ALIGNN and two GCN layers, 128 hidden features, smooth cutoff, trained on MATPES) is the fastest at every size and ∼4.5× faster than both baselines at 512 atoms. 
+
+Table S6: Single-output property-prediction models: figshare archives (radius and kNN graphs) and JARVIS-Leaderboard benchmark pages. Model / property figshare (radius) figshare (kNN) Leaderboard 
+
+εx (MBJ) 33135077 33135080 link 
+
+εx (OPT) 33135017 33135020 link 
+
+εy (MBJ) 33135083 33135086 link 
+
+εy (OPT) 33135023 33135026 link 
+
+εz (MBJ) 33135089 33135092 link 
+
+εz (OPT) 33135029 33135032 link 
+
+Tc (JARVIS-SC) 33135209 33135212 –
+
+Tc hydride 33135215 33135218 link 2D-MatPedia band gap 33135242 33135245 link alex supercon debye 33135185 – –alex supercon dosef 33135182 – –alex supercon la 33135188 – –alex supercon Tc 33135179 – –alex supercon wlog 33135191 – –Avg. electron mass 33134975 33134978 link Avg. hole mass 33134981 33134984 link Bulk modulus KV 33134987 33134990 link C2DB band gap 33135236 33135239 link Energy above hull 33135005 33135008 link Exfoliation energy 33135041 33135044 link Formation energy (JARVIS-DFT) 33135047 33135050 link Halide-perov. HSE decomp. 33135434 33135437 link Halide-perov. HSE gap 33135401 33135404 link Halide-perov. PBE decomp. 33135425 33135428 link Halide-perov. PBE gap 33135395 33135398 link Halide-perov. refr. index 33135416 33135419 link hMOF CO 2 uptake – 33137036 link k-point length 33135053 33135056 link Lattice therm. cond. 33135194 33135197 –Magnetic moment 33135059 33135062 link 
+
+45 Model / property figshare (radius) figshare (kNN) Leaderboard Max EFG 33135065 33135068 link MBJ band gap 33135071 33135074 link MXene275 formation energy 33135221 33135224 link n-power factor 33135101 33135104 link n-Seebeck 33135095 33135098 link OMDB band gap 33135329 33135332 link OptB88vdW band gap 33135107 33135110 link OptB88vdW total energy 33135113 33135116 link PDBbind binding affinity 33135335 33135338 link Piezo. dij (max) 33134999 33135002 link Piezo. dielectric (max) 33134993 33134996 link Plane-wave cutoff 33135011 33135014 link Polymer-Genome GGA gap 33135230 33135233 link QM9 HOMO–LUMO gap – 33135167 –QMOF band gap – 33135170 –Shear modulus GV 33135119 33135122 link SLME 33135125 33135128 link SNUMAT HSE gap 33135974 33135977 link Spin–orbit spillage 33135131 33135134 link Table S7: Multi-output (tensor/spectra/atomwise) models: figshare archives and JARVIS-Leaderboard pages. D is the output dimension. Model / property D figshare (radius) figshare (kNN) Leaderboard Bader charge (per atom) 1 33135137 – –Born effective charge 1 33135155 – –Dielectric function (mBJ spectrum) 300 33135254 33135266 link Dielectric tensor 9 33135143 – –Elastic Cij tensor 36 33135152 – –Electronic DOS 300 33135158 – –IR spectrum 200 33135248 33135251 link Magn. moment (per atom) 1 33135140 – –Net charge (per atom) 1 33135227 – –Phonon DOS 200 33135164 – –Piezoelectric tensor 18 33135149 – –Raman spectrum 200 – 33134963 –Table S8: Force-field models: figshare archives and JARVIS-Leaderboard MLFF benchmark pages. Model / property figshare (radius) figshare (kNN) Leaderboard JARVIS-FD 33135203 – –JARVIS-FD-EV 33134966 – –JARVIS-FF-DB 33135200 – link MATPES-PBE 33134972 – link MATPES-PBE (smooth, default) 33148208 – link MATPES-R2SCAN 33190782 – –mlearn-Si 33135206 – link MPtrj 33134969 – link 
+
+Supplementary methods 
+
+ALIGNN 2.0 retains the alternating atom-graph and line-graph update structure of ALIGNN [6] but implements every graph operation in native PyTorch tensors [11] under a neighbor strategy we refer to as pure-torch, with no external graph runtime. Atoms are represented by ninety-two-dimensional CGCNN embedding vectors [2]; edges carry radial-basis-function distance features; and triplets, which are the nodes of the line graph, carry bond-angle features expanded in a radial basis. The model alternates edge-gated graph convolutions on the atom graph with convolutions on the 46 Si[110] (49 cols) ALIGNN2: Ef=0.00 eV/at, gap=0.77 eV           
+
+> GaN[11-20] (46 cols) ALIGNN2: Ef=-0.58 eV/at, gap=1.96 eV
+> MoS2 (28 cols) ALIGNN2: Ef=-0.93 eV/at, gap=1.07 eV
+> graphene (28 cols) ALIGNN2: Ef=0.01 eV/at, gap=-0.00 eV
+> Au[110] (25 cols) ALIGNN2: Ef=0.00 eV/at, gap=-0.00 eV
+> BaTiO3[001] (25 cols) ALIGNN2: Ef=-3.34 eV/at, gap=1.76 eV
+> HAADF-STEM from ALIGNN 2.0 across materials: force-field frozen phonons drive the image, AtomVision + ALIGNN read it back
+
+Figure S5: Force-field-driven HAADF-STEM across materials with ALIGNN 2.0. 
+
+The single-framework microscopy pipeline of Fig. 5, applied to six materials spanning covalent (Si[110]), wide-gap semiconductor (GaN[11¯ 20]), 2D (monolayer MoS 2, graphene), close-packed metal (Au[110]), and perovskite (BaTiO 3[001]) structures. For each, the ALIGNN-FF (MATPES-R2SCAN) relaxes the cell and supplies per-element 300 K thermal (frozen-phonon) displacements that drive an abTEM multislice HAADF-STEM simulation. AtomVision then detects the atomic columns (cyan markers, count in each title) and ALIGNN 2.0 predicts the formation energy and OptB88vdW band gap (title) from the same relaxed structure. One model set closes the simulate →image →read-back loop across bonding types. line graph, so that angular information computed on the line graph modulates the messages passed on the atom graph. The line graph is constructed on the fly from the atom graph’s edges, and, because training proceeds over batches of structures of different sizes, both graphs are batched by concatenation with consistent index offsetting, so that atoms, edges, and triplets belonging to different structures never exchange messages; this batched line-graph construction, expressed entirely in vectorized tensor operations, is what allows the dependency-free implementation to train efficiently at the scale of more than a million configurations. Two model sizes are used throughout: a compact configuration with two atom-graph and two line-graph layers and a hidden width of sixty-four, used for controlled comparisons, and a production configuration with four atom-graph and four line-graph layers and a hidden width of two hundred and fifty-six. Two graph constructions are compared under otherwise identical settings. The force-field-compatible radius graph uses a five-angstrom cutoff, retains at most twelve nearest neighbors, and 47 0 2 4 6 8 10 12 14 Photon energy (eV) 01234                      
+
+> (a) Dielectric
+> 1TBMBJ
+> 2TBMBJ
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (b) IR
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (c) Raman
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (d) INS
+> FD-ELAST DFT ALIGNN-FF phonon
+> ZnO: ALIGNN 2.0 vs DFT/experiment
+
+Figure S6: Spectroscopic validation for ZnO (wurtzite; IR JVASP-1195, Raman mp-2133), panels as in Fig. 4: (a) optical dielectric vs TBmBJ, (b) IR vs DFPT and experiment, (c) Raman vs the JARVIS DFT Raman database, (d) INS vs finite-displacement DFT, all from a single relaxed structure with ALIGNN 2.0. builds the line graph from a three-and-a-half angstrom three-body cutoff; its neighbor set varies continuously with atomic displacement, which is the property required for conservative dynamics. The alternative kNN graph uses an eight-angstrom cutoff with twelve nearest neighbors and the full angular line graph, providing a wider angular receptive field at the cost of a neighbor list that changes discontinuously as atoms move. All other architectural and training settings are held fixed between the two constructions so that any difference in accuracy is attributable to the graph alone. For force-field training the total energy is predicted as a per-atom energy multiplied by the number of atoms; atomic forces are obtained analytically as the negative gradient of the predicted energy with respect to atomic positions through automatic differentiation; and, where trained, the stress is obtained from the corresponding virial. The training loss combines a graph-level term for energy with a gradient term for forces and, when enabled, a stress term, with fixed relative weights. The same per-atom head that produces forces is reused, with the gradient disabled, to fit non-gradient per-atom targets such as atomic charges and magnetic moments, and a graph-level vector head of the appropriate output dimension is used for spectral and tensorial targets. The property datasets are drawn from JARVIS-DFT [22], in which the underlying quantities are computed with the projector-augmented-wave method [54] using, for the dft 3d properties, the OptB88vdW van der Waals density functional [23]. Formation and total energies, band gaps, and 48 0 2 4 6 8 10 12 14 Photon energy (eV) 2                      
+
+> 02468
+> (a) Dielectric
+> 1TBMBJ
+> 2TBMBJ
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (b) IR
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (c) Raman
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (d) INS
+> FD-ELAST DFT ALIGNN-FF phonon
+> AlN: ALIGNN 2.0 vs DFT/experiment
+
+Figure S7: Spectroscopic validation for AlN (wurtzite; IR JVASP-39, Raman mp-661), panels as in Fig. 4. derived electronic descriptors follow from self-consistent calculations; elastic stiffness tensors are ob-tained from finite strain-stress relations; dielectric, Born-effective-charge, and piezoelectric tensors are obtained from density-functional perturbation theory [26]; thermoelectric Seebeck coefficients and power factors follow from semiclassical Boltzmann transport; and the lattice thermal conduc-tivity, reported on a base-ten logarithmic scale, quantifies phonon transport. Electronic densities of states are taken directly from the self-consistent calculations, while phonon densities of states derive from force constants evaluated by the finite-displacement method and post-processed with phonopy [55]. Atomic charges are obtained by Bader decomposition of the charge density [25], and site magnetic moments from spin-polarized calculations. Superconducting critical temperatures, in-cluding the separately distributed high-pressure hydride sets, follow the electron-phonon-coupling screening workflow of Ref. [7]. For force fields, the element-specific mlearn sets provide DFT molec-ular dynamics snapshots for six elements assembled to benchmark machine-learning potentials [69]; the ALIGNN-FF database aggregates JARVIS-DFT relaxation trajectories [8]; and the MATPES set provides of order four hundred thousand structures carefully sampled from a very large pool of molecular-dynamics snapshots to span equilibrium and near-equilibrium configurations [28]. To broaden the configuration space sampled by a finite-displacement potential, we additionally harvest OptB88vdW configurations from energy-volume curves and from vacancy and surface relaxation trajectories generated in JARVIS-DFT workflows, parsing every ionic step of each converged cal-culation into an energy-per-atom-and-forces record consistent with the finite-displacement data’s 49 0 2 4 6 8 10 12 14 Photon energy (eV) 0510 15                       
+
+> (a) Dielectric
+> 1TBMBJ
+> 2TBMBJ
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (b) IR
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (c) Raman
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (d) INS
+> FD-ELAST DFT ALIGNN-FF phonon
+> SnS: ALIGNN 2.0 vs DFT/experiment
+
+Figure S8: Spectroscopic validation for SnS ( Pnma ; IR JVASP-1109, Raman mp-2231), panels as in Fig. 4. reference, and merge these with the finite-displacement set while holding the original test partition fixed so that any change in accuracy is attributable to the added training data alone. All property and force-field evaluations follow the JARVIS-Leaderboard protocol and its fixed train, validation, and test splits and report the mean absolute error on the test partition [16]. Alongside the model comparisons we report, for each single-property task where it is well defined, the mean absolute error of a baseline that predicts the mean of the training targets, evaluated on the test partition, and a skill score defined as one minus the ratio of the model error to this baseline error; the skill score is positive when the model outperforms the naive predictor and equals the fraction of the baseline error removed. For a small number of targets whose per-atom or reference conventions are still being reconciled, the corresponding baseline or skill entry is omitted rather than reported provisionally. Models are trained with a one-cycle learning-rate schedule [29] and the AdamW optimizer [56]. Because the schedule anneals the learning rate to near zero only at the final epoch, all results are reported at full convergence, with property models trained for one hundred and fifty to three hun-dred epochs and force fields for up to several tens to a few hundred epochs depending on dataset size. Warm starting from a converged checkpoint is used when continuing a potential’s training on an augmented dataset. Training was performed on current-generation Blackwell-class GPUs and on Grace-Blackwell hardware; the dependency-free implementation runs on these accelera-tors without modification. Molecular-dynamics stability is assessed by micro-canonical integration 50 0 2 4 6 8 10 12 14 Photon energy (eV) 5
+
+> 0510 15 20 25
+
+(a) Dielectric           
+
+> 1TBMBJ
+> 2TBMBJ
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(b) IR       
+
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(c) Raman       
+
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(d) INS 
+
+> FD-ELAST DFT ALIGNN-FF phonon
+
+SnSe: ALIGNN 2.0 vs DFT/experiment Figure S9: Spectroscopic validation for SnSe ( Pnma ; IR JVASP-299, Raman mp-691), panels as in Fig. 4. with a one-femtosecond time step, using structures handled through the atomic simulation en-vironment [57], initializing supercells at finite temperature and reporting the linear drift of the total energy per atom in milli-electronvolts per atom per picosecond together with its maximum absolute deviation. The pure-PyTorch ALIGNN implementation, the trained models, and the asso-ciated LAMMPS-compatible [19] ALIGNN-FF potential are openly available at https://github. com/atomgptlab/alignn , with an interactive web application at https://atomgpt.org/alignn ,whose agentic AtomGPT.org platform exposes these models alongside the wider materials-design toolchain [58]; evaluations follow the JARVIS-Leaderboard protocol [16] and the contributions will be provided under the corresponding leaderboard entries. 
+
+Reproducibility, hyperparameter search, and a zero-shot universal-potential baseline 
+
+To test end-to-end reproducibility, the formation-energy and exfoliation-energy benchmarks were retrained from a self-contained bundle (data download, split construction verified against the pub-lic benchmark files, four training configurations, and an automatic reported-versus-retrained com-parison) on two unrelated clusters with different architectures (aarch64 Grace–Blackwell and x86 nodes). The kNN formation-energy model reproduced the reported test error to within one percent on both clusters (0.0305 and 0.0308 versus 0.0307 eV/atom); the radius models reproduced 40.6 51 0 2 4 6 8 10 12 14 Photon energy (eV) 5                      
+
+> 0510 15
+> (a) Dielectric
+> 1TBMBJ
+> 2TBMBJ
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (b) IR
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (c) Raman
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (d) INS
+> FD-ELAST DFT ALIGNN-FF phonon
+> LiNbO3: ALIGNN 2.0 vs DFT/experiment
+
+Figure S10: Spectroscopic validation for LiNbO 3 (R3c ; IR JVASP-1240, Raman mp-3731), panels as in Fig. 4. versus 40.3 meV/atom on exfoliation energy and 0.0330 versus 0.0316 eV/atom on formation en-ergy, agreement within a few percent. The campaign also independently detected, and confirmed the fix for, an earlier pipeline defect in which the test split was featurized without the three-body cutoff; radius-graph models required the corrected test featurization to replicate, whereas kNN models are structurally immune because their three-body cutoff equals the neighbor cutoff. Hyperparameter sensitivity was probed with a validation-ranked random search (learning rate, batch size, weight decay, width, depth, and convolution variant), with the test split never entering model selection; final evaluation used the best-validation checkpoint, optionally with an exponen-tial moving average of the weights. Figure S13 plots, for every trial of both searches, the validation error used for selection against the held-out test error, with the untuned default marked. On the 5,572-structure formation-energy validation set the search is well conditioned, and the winning configuration (learning rate 3 .5 × 10 −3, batch 128, hidden width 384, five ALIGNN and four GCN layers, n alignn convolution, weight decay 10 −4, with weight-space exponential moving averaging and best-validation-checkpoint evaluation), retrained at full length with three training-seed replicas that share the identical leaderboard split, gives a median single-model test error of 0.0312 eV/atom and a three-seed prediction ensemble of 0.0294 eV/atom on the radius graph; the same configuration transferred to the kNN graph gives single-model errors of 0.0281–0.0287 eV/atom (median 0.0283) and a three-seed ensemble of 0.0266 eV/atom, a thirteen percent improvement over the untuned single model. On the 81-structure exfoliation benchmark the same procedure fails instructively: 52 0 2 4 6 8 10 12 14 Photon energy (eV) 5
+
+> 0510 15 20
+
+(a) Dielectric           
+
+> 1OPT-LOPTICS
+> 2OPT-LOPTICS
+> 1ALIGNN
+> 2ALIGNN
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(b) IR       
+
+> DFPT ALIGNN-FF phonon ALIGNN direct exp. IR
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(c) Raman       
+
+> ramandb DFT ALIGNN-FF phonon ALIGNN direct
+> 0200 400 600 800 1000 cm 1
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+(d) INS 
+
+> ALIGNN-FF phonon
+
+GeS: ALIGNN 2.0 vs DFT/experiment Figure S11: Spectroscopic validation for GeS ( Pnma ; IR JVASP-2169, Raman mp-2242), panels as in Fig. 4. although validation and test errors correlate across trials, the 64-structure validation subset is sys-tematically optimistic (every trial’s held-out error exceeds its validation error, by twenty meV/atom for the validation-selected trial), and every configuration that outperformed the untuned default on validation, including the selected one, went on to underperform it on test, as did every other trial; the untuned defaults are therefore reported there, and we regard this as a caution against tuning on small-sample benchmarks generally. The universal-potential baseline evaluates UMA (uma-s, omat task head) [12] zero-shot on the identical held-out splits. Formation energies per atom are obtained from UMA total energies with per-element reference energies fitted by least squares on the training split only; exfoliation energies are computed physically, as the difference between monolayer and bulk single-point energies per atom, with each bulk structure paired to its DFT-relaxed monolayer counterpart in JARVIS-DFT-2D through the shared source identifier. UMA reaches 0.112 eV/atom on formation energy and 82 meV/atom on exfoliation energy against the OptB88vdW targets, versus 0.0305 and 38.6 for the retrained task-trained models on the same splits; the exfoliation gap is expected, since the PBE-level data on which universal potentials are trained lacks the interlayer van der Waals binding that OptB88vdW captures and that exfoliation energy directly measures. 53 0.0 2.5 5.0 7.5 10.0 12.5 15.0 Photon energy (eV) 2.5 
+
+0.0 2.5 5.0 7.5 10.0 Dielectric function 
+
+> (a) Optical dielectric function
+> 1
+> 2
+
+0 200 400 600 800 1000 Wavenumber (cm 1)
+
+0.0 0.2 0.4 0.6 0.8 1.0 IR intensity (arb.) 
+
+> (b) Infrared
+> phonon-derived (FF) direct predictor
+
+0 200 400 600 800 1000 Wavenumber (cm 1)
+
+0.0 0.2 0.4 0.6 0.8 1.0 Raman intensity (arb.)  (c) Raman 
+
+> phonon-derived (FF) direct predictor
+
+0 20 40 60 80 100 Energy transfer (meV) 0.0 0.2 0.4 0.6 0.8 1.0 INS intensity (arb.) 
+
+> (d) Inelastic neutron scattering
+
+ALIGNN 2.0 predicted spectra: rutile TiO 2 (JVASP-5, r2SCAN-FF) Figure S12: Spectroscopic showcase for rutile TiO 2 (JVASP-5) predicted by ALIGNN 2.0 from a single relaxed structure: (a) optical dielectric ( ε2 from TBmBJ, ε1 from Kramers–Kronig); (b) infrared and (c) Raman computed two independent ways, from r2SCAN ALIGNN-FF phonons (solid) and the direct end-to-end predictor (dashed), agreeing on the principal E u IR band near 180 cm −1 and resolving the E g/A 1g Raman lines at ∼ 400/560 cm −1; and (d) inelastic neutron scattering from the same force constants. 54 Table S4: Interface work of adhesion from the ALIGNN 2.0 force field (MATPES). 
+
+Predicted Wad = ( Eslab1 + Eslab2 − Einterface )/A , with all three cells relaxed and the two slabs obtained by a self-consistent split of the relaxed interface (same lateral cell and atom set), for lattice-matched interfaces spanning metal, ceramic, semiconductor and 2D chemistries built with the 
+
+Intermat protocol [43]. Positive Wad denotes adhesion; values are single lowest-energy stackings without lateral-registry optimization, so weakly registered contacts can read near zero or slightly negative. Interface (film / substrate, Miller) Wad (J/m 2)
+
+Metal / metal 
+
+Cu (111) / W (001) +6.61 Al (111) / W (001) +7.15 
+
+Metal / nitride 
+
+Cu (111) / TiN (111) +1.79 Al (111) / TiN (111) +1.45 Ti (001) / TiN (001) +5.39 
+
+Metal / oxide 
+
+Al (111) / Al 2O3 (001) -0.06 Cu (111) / SiO 2 (101) +1.87 Al (111) / SiO 2 (101) +0.73 Cu (001) / ZrO 2 (110) +1.38 Cu (111) / Cu 2O (111) +2.00 
+
+Ceramic / ceramic 
+
+AlN (100) / Al 2O3 (001) +0.03 TiO 2 (001) / TiN (001) +2.13 
+
+Semiconductor / oxide 
+
+Si (111) / SiO 2 (001) +1.12 
+
+2D / 3D 
+
+MoS 2 (001) / Al 2O3 (001) -1.02 graphene (001) / SiO 2 (101) +0.57 55 35 40 45 50 best validation MAE (meV/atom) 40 45 50 55 60 65 test MAE (meV/atom)    
+
+> Pearson r= 0.78 Spearman = 0.80
+> every trial tests worse than the default
+> (a) exfoliation energy (validation n=64, test n=81)
+> untuned default (test) selected by validation
+
+0.0315 0.0320 0.0325 0.0330 0.0335 0.0340 best validation MAE (eV/atom) 0.0315 0.0320 0.0325 0.0330 0.0335 0.0340 0.0345 test MAE (eV/atom)    
+
+> Pearson r= 0.89 Spearman = 0.85
+> (b) formation energy (validation n=5,572, test n=5,572)
+
+Small validation sets mislead model selection Figure S13: Hyperparameter selection is only as reliable as the validation set is large. Each point is one random-search trial, plotting the best validation error used for model selection against the held-out test error; the dashed line marks the untuned default configuration’s test error and the circled point marks the trial selected by validation. (a) On the 81-structure exfoliation benchmark the 64-structure validation subset is systematically optimistic and every trial that beat the default on validation lost to it on test, so the defaults are reported. (b) On the 5,572-structure formation-energy benchmark validation and test agree, and the validation-selected winner is also the best on test, below the default; its three-seed ensembles give the tuned results quoted in the text. 56

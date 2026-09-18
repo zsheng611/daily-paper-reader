@@ -1,0 +1,2083 @@
+Symmetry-aware super-resolution of crystal
+orientation maps via invariant latent-space learning
+Umang Garg1*†, Warren Zamudio2†, McLean P. Echlin3,
+Samantha H. Daly2, Tresa M. Pollock3, B.S. Manjunath1
+1*Electrical and Computer Engineering, University of California Santa
+Barbara, Santa Barbara, 93106, California, USA.
+2Mechanical Engineering, University of California Santa Barbara, Santa
+Barbara, 93106, California, USA.
+3Materials, University of California Santa Barbara, Santa Barbara,
+93106, California, USA.
+*Corresponding author(s). E-mail(s): umang@ucsb.edu;
+Contributing authors: wzamudio@ucsb.edu; mechlin@ucsb.edu;
+samdaly@ucsb.edu; tresap@ucsb.edu; manj@ucsb.edu;
+†These authors contributed equally to this work.
+Abstract
+Crystal-orientation maps are physical fields defined only up to crystal symme-
+try; electron backscatter diffraction (EBSD) resolves them experimentally, but
+acquisition-time constraints limit spatial resolution. Unlike conventional images,
+EBSD data lie on the quotient space SO(3)/G, where G is the crystal-symmetry
+group. Standard Euclidean interpolation can therefore mix symmetry-equivalent
+representations and blur grain boundaries. We introduce the Symmetry-Group-
+Aware Super-Resolution Attention Network (SG-SRAN), which incorporates
+crystal symmetry and boundary preservation by design. A frozen, locally iso-
+metric encoder maps equivalent orientations to a common latent representation
+in which Euclidean distance approximates misorientation. Super-resolution is
+performed in this space, with each high-resolution token restricted to a feature-
+consistent local support to prevent cross-boundary mixing. A dictionary-based
+decoder then recovers valid orientations. Across FCC and HCP benchmarks,
+SG-SRAN matches 15–16-million-parameter backbones using only 27–49k train-
+able parameters, while achieving the lowest p68 errors, highest inverse-pole-figure
+fidelity, and zero-shot transfer to unseen alloys.
+1
+arXiv:2609.10898v1  [cs.CV]  9 Sep 2026
+
+
+Keywords: EBSD; super-resolution; crystal orientation; equivariant learning; locally
+isometric embedding; grain boundaries; orientation routing
+Electron backscatter diffraction (EBSD) is a widely used technique for resolving
+crystallographic orientation fields in structural materials, with applications rang-
+ing from grain-topology characterization to the study of deformation localization,
+recrystallization and damage initiation [1]. However, its spatial resolution comes at a
+substantial acquisition cost. Reducing the pixel pitch increases scan time and limits
+the area that can be mapped under a fixed measurement budget. A reliable digi-
+tal super-resolution (SR) method could help relax this trade-off by reconstructing
+high-resolution microstructural information from more rapidly acquired low-resolution
+scans (Extended Data Fig. 1).
+EBSD super-resolution is fundamentally different from conventional image super-
+resolution because each pixel represents a crystal orientation rather than a Euclidean
+intensity or color value (Fig. 1a). A crystal orientation is defined only up to the proper
+rotational symmetry group of the crystal. The physically meaningful orientation space
+is therefore the quotient manifold SO(3)/G, where SO(3) denotes the group of three-
+dimensional rotations and G is the proper rotational crystal point group.
+This geometry presents two distinct challenges. First, symmetry-equivalent ori-
+entations can have very different numerical representations. Interpolation that
+neglects crystal symmetry may therefore introduce artificial orientation gradients
+near fundamental-zone boundaries (Fig. 1b). Second, grain boundaries introduce dis-
+continuities in the physical orientation field. Interpolation or feature aggregation
+across a grain boundary mixes information from distinct grains, producing nonphys-
+ical orientations and blurred, shifted, or smoothed boundaries. A naive upsampler
+can consequently generate visually smooth reconstructions while introducing speckled
+intra-grain errors and degraded grain boundaries (Fig. 1c). Common representations,
+including Euler angles, inverse-pole-figure color maps and raw quaternion coordinates,
+all retain ambiguities or discontinuities when processed using standard Euclidean
+operations.
+Classical interpolation methods address parts of this problem. For example, Spheri-
+cal linear interpolation (SLERP) preserves the unit-norm constraint of quaternions [2],
+and symmetry-aware variants can select shorter paths between symmetry-equivalent
+representations. These approaches nevertheless remain local, pairwise and non-learned.
+They cannot draw on mesoscale orientation structure or adapt their interpolation sup-
+port to the surrounding grain topology. Learned EBSD super-resolution has also been
+explored using IPF-color images and quaternion-valued maps [3, 4]. Related work has
+used serial-section learning to generate volumetric EBSD maps [4], for which accu-
+rate two-dimensional section-level super-resolution is a natural building block. Yet
+the underlying representation problem remains. When a network operates in a space
+whose distance metric does not agree with crystallographic misorientation, part of its
+capacity must be spent compensating for that geometric mismatch before it can learn
+the reconstruction task.
+2
+
+
+A learned backbone is also not automatically protected from mixing information
+across grains. Unless the architecture controls which neighbors contribute to a predic-
+tion, feature aggregation can still blur adjacent grains or bridge them with physically
+incorrect orientation gradients. An effective orientation-field super-resolution method
+must therefore distinguish between two different situations: orientations that appear
+different numerically but are equivalent under crystal symmetry, and orientations that
+are physically distinct because they lie on opposite sides of a grain boundary.
+Two developments make this distinction tractable. First, locally isometric embed-
+dings of the quotient space SO(3)/G, constructed from Reynolds-projected Wigner-D
+features, provide latent coordinates that are invariant to the crystal point-group
+action while remaining organized into SO(3) irreducible-representation channels [5–
+7]. Symmetry-equivalent orientations therefore map to the same latent representation,
+while small Euclidean distances approximate small crystallographic misorientations.
+Second, SO(3)-equivariant operations preserve the transformation laws of these latent
+features throughout the network rather than flattening them into generic scalar
+channels [8–11].
+Here we introduce SG-SRAN, a symmetry-aware and locally routed architecture
+for orientation-map super-resolution. A frozen encoder maps each input quaternion to
+a locally isometric latent representation constructed from Reynolds-projected Wigner-
+D features [7]. The resulting features are invariant to the proper rotational crystal
+point group while transforming as structured SO(3) irreducible-representation chan-
+nels under global rotations. The trainable SG-SRAN backbone operates entirely on
+these latent features using SO(3)-equivariant operations implemented in e3nn, preserv-
+ing their transformation structure throughout the network. Feature-distance-masked
+latent convolutions restrict local support and reduce information exchange between
+crystallographically incompatible orientations. During upsampling, neighboring fea-
+tures are grouped into a small set of feature-consistent slots, and each high-resolution
+(HR) token is routed to its most compatible slot. Finally, a dictionary-based decoder
+maps the predicted latent features back to unit quaternions using an orientation
+dictionary generated by cubochoric sampling [12, 13].
+We evaluate SG-SRAN through three sets of experiments. First, the frozen
+encoder–dictionary-based decoder reconstructs held-out orientations with milliradian
+accuracy for both face-centered cubic (FCC) IN718 and hexagonal close-packed (HCP)
+Ti-6Al-4V data, showing that the latent space provides a faithful computational
+interface across distinct crystal symmetries. Second, on the IN718 4 × 4 benchmark,
+evaluated over five seeds against four classical interpolants and seven learned base-
+lines, the leading methods are not materially separated by pooled mean misorientation.
+SG-SRAN nevertheless achieves the lowest p68 and p95 misorientation errors and the
+highest IPF-space PSNR, while using approximately 320× fewer parameters than the
+attention-based backbones. This comparison refers to trainable backbone size; end-to-
+end inference also includes the fixed dictionary and dictionary-based decoder, whose
+runtime cost is reported in Methods. Third, the same architecture family supports a
+second crystal symmetry using symmetry-specific invariant encoders and configuration
+choices. SG-SRAN is the strongest compact model on the Ti-6Al-4V HCP benchmark
+3
+
+
+Fig. 1 Geometric and microstructural challenges in orientation-map super-resolution.
+a, A low-resolution (LR) orientation map and its high-resolution (HR) target, rendered in IPF-Z
+color. b, Crystal orientations are points on the quotient manifold SO(3)/G: pairwise spherical-linear
+interpolation (SLERP) on the quaternion sphere follows a geodesic but is local and symmetry-blind;
+the color bar reports the residual misorientation such an interpolant leaves across an interface. c, A
+“naive” generative upsampler (SLERP here) that treats orientations as Euclidean image channels;
+the magnified insets reveal its characteristic, physically invalid failure modes—speckled intra-grain
+noise and blurred or bridged grain boundaries—even where the output looks visually smooth. These
+artifacts motivate operating in a quotient-aware latent representation with explicit, boundary-aware
+routing rather than on rendered RGB maps. Scale bar, 50 µm; in the 4 × 4 task, one LR sample
+corresponds to a 4 × 4 block of HR pixels.
+under the proper D6 symmetry protocol and supports zero-shot transfer to out-of-
+distribution FCC CoNi and HCP Ti-Al targets (Table 3). Together, these results show
+that quotient geometry, equivariant feature processing and local routing provide use-
+ful inductive biases for orientation-valued super-resolution, rather than corrections
+applied after training a conventional Euclidean image backbone.
+1 Results
+1.1 Pipeline overview
+The SG-SRAN pipeline separates the EBSD SR problem into a frozen geometric rep-
+resentation and a trainable latent-space upsampler (Fig. 2). The encoder collapses
+symmetry-equivalent orientations exactly and makes small latent Euclidean distances
+correspond to small crystallographic misorientations (see Methods). Therefore, the
+trainable backbone never compares quaternions directly: local context aggregation,
+support-bank clustering and routed patch synthesis all happen in the latent fea-
+ture space. The routing operation is symmetry-aware: SG-SRAN clusters a local
+window-support bank (for instance, the 9 × 9 bank shown in Fig. 2) by Euclidean dis-
+tance in the locally isometric latent feature embedding, and the router selects among
+those symmetry-collapsed feature slots. Thus, upsampling preserves crystal-symmetry
+4
+
+
+equivalence while discouraging support from distinct grains being merged across a
+boundary.
+Figure 2 presents the pipeline at two levels. The top row (a) gives the end-to-end
+latent SR path: frozen A1g encoding, one LR latent refinement, SG-SRAN upsam-
+pling, configuration-dependent HR latent refinement and decoding. The lower row
+(b) depicts one typical local SG-SRAN decision: a boundary-centered local window-
+support bank is partitioned into latent feature slots, a proposal generator forms
+token-conditioned candidate features for each slot, and a MLP router uses the com-
+plete binary slot-composition masks together with learned subpixel position to choose
+the local orientation branch for each HR token in the final 4 × 4 patch. Detailed layer
+definitions are given in Methods.
+Fig. 2 Symmetry-aware latent EBSD super-resolution pipeline and local routed synthe-
+sis in SG-SRAN. The top row summarizes the end-to-end model. Input orientations are mapped
+by the frozen A1g/Reynolds encoder into a symmetry-invariant latent stack, refined once at LR,
+upsampled by SG-SRAN, refined at HR according to the material-specific configuration, and decoded
+back to crystallographically valid quaternions. The small decoded crops above the latent stacks pro-
+vide an interpretable view of the orientation field before and after latent upsampling. The lower row
+expands one local SG-SRAN decision at a boundary-rich site. The displayed IN718 example uses a
+9 × 9 support bank around the marked LR pixel, which is partitioned into candidate orientation slots
+in the locally isometric latent embedding; the proposal generator builds token-conditioned candidate
+features for each slot, while a router uses the complete binary slot-composition masks and learned
+subpixel position embeddings to assign each HR token to one slot. Each routed HR token is therefore
+initialized from one observed local orientation branch before HR refinement. Detailed layer defini-
+tions and equations are given in Methods.
+5
+
+
+1.2 The frozen encoder–dictionary-based decoder round-trips
+orientations across FCC and HCP
+We first isolate the latent interface from the SR task by measuring round-trip
+encode–decode fidelity on held-out test orientations: with no spatial upsampling, how
+accurately do the frozen encoder and dictionary-based decoder recover the input ori-
+entation? Dense dictionary lookup achieves milliradian-level accuracy on both crystal
+systems (Table 2a): the mean per-sample symmetry-aware error is 0.0076 rad on the
+FCC IN718 test split and 0.0079 rad on the Ti-6Al-4V HCP test split. These val-
+ues measure the end-to-end round-trip fidelity of the frozen Reynolds encoder and
+dictionary-based decoder independently of the spatial super-resolution network. Their
+close agreement shows that the latent interface attains comparable round-trip accuracy
+across the two crystal-symmetry classes. The two geometric properties that make this
+latent space a locally faithful interface—exact crystal-symmetry invariance and local
+isometry with respect to misorientation—are verified directly in Fig. 3; representative
+round-trip reconstructions are shown in Extended Data Fig. 2.
+1.3 Benchmark on held-out IN718 and Ti-6Al-4V at 4 × 4
+We evaluate SG-SRAN at scale factor r
+=
+(4, 4) against four classical inter-
+polants (nearest-neighbor, bicubic with renormalization, SLERP and symmetry-aware
+SLERP) and seven learned baselines trained independently on the matched splits:
+Q-RBSA-adapted [4], EDSR [14], a quaternion EDSR (QEDSR) [14], an Atindama-
+style partial-convolution inpainting network [15], RCAN [16], SAN [17] and HAN [18].
+Every learned method is trained over five seeds per material and evaluated under a
+single fixed protocol (symmetry-aware error dG, a 5◦boundary mask, the same held-
+out test splits of n = 147 IN718 and n = 72 Ti-6Al-4V patches; Methods), so all rows
+of Table 2b are directly comparable. The Ti-6Al-4V metrics use the 12-element proper
+D6 rotational subgroup.
+On IN718, the attention backbones, the quaternion baselines and SG-SRAN form
+a closely grouped tier on pooled mean misorientation: RCAN records the lowest mean
+(2.52 ± 0.04◦), with SG-SRAN (2.60 ± 0.06◦), SAN (2.62◦) and HAN (2.63◦) sepa-
+rated by only about a tenth of a degree. The complementary metrics resolve distinct
+strengths: RCAN leads Boundary F1 (0.678) and boundary-band error, QEDSR leads
+median and interior error, SAN leads boundary-window Composition F1, and SG-
+SRAN attains the lowest p68 and p95 error percentiles (p68 0.81◦and p95 1.73◦;
+the next-best learned p68 is EDSR at 0.83◦and the next-best learned p95 is SAN
+at 2.70◦, with the remaining learned rows spanning 3.17–34.62◦; Table 1) and the
+highest IPF-space PSNR and SSIM. SG-SRAN reaches this with a ∼49k-parameter
+trainable backbone—∼320× smaller than RCAN/SAN/HAN, ∼126× smaller than Q-
+RBSA-adapted and ∼530× smaller than Atindama inpainting. The IN718 comparison
+therefore establishes SG-SRAN’s compactness–accuracy advantage: it leads p68/p95
+and parameter efficiency while maintaining competitive accuracy among other metrics.
+On Ti-6Al-4V, the task is substantially harder because the held-out HCP patches
+contain a dense network of fine boundaries. The 27k-parameter SG-SRAN configura-
+tion nevertheless gives the best pooled mean (9.54 ± 0.12◦), median (0.48◦), interior
+6
+
+
+Table 1 Model compactness, orientation accuracy and image fidelity (all baselines).
+Per-method trainable parameter count (thousands, K), error percentiles (p68/p95/p99) of the per-
+pixel symmetry-aware misorientation, and IPF-space PSNR/SSIM, on the held-out IN718 (n = 147)
+and Ti-6Al-4V (n = 72) 4 × 4 test splits. SG-SRAN parameter counts are configuration-specific:
+49K for the IN718 support-window setting and 27K for the Ti-6Al-4V setting. Deterministic
+interpolants are marked “–” and learned rows are five-seed means; ± reports seed-level standard
+deviation for learned rows and per-patch test-set standard deviation for deterministic IN718 rows.
+Pooled mean and median misorientation are in Table 2 b. Lower is better for misorientation, higher
+for PSNR/SSIM; bold marks the best per column. Most IN718 learned methods cluster near 59◦at
+p99, whereas the boundary-rich Ti-6Al-4V benchmark yields larger extreme errors across methods.
+Method
+Params (K)
+p68 (◦)
+p95 (◦)
+p99 (◦)
+PSNR (dB)
+SSIM
+IN718 4 × 4 (FCC, n = 147)
+Nearest
+–
+1.00
+46.83
+59.76
+17.58 ± 0.73
+0.615 ± 0.021
+Bicubic
+–
+3.99
+39.33
+57.73
+14.64 ± 0.90
+0.474 ± 0.044
+SLERP
+–
+1.24
+38.32
+56.40
+14.74 ± 0.99
+0.527 ± 0.042
+Symm-SLERP
+–
+1.15
+32.40
+53.04
+15.89 ± 0.65
+0.558 ± 0.031
+Atindama inpainting [15]
+25,784
+4.60
+34.62
+50.13
+13.90 ± 0.26
+0.411 ± 0.033
+Q-RBSA-adapted [4]
+6,175
+1.03
+14.64
+56.23
+19.01 ± 0.31
+0.652 ± 0.012
+QEDSR [14]
+1,815
+0.86
+5.23
+59.21
+19.91 ± 0.04
+0.706 ± 0.004
+EDSR [14]
+7,241
+0.83
+3.39
+59.04
+20.12 ± 0.11
+0.711 ± 0.004
+RCAN [16]
+15,594
+0.89
+3.88
+58.30
+20.29 ± 0.05
+0.706 ± 0.013
+SAN [17]
+15,862
+0.83
+2.70
+59.12
+20.13 ± 0.06
+0.710 ± 0.004
+HAN [18]
+16,073
+0.85
+3.17
+59.11
+20.10 ± 0.14
+0.709 ± 0.009
+SG-SRAN (ours)
+49
+0.81
+1.73
+59.55
+20.36 ± 0.15
+0.715 ± 0.006
+Ti-6Al-4V 4 × 4 (HCP, proper D6, n = 72)
+Nearest
+–
+7.93
+73.56
+88.08
+12.90
+0.449
+Bicubic
+–
+22.45
+72.26
+87.23
+10.59
+0.262
+SLERP
+–
+24.19
+72.66
+87.14
+10.44
+0.280
+Symm-SLERP
+–
+15.58
+56.12
+79.57
+12.76
+0.405
+Atindama inpainting [15]
+25,784
+22.79
+69.53
+86.87
+10.15 ± 0.10
+0.275 ± 0.012
+Q-RBSA-adapted [4]
+6,175
+1.93
+66.00
+86.61
+14.29 ± 0.03
+0.557 ± 0.001
+QEDSR [14]
+1,815
+1.99
+65.58
+86.49
+14.36 ± 0.03
+0.562 ± 0.002
+EDSR [14]
+7,241
+6.66
+61.35
+84.99
+13.80 ± 1.32
+0.503 ± 0.105
+RCAN [16]
+15,594
+3.64
+63.57
+85.78
+14.18 ± 0.23
+0.534 ± 0.032
+SAN [17]
+15,862
+2.89
+64.48
+86.15
+14.36 ± 0.05
+0.547 ± 0.009
+HAN [18]
+16,073
+4.00
+63.34
+85.79
+14.22 ± 0.21
+0.529 ± 0.029
+SG-SRAN (ours)
+27
+1.36
+65.16
+86.51
+14.60 ± 0.06
+0.575 ± 0.005
+mean (0.51◦), boundary-band mean (9.63◦), Boundary F1 (0.639), PSNR and SSIM.
+SG-SRAN also leads p68; EDSR leads learned-method p95, and symmetry-aware
+SLERP leads overall p95 and p99. The Ti-6Al-4V comparison therefore separates
+boundary-aware reconstruction from extreme-tail ranking: SG-SRAN gives the most
+accurate and most faithful average reconstruction while SAN narrowly gives the best
+boundary-window Composition F1 (0.804 versus 0.782 for SG-SRAN).
+Qualitative comparisons support the same picture: SG-SRAN and Q-RBSA-
+adapted recover coherent grain interiors while Atindama leaves periodic stripe artifacts
+from the sparse observation mask (Extended Data Fig. 3); matched held-out test
+examples for both materials are shown in Extended Data Fig. 4. IPF renderings are
+used only as qualitative visualizations; quantitative claims rest on dG and the bound-
+ary diagnostics. Scale dependence across the 2 × 2, 4 × 4 and 8 × 8 tasks on both
+materials is summarized in Extended Data Fig. 7.
+7
+
+
+Table 2 Encoder fidelity and orientation-accuracy breakdown. (a) Frozen Reynolds
+encoder–dictionary-based decoder round-trip fidelity on held-out test samples, as mean and
+standard deviation of per-sample mean symmetry-aware error dG in radians. (b) IN718 and
+Ti-6Al-4V super-resolution accuracy breakdown on the 4 × 4 task: trainable parameter count (K),
+pooled mean and median per-pixel symmetry-aware misorientation, Boundary F1,
+boundary-window Composition F1, and the interior / boundary-band split of mean misorientation.
+SG-SRAN parameter counts are configuration-specific: 49K for IN718 and 27K for Ti-6Al-4V.
+Error-tail percentiles and IPF-space PSNR/SSIM are in Table 1. The composition-F1 column is the
+pooled boundary-window analysis on the selected prediction summaries, with its spurious-rate and
+recall components reported in Extended Data Table 1. Lower is better except Boundary F1 and
+Composition F1; classical interpolants are deterministic and marked “–”, and the Ti-6Al-4V rows
+use the 12 proper D6 rotations. Except for the composition-F1 analysis column, learned values are
+five-seed means and the Mean-column ± is the seed-level standard deviation. Classical-row ± values
+in the Mean column are per-patch test-set standard deviations where available, not seed spreads.
+a. Encoder–dictionary-based decoder round-trip fidelity
+Variant
+IN718 (FCC, n = 147)
+Ti-6Al-4V (HCP, n = 72)
+latent features + dictionary lookup
+0.0076 ± 0.0004
+0.0079 ± 0.0001
+b. Orientation-accuracy breakdown on the 4 × 4 task
+Method
+Params (K)
+Mean (◦)
+Median (◦) Boundary F1 Composition F1 Interior / Boundary mean (◦)
+IN718 4 × 4 (FCC, n = 147 held-out test patches; learned methods over five seeds)
+Nearest
+–
+4.45 ± 0.60
+1.00
+0.425
+0.807
+0.69 / 9.36
+Bicubic
+–
+6.71 ± 0.99
+1.22
+0.432
+0.353
+1.57 / 13.42
+SLERP
+–
+6.16 ± 1.00
+0.88
+0.442
+0.325
+1.38 / 12.39
+Symm-SLERP
+–
+4.92 ± 0.65
+0.86
+0.477
+0.381
+0.67 / 10.46
+Atindama inpainting [15]
+25,784
+7.14 ± 0.42
+2.82
+0.400
+0.245
+3.57 / 11.79
+Q-RBSA-adapted [4]
+6,175
+3.05 ± 0.12
+0.76
+0.665
+0.665
+0.64 / 6.19
+QEDSR [14]
+1,815
+2.68 ± 0.01
+0.60
+0.626
+0.853
+0.56 / 5.44
+EDSR [14]
+7,241
+2.59 ± 0.04
+0.61
+0.647
+0.849
+0.58 / 5.22
+RCAN [16]
+15,594
+2.52 ± 0.04
+0.65
+0.678
+0.866
+0.58 / 5.05
+SAN [17]
+15,862
+2.62 ± 0.03
+0.61
+0.640
+0.899
+0.58 / 5.27
+HAN [18]
+16,073
+2.63 ± 0.05
+0.62
+0.643
+0.812
+0.57 / 5.32
+SG-SRAN (ours)
+49
+2.60 ± 0.06
+0.61
+0.658
+0.891
+0.61 / 5.20
+Ti-6Al-4V 4 × 4 (HCP, n = 72 held-out test patches; learned methods over five seeds)
+Nearest
+–
+13.85
+0.68
+0.544
+0.689
+0.67 / 13.98
+Bicubic
+–
+20.96
+11.68
+0.611
+0.293
+2.71 / 21.14
+SLERP
+–
+20.72
+11.39
+0.605
+0.311
+1.51 / 20.91
+Symm-SLERP
+–
+14.94
+7.22
+0.561
+0.406
+0.73 / 15.08
+Atindama inpainting [15]
+25,784
+20.76 ± 0.47
+13.03
+0.618
+0.263
+8.50 / 20.88
+Q-RBSA-adapted [4]
+6,175
+10.36 ± 0.09
+1.00
+0.620
+0.773
+0.92 / 10.46
+QEDSR [14]
+1,815
+10.09 ± 0.03
+0.66
+0.619
+0.766
+0.59 / 10.18
+EDSR [14]
+7,241
+11.72 ± 3.55
+3.34
+0.609
+0.739
+2.72 / 11.81
+RCAN [16]
+15,594
+10.74 ± 0.69
+1.88
+0.613
+0.511
+1.27 / 10.83
+SAN [17]
+15,862
+10.27 ± 0.15
+1.18
+0.621
+0.804
+0.95 / 10.36
+HAN [18]
+16,073
+10.64 ± 0.64
+1.79
+0.624
+0.671
+1.26 / 10.73
+SG-SRAN (ours)
+27
+9.54 ± 0.12
+0.48
+0.639
+0.782
+0.51 / 9.63
+1.4 Grain Boundary analysis
+The boundary diagnostics measure complementary reconstruction properties: strict
+Boundary F1 scores edge localization, boundary-band misorientation scores angular
+accuracy, and boundary-window Composition F1 scores recovery of the distinct local
+orientation branches present within an interface window. RCAN leads IN718 Boundary
+F1, while SG-SRAN leads the IN718 p68/p95 errors and the Ti-6Al-4V mean, median,
+and boundary-band metrics. Table 2b reports Composition F1, and Extended Data
+Table 1 separates its spurious-rate and recall components. Spurious rate is the fraction
+of SR observations in boundary windows that do not match any HR orientation group
+8
+
+
+within the prescribed misorientation threshold. Nearest-neighbor copying produces
+few spurious observations but misses minority local orientation branches; SG-SRAN
+reaches 0.891 on IN718 and 0.782 on Ti-6Al-4V, close to SAN’s respective leading
+values of 0.899 and 0.804.
+The evidence for the mechanism is therefore local, matching the scale at which
+SG-SRAN forms routed patch assignments. The walkthrough in Extended Data
+Fig. 6 shows that crop-level owner changes and reduced router confidence follow
+grain-boundary neighborhoods, while support-bank clustering and decoded candidate
+features remain consistent with the local orientation branches in the same locally iso-
+metric latent feature space. This supports the interpretation that SG-SRAN selects
+among local orientation branches rather than smoothing across the interface. These
+owner, confidence, and slot-usage maps also make the learned upsampler inspectable:
+failure modes can be examined in the same latent feature space used for routing, rather
+than only through the final decoded IPF maps.
+The stagewise decoded-error analysis provides a complementary aggregate check
+on both crystal systems. The routed upsampler accounts for nearly all of the reduction
+in decoded error from the encoded input to the final output: 98.0% on IN718 (147 held-
+out test samples) and 99.7% on Ti-6Al-4V (72 held-out test samples), with subsequent
+HR refinement changing the mean error by at most 0.02◦in either material (Extended
+Data Fig. 5). The no-routing control isolates the contribution of the routed-patch
+upsampler: replacing only this component with latent bicubic or nearest-neighbor
+interpolation, while holding every other component fixed, reduces IN718 Boundary F1
+to 0.445 and 0.425, respectively, compared with 0.656 for the full pipeline (Methods).
+1.5 Zero-shot transfer to out-of-distribution FCC and HCP
+datasets
+Because the pipeline is built around a frozen symmetry-aware representation, trained
+checkpoints can be applied unchanged to new materials within the same symmetry
+class. Table 3 reports zero-shot transfer to two out-of-distribution targets: a CoNi
+alloy (FCC) and a Ti-Al alloy (HCP). SG-SRAN remains strongest on CoNi mean,
+median, p68, p95 and IPF fidelity, while HAN has the highest CoNi Boundary F1
+and SAN has the highest CoNi Composition F1. On Ti-Al, the Ti-6Al-4V-trained SG-
+SRAN gives the best mean, boundary-band mean, Boundary F1, composition F1, p68,
+p95, p99, PSNR and SSIM among the reported methods. The zero-shot boundary-
+Composition F1 values are integrated into Table 3a, with the full spurious-rate and
+recall decomposition in Extended Data Table 2. This analysis separates the two trans-
+fer regimes: SAN narrowly gives the highest CoNi Composition F1 (0.844 versus 0.834
+for SG-SRAN), whereas SG-SRAN gives the highest Ti-Al Composition F1 (0.915).
+Representative IPF-Z maps for two CoNi and two Ti-Al zero-shot samples, including
+all deterministic and learned baselines, are shown in Extended Data Fig. 8.
+9
+
+
+Fig. 3 The frozen Reynolds embedding is crystal-symmetry-invariant and locally iso-
+metric for both crystal systems. a,b, Scalar field s(n) = ∥f(R(n, 60◦))−f(I)∥over the sphere of
+rotation axes n, rendered in 3D for the FCC/O (a) and HCP/D6 (b) embeddings; the encoder uses
+the proper rotational subgroups, while these scalar norm fields also display the corresponding cubic
+and hexagonal Laue-class visual symmetries (m¯3m and 6/mmm). c,d, The same fields unrolled on
+the polar and azimuthal angles (θ, φ), exposing the symmetry-repeating fundamental tiles (FCC, c;
+HCP, d). e, Locally isometric embedding distance ∥∆f∥versus symmetry-reduced crystallographic
+misorientation ∆ω for 2.4 × 104 low-discrepancy (Fibonacci-lattice sampling) orientation-pair sepa-
+rations per system (line, median; band, interquartile range). Both systems are linear near the origin
+(dashed small-angle reference); the first-order calibration holds to ∼0.2 rad (∼11◦, red dashed) and
+saturates beyond. f, Numerical verification of crystal-symmetry invariance. For each low-discrepancy
+sampled orientation, we evaluate all 24 FCC or 12 HCP symmetry-equivalent copies and report the
+maximum deviation from their orbit-mean embedding, normalized by the mean norm. Relative devi-
+ations remain below 1.1 × 10−6, confirming invariance to single-precision accuracy. The retained
+Reynolds degrees are L = {4} for FCC and L = {2, 4, 6} for HCP.
+10
+
+
+Table 3 Zero-shot transfer to out-of-distribution FCC and HCP targets. All entries use
+source-domain checkpoints without target retraining. Composition F1 is the boundary-window
+composition score; its spurious-rate and recall components are reported in Extended Data Table 2.
+Lower is better for angular metrics; higher is better for Boundary F1, Composition F1, PSNR and
+SSIM. Bold marks the best available method in each column. SG-SRAN uses 49K trainable
+parameters for the IN718-source FCC transfer and 27K for the Ti-6Al-4V-source HCP transfer.
+a. Orientation-accuracy and boundary metrics.
+Method
+Params (K) Mean (◦) Median (◦) Boundary F1 Composition F1 Interior (◦) Boundary band (◦)
+IN718 →CoNi (FCC): zero-shot test split n = 20
+Nearest
+–
+2.85
+0.27
+0.405
+0.741
+0.35
+8.30
+Bicubic
+–
+3.94
+0.40
+0.446
+0.387
+0.47
+11.53
+SLERP
+–
+3.49
+0.27
+0.452
+0.364
+0.33
+10.40
+Symm-SLERP
+–
+3.12
+0.27
+0.455
+0.401
+0.32
+9.22
+Atindama inpainting [15] 25,784
+7.87
+2.49
+0.260
+0.240
+5.80
+12.40
+Q-RBSA-adapted [4]
+6,175
+2.35
+0.88
+0.666
+0.636
+0.91
+5.49
+QEDSR [14]
+1,815
+1.66
+0.23
+0.628
+0.801
+0.29
+4.65
+EDSR [14]
+7,241
+1.65
+0.25
+0.644
+0.798
+0.30
+4.59
+RCAN [16]
+15,594
+1.66
+0.24
+0.640
+0.804
+0.29
+4.65
+SAN [17]
+15,862
+1.62
+0.26
+0.631
+0.844
+0.31
+4.48
+HAN [18]
+16,073
+1.68
+0.32
+0.675
+0.760
+0.34
+4.61
+SG-SRAN (ours)
+49
+1.59
+0.23
+0.670
+0.834
+0.29
+4.42
+Ti-6Al-4V →Ti-Al (HCP): zero-shot test split n = 133
+Nearest
+–
+2.21
+0.36
+0.393
+0.818
+0.38
+7.55
+Bicubic
+–
+4.08
+0.43
+0.364
+0.395
+0.66
+14.04
+SLERP
+–
+3.78
+0.33
+0.404
+0.411
+0.53
+13.26
+Symm-SLERP
+–
+2.48
+0.33
+0.415
+0.462
+0.35
+8.68
+Atindama inpainting [15] 25,784
+12.01
+6.47
+0.115
+0.243
+9.79
+18.51
+Q-RBSA-adapted [4]
+6,175
+2.05
+0.79
+0.533
+0.867
+0.80
+5.69
+QEDSR [14]
+1,815
+1.68
+0.38
+0.536
+0.850
+0.42
+5.37
+EDSR [14]
+7,241
+1.72
+0.43
+0.554
+0.823
+0.48
+5.36
+RCAN [16]
+15,594
+5.15
+2.72
+0.456
+0.456
+3.76
+9.20
+SAN [17]
+15,862
+1.99
+0.67
+0.514
+0.900
+0.76
+5.60
+HAN [18]
+16,073
+3.07
+1.45
+0.470
+0.711
+1.85
+6.62
+SG-SRAN (ours)
+27
+1.21
+0.30
+0.630
+0.915
+0.33
+3.78
+11
+
+
+Table 3b. Error-tail percentiles and IPF image fidelity.
+Method
+Params (K) p68 (◦) p95 (◦) p99 (◦) PSNR (dB) SSIM
+IN718 →CoNi (FCC): zero-shot test split n = 20
+Nearest
+–
+0.42
+24.04
+59.76
+19.69
+0.770
+Bicubic
+–
+0.95
+26.12
+52.14
+17.61
+0.680
+SLERP
+–
+0.46
+26.42
+50.57
+17.89
+0.728
+Symm-SLERP
+–
+0.46
+22.37
+47.61
+18.36
+0.733
+Atindama inpainting [15] 25,784
+5.47
+40.48
+48.59
+14.03
+0.402
+Q-RBSA-adapted [4]
+6,175
+1.16
+5.62
+46.23
+21.04
+0.779
+QEDSR [14]
+1,815
+0.34
+1.62
+53.84
+22.28
+0.831
+EDSR [14]
+7,241
+0.37
+1.67
+53.05
+22.30
+0.831
+RCAN [16]
+15,594
+0.36
+1.62
+53.69
+22.25
+0.828
+SAN [17]
+15,862
+0.37
+1.43
+54.71
+22.51
+0.837
+HAN [18]
+16,073
+0.49
+2.64
+50.14
+22.44
+0.813
+SG-SRAN (ours)
+49
+0.32
+1.20
+54.97
+22.66
+0.842
+Ti-6Al-4V →Ti-Al (HCP): zero-shot test split n = 133
+Nearest
+–
+0.49
+1.31
+64.92
+22.15
+0.828
+Bicubic
+–
+0.72
+22.50
+71.33
+18.75
+0.732
+SLERP
+–
+0.48
+25.55
+73.02
+18.81
+0.771
+Symm-SLERP
+–
+0.47
+16.13
+46.46
+21.50
+0.814
+Atindama inpainting [15] 25,784
+11.10
+51.19
+80.47
+13.49
+0.334
+Q-RBSA-adapted [4]
+6,175
+0.96
+1.60
+56.70
+23.48
+0.828
+QEDSR [14]
+1,815
+0.53
+1.44
+54.82
+23.69
+0.833
+EDSR [14]
+7,241
+0.59
+1.67
+51.04
+23.49
+0.824
+RCAN [16]
+15,594
+3.79
+17.65
+50.42
+18.25
+0.599
+SAN [17]
+15,862
+0.89
+2.64
+54.47
+23.31
+0.763
+HAN [18]
+16,073
+2.16
+6.71
+47.56
+21.05
+0.687
+SG-SRAN (ours)
+27
+0.40
+0.88
+42.61
+25.31
+0.886
+12
+
+
+2 Discussion
+Orientation super-resolution should be treated as reconstruction on the symmetry
+quotient SO(3)/G, rather than as interpolation of generic image channels. By com-
+bining this geometry with local routing at grain boundaries, SG-SRAN produces
+accurate, physically valid outputs through an inspectable routed upsampling pro-
+cess. Across five seeds, the compact 27–49k-parameter model performs strongly on
+tail-error and boundary-sensitive metrics across both crystal systems, although com-
+peting methods lead individual measures. Orientation-field super-resolution should
+therefore be assessed jointly through angular accuracy, boundary localization, local
+orientation-branch recovery, and compactness.
+The boundary performance arises from the geometry-aware representation and
+routed upsampler acting together. The right-G-invariant, locally isometric encoder
+gives nearby Euclidean latent distances a first-order interpretation as crystallographic
+misorientation. Routing changes and reduced confidence concentrate near grain bound-
+aries, where the upsampler forms distinct candidate features and assigns them to the
+high-resolution output grid. The slot assignments are made during upsampling; sub-
+sequent convolution layers refine the latent features without re-clustering the local
+support, while boundary-window Composition F1 measures whether the correspond-
+ing local branches survive in the final output. SG-SRAN therefore preserves interfaces
+by assigning among local orientation branches rather than averaging across them.
+The principal limitations are difficult orientation selection, decoding cost, and
+validation breadth. On the boundary-rich Ti-6Al-4V benchmark, the most extreme
+p95–p99 errors remain comparable to those of other learned methods; because
+dictionary-based decoding always returns a canonical unit quaternion, these errors are
+valid but incorrect orientation choices rather than invalid states. Dictionary search
+and refinement dominate inference, requiring approximately 4.63 s per patch com-
+pared with 28.5 ms for encoding and latent super-resolution. The CoNi and Ti–Al
+transfers provide initial evidence within FCC and HCP symmetry classes, but broader
+cross-specimen validation remains necessary.
+These findings point directly to router calibration, learnable decoding, and broader
+cross-specimen validation. More broadly, they support a representation-first strat-
+egy: quotient geometry defines physical equivalence, local-isometry normalization gives
+nearby latent distances a crystallographic meaning, and routed upsampling preserves
+distinct local branches at interfaces. Building these properties into both the represen-
+tation and the upsampling process, rather than correcting a Euclidean image model
+after the fact, may provide a useful strategy for reconstructing fields defined only up
+to a physical symmetry.
+3 Methods
+Global notation.
+We write QLR and QHR for the low- and high-resolution quaternion fields, E and D
+for the frozen encoder and dictionary-based decoder, and dG for the symmetry-aware
+misorientation metric of equation 2. The spatial upsampling factor is r = (ry, rx) and
+13
+
+
+the task studied here is r = (4, 4). Latent feature fields after successive backbone
+stages are denoted Z0, . . . , Z4 as in equation 8.
+3.1 Crystal orientations and quotient geometry
+In this work, crystal orientation is represented as an active crystal-to-specimen rota-
+tion R ∈SO(3), defined by vs = Rvc, where vc and vs are the coordinates of the
+same physical direction in right-handed crystal and specimen frames, respectively.
+We write R = R(q) and represent it by a scalar-first Hamilton unit quaternion
+q = (q0, q1, q2, q3) ∈S3, acting as R(q)v = vec
+ q ⊗(0, v) ⊗q−1
+, where (0, v)
+denotes the pure quaternion with zero scalar part and vector part v, and vec(·)
+extracts the vector part of a quaternion. Under this convention, composition satisfies
+R(q1⊗q2) = R(q1)R(q2). The antipodal quaternions q and −q represent the same rota-
+tion, so SO(3) ≃S3/±1. When an EBSD tool supplies a passive specimen-to-crystal
+orientation, we denote it by Rcs = R(qcs); after expressing it in our crystal and speci-
+men frames, we convert it once at import as R = R−1
+cs = RT
+cs and q = q−1
+cs . Thereafter,
+R and q always denote active crystal-to-specimen orientations, with conversion back
+to the source convention performed only for visualization. Our frame, handedness, and
+active/passive conventions follow Britton et al. [19].
+The crystal lattice has a finite proper rotational crystal point group G ⊂SO(3),
+whose elements act actively in the crystal frame. For each g ∈G, let qg ∈S3 be
+a unit-quaternion lift satisfying R(qg) = g. Because R maps crystal coordinates to
+specimen coordinates, crystal symmetry acts from the right: R ∼Rg, equivalently
+q ∼q ⊗qg. Thus, the physical orientation space is the quotient manifold SO(3)/G.
+For face-centered cubic (FCC) metals, G is the cubic rotation group O with |O| = 24;
+for hexagonal close-packed (HCP) metals, it is the dihedral rotation group D6 with
+|D6| = 12.
+The fundamental zone (FZ) selects one representative from each symmetry orbit,
+up to boundary ties. Enumerating G = {gi}|G|
+i=1, we form
+q(i) = q ⊗qgi,
+i⋆= arg max
+i
+w(i) ,
+(1)
+where w(i) is the scalar part of q(i). We define qFZ = q(i⋆) and choose its antipodal
+sign such that wFZ ≥0. This selects the symmetry-equivalent rotation closest to the
+identity; remaining boundary ties are resolved deterministically. The symmetry-aware
+angular error is
+dG(q1, q2) = min
+g∈G 2 arccos (|⟨q1, q2 ⊗qg⟩|) ,
+(2)
+which is zero for symmetry-equivalent orientations and reduces to dgeo(q1, q2) =
+2 arccos |⟨q1, q2⟩| when |G| = 1.
+3.2 Locally isometric orientation encoder
+The encoder maps each pixel quaternion to a finite-dimensional Euclidean vector
+that is (i) exactly invariant under G and (ii) locally isometric such that small latent
+14
+
+
+distances track small geodesic distances on SO(3)/G near the identity equivalence
+class.
+Symmetry-invariant feature blocks.
+For each angular degree l, the real (tesseral) Wigner matrix Dl
+:
+SO(3)
+→
+R(2l+1)×(2l+1) is the degree-l irreducible representation of SO(3), obtained from the
+complex Wigner-D matrices by the unitary change of basis to real tesseral harmon-
+ics; it preserves the homomorphism Dl(R1R2) = Dl(R1)Dl(R2) and keeps all features
+and weights real. The Reynolds projector
+P (G)
+l
+:=
+1
+|G|
+X
+g∈G
+Dl(g)
+(3)
+projects onto the G-fixed subspace Il(G) = {u : Dl(g)u = u ∀g ∈G}. With rl =
+dim Il(G) and U (G)
+l
+∈R(2l+1)×rl an orthonormal basis of Il(G), the crystal-invariant
+feature block at degree l is
+Fl(q) := Dl(R(q)) U (G)
+l
+∈R(2l+1)×rl,
+(4)
+where R(q) is the active rotation of q. Because Dl(g) U (G)
+l
+= U (G)
+l
+for all g ∈G,
+invariance under R(q) ∼R(q)g follows from the homomorphism property and R(q ⊗
+qg) = R(q)g:
+Fl(q ⊗qg) = Dl R(q)g
+
+U (G)
+l
+= Dl(R(q)) Dl(g) U (G)
+l
+|
+{z
+}
+= U (G)
+l
+= Fl(q).
+(5)
+Two group actions must be distinguished: the encoder is invariant under the right
+crystal-symmetry action q 7→q⊗qg (equation 5), which collapses symmetry-equivalent
+orientations, and equivariant under the left global-rotation action q 7→q′ ⊗q, with
+R′ = R(q′) (i.e. R 7→R′R), for which Fl(q) 7→Dl(R′) Fl(q). The backbone operates on
+these right-G-invariant feature blocks as left-SO(3)-equivariant e3nn representations—
+processing orientation as SO(3) tensors —while the routing and feature-matching loss
+introduced in Section 3.3 are constructed from invariant contractions of these equiv-
+ariant features. The raw descriptor is the concatenation Φraw(q) = L
+l∈L vec(Fl(q))
+over the selected invariant degrees L.
+Constructing the invariant bases.
+The invariant bases U (G)
+l
+are built once, offline, and stored as non-trainable buffers.
+For each degree l in the truncation set, we form the Reynolds projector of equation 3
+in the real tesseral Wigner basis, symmetrize it numerically, and take the eigenvectors
+with eigenvalue one as an orthonormal basis U (G)
+l
+for the fixed subspace. The scalar
+block l = 0 is mathematically invariant but is not emitted by the orientation encoder
+because it carries no orientation information. The emitted descriptor therefore contains
+only non-scalar invariant blocks.
+15
+
+
+For FCC (O), the descriptor is truncated at l ≤4. Since r2 = 0 and r4 = 1,
+the first non-trivial cubic invariant is the 9-dimensional 1×4e block. For HCP (D6),
+the descriptor is truncated at l ≤6 and keeps every non-scalar projector component
+below that cutoff: r2 = 1, r4 = 1, and r6 = 2. The HCP encoder output is therefore
+1×2e + 1×4e + 2×6e, i.e. 5 + 9 + 2 × 13 = 40 dimensions, and serves as both the
+encoder output and the backbone working space.
+Local-isometry normalization.
+The Reynolds projector fixes the invariant subspace U (G)
+l
+, but it does not fix the
+Euclidean scale assigned to each emitted feature block. We therefore calibrate the scale
+of the actual encoder feature map at the identity. For each retained block Fl(q) =
+Dl(R(q))U (G)
+l
+, let Jl ∈Rdl×3, with dl = (2l + 1)rl, denote the Jacobian of vec(Fl(q))
+with respect to infinitesimal axis-angle perturbations at R(q) = Id. The normalized
+encoder is
+E(q) =
+M
+l∈L
+βl vec(Fl(q)),
+where the scalar block weights βl are chosen so that
+X
+l∈L
+β2
+l J⊤
+l Jl ≈I3.
+(6)
+These scalar weights change only the metric scale; they do not change the invariant
+subspaces or the right-G invariance established in equation 5.
+For FCC (G = O), only the 1×4e block is retained through l ≤4. Its unnormalized
+local metric is J⊤
+4 J4 = (20/3)I3 to numerical precision, so we use
+β4 =
+r
+3
+20 = 0.3872983346.
+For HCP (G = D6), the retained blocks through l ≤6 are 1 × 2e + 1 × 4e + 2 ×
+6e. Their unnormalized local metric contributions are J⊤
+2 J2 ≈diag(3, 3, 0), J⊤
+4 J4 ≈
+diag(10, 10, 0), J⊤
+6 J6 ≈diag(24, 24, 36). With equal weights, the combined local metric
+would be diag(37, 37, 36), corresponding to the small anisotropy λmax/λmin = 37/36 ≈
+1.03. The implemented normalization instead uses
+β2 = 0.1633674001,
+β4 = 0.1591435236,
+β6 = 0.1666666667,
+which makes the combined local metric equal to I3 up to numerical precision.
+Thus, for a sufficiently small axis-angle vector ξ ∈R3, let bξ ∈so(3) denote its skew-
+symmetric matrix, and let qξ ∈S3 be a unit-quaternion lift satisfying R(qξ) = exp(bξ).
+Let qId = (1, 0, 0, 0), so that R(qId) = I3. Then
+∥E(qξ) −E(qId)∥= ∥ξ∥+ O(∥ξ∥2).
+(7)
+Consequently, mean-squared error in the normalized latent space tracks squared
+geodesic orientation error to leading order. This local-isometry construction follows
+16
+
+
+[5]. In our numerical analysis, the approximation remains tight for misorientations up
+to approximately 0.2 rad, or 11◦, beyond which higher-order Taylor terms become
+non-negligible.
+Completeness and truncation.
+In the untruncated harmonic construction, all nonconstant degrees with rl
+=
+dim Il(G) > 0 together separate quotient orientations in SO(3)/G. The implemented
+encoders retain finite degree sets, L = {4} for FCC and L = {2, 4, 6} for HCP, yield-
+ing finite-dimensional representations. The selected degrees determine the harmonic
+content, latent dimension and computational cost of each encoder. The local-isometry
+analysis characterizes the infinitesimal geometry of these representations, while the
+encoder–dictionary round-trip error in Table 2 measures orientation recovery by the
+implemented encoder–dictionary pair on the orientations used in the experiments.
+3.3 Orientation-cluster routed-patch super-resolution
+backbone
+The SG-SRAN super-resolution stage uses an orientation-cluster routed-patch upsam-
+pler that acts directly on the locally isometric latent field, predicting one high-
+resolution (HR) latent patch per low-resolution (LR) pixel from a local, orientation-
+conditioned support bank. The emitted patch is 4×4 for the r = (4, 4) SR task. Every
+stage operates on the crystal-invariant latent of the encoder (the 9-dimensional l = 4
+block for FCC, the 40-dimensional 1×2e+1×4e+2×6e descriptor for HCP), so crystal
+invariance of the predicted orientation is preserved end to end.
+Let Z0 = E(QLR) ∈RB×HW ×C be the encoded LR feature map, with batch size
+B, flattened LR grid H × W, and latent dimension C. The pipeline is
+Z1 = CLR
+wLR(Z0),
+Z2 = O(Z1; Z0),
+Z3 = CHR
+wHR(Z2),
+Z4 = RHR(Z3),
+(8)
+where CLR
+wLR and CHR
+wHR are feature-similarity-masked equivariant convolutions, O is the
+SG-SRAN upsampler with Z0 used for clustering and Z1 used for token synthesis, and
+RHR denotes the optional second HR refinement pass. SG-SRAN uses a configured
+odd local support window (e.g. 9 × 9 for IN718 and 5 × 5 for Ti-6Al-4V), up to K = 6
+candidate slots per LR pixel, and an 8-neighbor feature-space clustering graph. The
+router is a small MLP (hidden = 64) over the complete binary slot-composition image
+and the learned subpixel position embedding, with a center-prior weight of 5.0, and
+the cross-attention proposal uses a 54-dimensional hidden MLP and a 32-dimensional
+query/key space.
+Feature-similarity-masked equivariant convolutions.
+Each convolution forms local context only from neighbors whose latent direction is
+aligned with the center pixel, using a cosine-similarity threshold τcos = 0.97 between
+the locally isometric feature vectors. This cosine gate is used as a scale-invariant
+feature-direction mask; the calibrated angular neighborhoods are the L2 thresholds in
+equation 10. The masked neighborhood average is combined with the center feature
+17
+
+
+through an e3nn fully connected tensor product [11] followed by a residual connection,
+keeping the update exactly equivariant while suppressing crystallographically dissim-
+ilar neighbors. The IN718 configuration uses one 5 × 5 LR convolution with residual
+weight 1.0, followed by two 7 × 7 HR refinements with residual weight 0.3; the Ti-
+6Al-4V configuration uses one 3 × 3 LR convolution with residual weight 1.0, followed
+by one 3 × 3 HR refinement with residual weight 0.2, avoiding broader post-routing
+smoothing on the finer HCP boundary network.
+Local support banks and feature-space clustering.
+For each LR pixel p, SG-SRAN extracts co-registered clustering and value banks
+B(0)
+p
+= {Z0,p,m}W 2
+s
+m=1,
+B(1)
+p
+= {Z1,p,m}W 2
+s
+m=1,
+Ws ∈{5, 9} in the reported configurations,
+(9)
+with replicate padding at boundaries. The frozen encoded features Z0 determine clus-
+ter membership, whereas the context-refined equivariant features Z1 provide the values
+later synthesized into HR tokens. At 4× upsampling this LR window spans roughly
+4Ws HR pixels per side (for example, 36 HR pixels when Ws = 9 and 20 when Ws = 5).
+The W 2
+s nodes form an 8-neighbor graph in which two adjacent nodes are linked when
+∥Z0,p,m −Z0,p,m′∥2 ≤τc,
+τc ∈{0.0349, 0.0873},
+(10)
+corresponding under the local isometry to 2◦in the IN718 configuration and 5◦in the
+Ti-6Al-4V configuration. Connected components of this graph define local orientation
+regions; the largest K components are packed into deterministic slots, and for each
+slot k SG-SRAN stores a binary membership mask Mp,k,m and a compact metadata
+vector µp,k (slot validity, slot-rank one-hot code, relative mass, centroid and spatial
+dispersion).
+Token-conditioned cross-attention proposal.
+SG-SRAN synthesises each candidate HR-token feature using a single token-
+conditioned cross-attention operation over the members of a local orientation slot. Let
+the emitted patch be indexed by t ∈{1, . . . , T}, with T = 16 for the 4 × 4 task, and
+let ϕt ∈R32 denote the learned subpixel position embedding for token t. For slot k
+at LR site p, define its member set as Sp,k = {m : Mp,k,m = 1}. A query constructed
+from the slot metadata µp,k and the learned subpixel position embedding ϕt attends
+over these members; keys are derived from member window coordinates and invari-
+ant norms of the context-refined member features, while values are the context-refined
+member features Z1:
+ezp,k,t =
+X
+m∈Sp,k
+βp,k,t,m Z1,p,m,
+(11)
+where βp,k,t,m is a masked softmax over m ∈Sp,k. This directly produces an anchor-
+less, token-conditioned proposal for each slot. Since the attention weights are invariant
+18
+
+
+scalars and the values are equivariant features, ezp,k,t is equivariant. This single atten-
+tion operation performs both pooling and proposal generation, allowing different
+tokens within the same HR patch to attend to different members of the same local
+orientation cluster.
+Geometric routing and owner selection.
+For each token the router emits logits over slots from the complete binary slot-
+composition image Mp ∈{0, 1}K×W 2
+s and the token position,
+ℓp,t = froute
+ vec(Mp), ϕt
+
++ wc cp,
+(12)
+where ϕt is the learned subpixel position embedding for token t, cp,k = 1 when slot
+k contains the window center and is zero otherwise, and wc = 5.0 biases the decision
+toward the center slot when occupancy evidence is weak. The reported MLP router
+jointly processes all KW 2
+s mask entries and the token-position embedding, making
+routing geometric and separate from orientation-feature proposal synthesis; logits for
+empty slots are masked before selection. A hard owner op,t = arg maxk ℓp,t,k selects
+the slot for token t, implemented with a straight-through estimator so gradients flow
+through the logits, and the emitted token is the cross-attention proposal of that slot,
+yp,t = ezp,op,t,t.
+(13)
+The T selected tokens are reshaped into the HR patch for site p and used directly
+as the HR latent prediction; residual connections appear only within the downstream
+HR refinement convolutions, after routed token selection.
+3.4 Dictionary-based decoder and fundamental-zone
+canonicalization
+The dictionary-based decoder maps a predicted latent feature z ∈RC back to a
+unit quaternion in two steps. First, a precomputed lookup table of T = 857,973
+fundamental-zone quaternions sampled by cubochoric sampling [12, 13] is encoded
+once, ft = E(qt), and the k = 2 nearest table entries to z are retrieved by chunked
+squared-Euclidean search. Second, starting from these seeds, quaternion candidates are
+refined in parallel by Adam (60 steps, learning rate 0.03) to minimize ∥E(q)−z∥2
+2, with
+q renormalized to the unit sphere after each step, and the candidate with the lowest
+residual is selected and canonicalized to the fundamental zone by equation 1. The finite
+cubochoric dictionary sets the small frozen-interface floor reported in Table 2a; that
+floor is below the downstream SR errors and is separated from the trainable upsampler
+when reporting representation fidelity. The encoder and dictionary-based decoder are
+frozen throughout training; only the SG-SRAN upsampler and the refinement convo-
+lutions are optimized. The standalone representation-fidelity result in Table 2a reports
+the dense lookup-only floor, isolating the frozen encoder–dictionary-based decoder
+interface.
+19
+
+
+On an NVIDIA A100-PCIE-40GB, end-to-end IN718 4 × 4 inference takes 4.65 s
+per 256 × 256 HR patch. The dictionary-based decoder takes ∼4.63 s (70.6 µs per HR
+pixel), compared with 0.70 ms for the encoder and 27.8 ms for the SR backbone. The
+dictionary search and refinement therefore set the current inference latency.
+3.5 Training objective and implementation
+The SG-SRAN backbone is trained with a feature-space mean-squared-error loss,
+Lfeat =
+1
+BNHR
+X
+b,n
+ bZHR,b,n −E(QHR)b,n
+2
+2,
+(14)
+where
+bZHR
+=
+FSG-SRAN(E(QLR)) is the predicted HR latent from the full
+pipeline (equation 8), E(QHR) is the frozen encoded HR target (computed under
+torch.no grad() and detached), and NHR is the number of HR pixels per sample.
+By equation 7, minimizing Lfeat is a first-order surrogate for the squared geodesic
+orientation error,
+Lfeat ≈
+1
+BNHR
+X
+b,n
+dG
+ ˆqb,n, qHR,b,n
+2 + O(θ3),
+(15)
+with θ the per-pixel misorientation angle; the correspondence is exact to first order in
+the locally isometric small-angle regime and remains an effective objective empirically
+at larger angles. The backbone is trained with this loss alone, and the geometric
+router and its straight-through owner assignment are learned end to end from the
+feature-matching gradient.
+The model is implemented in PyTorch with e3nn [11] for the equivariant tensor
+products. At run time, Reynolds invariant features are evaluated from precomputed
+projector bases using spherical-harmonic synthesis of Dl(R(q))U (G)
+l
+, entirely on GPU;
+the Wigner-D eigensolve and angular-momentum-generator machinery enters only in
+the offline construction of the projectors and bases. Optimization uses AdamW (weight
+decay 10−4) at peak learning rate 3 × 10−4 with cosine annealing (2 warmup epochs,
+minimum learning rate 10−6), gradient clipping at norm 1.0, and bfloat16 mixed preci-
+sion with TensorFloat-32, for 150 epochs at batch size 2 on IN718 and 5 on Ti-6Al-4V.
+The aggregate benchmark reports five independent SG-SRAN seeds (42–46); seed 42
+is used for the representative qualitative figures and mechanism analysis.
+3.6 Datasets and evaluation protocol
+Materials.
+Two EBSD datasets are used for in-domain training and testing. The IN718 source
+map is an EBSD orientation field from the multi-modal 3D microstructure dataset
+of Stinville et al. [20]; the Ti-6Al-4V source data are drawn from the Ti-6Al-4V 3D
+microstructure dataset of Jangid et al. [21]. The IN718 dataset (nickel superalloy,
+FCC, G = O) provides 1174/147/147 train/validation/test paired patches at HR size
+20
+
+
+256 × 256; the Ti-6Al-4V dataset (titanium alloy, HCP, G = D6) provides 581/73/72
+train/validation/test paired patches at HR size 128 × 128. SG-SRAN is trained and
+evaluated end to end on both materials under the r = (4, 4) task. The frozen encoder–
+dictionary-based decoder round-trip baseline in Table 2a is reported on the IN718 and
+Ti-6Al-4V test splits as an FCC/HCP representation analysis rather than as a trained
+SR result. The dataset manifests record patch counts, sizes, and crystal symmetry;
+train, validation, and test splits are disjoint at the patch-file level. The zero-shot
+transfer table uses two held-out targets: CoNi (FCC) and Ti-Al (HCP). The CoNi scan
+is a held-out FCC transfer map prepared with the same manifest workflow, and the
+Ti-Al target uses an HCP Ti-Al split with 1064/133/133 train/validation/test paired
+patches; only its test split is used for zero-shot evaluation.
+Training-pair construction.
+For each source map, quaternions are normalized, mapped to a consistent hemisphere,
+and reduced to the fundamental zone. Random aligned HR patches are extracted, and
+the matching LR patches are formed by regular stride-r subsampling along each axis
+(r = 4), so LR and HR remain spatially registered without an extra interpolation step.
+This construction models the spatial-resolution component of the LR/HR trade-off.
+Baselines.
+We compare against four classical interpolants. Nearest: nearest-neighbor upsampling
+with quaternion renormalization. Bicubic: per-channel bicubic interpolation, renormal-
+ized to unit norm. SLERP: pairwise spherical linear interpolation [2] on the quaternion
+sphere. Symmetry-aware SLERP: bilinear SLERP in which each pair is first symmetry-
+resolved to the shortest crystallographic path. All four are generated from the same
+LR test patches used by SG-SRAN. Seven learned baselines are trained independently
+on the matched IN718 and Ti-6Al-4V train/validation splits and evaluated on the
+corresponding n = 147 and n = 72 held-out test patches at 4 × 4, each over five
+training seeds (42–46). Q-RBSA-adapted [4] retains the released 10-block, 128-feature
+quaternion residual self-attention head and body. Its local adapter converts the passive
+scalar-first dataset quaternions to the active scalar-last convention expected by the
+released implementation, selects the 24-element proper O subgroup for IN718 or the
+12-element proper D6 subgroup for Ti-6Al-4V from the dataset point-group metadata
+for the rotational loss, and exports predictions through the same fundamental-zone
+and held-out evaluation protocol as SG-SRAN. The 4 × 4 model replaces the released
+one-dimensional pixel-shuffle tail with a dimension-matched two-dimensional quater-
+nion pixel-shuffle tail. It is trained from scratch for 300 epochs and contains 6.17
+million parameters, using AdamW with cosine decay (peak learning rate 3 × 10−4,
+weight decay 10−4, two warmup epochs, seeds 42–46).
+QEDSR is a quaternion adaptation of EDSR [14]: the standard EDSR residual
+body operates on four quaternion channels (active scalar-last, with the passive scalar-
+first convention restored after inference), followed by a two-dimensional quaternion
+pixel-shuffle tail. It contains 1.82M trainable parameters and is trained from scratch for
+150 epochs with AdamW (peak learning rate 3×10−4, weight decay 10−4, two warmup
+epochs, five seeds 42–46) under the same dataset-selected O or D6 rotational loss
+21
+
+
+and held-out evaluator as SG-SRAN. The corresponding real-valued EDSR baseline
+uses the same residual-block schedule and two-dimensional pixel-shuffle tail on four
+scalar quaternion channels, without quaternion convolutions or quaternion attention.
+It contains 7.24M trainable parameters and is trained and evaluated with the same
+five-seed held-out protocol as the other learned baselines.
+RCAN [16], SAN [17] and HAN [18] retain their published residual-channel, second-
+order and holistic attention bodies, respectively. RGB mean-shift layers are omitted
+and active scalar-last quaternions are supplied as four channels; the passive scalar-first
+convention is restored after inference. RCAN uses 10 residual groups with 20 blocks
+each, SAN uses 20 groups with 10 blocks each, and HAN uses 10 groups with 20
+blocks each, all with 64 features. The 4 × 4 models use a two-dimensional pixel-shuffle
+tail; parameter counts are 15.59M (RCAN), 15.86M (SAN) and 16.07M (HAN). Each
+dataset is trained independently for 300 epochs with AdamW, cosine decay, weight
+decay 10−4, two warmup epochs and five seeds (42–46). SAN uses its published 10−4
+base rate on both materials; RCAN/HAN use 3 × 10−4 on IN718 and the authors’
+10−4 rate on Ti-6Al-4V after the larger rate proved unstable under the proper-D6
+loss. SAN covariance pooling is evaluated by the exactly equivalent centered product
+XX⊤/(HW) rather than materializing an (HW)2 centering matrix, and its trace-
+normalized Newton–Schulz square root uses native autograd with a machine-precision
+diagonal regularizer. All three models use the same dataset-selected O or D6 rotational
+loss and held-out evaluator as SG-SRAN.
+The Atindama baseline adapts the partial-convolution U-Net from the EBSD
+restoration pipeline of Atindama et al. [15]. HR orientations are converted to nor-
+malized intrinsic ZXZ Euler channels, the observed stride-r samples define a periodic
+known-pixel mask, and the network predicts the missing pixels while known sam-
+ples are copied exactly into the output. The 4 × 4 model is trained for 150 epochs
+with Adam (learning rate 2 × 10−4, five seeds 42–46) using squared SO(3) geodesic
+error on unknown pixels without crystal-symmetry minimization. Training is therefore
+symmetry-agnostic, but all exported Ti predictions are reduced and evaluated with
+the same 12 proper D6 rotations used by the other methods. Each model has 25.78
+million trainable parameters. The published Criminisi refinement is not applied: the
+regular SR masks contain no fully known 3 × 3 source patch, so its exemplar-search
+precondition is unsatisfied.
+An architecture-matched no-routing control isolates the routing mechanism: the
+encoder, refinement convolutions and dictionary-based decoder are fixed, and only the
+routed-patch upsampler is replaced by bicubic or nearest interpolation in the latent
+space. The control was run for the IN718 Reynolds 4×4 checkpoint under a single-seed
+protocol; its results are reported alongside the boundary metrics in Results.
+Evaluation metrics.
+Angular accuracy is measured by the symmetry-aware misorientation dG (equation 2).
+The FCC metric minimizes over the 24 proper rotations of O, and the HCP metric
+minimizes over the 12 proper rotations of D6, so each material is evaluated with its
+own rotational crystal symmetry. For the frozen encoder–dictionary-based decoder
+round trip, we report the mean and standard deviation of the per-sample mean dG
+22
+
+
+in radians on the held-out IN718 and Ti-6Al-4V test splits. For the super-resolution
+benchmark, angular errors are reported in degrees and pooled over all HR pixels in the
+147 held-out IN718 patches or the 72 held-out Ti-6Al-4V patches. The mean, median,
+p68, p95 and p99 summarize this pooled per-pixel distribution; per-patch or seed-level
+standard deviations are reported where uncertainty is shown.
+To evaluate boundary recovery, we also split dG into grain-interior and grain-
+boundary-band pixels. The HR boundary mask is obtained by thresholding 4-
+connected nearest-neighbor crystallographic misorientation at 5◦, and the boundary
+band contains pixels within five pixels of this HR mask. Boundary F1 is computed
+from predicted and HR boundary masks using the same 5◦rule, with TP, FP and FN
+accumulated over all patches: F1 = 2 TP/(2 TP + FP + FN).
+Inverse-pole-figure (IPF) maps color each pixel by the crystal direction parallel
+to a selected sample axis (X, Y or Z), making grains and sharp orientation changes
+visually legible; we render them with orix [22, 23]. IPF-space PSNR and SSIM are
+computed on the IPF-X, Y and Z renderings of the prediction against the HR reference
+and averaged over the three axes. All angular metrics are computed directly on the
+quaternion orientation field.
+For the boundary-window composition analysis, an 8-neighbor 5◦symmetry-aware
+rule defines HR boundary centers. Each center contributes clipped 3 × 3 HR and
+SR windows. Transitive pairwise matches within 5◦partition the HR window into
+orientation groups. The spurious rate is the fraction of SR observations farther than
+5◦from every HR group; composition recall is the fraction of HR groups recovered
+by at least one SR observation; and Composition F1 is the harmonic mean of recall
+and precision, with precision = 1−spurious rate. Overlapping boundary windows are
+counted separately.
+Data availability.
+EBSD datasets and encoded lookup tables will be deposited in
+a public repository upon publication. Requests for data prior to publication should be
+directed to the corresponding author.
+Code availability.
+Code implementing the SG-SRAN-based latent super-resolution
+model, the locally isometric encoder, and the dictionary-based decoder will be released
+under the Apache 2.0 license on a public GitHub repository upon publication. The
+release will include trained checkpoints for the IN718 and Ti-6Al-4V 4 × 4 models,
+the precomputed Reynolds basis files, and the cubochoric-sampled dictionary lookup
+tables (T = 857,973 per symmetry class for FCC and HCP), which would otherwise
+be non-trivial to recompute.
+Acknowledgements.
+The authors acknowledge Neal Brodnik (Postdoc, UCSB)
+for his intellectual contributions and early discussions on this problem. We also
+thank Joaquin Giorgio (M.S., UCSB) for his prior work on SLERP-based orien-
+tation upsampling, which informed the baseline comparison in this study. This
+research was supported in part by the NSF CSSI Award #2411453. TMP and
+MPE also acknowledge the support of Army Research Office (ARO) MURI Grant
+W911NF-25-2-0164.
+23
+
+
+Competing interests
+The authors declare no competing interests.
+Author contributions
+U.G. developed the direct Reynolds-projection embedding used in the final HCP
+and FCC representations, along with its calibration, and developed the anchorless
+routing architecture. U.G. led the experimental validation and conducted the experi-
+ments, and wrote the manuscript. W.Z. proposed applying the Reynolds operator to
+enforce symmetry-compliant network outputs and developed the original locally iso-
+metric embedding and its calibration, using rank-tensor decomposition. U.G. and W.Z.
+jointly developed and tested early implementations of this approach. Both authors
+revised the manuscript; U.G. verified the manuscript’s claims against the implemen-
+tation. M.P.E. acquired and provided EBSD datasets, contributed to experimental
+design, and reviewed the manuscript. S.H.D. provided guidance on data interpretation,
+and reviewed the manuscript. T.M.P. provided guidance on materials characteriza-
+tion and EBSD methodology, and reviewed the manuscript. B.S.M. supervised the
+overall project, provided guidance on the manuscript, and reviewed and edited the
+manuscript.
+References
+[1] Humphreys, F. J.
+Review of grain and subgrain characterisation by electron
+backscatter diffraction. Journal of Materials Science 36, 3833–3854 (2001).
+[2] Shoemake, K. Animating rotation with quaternion curves. ACM SIGGRAPH
+Computer Graphics 19, 245–254 (1985).
+[3] Seret, A., Moussa, C. & Jonas, J. J. Application of super-resolution convolutional
+neural networks to EBSD maps. Materials Characterization 153, 1–9 (2019).
+[4] Jangid, D. K. et al. Q-RBSA: High-resolution 3d EBSD map generation using
+an efficient quaternion transformer network. npj Computational Materials 10, 27
+(2024).
+[5] Hielscher, R. & Lippert, L.
+Locally isometric embeddings of quotients of the
+rotation group modulo finite symmetries. Journal of Multivariate Analysis 185,
+104764 (2021).
+[6] Arnold, R., Jupp, P. E. & Schaeben, H. Statistics of ambiguous rotations. Journal
+of Multivariate Analysis 165, 73–85 (2018).
+[7] Lenthe, W., Singh, S. & Graef, M. D. A spherical harmonic transform approach
+to the indexing of electron back-scattered diffraction patterns. Ultramicroscopy
+207, 112841 (2019).
+24
+
+
+[8] Cohen, T. S. & Welling, M. Group equivariant convolutional networks. Proceed-
+ings of ICML (2016).
+[9] Weiler, M. & Cesa, G. General E(2)-equivariant steerable CNNs. Advances in
+NeurIPS (2019).
+[10] Thomas, N. et al. Tensor field networks: Rotation- and translation-equivariant
+neural networks for 3d point clouds. arXiv:1802.08219 (2018).
+[11] Geiger, M. & Smidt, T.
+e3nn: Euclidean neural networks.
+arXiv:2207.09453
+(2022).
+[12] Rosca, D., Morawiec, A. & De Graef, M. A new method of constructing a grid in
+the space of 3d rotations and its applications to texture analysis. Modelling and
+Simulation in Materials Science and Engineering 22, 075013 (2014).
+[13] Rowenhorst, D. et al. Consistent representations of and conversions between 3d
+rotations. Modelling and Simulation in Materials Science and Engineering 23,
+083501 (2015).
+[14] Lim, B., Son, S., Kim, H., Nah, S. & Lee, K. M. Enhanced deep residual networks
+for single image super-resolution. CVPR Workshops (2017).
+[15] Atindama, E., Lef, P., Do˘gan, G. & Athavale, P. Restoration of noisy orientation
+maps from electron backscatter diffraction imaging. Integrating Materials and
+Manufacturing Innovation 12, 251–266 (2023).
+[16] Zhang, Y. et al. Image super-resolution using very deep residual channel attention
+networks. European Conference on Computer Vision 286–301 (2018).
+[17] Dai, T., Cai, J., Zhang, Y., Xia, S.-T. & Zhang, L. Second-order attention network
+for single image super-resolution. IEEE/CVF Conference on Computer Vision
+and Pattern Recognition 11065–11074 (2019).
+[18] Niu, B. et al.
+Single image super-resolution via a holistic attention network.
+European Conference on Computer Vision 191–207 (2020).
+[19] Britton, T. B. et al. Tutorial: Crystal orientations and EBSD—or which way is
+up? Materials Characterization 117, 113–126 (2016).
+[20] Stinville, J. C. et al. Multi-modal dataset of a polycrystalline metallic material:
+3D microstructure and deformation fields. Scientific Data 9, 460 (2022).
+[21] Jangid, D. et al. Titanium 3d microstructure for physics-based generative models:
+A dataset and primer. ICML 2023 Workshop on the Synergy of Scientific and
+Machine Learning Modelling (2023).
+25
+
+
+[22] Johnstone, D. N., Martineau, B. H., Crout, P., Midgley, P. A. & Eggeman, A. S.
+Density-based clustering of crystal (mis)orientations and the orix Python library.
+Journal of Applied Crystallography 53, 1293–1298 (2020).
+[23] orix developers. orix: Analysing crystal orientations and symmetry in Python,
+version 0.13.0 (2024). Software.
+26
+
+
+Extended Data
+27
+
+
+a
+b
+Extended Data Fig. 1 Electron backscatter diffraction (EBSD) and the inverse pole
+figure (IPF) representation. a, A focused electron beam is scanned across a specimen tilted to 70◦
+in a scanning electron microscope, and the backscatter diffraction pattern collected at each scan point
+is indexed to a crystallographic orientation; the resulting orientation field is rendered as an inverse
+pole-figure (IPF-Z) map. b, In the IPF representation, color encodes the crystal direction aligned
+with the sample Z axis according to the IPF color key (colored fundamental triangle). Grains appear
+as contiguous regions of slowly varying color separated by sharp orientation boundaries; recovering
+these boundaries at high spatial resolution, under a fixed acquisition budget, is the objective of this
+work.
+28
+
+
+Extended
+Data
+Fig.
+2 Frozen
+orientation
+interface
+and
+encoder–dictionary-based
+decoder reconstruction fidelity. a, Each pixel orientation is mapped by the Reynolds-projected
+A1 encoder to crystal-symmetry-invariant latent features. Predicted HR features are matched against
+the dictionary, generated by cubochoric sampling, and decoded to unit quaternions, with optional
+local iterative refinement. The 4 × 4 annotation denotes the surrounding SR task: spatial upsampling
+is performed by the SG-SRAN backbone (Fig. 2), whereas the frozen encoder and dictionary-based
+decoder act pointwise on the LR and HR orientation fields. b, Round-trip encode→decode recon-
+structions on full IPF-Z scan slices for FCC IN718 using the proper rotational subgroup O (left pair)
+and Ti-6Al-4V HCP test data using the proper rotational subgroup D6 (right pair). In each pair,
+the ground-truth input and dictionary-based decoder output are visually indistinguishable, includ-
+ing at grain boundaries. The dense-lookup round-trip misorientation is approximately 0.45◦(dG) for
+both systems (Table 2a), showing that the frozen latent interface round-trips orientation information
+across the two symmetry classes. Panel b isolates pointwise encoder–dictionary-based decoder recon-
+struction at unchanged spatial sampling.
+29
+
+
+a IN718 (FCC, O)
+b Ti-6Al-4V (HCP, D6)
+Extended Data Fig. 3 Expanded learned-baseline comparison on IN718 and Ti-6Al-4V
+held-out 4 × 4 examples. a, IN718 comparison with the full Open718 block [20] labeled Test 0,
+followed by held-out test samples 1–3, shown at a common extent and aspect ratio. b, Ti-6Al-4V
+trained-baseline comparison on held-out test samples 0–3 from the HCP split. In both panels, columns
+show the display-upsampled LR input, Atindama inpainting, EDSR, HAN, RCAN, SAN, Q-RBSA-
+adapted, QEDSR, SG-SRAN and the HR target, with the material-specific IPF-Z key at right. One
+displayed LR pixel corresponds to a 4 × 4 HR block.
+30
+
+
+a IN718 (FCC, O)
+b Ti-6Al-4V (HCP, D6)
+Extended Data Fig. 4 Held-out 4 × 4 test samples on both crystal systems. Within each
+material panel, from top to bottom, rows show the display-upsampled low-resolution input, the SG-
+SRAN super-resolved output and the high-resolution target; the first three columns show IPF-X,
+IPF-Y and IPF-Z, and the fourth visual column shows the IPF-Z residual |HR −SR| with brighter
+pixels indicating larger residual. The LR input is displayed at the HR grid via nearest-neighbor
+upsampling only for visual alignment; the SG-SRAN SR and HR fields are at the native HR resolution.
+(a) IN718 held-out test sample. (b) Ti-6Al-4V held-out test sample from the HCP test split. One LR
+pixel corresponds to a 4 × 4 HR block; the displayed HR fields are 256 × 256 pixels for IN718 and
+128 × 128 pixels for Ti-6Al-4V.
+31
+
+
+Extended Data Fig. 5 Stagewise decoded error and sample-level interpretability for SG-
+SRAN. a, Mean decoded symmetry-aware misorientation for intermediate latent features from the
+seed-42 SG-SRAN checkpoints on IN718 and Ti-6Al-4V. The routed-upsampler decrease accounts for
+98.0% of the total encoded-LR-to-final decrease on IN718 and 99.7% on Ti-6Al-4V; error bars show
+the standard deviation across per-sample means. b, IN718 Test sample 0 decoded through the SG-
+SRAN pipeline. From top to bottom, the rows show the observed LR samples, decoded LR embedding,
+context aggregation, routed patch synthesis, final SG-SRAN output and HR target. Columns show
+IPF-X, IPF-Y , IPF-Z and the 5◦boundary map. LR-space rows are displayed on the HR canvas only
+at sampled sites; unsampled pixels are black. The IN718 test canvas is 256 × 256 HR pixels, with LR
+rows sampled every fourth HR pixel.
+32
+
+
+Extended Data Fig. 6 SG-SRAN local-routing walkthrough on a boundary-rich IN718
+test crop. a, Boundary-rich crop context: the four tiles show the sparse LR input, the decoded SG-
+SRAN SR map, the HR target and the SR–HR misorientation map, localizing residual error to grain-
+boundary neighborhoods. b, Crop-scale routing analysis: owner-slot assignments, router confidence,
+the HR boundary mask and the owner-boundary overlay show that route changes and confidence
+drops align with grain-boundary neighborhoods. c, 9 × 9 Local support-bank decomposition for the
+marked LR site: the configured local window-support bank, shown here as a 9×9 IN718 neighborhood,
+is grouped into orientation-consistent slots in the isometric latent feature space, and the rightmost
+bars report the center-site slot masses. They summarize local support composition for interpretation;
+the router itself consumes the complete binary slot masks and token position. d, 4 × 4 Patch-level
+routing decision for the selected 4 × 4 HR block: crop context, per-pixel owner slots, selected owners
+and router margins show which support branch is selected at each HR location. e, Decoded candidate
+features: each candidate slot is mapped back to an IPF-colored orientation branch, making residual
+errors interpretable as branch-selection errors among discrete local candidate features rather than
+unconstrained quaternion averaging. The displayed 9 × 9 LR support footprint spans 36 × 36 HR
+pixels at 4× upsampling, and the selected routed output block is 4 × 4 HR pixels.
+33
+
+
+Extended Data Fig. 7 Scale dependence across crystal systems and upsampling factors.
+Seed-42 performance is shown for deterministic interpolants, learned baselines and SG-SRAN as
+grouped normalized score bars at 2 × 2, 4 × 4 and 8 × 8. a, IN718 (FCC, O). b, Ti-6Al-4V (HCP,
+proper D6). Each scale subplot reports median symmetry-aware misorientation, IPF-space PSNR,
+IPF-space SSIM, Boundary F1 and boundary-window Composition F1. Because these metrics have
+different units, values are normalised to [0, 1] against fixed physical anchors rather than subplot-
+wise min–max ranges, after orienting all metrics so higher bars indicate better performance: median
+misorientation is inverted on a logarithmic scale between 0.2◦and the crystal-symmetry covering
+radius (62.8◦for cubic O and 93.8◦for hexagonal D6), PSNR is linear on [0, 25] dB, and SSIM,
+Boundary F1 and Composition F1 are linear on [0, 1]. Each bar is evaluated from the corresponding
+scale-specific prediction summary; SG-SRAN uses the reported scale-specific invariant-embedding
+router configuration.
+34
+
+
+a CoNi zero-shot (FCC, O)
+b Ti-Al zero-shot (HCP, D6)
+Extended Data Fig. 8 Zero-shot IPF-Z outputs across all baselines for FCC and HCP
+transfer targets. a, IN718-trained models evaluated without target retraining on two CoNi samples.
+b, Ti-6Al-4V-trained models evaluated without target retraining on two Ti-Al samples. Within each
+material panel, two seven-column rows show the display-upsampled LR input, deterministic inter-
+polants, learned quaternion or image-space baselines, SG-SRAN and the HR target. The LR input
+is nearest-neighbor expanded only for visual alignment; all SR and HR panels are rendered at the
+native HR grid from saved quaternion arrays, with SLERP and Symm-SLERP recomputed from the
+same LR samples at render time. Each subfigure has one material-appropriate Laue IPF-Z key, while
+the misorientation/evaluation protocol uses the rotational subgroups O and D6.
+35
+
+
+Extended Data Table 1 Boundary-window composition analysis on in-distribution
+test splits. This pooled diagnostic is evaluated on the selected prediction summaries used for the
+composition analysis. For each HR boundary pixel, the HR and SR 3 × 3 windows centered at that
+pixel are compared under crystal symmetry with a 5◦tolerance. The spurious rate is the fraction of
+SR window observations not matching any GT orientation group in the corresponding HR window
+(lower is better). Recall is the fraction of GT orientation groups recovered by at least one SR
+observation, and Composition F1 uses precision = 1−spurious rate together with this recall.
+Boundary centers use the HR 8-neighbor 5◦boundary mask; overlapping boundary windows are
+counted separately.
+Method
+IN718 4 × 4
+Ti-6Al-4V 4 × 4
+Spurious ↓Recall ↑
+F1 ↑
+Spurious ↓Recall ↑
+F1 ↑
+Nearest
+0.030
+0.691
+0.807
+0.149
+0.579
+0.689
+Bicubic
+0.691
+0.410
+0.353
+0.734
+0.327
+0.293
+SLERP
+0.673
+0.323
+0.325
+0.679
+0.301
+0.311
+Symm-SLERP
+0.613
+0.374
+0.381
+0.566
+0.382
+0.406
+Atindama inpainting [15]
+0.813
+0.355
+0.245
+0.792
+0.358
+0.263
+Q-RBSA-adapted [4]
+0.335
+0.665
+0.665
+0.076
+0.664
+0.773
+QEDSR [14]
+0.080
+0.796
+0.853
+0.104
+0.669
+0.766
+EDSR [14]
+0.083
+0.791
+0.849
+0.147
+0.652
+0.739
+RCAN [16]
+0.070
+0.810
+0.866
+0.476
+0.499
+0.511
+SAN [17]
+0.036
+0.843
+0.899
+0.106
+0.731
+0.804
+HAN [18]
+0.151
+0.777
+0.812
+0.279
+0.627
+0.671
+SG-SRAN (ours)
+0.038
+0.830
+0.891
+0.093
+0.687
+0.782
+36
+
+
+Extended Data Table 2 Zero-shot boundary-window composition analysis. The same
+3 × 3 HR-boundary-window composition diagnostic as Extended Data Table 1 is applied to the two
+headline out-of-distribution targets. Spurious rate is lower better; recall and Composition F1 are
+higher better.
+Method
+IN718 →CoNi
+Ti-6Al-4V →Ti-Al
+Spurious ↓Recall ↑
+F1 ↑
+Spurious ↓Recall ↑
+F1 ↑
+Nearest
+0.054
+0.609
+0.741
+0.014
+0.699
+0.818
+Bicubic
+0.620
+0.393
+0.387
+0.626
+0.419
+0.395
+SLERP
+0.598
+0.332
+0.364
+0.569
+0.393
+0.411
+Symm-SLERP
+0.554
+0.364
+0.401
+0.510
+0.437
+0.462
+Atindama inpainting [15]
+0.813
+0.335
+0.240
+0.820
+0.374
+0.243
+Q-RBSA-adapted [4]
+0.323
+0.600
+0.636
+0.007
+0.769
+0.867
+QEDSR [14]
+0.090
+0.716
+0.801
+0.049
+0.769
+0.850
+EDSR [14]
+0.090
+0.711
+0.798
+0.092
+0.753
+0.823
+RCAN [16]
+0.091
+0.721
+0.804
+0.578
+0.496
+0.456
+SAN [17]
+0.045
+0.756
+0.844
+0.046
+0.852
+0.900
+HAN [18]
+0.160
+0.693
+0.760
+0.283
+0.705
+0.711
+SG-SRAN (ours)
+0.054
+0.745
+0.834
+0.005
+0.847
+0.915
+37

@@ -1,0 +1,3800 @@
+El Agente Potente: High-Throughput Agentic
+Atomistic Simulations
+Tsz Wai Ko1,2,†, , Jiaru Bai1,2,†, , Thomas Swanick3,4,†, , Yeonghun Kang1,2, ,
+Changhyeok Choi1,2, , Angelina Qihong Jiang3, Aiwei Yin3, , Varinia Bernales1,3,8,∗, ,
+Alán Aspuru-Guzik1,2,3,5,6,7,8,9,10,∗,
+1Department of Chemistry, University of Toronto, 80 St. George St., Toronto, ON M5S 3H6, Canada
+2Vector Institute for Artificial Intelligence, W1140-108 College St., Schwartz Reisman Innovation
+Campus, Toronto, ON M5G 0C6, Canada
+3Department of Computer Science, University of Toronto, 40 St George St., Toronto, ON M5S 2E4,
+Canada
+4Department of Mathematics, University of Toronto, 40 St George St., Toronto, ON M5S 2E4, Canada
+5Department of Materials Science & Engineering, University of Toronto, 184 College St., Toronto, ON
+M5S 3E4, Canada
+6Department of Chemical Engineering & Applied Chemistry, University of Toronto, 200 College St.,
+Toronto, ON M5S 3E5, Canada
+7Institute of Medical Science, 1 King’s College Circle, Medical Sciences Building, Room 2374,
+Toronto, ON M5S 1A8, Canada
+8Acceleration Consortium, 700 University Ave., Toronto, ON M7A 2S4, Canada
+9Canadian Institute for Advanced Research (CIFAR), 661 University Ave., Toronto, ON M5G 1M1,
+Canada
+10NVIDIA, 431 King St W #6th, Toronto, ON M5V 1K4, Canada
+†Contributed equally to this work.
+Foundational machine-learning interatomic potentials (MLIPs) are transforming atomistic simulations
+by achieving near-ab initio accuracy across large chemical spaces at a fraction of the computational
+cost. A central challenge in using these tools for high-throughput property calculations is translating
+high-level scientific intent into adaptive simulation campaigns without compromising workflow rigour.
+We introduce El Agente Potente, an agentic system that combines typed execution graphs with
+a complementary coding mode for MLIPs-driven atomistic simulations. Typed execution graphs
+provide structured and provenance-aware execution for standardized workflows, with large language
+models (LLMs) restricted to planning and routing while deterministic Python components perform
+scientific computation and validation. Complementing this structured execution, a coding agent
+constructs customized workflows for tasks requiring greater procedural flexibility while invoking
+existing Potente functions for supported calculations. We demonstrate El Agente Potente
+across computational materials discovery, molecular energy-landscape exploration, adsorption, and
+catalytic reaction workflows, together with systematic benchmarks of reproducibility and LLM
+token cost. These results establish typed execution graphs and code-based workflow construction as
+complementary mechanisms for agentic scientific computing, combining controlled, auditable execution
+with the flexibility required for customized atomistic simulations.
+Date: September 15, 2026
+Correspondence:
+varinia@bernales.org and alan@aspuru.com
+1
+arXiv:2609.14840v1  [cs.AI]  13 Sep 2026
+
+
+1
+Introduction
+Machine learning interatomic potentials (MLIPs) are rapidly expanding the accessible scale and scope of
+atomistic simulation by approximating ab initio potential-energy surfaces at substantially reduced computa-
+tional cost (1; 2; 3; 4). Recent models with broad chemical coverage (5; 6; 7; 8) further enable a common
+computational infrastructure across diverse materials and molecular systems. However, deploying these
+foundational MLIPs at scale requires more than efficient energy and force evaluation: practical studies must
+coordinate structure preparation, relaxation, sampling, property calculations, validation, failure handling, and
+data aggregation, often through workflows that differ substantially between scientific problems.
+Most existing high-throughput workflow frameworks, such as AFLOW (9), AiiDA (10; 11), Pyiron (12; 13),
+and Atomate2 (14), provide powerful infrastructure for automating atomistic simulations. However, using
+these frameworks often requires substantial expertise across multiple simulation packages, as well as domain
+knowledge of computational materials science and chemistry. Large language model (LLM)-based scientific
+agents offer a complementary form of flexibility by translating high-level objectives into tool use, workflow
+decisions, or generated code (15; 16; 17; 18; 19; 20). Recent systems targeting atomistic simulation, including
+LAMMPS-Agent (21), Masgent (22), and AtomisticSkills (23), further demonstrate the potential of this
+approach. Yet greater runtime flexibility raises a complementary challenge: scientific autonomy must be
+introduced without sacrificing reproducibility, provenance, and explicit control over numerical execution.
+Within the El Agente family, successive systems have explored different ways of introducing autonomy into
+scientific workflows. El Agente Q (24) and its successor El Agente Quntur (25), as well as other members
+such as El Agente Sólido (26), El Agente Estructural (27) and El Agente Cuántico (28), use
+hierarchical multi-agent reasoning to dynamically decompose and delegate computational tasks across quantum-
+chemistry, solid-state, and quantum simulations. El Agente Gráfico (29) instead structures execution
+through typed execution graphs, while retaining flexibility through a coding agent that can construct task-
+specific graphs. El Agente Forjardor (30) extends adaptability to the capability layer by dynamically
+generating and refining computational tools. Building on El Agente Gráfico, El Agente Seguro (31)
+embeds specialized agents directly within structured execution graphs, combining multi-agent reasoning with
+explicit control over scientific state and execution. Together, these systems explore how to introduce flexibility
+at the levels of reasoning, workflow construction, and tool construction while preserving reliable scientific
+execution.
+Here, we introduce El Agente Potente, an agentic framework for MLIP-driven atomistic simulations that
+integrates structured workflow execution with programmable agentic flexibility. Rather than relying exclusively
+on either predefined workflows or open-ended code generation, Potente supports two complementary
+execution modes. Standardized scientific procedures are represented as typed execution graphs, providing
+explicit control over data flow, validation, branching, provenance, and concurrent execution as intermediate
+results become available. For tasks requiring customized procedural logic, a coding agent constructs task-
+specific Python workflows and invokes existing Potente functions when the requested calculations are
+already supported. This hybrid design combines controlled and auditable execution with the flexibility to
+adapt workflow logic beyond predefined graph components.
+We assess
+El Agente Potente through three systematic benchmarks examining reproducibility, the
+performance of foundational MLIPs and LLM token cost (including comparisons with open-ended skill-based
+agents), and seven representative scientific case studies. These span high-throughput property evaluation,
+composition-driven materials discovery, molecular energy-landscape exploration, adsorption, and catalytic
+reaction pathways, providing progressively more demanding tests of structured execution, adaptive decision-
+making, and customized workflow construction.
+2
+Results
+2.1
+Architecture of El Agente Potente
+Figure 1 summarizes the architecture of Potente, an agentic framework for MLIP-driven atomistic simula-
+tions across molecules, bulk materials, and interfaces. Given a natural-language scientific objective, Potente
+2
+
+
+Software
+ORB
+MACE
+UPET
+MatterSim
+OMatG
+MLIPs/Models
+Ecosystem Tools/Data
+ASE
+MatCalc
+Materials 
+Project
+Pymatgen
+User Prompts
+Execution Graph
+Dynamic Router  
+MLIP Relaxation
+Phase Stability 
+Filter 
+Structures
+Result 
+Aggregation
+Elasticity
+Phonons
+Adsorption
+Bandgap
+MD
+Downstream Property Calculations
+Execution 
+Graph
+Workflow States
+Natural 
+Languages
+Coding Mode
+Return Structured 
+Reports/Data
+Completed/Post-
+processing
+Reaction 
+pathway 
+Figure 1 Architecture of El Agente Potente: Natural-language scientific requests are adaptively routed to reusable
+computational capabilities for MLIP-driven atomistic simulation. Standardized high-throughput tasks use a typed
+execution graph supporting parallel structure processing, relaxation, routing, and downstream property calculations,
+while customized tasks can be implemented through agent-generated Python workflows that compose existing functions,
+tools, and the execution graph itself. Structured results and provenance are returned for downstream analysis and
+reuse.
+3
+
+
+plans and orchestrates computational operations using a hierarchy of reusable capabilities. Its central design
+principle separates agentic scientific reasoning and workflow composition from validated numerical execution,
+allowing the agent to adapt task orchestration without regenerating established computational procedures.
+A central capability exposed to Potente is a typed execution graph for standardized high-throughput
+simulation campaigns. The graph coordinates computational nodes for structure retrieval or generation,
+MLIP-based relaxation, optional filtering, downstream property calculations, and result aggregation. Within
+the graph, an LLM-based router can make constrained scientific decisions, such as selecting downstream
+calculations from the user objective and structural metadata, while deterministic Python functions perform
+the underlying simulations and data processing.
+The graph is designed to execute many related calculations efficiently. Mapping operations fan computations
+across structures, streaming lets downstream tasks begin as soon as their dependencies are satisfied, and
+join operations synchronize results only when required. Outputs, routing and filtering decisions, failures,
+simulation artifacts, and provenance are retained as structured workflow state, with selected semantic
+provenance optionally persisted to a knowledge graph.
+When a task requires customized procedural logic, Potente can instead construct and execute a task-specific
+Python workflow. The generated code can compose reusable Potente functions, external ecosystem tools,
+and the execution graph itself, allowing the agent to customize control flow, iteration, data dependencies, and
+post-processing without reimplementing established numerical procedures.
+This layered architecture allows Potente operate at different levels of abstraction, invoking complete
+high-throughput workflows when appropriate while composing lower-level capabilities when greater procedural
+flexibility is needed. Detailed graph topology, supported MLIP models, reusable simulation functions, and
+parallel execution implementation are provided in the Supplementary Information, Sec. Execution graph
+implementation.
+2.2
+Benchmarks
+2.2.1
+Reproducibility of high-throughput calculations
+To evaluate the reproducibility of high-throughput execution, we considered two workflows applied to 500
+structures retrieved from the Materials Project (32). Both workflows used the OMAT head of the multi-head
+MACE model (MACE-OMAT) (33). The first workflow calculated the Voigt–Reuss–Hill bulk and shear
+moduli (KVRH and GVRH), whereas the second calculated the harmonic constant-volume heat capacity (CV )
+at 300 K. For each task, we compared the El Agente Potente execution graph with a manually scripted
+Python workflow using identical input structures, MLIP, and computational settings. Each workflow was
+executed independently five times.
+In the elasticity workflow (Figure 2a), Potente reads the structures directly from the input directory, relaxes
+each structure, and evaluates the elastic tensor from stress–strain calculations to obtain KVRH and GVRH. In
+the phonon workflow (Figure 2b), the relaxed structures are passed to harmonic phonon calculations from
+which CV is evaluated at 300 K. Across the five repeated executions, the YbZn2P2 structure (Materials
+Project ID mp-9582) was the only structure that occasionally failed in both the manually scripted and El
+Agente Potente workflows. The failure occurred during Niggli reduction of the MLIP-relaxed unit cell,
+a tolerance-sensitive crystallographic standardization procedure (34). When a relaxed lattice lies close to a
+reduction boundary, small numerical variations in its lattice parameters can cause the reduction algorithm to
+fail, rather than indicating a failure of the MLIP force evaluation or harmonic phonon calculation. In El
+Agente Potente, such cases are returned as typed failures and retained for subsequent inspection rather
+than interrupting the remaining high-throughput campaign.
+We first quantified run-to-run reproducibility by calculating, for each material, the standard deviation of
+KVRH, GVRH, and CV across the five independent executions. The manually scripted workflow shows narrowly
+distributed standard deviations for all three quantities (Figure S9), with most materials showing only small
+numerical variations between repeated runs. The same analysis for the El Agente Potente execution graph
+yields comparably narrow distributions (Figure S8). The median and 95th-percentile standard deviations
+4
+
+
+High throughput elasticity calculations
+Please read all structure files from the specified directory and compute the bulk modulus and shear
+modulus for each structure. Use the corresponding file name as the mp-id for each entry. Save the final
+results to a CSV file containing at least the following columns: mp_id, bulk_modulus, and
+shear_modulus.
+Convert CIF files into 
+structure objects
+Perform geometry relaxation 
+& calculate elastic tensor
+Calculate bulk and shear 
+modulus
+High throughput phonon calculations
+Please read all structure files from the specified directory and compute the heat capacity for each structure 
+at 300 K under Harmonic approximation. Use the corresponding file name as the mp-id for each entry. Save 
+the final results to a CSV file
+Convert CIF files into 
+structure objects
+Perform geometry relaxation 
+& calculate harmonic phonons
+Calculate heat capacity
+Gvrh (GPa)
+Kvrh (GPa)
+mp-id
+85.26
+202.03
+1597
+125.74
+245.34
+27861
+29.25
+64.66
+570683
+51.00
+149.15
+1025455
+…
+…
+…
+Cv (J/mol K)
+mp-id
+24.86
+39
+147.18
+467
+216.07
+1047
+254.06
+29331
+585.90
+504539
+…
+…
+a
+b
+File 1
+File 2
+File 3
+File N
+Structure 1
+Structure 2
+Structure N
+⋯
+File 1
+File 2
+File 3
+File N
+Structure 1
+Structure 2
+Structure N
+⋯
+𝜎!"
+𝜎!#
+𝜎#!
+𝜎""
+𝜎"#
+𝜎"!
+𝜎!"
+𝜎!#
+𝜎!!
+y
+x
+𝑧
+Figure 2 Agentic workflows for high-throughput property calculations. Examples of El Agente Potente workflows
+for automated high-throughput property prediction. a, Elasticity workflow in which CIF files are converted into
+structure objects, relaxed with an MLIP, and used to compute elastic tensors, bulk moduli, and shear moduli. b,
+Phonon workflow in which structures are relaxed, harmonic phonon calculations are performed, and constant-volume
+heat capacities are computed at 300 K. In both examples, natural-language instructions are converted into executable
+workflows that process multiple structures and export the final results as CSV files.
+5
+
+
+remain small relative to the overall ranges of the corresponding properties, indicating that repeated agentic
+execution does not introduce appreciable variability into the underlying numerical calculations.
+We next compared the scientific outputs produced by the two approaches. For each material, the values of
+KVRH, GVRH, and CV were averaged over the five executions of each workflow. The resulting parity plots
+(Figure S10) lie essentially along the y = x line across the full property ranges, showing that El Agente
+Potente reproduces the results of the manually scripted reference workflow while autonomously constructing
+and executing the corresponding high-throughput calculation graph.
+Together, these benchmarks show that the typed execution graph preserves the numerical reproducibility
+of a conventional scripted workflow while providing automated workflow construction, structured failure
+handling, and provenance capture. The agreement between repeated executions and between independently
+implemented workflow interfaces is particularly important for agentic high-throughput simulations, where
+adaptive planning should not compromise the determinism of the underlying scientific calculations.
+2.2.2
+Agentic benchmarking of foundational machine learning interatomic potentials
+Having established the reproducibility of the execution-graph workflow, we next examined whether El Agente
+Potente could support systematic benchmarking of different pretrained foundational MLIPs. These models
+differ in architecture, training data, and chemical coverage, so their accuracy can vary substantially across
+downstream properties. Reliable comparison under identical simulation settings is consequently important
+before deploying a foundational MLIP in large-scale screening campaigns.
+For this benchmark, we evaluated MatterSim-v1.0.0-1M (MatterSim) (35), conservative Orb-V3-OMAT
+(Orb-OMAT) (36), and MACE-OMAT (33) on 1,000 bulk crystal structures with reference bulk and shear
+moduli. In contrast to the preceding benchmark, which used the predefined execution graph, here the user
+requested a comparative high-throughput benchmark, and Potente employed its coding mode. The coding
+agent constructed a Python workflow that iterated over the structures and models while invoking the existing
+model-loading, relaxation, and elasticity functions implemented in Potente. Thus, the agent customized the
+benchmarking logic without reimplementing the underlying numerical procedures. All 3,000 model–structure
+calculations completed successfully.
+The three models exhibited similar performance for the Voigt–Reuss–Hill bulk modulus as shown in Figure S7.
+MatterSim achieved the lowest mean absolute error (MAE) of 13.99 GPa, followed by MACE-OMAT at
+15.69 GPa and Orb-OMAT at 16.88 GPa, with corresponding R2 values of 0.873, 0.871, and 0.863, respectively.
+Larger differences emerged for the shear modulus. Orb-OMAT gave the lowest MAE of 13.94 GPa, closely
+followed by MatterSim (14.05 GPa) and MACE-OMAT (15.24 GPa). MatterSim nevertheless achieved the
+highest R2 for the shear modulus (0.663), compared with 0.624 for Orb-OMAT and 0.439 for MACE-OMAT,
+indicating larger structure-dependent deviations for the latter.
+This benchmark illustrates two aspects of El Agente Potente. First, the coding mode can construct
+customized comparative workflows while reusing the same validated computational functions employed
+elsewhere in the framework. Second, even closely performing foundational MLIPs can exhibit property-
+dependent differences in accuracy and ranking, emphasizing the importance of benchmarking candidate models
+for the specific observables and materials domains in which they will be deployed.
+2.2.3
+Comparison with a skill-based coding agent
+To assess the practical trade-off between a “fixed” execution-graph workflow and a more open-ended skill-based
+coding agent, we compared Potente with Claude Code equipped with atomistic skills (23). Both systems
+were given the same high-level GCMC task for CO2 adsorption in HKUST-1: read the input CIF structure,
+set up the CO2 GCMC simulation with an MLIP backend, run 5,000 equilibration and 5,000 production steps
+at 298 K and 1 bar, and aggregate the adsorption results. We repeated the task five times for each system
+and compared the adsorption outputs against metrics that reflect execution behaviour.
+6
+
+
+Table 1 Benchmark comparison of agentic workflows for GCMC simulations. CO2 adsorption in HKUST-1 was
+evaluated using GCMC simulations at 298 K and 1 bar, with 5000 equilibration steps and 5000 production steps.
+The predictions from Potente and Claude Code equipped with AtomisticSkills (23) were obtained using the same
+high-level GCMC task. Each workflow was repeated five times, and values are reported as mean ± standard deviation.
+The uptake and interaction energy evaluate adsorption predictions, while the token cost reflects the execution overhead
+of each agent trace. Detailed metrics see Supplementary Information, Sec. B.5.
+Agent
+Uptake (mmol/g)
+Heat of adsorption (kJ/mol per CO2)
+Token cost (USD)
+Claude Code with skills
+1.25 ± 0.57
+13.81 ± 0.77
+0.638 ± 0.139
+Potente
+1.88 ± 0.12
+22.79 ± 0.53
+0.152 ± 0.003
+As summarized in Table 1, both systems completed the HKUST-1 CO2 GCMC task, but with distinct execution
+profiles. Because the requested simulations used only 5,000 production steps, interpret the adsorption values
+as screening-level predictions. For context, experimental CO2 uptakes of approximately 4.1–4.2 mmol g−1
+have been reported for pristine HKUST-1 near 298–300 K and 1 bar (37; 38). Reported isosteric heats of CO2
+adsorption for pristine HKUST-1 are approximately 20–30 kJ mol−1, depending on loading and measurement
+protocol (37; 39).
+These experimental values are provided only as physical context, because the two systems used different MLIP
+backends and GCMC sampling protocols, the comparison should be viewed as a workflow-level assessment and
+does not constitute a direct benchmark of adsorption accuracy. In Potente, the execution graph reduced
+runtime decision-making and produced reproducible adsorption estimates with stable resource usage. By
+contrast, skill-based Claude Code performed workflow construction in addition to running the calculation in
+each independent run. Only two of the five runs considered pre-relaxing the framework before GCMC (one
+relaxed it with the MLIP calculator, one explicitly checked and opted to skip it). This comparison points to a
+complementary use case: skill-based coding agents can accelerate workflow prototyping, while typed execution
+graphs can amortize this effort for repeated computation. Detailed discussions on each run can be found in
+SI Sec. B.5.
+2.3
+Case studies
+We evaluated El Agente Potente on seven representative research problems formulated through tailored
+user prompts, demonstrating its ability to execute robust atomistic simulations across diverse application
+scenarios.
+2.3.1
+Materials Discovery
+Computational materials discovery often relies on high-throughput calculations to efficiently screen large
+chemical spaces and identify promising candidates. A central challenge is the end-to-end integration of the
+autonomous discovery workflow, from generating candidate structures to evaluating their thermodynamic sta-
+bility and then performing downstream property calculations for targeted applications. For composition-driven
+discovery, thermodynamic screening can be performed using the energy above the convex hull. Competing
+phases in the corresponding chemical system are retrieved from the Materials Project (40; 41) and evaluated
+using the same MLIP as the generated candidates, providing an internally consistent phase diagram. Can-
+didates satisfying the user-defined stability criterion proceed to downstream calculations, whereas filtered
+or failed structures retain typed records describing their execution outcome. Downstream calculations are
+implemented as modular nodes spanning structural, vibrational, mechanical, electronic, dynamical, adsorption,
+and reaction-pathway properties. Because routing runs independently for each structure, different members of
+the same campaign can be assigned different combinations of calculations based on the scientific objective.
+Perovskite discovery
+In the first case study (see Figure 3a), via the user prompt, the user asked Potente
+to explore promising ABX3 perovskite materials. The agent first performed a literature and web search
+on lead-free halide perovskites, motivated by the broader interest in replacing Pb-based halide absorbers
+7
+
+
+Exploration of lithium superionic conductors
+Search the existing literature and propose five novel and reasonable compositions for Li-ion superionic conductors with
+the formula Li12M4X16 using the structure generator. For each proposed composition, generate 10 candidate structures
+and evaluate their phase stability. For each composition, select the structure with the lowest energy above the convex hull
+and calculate its ionic conductivity at 300 K. To perform the conductivity calculation, replicate the unit cell by a factor of 2
+along the x, y, and z directions, then run NPT MD simulations with 100 ps of equilibration followed by a 100 ps production
+run. Use a logging interval of 10 steps.
+Perform web search & 
+structure generation
+Perform geometry relaxation & 
+calculate energy above the hull
+Perform MD simulations & 
+calculate ionic conductivity
+Exploration of perovskite materials
+Search existing literatures and propose five novel and reasonable compositions for promising perovskite
+materials with the general formula ABX3 using the ALEX_MP20_CSP structure generator. For each proposed
+composition, generate ten candidate structures, evaluate their phase stability. For each composition, select
+the structure with the lowest energy above the convex hull and calculate its bandgap.
+Perform web search & 
+structure generation
+Perform geometry relaxation & 
+calculate energy above the hull
+Perform bandgap 
+prediction
+a
+b
+Eg (eV)
+Composition
+1.312
+CsSnCl3
+1.514
+KGeBr3
+0.774
+RbSnBr3
+1.609
+RbGeI3
+1.285
+KGeI3
+𝝈!"# (ms/cm)
+Composition
+43.16
+Li12As4Te16
+6.565
+Li12Sb4 Se16
+9.136
+Li12As4Se16
+65.44
+Li12Sb4Te16
+5.892
+Li12Bi4Se16
+Generated 
+Compositions
+1. CsSnCl3
+2. KGeBr3
+3. RbSnBr3
+4. RbGeI3
+5. KGeI3
+Generated 
+Compositions
+1. Li12As4Te16
+2. Li12Sb4Se16 
+3. Li12As4Se16 
+4. Li12Sb4Te16 
+5. Li12Bi4Se16
+Figure 3 Agentic workflows for materials discovery: Exploration of perovskite materials a and lithium superionic
+conductors b using MLIPs and generative models. In both cases, natural-language instructions are translated into
+executable pipelines that combine literature-guided composition proposal, structure generation, MLIP-based relaxation,
+phase-stability evaluation, and property prediction, including bandgap estimation for perovskites and MD-based ionic
+conductivity calculations for Li conductors.
+8
+
+
+with chemically reasonable Ge- and Sn-based alternatives (42; 43; 44; 45). Based on this search, the agent
+selected five charge-balanced alkali-metal halide perovskite candidates: KGeI3, RbGeI3, KGeBr3, RbSnBr3,
+and CsSnCl3.
+For each composition, Potente generated ten candidate structures using the OMatG model trained on
+the ALEX-MP20-CSP database (46). The generated structures and competing phases in the corresponding
+chemical systems were then relaxed using MACE-OMAT (33), which was fine-tuned across different domains
+and large datasets spanning bulk materials, molecules, and surfaces (47; 48; 49; 50). The relaxed energies were
+used to evaluate thermodynamic stability by computing the energy above the MLIP convex hull. For each
+composition, only the lowest-energy-above-hull structure was retained for electronic-property prediction. Band
+gaps were then predicted using PET-MAD-DOS (51), a point-edge transformer (52) trained on density-of-states
+data at the Perdew-Burke-Ernzerhof revised for solids (PBE-sol) level from the Massive Atomic Density
+dataset (53).
+The selected candidates occupied a relatively narrow metastability window of 0.0151–0.0579 eV atom−1 above
+the MLIP convex hull, with predicted band gaps ranging from 0.774 to 1.609 eV. CsSnCl3 was the most stable
+candidate, lying only 0.0151 eV atom−1 above the hull with a predicted band gap of 1.312 eV. The Ge-based
+halides also showed low hull distances and optoelectronically relevant gaps: RbGeI3, KGeBr3, and KGeI3
+were 0.0241, 0.0306, and 0.0579 eV atom−1 above hull, with predicted band gaps of 1.609, 1.514, and 1.285 eV,
+respectively. RbSnBr3 was also close to the hull, at 0.0351 eV atom−1, but had the smallest predicted band
+gap of 0.774 eV.
+Overall, these results illustrate how Potente integrates literature-guided composition proposal, structure
+generation, MLIP relaxation, convex-hull-based down-selection, and electronic-property prediction within a
+single reproducible workflow. The selected Ge- and Sn-based halide perovskites are qualitatively consistent
+with prior first-principles studies that identified KGeI3, RbGeI3, KGeX3 (X = Br, I), RbSnX3 (X = Cl, Br, I),
+and CsSnCl3 as potential lead-free photovoltaic or optoelectronic candidates. We note that the predicted band
+gaps slightly deviate from reported ab initio values (42; 44; 43; 45), which can be attributed to differences
+in first-principles settings, exchange–correlation functionals, structural phases, and the intrinsic accuracy
+of the machine-learned band-gap model. Nevertheless, the qualitative agreement indicates that Potente
+can already serve as an effective preliminary screening tool for rapidly identifying plausible lead-free halide
+perovskite candidates, with higher-fidelity DFT reserved for final validation.
+Superionic lithium-ion conductors
+In the second task, we prompted Potente to propose lithium-ion
+superionic conductors with the Li12M4X16 stoichiometry as shown in Figure 3b. This composition can be
+viewed as a four-formula-unit representation of the Li3MX4 family, which is closely related to thio-LISICON-
+type solid electrolytes such as Li3PS4. Following the protocol used in the perovskite-discovery task, Potente
+first performed literature and web searches to identify chemically related lithium- and alkali-ion-conducting
+chalcogenides and plausible substitution trends within this chemical space. Prior work has shown that
+Li-sublattice disorder in these frameworks can promote fast Li-ion transport (54). The chemical rationale for
+the agent-proposed compositions is further supported by reported As- and Sb-based chalcogenide conductors.
+For example, (Li3SbS4) glass and glass-ceramic electrolytes have been synthesized and shown to contain
+(SbS4) units, demonstrating that heavier group-15 tetrahedral chalcogenide frameworks can support Li-ion
+transport (55). In addition, cubic (Na3SbSe4) exhibits fast Na-ion conduction at room temperature, indicating
+that (SbSe3−
+4 )-based selenide frameworks are also compatible with superionic alkali-ion transport (56).
+More broadly, previous computational studies have shown that anion chemistry, framework topology, and
+cation/anion substitution can substantially affect phase stability and ion migration in lithium superionic
+conductors (57; 58).
+Therefore, the proposed Li12As4Se16, Li12Sb4Se16, Li12Bi4Se16, Li12As4Te16, and
+Li12Sb4Te16 compositions can be interpreted as literature-inspired extensions of known Li3MX4 chalcogenide
+solid-electrolyte chemistry.
+Using the same protocol for structure generation and thermodynamic-stability evaluation as in the first prompt,
+Potente generated ten candidate structures for each of five charge-balanced compositions: Li12Sb4Se16,
+Li12As4Se16, Li12Bi4Se16, Li12As4Te16, and Li12Sb4Te16. Each structure was relaxed with MACE-OMAT,
+evaluated against the MLIP convex hull, and the lowest-energy-above-hull structure for each composition was
+selected for Li-ion transport calculations. Conductivities were obtained from 2 × 2 × 2 replicated supercells
+9
+
+
+using NPT Nose-Hoover-chain molecular dynamics at 300 K, with 100 ps equilibration, 100 ps production, a
+1 fs timestep, and a logging interval of ten steps.
+The selected candidates spanned a narrow metastability window of 0.0618–0.1038 eV atom−1 above the MLIP
+convex hull, with predicted 300 K Li-ion conductivities from 5.89 to 65.44 mS cm−1. The most stable candidate
+was Li12Sb4Se16, at 0.0618 eV atom−1 above hull, with a predicted conductivity of 6.56 mS cm−1. Li12As4Se16
+and Li12Bi4Se16 were similarly close to the hull, with hull distances of 0.0728 and 0.0755 eV atom−1, and
+conductivities of 9.14 and 5.89 mS cm−1, respectively. The telluride candidates showed higher predicted
+transport but larger metastability: Li12As4Te16 reached 43.16 mS cm−1 at 0.0993 eV atom−1 above hull,
+while Li12Sb4Te16 gave the highest conductivity, 65.44 mS cm−1, at 0.1038 eV atom−1 above hull.
+These results identify selenide Li3MSe4 chemistries, especially Li12Sb4Se16 and Li12As4Se16, as the most bal-
+anced candidates in terms of metastability and room-temperature Li-ion mobility. The tellurides Li12As4Te16
+and Li12Sb4Te16 are higher-risk but potentially high-conductivity candidates: their softer anion frameworks
+may promote Li mobility, but their larger energy above hull suggests a greater thermodynamic penalty. The
+large conductivities typically arise from the short MD trajectories, finite supercell sizes, and limitations of both
+the MLIP and the generative model. These results should therefore be interpreted as screening-level indicators
+and as a demonstration of the autonomous workflow, rather than as quantitatively validated conductivities.
+2.3.2
+Molecular Energy Landscape Exploration
+Molecular energy-landscape exploration presents distinct challenges for autonomous agents. First, practical
+workflows often span multiple computational domains, including MLIPs and quantum-chemistry methods,
+and connecting these domains within a unified framework remains challenging. Second, certain types of
+simulations require chemical intuition rather than direct translation of user instructions, such as identifying
+relevant conformational degrees of freedom or selecting appropriate collective variables.
+Low-energy conformer search and validation with quantum chemistry
+In the first molecular user case, we
+evaluated whether El Agente Potente could coordinate MLIP and quantum-chemistry workflows within
+El Agente Gráfico through a sequence of natural language instructions. Low-energy conformer search is
+well suited to this demonstration because flexible molecules may contain many local minima separated by
+small energy differences, making exhaustive exploration directly with DFT computationally demanding. We
+therefore adopted a hierarchical strategy in which the MLIPs were used for efficient conformational sampling,
+followed by DFT for reranking and validation. Tetraethylene glycol dibenzoate, C22H26O7, was selected
+because its flexible polyether chain contains multiple rotatable C–C and C–O bonds, while its terminal
+benzoate groups introduce rigid aromatic moieties and intramolecular dispersion interactions. These features
+give rise to a nontrivial landscape of folded and extended conformations.
+We first provided the SMILES string O=C(OCCOCCOCCOCCOC(=O)c1ccccc1)c1ccccc1 and requested a low-
+energy conformer search using the conservative Orb-v3 (36) trained on the OMol25 database (59) (Orb-OMOL).
+The agent interpreted the system as an isolated, neutral, closed-shell molecule and routed the request to a
+multiple-minimum Monte Carlo conformer-search workflow. The exploration identified 84 distinct local minima
+distributed over an energy range of approximately 0.535 eV (12.34 kcal, mol−1) relative to the lowest-energy
+conformer. The ten lowest-energy conformers were concentrated within only 0.129 eV (2.97 kcal, mol−1),
+indicating a dense manifold of competing low-energy structures. Using computationally efficient MLIPs for
+broad PES exploration substantially reduces the computational cost compared with performing geometry
+optimization and energy evaluation for all sampled configurations directly with electronic-structure methods,
+while enabling much more extensive configurational sampling.
+We subsequently prompted the agent to rerank the 10 lowest-energy conformers using PySCF (60), which
+offers GPU acceleration for quantum chemistry workflows covering a wide range of electronic structure
+methods for materials and molecules(61). The lowest-energy conformer was further optimized with the same
+level of theory, followed by the calculation of infrared (IR) and Raman spectra. The agent launched ten
+independent single-point calculations in parallel at the ωB97X-D4/def2-TZVP level. After DFT reranking, the
+conformer ranked lowest in energy by Orb-OMOL remained the lowest-energy structure, while the ten selected
+structures spanned approximately 0.135 eV (3.12 kcal mol−1). This DFT-ranked lowest-energy conformer was
+subsequently optimized to an electronic energy of −1380.74048 Eh, followed by harmonic vibrational analysis
+10
+
+
+a
+b
+Low energy conformer search
+Perform low energy conformer search for the specified SMILES string using Orb-OMol. Use PySCF to rerank
+the ten lowest-energy conformers from the specified directory. Optimize the lowest-energy conformer and
+calculate its infrared and Raman spectra. Generate the corresponding plots and report the results.
+Perform low energy conformer 
+search
+Rerank MLIP energies with DFT
+Calculate frequencies and spectra
+Agent-driven metadynamics
+Run a two-dimensional enhanced-sampling calculation for alanine dipeptide using Orb-OMOL by writing a
+Python script. Use the supplied structure from the specified directory. Use the NVT ensemble at 300 K with a
+0.5 fs timestep, 1,000 equilibration steps, and 100,000 production steps. Record frames every 100 steps.
+Define the collective variables and other enhanced-sampling settings, and report the results. Generate plots
+of the sampling distribution and free-energy surface.
+Determine collective variables 
+and other settings
+Perform Metadynamics
+Generate free energy surface
+Figure 4 Agentic workflows for molecular energy-landscape exploration. a, Low-energy conformer-search workflow.
+Starting from a user-specified molecular structure, the agent samples conformers with MLIPs, identifies low-energy
+candidates, reranks MLIP energies with more accurate DFT calculations, and performs vibrational-frequency calcula-
+tions to generate infrared and Raman spectra. The molecular structures shown are representative conformers obtained
+from the actual conformer search, and the IR spectrum is the calculated spectrum of the lowest-energy conformer
+after DFT reranking. b, Agent-driven metadynamics workflow. Given a molecular system and a natural-language
+simulation request, the agent determines appropriate collective variables and enhanced-sampling parameters, executes
+metadynamics simulations, and analyses the resulting trajectory to construct the multidimensional free-energy surface.
+The collective-variable-selection and Gaussian-hill panels are schematic representations of the workflow, whereas the
+displayed two-dimensional free-energy surface is the actual result obtained from the alanine-dipeptide metadynamics
+simulation.
+11
+
+
+of its 159 normal modes. No significant imaginary frequencies above the 50 cm−1 threshold were identified,
+supporting its assignment as a local minimum. The calculated IR spectrum exhibited its strongest bands at
+approximately 1820 and 1825 cm−1, with intensities of 299.7 and 258.1 km, mol−1, respectively, together with
+a group of intense modes between approximately 1316 and 1349 cm−1. In contrast, the Raman spectrum was
+dominated by high-frequency modes, with the strongest Raman activities at approximately 3238 cm−1 (306.4
+and 256.3 Å
+4, amu−1) and 3031 cm−1 (228.9 Å
+4, amu−1). The corresponding IR and Raman spectra are shown
+in Figure S4.
+El Agente Potente automatically generated broadened IR and Raman spectra together
+with machine-readable peak tables. This example demonstrates how El Agente Potente can combine
+efficient MLFF-based exploration of a complex molecular PES with targeted higher-level electronic-structure
+refinement and spectroscopic characterization, thereby reducing the number of expensive quantum-chemical
+calculations required for conformational screening.
+Agent-driven metadynamics for conformational free-energy exploration
+To test the chemical intuition of
+state-of-the-art LLM models, we evaluated whether El Agente Potente could translate a partially specified
+natural-language request into a complete free-energy sampling workflow through the coding mode. Conventional
+MD simulations can remain trapped within metastable conformational states when transitions are separated by
+free-energy barriers that are rarely crossed on accessible simulation timescales. Metadynamics(62) addresses
+this limitation by introducing a history-dependent bias along selected collective variables (CVs), thereby
+accelerating transitions between metastable states and enabling reconstruction of the underlying free-energy
+landscape.
+We asked Potente to perform a two-dimensional enhanced-sampling calculation for neutral, singlet alanine
+dipeptide using Orb-OMOL and supplied an initial C7ax conformer. The MD conditions were explicitly
+specified as the NVT ensemble at 300 K, a timestep of 0.5 fs, 1,000 equilibration steps, 100,000 production
+steps, and a trajectory-recording interval of 100 steps. However, we intentionally did not specify either the
+collective variables or the enhanced-sampling parameters, instead asking El Agente Potente to determine
+these settings. The agent first parsed the molecular structure and constructed its bonding topology using
+covalent connectivity. From this topology, it identified the conventional alanine-dipeptide Ramachandran
+torsions as chemically meaningful coordinates for describing the dominant backbone conformational changes.
+The ϕ torsion was identified as Cacetyl–N–Cα–Ccarbonyl, corresponding to zero-based atom indices [4, 6, 8, 14],
+whereas ψ was identified as N–Cα–Ccarbonyl–Nmethylamide, corresponding to [6, 8, 14, 16]. For the supplied
+starting structure, the corresponding torsional angles were ϕ = 74.3◦and ψ = −57.4◦, placing the initial
+configuration in the expected C7ax region of the alanine-dipeptide Ramachandran surface.
+Based on these CVs, El Agente Potente selected two-dimensional well-tempered metadynamics (63)
+and generated a Python script that constructed and executed the corresponding typed MLFF workflow
+request. Both torsional CVs were treated as periodic coordinates over the complete [−180◦, 180◦] domain.
+The two-dimensional free-energy grid was discretized using 5◦bins along both coordinates, resulting in
+72 × 72 = 5184 grid points. The agent selected Gaussian hills with a height of 1.0 kJ, mol−1 and a standard
+deviation of 10◦along both ϕ and ψ. Bias was deposited every 100 MD steps, corresponding to an interval of
+50 fs at the chosen timestep. A well-tempered bias factor of 10 was used, corresponding to a bias-temperature
+increment of 2700 K at the 300 K simulation temperature. No additional harmonic confinement was applied
+because both torsions were explicitly treated as periodic variables over their full angular domains.
+The MD was propagated using an NVT Bussi thermostat (64) at 300 K. After 1,000 steps of equilibration,
+the system was sampled for 100,000 production steps, corresponding to a total production time of 50 ps.
+Configurations were recorded every 100 steps, yielding 1,001 trajectory frames when the initial production
+configuration was included.
+The enhanced-sampling calculation accumulated 100,001 CV samples and
+visited 2,429 of the 5,184 grid bins, corresponding to approximately 47% of the discretized two-dimensional
+Ramachandran space. Thus, within a relatively short MLIP trajectory, the metadynamics bias drove the
+system away from the initial C7ax configuration and enabled exploration of multiple conformational regions
+that would be more difficult to sample using conventional MD on the same timescale.
+The resulting two-dimensional free-energy surface exhibited its lowest-energy region around (ϕ, ψ) = (−77.5◦, 102.5◦).
+Several neighboring grid points, including (−82.5◦, 102.5◦), (−82.5◦, 97.5◦), and (−77.5◦, 107.5◦), occurred
+within approximately 0.3 kJ, mol−1 of the minimum, indicating a broad low-free-energy basin rather than a set
+12
+
+
+of independent minima. A second prominent low-energy region was identified around (ϕ, ψ) = (−147.5◦, 157.5◦).
+These regions can be associated with the C7eq-like and C5-like conformational basins, respectively, while the
+supplied starting structure at (74.3◦, −57.4◦) corresponds closely to the C7ax region. The corresponding free
+energy surface and sampling distribution are shown in Figure S5.
+Notably, the locations of the conformational regions sampled by Orb-OMOL are in good qualitative agreement
+with previous electronic-structure studies of gas-phase alanine dipeptide, which consistently identify C7eq,
+C5, and C7ax as principal low-energy conformers (65; 66). At the B97-D/def2-TZVP level, Fadda and Woods
+reported optimized (ϕ, ψ) coordinates of (−82.3◦, 75.4◦), (−158.4◦, 154.7◦), and (74.1◦, −58.6◦) for C7eq, C5,
+and C7ax, respectively (66). The corresponding MP2/aug-cc-pVDZ structures reported in the same study,
+(−82.6◦, 75.8◦), (−161.1◦, 155.5◦), and (73.7◦, −53.7◦), show that the locations of these conformational minima
+are relatively robust with respect to the electronic-structure method.
+The C7ax starting configuration at (74.3◦, −57.4◦) is therefore in particularly close agreement with the
+electronic-structure results, while the sampled C5-like basin around (−147.5◦, 157.5◦) also lies close to
+the corresponding DFT and MP2 minima. The lowest free-energy region sampled by Orb-OMOL around
+(−77.5◦, 102.5◦) can be associated with the C7eq region, although it is shifted along ψ relative to the optimized
+gas-phase DFT minimum. First-principles enhanced-sampling calculations have also been used to construct
+free-energy and potential-energy surfaces of alanine dipeptide using both local and hybrid DFT functionals
+(67), further establishing this system as a benchmark for electronic-structure-based conformational sampling.
+Overall, the present Orb-OMOL results reproduce the qualitative topology and locations of the principal C7eq,
+C5, and C7ax conformational regions, with particularly good agreement for C7ax and C5. We emphasize that
+this comparison concerns the conformational landscape rather than direct quantitative equivalence of relative
+energies, because the Orb-OMOL metadynamics calculation yields a finite-temperature free-energy surface at
+300 K, whereas the optimized DFT and MP2 values correspond to static potential-energy minima.
+To facilitate analysis, El Agente Potente subsequently generated a two-dimensional histogram of the
+sampled ϕ–ψ distribution and the corresponding free-energy-surface plot. In addition to the graphical outputs,
+the workflow preserved the complete biased trajectory, molecular-dynamics log, free-energy grid in CSV format,
+the generated Python script, the exact enhanced-sampling configuration, and JSON summaries describing the
+calculation and resulting artifacts.
+This example demonstrates that El Agente Potente can resolve several scientifically important choices
+that were deliberately omitted from the user’s request. Rather than requiring the user to manually identify
+atom indices or specify detailed biasing parameters, the agent inferred chemically meaningful CVs directly
+from molecular connectivity, mapped them to the corresponding atoms, recognized their periodic nature,
+selected an appropriate enhanced-sampling method, and defined the grid resolution, Gaussian hill height
+and width, deposition frequency, and well-tempered bias factor. The numerical molecular dynamics and
+bias-force evaluations remained within the Orb-OMOL enhanced-sampling backend, while El Agente
+Potente translated the higher-level scientific intent into a complete, executable, and provenance-preserving
+enhanced-sampling workflow.
+2.3.3
+Adsorption and Catalytic Reaction Workflows
+Adsorption and catalytic simulations depend strongly on the chemical environment and physical process under
+study. Different problems may require distinct strategies for structure construction, configurational sampling,
+reaction-pathway generation, and the treatment of structural constraints, making it challenging to translate
+high-level user instructions into robust and physically meaningful simulations.
+Autonomous construction and adsorption-site search of a surface model
+As a surface-science user case,
+we evaluated whether El Agente Potente could translate a qualitative request for the “lowest-energy
+adsorption configurations” into a complete adsorption-site search through the coding mode. We requested
+Potente to generate a Python script to identify low-energy H2 adsorption configurations on Fe(100) using
+multi-head MACE model with the OC20 head (MACE-OC20), but did not provide an explicit slab structure,
+adsorption sites, molecular orientations, or structural constraints.
+13
+
+
+Surface reaction pathway on Fe(110)
+Write a python script to perform transition state search for the structures from the specified directory.
+Fix the bottom two layers and compare the results using MACE-OMAT and MACE-OC20. Generate a plot
+of the energy profile along the optimized transition-state pathway.
+Perform nudged elastic 
+band calculations
+Compare reaction barriers
+H2 adsorption on Fe (100)
+Write a python script to find the lowest-energy adsorption configurations of H2 on the sufficiently large
+Fe(100) slab. Report adsorption and relative energies and save all candidate geometries.
+.
+Sample possible configurations
+Filter redundant candidates 
+Perform geometry 
+relaxation
+a
+b
+Select initial and final images 
+Initial image
+Final image
+Figure 5 Agentic workflows for surface catalysis. a, Identification of low-energy H2 adsorption configurations on
+Fe(100). The agent generates and executes a workflow that samples candidate adsorption geometries, removes redundant
+structures using symmetry analysis or SOAP-based structural similarity, and relaxes the remaining candidates to
+determine their relative adsorption energies and lowest-energy configurations. b, Determination of the surface reaction
+pathway on Fe(110). The agent selects the initial and final images, constrains the bottom two slab layers, performs a
+nudged elastic band (NEB) calculation to determine the minimum-energy reaction pathway and transition state, and
+compares the resulting energy profiles and reaction barriers predicted by MACE-OMAT and MACE-OC20.
+14
+
+
+El Agente Potente automatically constructed an ideal bcc α-Fe(100) slab with a lattice parameter of
+2.866 Å, a 4 × 4 lateral supercell, five Fe layers, and 15 Å of vacuum, resulting in a 160-atom surface model.
+The cell was kept fixed, the lower three Fe layers were constrained, and the upper two layers together with
+all adsorbate atoms were allowed to relax. The same relaxation protocol was applied to the clean and
+adsorbate-covered slabs to ensure a consistent adsorption-energy reference.
+The agent represented the adsorbate as neutral, singlet molecular H2 and automatically constructed the
+configurational search space. The adsorption-site analysis initially identified 49 candidate surface positions.
+Because the slab represents an ideal periodic Fe(100) surface, El Agente Potente applied crystallographic
+symmetry analysis using ASE and reduced these 49 positions to four symmetry-distinct adsorption environments
+before performing the more expensive geometry optimizations. The configurational search was not restricted to
+a single orientation of H2. Instead, the workflow considered polar orientations of 0◦, 45◦, and 90◦relative to the
+surface normal together with eight azimuthal rotations, thereby sampling upright, tilted, and approximately
+surface-parallel starting configurations. Both H atoms were considered possible anchoring atoms. Combining
+adsorption-site and orientational sampling generated 12 candidates for local relaxation, from which 10 distinct
+relaxed minima were retained.
+A key feature of the workflow is that the chemical identity of the initial adsorbate does not constrain
+the final optimized structure.
+Although each candidate was initialized using molecular H2, the two H
+atoms remained fully mobile throughout geometry optimization. In the lowest-energy configurations, the
+H–H bond dissociated spontaneously during relaxation, and the two H atoms formed separate surface-
+bound configurations. The resulting structures therefore correspond to dissociative adsorption, [ H2(g) +
+2 · −−→2 H · , ] rather than molecular physisorption of intact H2. This distinction illustrates an important
+feature of the adsorption workflow: El Agente Potente defines and systematically explores chemically
+reasonable initial configurations, while the underlying MLIP relaxation remains free to identify a different
+local chemical state when bond breaking or bond formation is energetically favourable.
+After ensuring a consistent treatment of the clean and adsorbate-covered surfaces, the lowest-energy relaxed
+configuration obtained with MACE-OC20 had a dissociative adsorption energy of approximately −2.47 eV
+per H2. The second-lowest configuration was nearly degenerate, differing by only approximately 2 meV,
+while the next minimum occurred approximately 0.25 eV above the lowest-energy structure. Higher-lying
+configurations extended to more than 1 eV above the minimum, demonstrating that the systematic site and
+orientation search sampled both highly favourable and substantially less favourable arrangements of the two
+surface-bound H atoms. The near degeneracy of the two lowest structures also illustrates why enumeration
+of multiple adsorption configurations is important: independent initial placements can converge to closely
+related or symmetry-connected minima that would not necessarily be identified from a single manually selected
+adsorption geometry.
+The absolute MACE-OC20 adsorption energy should, however, be interpreted as a prediction at the level of
+the underlying MLIP rather than as a quantitatively validated reference value for H2/Fe(100). The OC20
+electronic-structure data(49) underlying this class of catalyst potentials were generated using RPBE without
+spin polarization or dispersion corrections. The absence of spin polarization is particularly relevant for Fe-
+containing catalysts because α-Fe is magnetic and adsorption energetics can depend strongly on the magnetic
+state of the substrate. In addition, molecular ∗H2 was not included among the original OC20 adsorbates and
+appears only in subsequent extensions of the Open Catalyst adsorbate space. Consequently, although the
+spontaneous dissociation and the ranking of alternative surface configurations provide a chemically meaningful
+demonstration of the workflow, the magnitude of the predicted −2.47 eV adsorption energy should not by itself
+be interpreted as quantitative agreement with spin-polarized DFT or experiment. A higher-level validation
+calculation on the selected minima would be required for that purpose.
+The workflow additionally preserved the complete computational provenance rather than returning only
+the lowest adsorption energy. For each locally optimized candidate, El Agente Potente retained the
+initial adsorption configuration, the relaxed structure, adsorption and relative energies, and the full geometry-
+optimization trajectory. We generated machine-readable CSV and JSON summaries, along with the Fe(100)
+slab, candidate configurations, and the Python script used to run the calculations. These artifacts make it
+possible to reconstruct how individual molecular H2 starting configurations evolved into the final dissociatively
+adsorbed structures and to determine whether different initial sites or orientations converged to the same
+15
+
+
+local minimum.
+This use case therefore demonstrates several levels of scientific workflow automation. Starting from only the
+identity of the adsorbate and the Fe(100) surface, El Agente Potente constructed an appropriate periodic
+slab model, selected its dimensions and vacuum spacing, imposed physically motivated surface constraints,
+generated the molecular adsorbate, enumerated candidate adsorption sites, removed crystallographically
+redundant environments, sampled molecular orientations and anchoring choices, and configured and executed
+the subsequent MACE-OC20 relaxations. Importantly, the workflow did not constrain the final structures to
+preserve the molecular form assumed in the input and consequently identified dissociatively adsorbed states
+during relaxation.
+El Agente Potente thus translated a high-level request to “find the lowest-energy
+adsorption configurations” into a systematic, executable, and provenance-preserving exploration of the surface
+potential-energy landscape, while leaving the underlying numerical energy and force evaluations to the selected
+MLIP backend.
+Transition-state search in surface reactions
+Finally, we evaluated whether El Agente Potente could
+translate a high-level request for a transition-state search into a complete double-ended reaction-pathway
+calculation. We provided the reactant and product structures for a surface reaction on Fe(110) and requested
+a Python script to compare MACE-OMAT and MACE-OC20 while fixing the bottom two surface layers and
+generating the corresponding energy profiles. El Agente Potente automatically identified and validated
+the endpoint structures, verified their atomic correspondence, and determined the bottom two Fe layers from
+their z coordinates, constraining 32 Fe atoms while keeping the simulation cell fixed. Because the user did
+not specify a chain-of-states algorithm, the agent constructed a seven-image nudged elastic band (NEB)
+pathway followed by Sella refinement and independently executed the same workflow using MACE-OMAT
+and MACE-OC20.
+The resulting pathway corresponds to the C→E elementary step reported in DFT studies (68) for phenol
+deoxygenation on Fe(110). This step is a side reaction of the DHOx(H) pathway in which coadsorbed surface
+H and OH species combine to form water. The DFT minimum-energy-path calculation reported an activation
+barrier of 1.41 eV and an endothermic reaction energy of +0.85 eV (68). In comparison, MACE-OC20
+predicted an activation barrier of 1.09 eV and a reaction energy of +0.53 eV, underestimating both quantities
+by approximately 0.32 eV while correctly reproducing the endothermic character of the reaction. MACE-
+OMAT predicted a higher activation barrier of 1.79 eV, differing from the DFT value by approximately
+0.38 eV, but yielded a strongly exothermic reaction energy of −2.28 eV, opposite to the DFT thermodynamics.
+The comparison therefore reveals substantial model dependence even when the same endpoint structures
+and transition-state-search protocol are used. MACE-OC20 provides reasonable agreement with the DFT
+reference for this elementary step, reproducing both the approximate magnitude of the activation barrier
+and the endothermic reaction energy, whereas MACE-OMAT gives a comparable error in the barrier but
+fails to reproduce the reaction thermodynamics. Beyond the numerical results, this example demonstrates
+that El Agente Potente can translate the general instruction “transition-state search” into a complete
+reaction-pathway workflow without requiring the user to manually specify the NEB procedure. The agent
+automatically constructed the structural constraints and intermediate images, executed multiple MLIP
+backends, extracted the pathway energetics, and generated comparative energy-profile plots. Comparison
+with an independently reported DFT minimum-energy pathway further shows how the workflow can assess
+the reliability and model dependence of foundational MLIPs for reactive surface processes.
+Widom insertion for metal-organic frameworks
+Direct air capture (DAC) is a challenging separation problem
+because CO2 must be captured from ambient air at only about 400 ppm, while H2O competes as an adsorbate.
+For metal-organic frameworks (MOFs), an effective DAC material must therefore combine sufficient CO2
+affinity with suppressed H2O adsorption, since water can block adsorption sites, reduce working capacity, and
+increase regeneration costs. Both the zero-loading CO2 heat of adsorption and the Henry-coefficient-based
+CO2/H2O selectivity are therefore important screening descriptors.
+To test Potente on a literature-grounded adsorption task, we selected five CoREMOF structures, RIPPEN,
+GAVYAG, ARAHIM, GELVID01, and PEGBUA, from a previous MLIP-based DAC screening study (69) as
+shown in Figure6. These MOFs contain diverse adsorption environments, including aromatic rings, metal–
+16
+
+
+Widom insertion with CO2 and H2O molecules
+Please perform Widom insertion calculations for the MOF structures located in the given directory using CO2 and H2O 
+molecules, with 10,000 insertion steps at 300 K.
+Perform Widom insertion
+Convert CIF files into 
+structure objects
+Calculate ensemble-averaged 
+adsorption properties 
+Figure 6 Agentic workflow for adsorption-property prediction in metal-organic frameworks. CIF files are first converted
+into structure objects, followed by Widom insertion simulations using CO2 and H2O probe molecules at 300 K. The
+resulting insertion energies are then ensemble averaged to estimate adsorption properties for each MOF, enabling
+automated screening of host–guest interactions across multiple framework structures.
+heteroatom motifs, electronegative functional groups, and methyl groups, making them a compact but
+chemically varied test set. Starting from the provided CIF structures, Potente relaxed each MOF using
+MACE-DAC-1 (MACE-DAC) from DAC-SIM (69) and performed separate Widom insertion calculations for
+CO2 and H2O at 300 K, using two folds of 10,000 trial insertions per MOF–adsorbate pair (20,000 attempted
+insertions in total for each pair). All calculations completed successfully and produced zero-loading adsorption
+descriptors.
+For CO2, the computed Henry coefficients, KCO2
+H
+, spanned nearly four orders of magnitude, from 4.66 × 10−3
+for ARAHIM to 17.82 for PEGBUA. The corresponding average CO2–framework interaction energies ranged
+from −0.438 to −0.631 eV, with adsorption heats of 44.7–63.4 kJ mol−1. PEGBUA showed the largest CO2
+Henry coefficient, whereas GELVID01 showed the most exothermic average CO2 interaction energy. This
+non-monotonic ordering indicates that dilute CO2 uptake depends not only on binding strength, but also on
+the number and accessibility of favourable insertion sites.
+For H2O, KH2O
+H
+varied from 3.23 × 10−4 for RIPPEN to 1.66 for GELVID01, with adsorption heats of
+31.0–62.2 kJ mol−1. GELVID01 was the strongest water-binding framework, while RIPPEN showed the
+weakest H2O uptake. The CO2/H2O selectivity was then computed as
+SCO2/H2O = KCO2
+H
+KH2O
+H
+,
+and reported as log10 SCO2/H2O because the selectivity spans several orders of magnitude. As shown in
+Figure S6, RIPPEN showed the highest selectivity, with log10 SCO2/H2O = 3.07, followed by PEGBUA (2.52)
+and GAVYAG (2.36). In contrast, GELVID01 was nearly non-selective (0.04) because it binds both CO2 and
+H2O strongly, while ARAHIM was water-selective (−0.37).
+Overall, these results show that a high CO2 heat of adsorption alone is insufficient for identifying promising
+DAC materials. RIPPEN and PEGBUA best satisfy the combined criterion of appreciable CO2 affinity and
+17
+
+
+suppressed H2O uptake, whereas GELVID01 and ARAHIM are less favourable because of strong H2O binding
+or weak CO2 uptake. Compared with Ref. 69, the workflow reproduces the favourable behaviour of RIPPEN
+and GAVYAG and the strong CO2 affinity of PEGBUA, while showing larger deviations for ARAHIM and
+GELVID01. These deviations likely arise from differences in geometry-relaxation settings and Widom insertion
+statistics, including the two-fold sampling protocol in the present workflow (10,000 trial insertions per fold),
+compared with the single-run calculations reported in the reference. In addition, Widom-derived KH values
+are sensitive to rare low-energy insertion sites and small changes in relaxed framework geometry, particularly
+in narrow pores or localized adsorption pockets.
+3
+Discussion
+In this work, we introduced El Agente Potente as an agentic framework for MLIP-driven atomistic
+simulations, combining structured execution with programmable workflow construction. Typed execution
+graphs provide explicit control over scientific state, validation, branching, failure handling, provenance, and
+parallel execution for standardized workflows, whereas coding mode enables task-specific procedural logic
+when predefined graph components are insufficient. Importantly, the coding agent reuses existing Potente
+functions whenever the requested calculations are already supported, limiting the need to regenerate established
+numerical procedures. This separation allows LLM-based reasoning to determine and organize scientific
+actions while validated computational components remain responsible for their numerical execution.
+The benchmarks illustrate the practical consequences of this architecture.
+Execution-graph workflows
+reproduced the numerical behaviour of manually scripted calculations while providing structured provenance
+and failure handling, whereas coding mode supported customized comparative workflows using the same
+validated computational functions. Comparison with an open-ended skill-based coding agent further highlights
+a trade-off between flexibility and repeated execution: open-ended coding is useful for building new procedures,
+while a validated execution graph can reduce repeated runtime reasoning once a workflow is established.
+These results therefore support using structured execution and programmatic workflow construction as
+complementary mechanisms rather than competing approaches to scientific automation.
+The scientific case studies extend this distinction across workflows with substantially different requirements,
+from standardized high-throughput screening to problems requiring task-specific decisions such as conforma-
+tional sampling, collective-variable selection, adsorption-site enumeration, and reaction-pathway construction.
+However, reliable execution should not be conflated with reliable physical prediction. The accuracy of the
+resulting calculations remains limited by the transferability of the underlying MLIPs, generative and property
+models, and by numerical choices such as system size, sampling length, structural relaxation, and convergence
+criteria. Likewise, structured execution does not guarantee that an LLM will select the scientifically optimal
+workflow or simulation parameters. Typed schemas, validated functions, and provenance make such decisions
+more constrained, reproducible, and inspectable, but higher-fidelity calculations and domain-specific validation
+remain necessary when quantitative accuracy is required.
+An important next step is therefore to make both workflow selection and computational fidelity adaptive.
+Uncertainty estimates, disagreement among foundational MLIPs, failed validation criteria, or sensitivity to
+simulation settings could identify cases that require higher-fidelity electronic-structure calculations. Such
+calculations could then refine screening decisions or provide new data to improve the model. Coupling these
+capabilities with experimental automation could ultimately support closed-loop workflows in which generative
+models, foundational MLIPs calculations, and experiments operate at different fidelity levels within a common
+provenance-aware framework. More broadly, the results suggest a design principle for agentic high-throughput
+scientific computing: structured execution and procedural flexibility can be implemented as complementary
+layers, enabling greater scientific autonomy without relinquishing explicit control over numerical computation.
+18
+
+
+4
+Methods
+4.1
+Computational materials science and chemistry software
+The project employed uv to manage a Python 3.12 environment. All experiments and benchmarks used
+ChatGPT 5.5 as the primary LLM, while ChatGPT 4.1 powered the routing agents. All computational
+materials science and chemistry packages were installed in a single environment to enable single-agent
+execution via a shared Python runtime. The computational software stack includes electronic-structure
+packages, molecular and crystal structure toolkits, MLIPs, phonon and atomistic simulation tools, and
+MOF-specific analysis packages. Where necessary, forked versions of selected packages were used to resolve
+dependency conflicts or expose programmatic interfaces required by the workflow.
+1. ASE: The Atomic Simulation Environment, ase (v3.26.0), served as the common atomic-structure
+representation throughout the workflow (70). Geometry relaxations and molecular dynamics simulations
+were also performed through ASE. In addition, ASE provided the calculator interface for MLIPs to
+evaluate energies, forces, and stresses for input structures, which were extensively used in downstream
+property calculations.
+2. Pymatgen: The Python Materials Genomics, pymatgen (v2025.6.14) was used for querying materials
+from MP databases through mp-api (v0.45.13) to construct a phase diagram using MLIP energies and
+to convert structures between ASE and pymatgen objects.
+3. Machine learning interatomic potentials: All property calculations were supported by multiple MLIP
+backends. mace-torch (v0.3.15) (71), with e3nn pinned at v0.5.0 for compatibility with the broader
+environment. MatterSim-v1.0.0-1M was available through mattersim (v0.1.dev136) (35), and Orb
+models were available through orb-models (v0.5.5) (36). The PET models for MLIPs (72) and band
+gap prediction (51) were available through upet (v2026.1).
+4. MatCalc: matcalc (v0.4.5) was included as a high-level materials-property calculation interface for
+connecting machine-learned interatomic potentials to standard atomistic simulation workflows. In this
+work, matcalc primarily served as a wrapper for MLIP force evaluators, ASE-compatible calculators, and
+structure representations from ASE and pymatgen. Downstream property workflows were then executed
+through specialized materials-science backends: elastic properties were computed from stress–strain
+calculations using pymatgen-based elasticity analysis, while harmonic and anharmonic lattice-dynamics
+workflows used phonopy (v3.1.0), phono3py (v3.28.0), and symfc (v1.5.4) for displacement generation,
+force-constant construction/symmetrization, and phonon-derived thermal properties. This design allowed
+Potente to couple MLIP-based energy, force, and stress predictions with established property-analysis
+tools in a consistent automated workflow.
+5. Dispersion corrections: The dispersion correction for MACE-DAC-1 was available through torch-dftd
+(v0.5.3).
+6. Visualization and molecular rendering: Molecular and crystal-structure visualization was supported
+by py3Dmol (v2.5.2), matplotlib (v3.10.6), and plotly (v6.3.0). These tools were used for interactive
+molecular visualization and post-processing of computational results.
+Data availability
+The benchmark results, generated user prompts, and workflow outputs used in this work are available at
+https://github.com/kenko911/User_Cases_El_Agente_Potente. Additional data required to reproduce
+the computational workflows, including input structures, generated scripts, and post-processing outputs, are
+provided in the same repository where applicable.
+19
+
+
+Code availability
+The main computational materials science and chemistry packages used in this work were obtained from
+the following source-code repositories: ase (https://gitlab.com/ase/ase), pymatgen (https://gith
+ub.com/materialsproject/pymatgen), mace-torch (https://github.com/ACEsuit/mace), mattersim
+(https://github.com/microsoft/mattersim), orb-models (https://github.com/orbital-materials
+/orb-models), matcalc (https://github.com/materialyzeai/matcalc), torch-dftd (https://gith
+ub.com/pfnet-research/torch-dftd), upet(https://github.com/lab-cosmo/upet), phonopy (https:
+//github.com/phonopy/phonopy), phono3py (https://github.com/phonopy/phono3py). A complete
+package list and environment specification will be provided with the repository to support reproducibility.
+Third-party packages, pretrained machine learning interatomic-potential models, and external databases were
+used according to their respective licenses.
+Acknowledgments
+We gratefully acknowledge the longstanding contributions of the Matter Lab’s current and past group
+members (https://www.matter.toronto.edu/), in particular El Agente team.
+T.W.K. acknowledges the
+support of the Vector Distinguished Postdoctoral Fellowship. J.B. acknowledges funding from the Eric
+and Wendy Schmidt AI in Science Postdoctoral Fellowship Program, a program by Schmidt Futures. Y.K.
+acknowledges support from the CIFAR AI Safety Catalyst Award (Catalyst Fund Project #CF26-AI-001).
+A.A.-G. thanks Anders G. Frøseth for his generous support. A.A.-G. also acknowledges the generous support
+of Natural Resources Canada and the Canada 150 Research Chairs program. This work was supported by
+the AI2050 program of Schmidt Sciences. This work was supported by the Defense Advanced Research
+Projects Agency (DARPA) under Agreement No. HR0011262E022. This research is part of the University
+of Toronto’s Acceleration Consortium, which receives funding from the CFREF-2022-00042 Canada First
+Research Excellence Fund. This research was enabled in part by support provided by SciNet HPC Consortium
+(https://scinethpc.ca/) and the Digital Research Alliance of Canada (https://www.alliancecan.ca).
+Computations were performed on the Trillium supercomputer at the SciNet HPC Consortium. SciNet is
+funded by: the Canada Foundation for Innovation; the Government of Ontario; Ontario Research Fund -
+Research Excellence; and the University of Toronto.
+References
+[1] Jörg Behler and Gábor Csányi. Machine learning potentials for extended systems: a perspective. Eur. Phys. J. B,
+94(7):142, 2021. doi:10.1140/epjb/s10051-021-00156-1.
+[2] Pascal Friederich, Florian Häse, Jonny Proppe, and Alán Aspuru-Guzik. Machine-learned potentials for next-
+generation matter simulations. Nat. Mater., 20(6):750–761, 2021. doi:10.1038/s41563-020-0777-6.
+[3] Tsz Wai Ko and Shyue Ping Ong. Recent advances and outstanding challenges for machine learning interatomic
+potentials. Nat. Comput. Sci., 3(12):998–1000, 2023. doi:10.1038/s43588-023-00561-9.
+[4] Yong-Wei Zhang, Viacheslav Sorkin, Zachary H Aitken, Antonio Politano, Jörg Behler, Aidan P Thompson,
+Tsz Wai Ko, Shyue Ping Ong, Olga Chalykh, Dmitry Korogod, et al. Roadmap for the development of machine
+learning-based interatomic potentials. Model. Simul. Mater. Sci. Eng., 33(2):023301, 2025. doi:10.1088/1361-
+651X/ad9d63.
+[5] Chi Chen and Shyue Ping Ong. A universal graph deep learning interatomic potential for the periodic table. Nat.
+Comput. Sci., 2(11):718–728, 2022. doi:10.1038/s43588-022-00349-3.
+[6] Bowen Deng, Peichen Zhong, KyuJung Jun, Janosh Riebesell, Kevin Han, Christopher J Bartel, and Gerbrand
+Ceder. Chgnet as a pretrained universal neural network potential for charge-informed atomistic modelling. Nat.
+Mach. Intell., 5(9):1031–1041, 2023. doi:10.1038/s42256-023-00716-3.
+[7] Ilyes Batatia, Philipp Benner, Yuan Chiang, Alin M Elena, Dávid P Kovács, Janosh Riebesell, Xavier R Advincula,
+Mark Asta, Matthew Avaylon, William J Baldwin, et al. A foundation model for atomistic materials chemistry.
+The Journal of chemical physics, 163(18):184110, 2025. doi:10.1063/5.0297006.
+20
+
+
+[8] Tsz Wai Ko, Runze Liu, Adesh Rohan Mishra, Zihan Yu, Ji Qi, and Shyue Ping Ong. A fast, accurate, and
+reactive equivariant foundation potential. arXiv preprint arXiv:2511.07249, 2025. doi:10.48550/arXiv.2511.07249.
+[9] Stefano Curtarolo, Wahyu Setyawan, Gus LW Hart, Michal Jahnatek, Roman V Chepulskii, Richard H Taylor,
+Shidong Wang, Junkai Xue, Kesong Yang, Ohad Levy, et al. Aflow: An automatic framework for high-throughput
+materials discovery. Computational Materials Science, 58:218–226, 2012. doi:10.1016/j.commatsci.2012.02.005.
+[10] Sebastiaan P Huber, Spyros Zoupanos, Martin Uhrin, Leopold Talirz, Leonid Kahle, Rico Häuselmann, Dominik
+Gresch, Tiziano Müller, Aliaksandr V Yakutovich, Casper W Andersen, et al. Aiida 1.0, a scalable computational
+infrastructure for automated reproducible workflows and data provenance.
+Scientific data, 7(1):300, 2020.
+doi:10.1038/s41597-020-00638-4.
+[11] Martin Uhrin, Sebastiaan P Huber, Jusong Yu, Nicola Marzari, and Giovanni Pizzi. Workflows in aiida: Engineering
+a high-throughput, event-based engine for robust and modular computational workflows. Computational Materials
+Science, 187:110086, 2021. doi:10.1016/j.commatsci.2020.110086.
+[12] Jan Janssen, Sudarsan Surendralal, Yury Lysogorskiy, Mira Todorova, Tilmann Hickel, Ralf Drautz, and Jörg
+Neugebauer. pyiron: An integrated development environment for computational materials science. Computational
+Materials Science, 163:24–36, 2019. doi:10.1016/j.commatsci.2018.07.043.
+[13] Sarath Menon, Yury Lysogorskiy, Alexander LM Knoll, Niklas Leimeroth, Marvin Poul, Minaam Qamar, Jan
+Janssen, Matous Mrovec, Jochen Rohrer, Karsten Albe, et al. From electrons to phase diagrams with machine
+learning potentials using pyiron based automated workflows. npj Computational Materials, 10(1):261, 2024.
+doi:10.1038/s41524-024-01441-0.
+[14] Alex M Ganose, Hrushikesh Sahasrabuddhe, Mark Asta, Kevin Beck, Tathagata Biswas, Alexander Bonkowski,
+Joana Bustamante, Xin Chen, Yuan Chiang, Daryl C Chrzan, et al. Atomate2: modular workflows for materials
+science. Digital Discovery, 4(7):1944–1973, 2025. doi:10.1039/D5DD00019J.
+[15] Thang D. Pham, Aditya Tanikanti, and Murat Keçeli. Chemgraph as an agentic framework for computational
+chemistry workflows. Communications Chemistry, 9(1), January 2026. ISSN 2399-3669. doi:10.1038/s42004-025-
+01776-9. http://dx.doi.org/10.1038/s42004-025-01776-9.
+[16] Ziqi Wang, Hongshuo Huang, Hancheng Zhao, Changwen Xu, Shang Zhu, Jan Janssen, and Venkatasubramanian
+Viswanathan. Dreams: Density functional theory based research engine for agentic materials simulation. arXiv
+preprint arXiv:2507.14267, 2025. doi:10.48550/arXiv.2507.14267.
+[17] Jinming Hu, Hassan Nawaz, Yi-Fan Hou, Yuting Rui, Lijie Chi, Yuxinxin Chen, Arif Ullah, and Pavlo O Dral.
+Aitomia: Your intelligent assistant for ai-driven atomistic and quantum chemical simulations. arXiv preprint
+arXiv:2505.08195, 2025. doi:10.48550/arXiv.2505.08195.
+[18] Ryan Nduma, Hyunsoo Park, and Aron Walsh.
+Crystalyse: a multi-tool agent for materials design, 2025.
+https://arxiv.org/abs/2512.00977.
+[19] Guangsheng Liu, Xiao Ma, Leshen Zhang, Jenedith Pascasio, Jonathan Yang, Yuxiang Chen, and Wan-Lu
+Li. Catgo: Bridging cli coding agents with interactive structure and workflow management for computational
+chemistry. Digital Discovery, 2026. doi:10.1039/D6DD00273K.
+[20] Seongmin Kim, Jaehwan Choi, Kunik Jang, Junkil Park, Varinia Bernales, Alán Aspuru-Guzik, and Yousung
+Jung. Materealize: a multi-agent deliberation system for end-to-end material design and synthesis. arXiv preprint
+arXiv:2601.15743, 2026. doi:10.48550/arXiv.2601.15743.
+[21] Aikaterini Vriza, Uma Kornu, Aditya Koneru, Henry Chan, and Subramanian KRS Sankaranarayanan.
+Multi-agentic ai framework for end-to-end atomistic simulations.
+Digital Discovery, 5(1):440–452, 2026.
+doi:10.1039/D5DD00435G.
+[22] Guangchen Liu, Songge Yang, and Yu Zhong. Masgent: an ai-assisted materials simulation agent. Digital
+Discovery, 5(5):2151–2171, 2026. doi:10.1039/D6DD00043F.
+[23] Bowen Deng, Bohan Li, Matthew Cox, Hoje Chun, Juno Nam, Artur Lyssenko, Sathya Edamadaka, Jurgis
+Ruza, Xiaochen Du, Nofit Segal, et al. Harnessing atomisticskills for agentic atomistic research. arXiv preprint
+arXiv:2605.24002, 2026. doi:10.48550/arXiv.2605.24002.
+[24] Yunheng Zou, Austin H Cheng, Abdulrahman Aldossary, Jiaru Bai, Shi Xuan Leong, Jorge Arturo Campos-
+Gonzalez-Angulo, Changhyeok Choi, Cher Tian Ser, Gary Tom, Andrew Wang, et al. El agente: An autonomous
+agent for quantum chemistry. Matter, 8(7):102263, 2025. doi:10.1016/j.matt.2025.102263.
+21
+
+
+[25] Juan B Pérez-Sánchez, Yunheng Zou, Jorge A Campos-Gonzalez-Angulo, Marcel Müller, Ignacio Gustin, Andrew
+Wang, Han Hao, Tsz Wai Ko, Changhyeok Choi, Eric S Isbrandt, et al. El agente quntur: A research collaborator
+agent for quantum chemistry. arXiv preprint arXiv:2602.04850, 2026. doi:10.48550/arXiv.2602.04850.
+[26] Sai Govind Hari Kumar, Yunheng Zou, Andrew Wang, Jesús Valdés-Hernández, Tsz Wai Ko, Nathan Yue, Olivia
+Leng, Hanyong Xu, Chris Crebolder, Alán Aspuru-Guzik, et al. El agente sólido: A new age(nt) for solid state
+simulations. arXiv preprint arXiv:2602.17886, 2026. doi:10.48550/arXiv.2602.17886.
+[27] Changhyeok Choi, Yunheng Zou, Marcel Müller, Han Hao, Yeonghun Kang, Juan B Pérez-Sánchez, Ignacio Gustin,
+Hanyong Xu, Andrew Wang, Mohammad Ghazi Vakili, et al. El agente estructural: An artificially intelligent
+molecular editor. arXiv preprint arXiv:2602.04849, 2026. doi:10.48550/arXiv.2602.04849.
+[28] Ignacio Gustin, Luis Mantilla Calderón, Juan B Pérez-Sánchez, Chris Crebolder, Jérôme F Gonthier, Mo-
+hammad Ghazi Vakili, Yuma Nakamura, Karthik Panicker, Manav Ramprasad, Aiwei Yin, et al. El agente
+cuántico: automating quantum simulations. Reports on Progress in Physics, 89(7):077602, 2026. doi:10.1088/1361-
+6633/ae8933.
+[29] Jiaru Bai, Abdulrahman Aldossary, Thomas Swanick, Marcel Müller, Yeonghun Kang, Zijian Zhang, Jin Won Lee,
+Tsz Wai Ko, Mohammad Ghazi Vakili, Varinia Bernales, and Alán Aspuru-Guzik. El Agente Gráfico: Structured
+execution graphs for scientific agents. arXiv preprint arXiv:2602.17902, 2026. doi:10.48550/arXiv.2602.17902.
+https://arxiv.org/abs/2602.17902.
+[30] Zijian Zhang, Aiwei Yin, Amaan Baweja, Jiaru Bai, Ignacio Gustin, Varinia Bernales, and Alán Aspuru-Guzik. El
+agente forjador: Task-driven agent generation for quantum simulation. arXiv preprint arXiv:2604.14609, 2026.
+doi:10.48550/arXiv.2604.14609.
+[31] Yeonghun Kang, Shi Xuan Leong, Hyun Suk Park, Jiaru Bai, Sven Papidocha, Yuchi Zhao, Rui Zhang, Magali
+Gimeno, Stanley Lo, Eric S. Isbrandt, Han Hao, Yang Cao, Felix Katzenburg, Fangshi Du, Alán Aspuru-
+Guzik, and Varinia Bernales. El agente seguro: An agent for chemical safety. ChemRxiv, 2026(0610), 2026.
+doi:10.26434/chemrxiv.15004378/v2. https://chemrxiv.org/doi/abs/10.26434/chemrxiv.15004378/v2.
+[32] Alexander Dunn, Qi Wang, Alex Ganose, Daniel Dopp, and Anubhav Jain. Benchmarking materials property
+prediction methods: the matbench test set and automatminer reference algorithm. npj Computational Materials,
+6(1):138, 2020. doi:10.1038/s41524-020-00406-3.
+[33] Ilyes Batatia, Chen Lin, Joseph Hart, Elliott Kasoar, Alin M Elena, Sam Walton Norwood, Thomas Wolf, and
+Gábor Csányi. Cross learning between electronic structure theories for unifying molecular, surface, and inorganic
+crystal foundation force fields. arXiv preprint arXiv:2510.25380, 2025. doi:10.48550/arXiv.2510.25380.
+[34] R. W. Grosse-Kunstleve, N. K. Sauter, and P. D. Adams. Numerically stable algorithms for the computation of
+reduced unit cells. Acta Crystallographica Section A, 60:1–6, 2004. doi:10.1107/S010876730302186X.
+[35] Han Yang, Chenxi Hu, Yichi Zhou, Xixian Liu, Yu Shi, Jielan Li, Guanzhi Li, Zekun Chen, Shuizhou Chen,
+Claudio Zeni, et al. Mattersim: A deep learning atomistic model across elements, temperatures and pressures.
+arXiv preprint arXiv:2405.04967, 2024. doi:10.48550/arXiv.2405.04967.
+[36] Benjamin Rhodes, Sander Vandenhaute, Vaidotas Šimkus, James Gin, Jonathan Godwin, Tim Duignan,
+and Mark Neumann.
+Orb-v3:
+atomistic simulation at scale.
+arXiv preprint arXiv:2504.06231, 2025.
+doi:10.48550/arXiv.2504.06231.
+[37] Nika Vrtovec, Matjaz Mazaj, Gianpiero Buscarino, Angela Terracina, Simonpietro Agnello, Iztok Arcon, Janez
+Kovac, and Natasa Zabukovec Logar. Structural and co2 capture properties of ethylenediamine-modified hkust-1
+metal–organic framework. Crystal Growth & Design, 20(8):5455–5465, 2020. doi:10.1021/acs.cgd.0c00667.
+[38] Yipei Chen, Xueliang Mu, Edward Lester, and Tao Wu. High efficiency synthesis of hkust-1 under mild conditions
+with high bet surface area and co2 uptake capacity. Progress in Natural Science: Materials International, 28(5):
+584–589, 2018. doi:10.1016/j.pnsc.2018.08.002.
+[39] Jonathan Cortés-Súarez, Vanessa Celis-Arias, Hiram I. Beltrán, et al. Synthesis and characterization of an
+swcnt@hkust-1 composite: Enhancing the co2 adsorption properties of hkust-1. ACS Omega, 4(3):5275–5282,
+2019. doi:10.1021/acsomega.9b00330.
+[40] Anubhav Jain, Shyue Ping Ong, Geoffroy Hautier, Wei Chen, William Davidson Richards, Stephen Dacek, Shreyas
+Cholia, Dan Gunter, David Skinner, Gerbrand Ceder, et al. Commentary: The materials project: A materials
+genome approach to accelerating materials innovation. APL Mater., 1(1), 2013. doi:10.1063/1.4812323.
+22
+
+
+[41] Matthew K. Horton, Patrick Huck, Ruo Xi Yang, Jason M. Munro, Shyam Dwaraknath, Alex M. Ganose,
+Ryan S. Kingsbury, Mingjian Wen, Jimmy X. Shen, Tyler S. Mathis, Aaron D. Kaplan, Karlo Berket, Janosh
+Riebesell, Janine George, Andrew S. Rosen, Evan W. C. Spotte-Smith, Matthew J. McDermott, Orion A.
+Cohen, Alex Dunn, Matthew C. Kuner, Gian-Marco Rignanese, Guido Petretto, David Waroquiers, Sinead M.
+Griffin, Jeffrey B. Neaton, Daryl C. Chrzan, Mark Asta, Geoffroy Hautier, Shreyas Cholia, Gerbrand Ceder,
+Shyue Ping Ong, Anubhav Jain, and Kristin A. Persson. Accelerated data-driven materials science with the
+materials project. Nature Materials, 24(10):1522–1532, 2025. ISSN 1476-4660. doi:10.1038/s41563-025-02272-0.
+http://dx.doi.org/10.1038/s41563-025-02272-0.
+[42] SK Mitro, Md Saiduzzaman, Arpon Biswas, Aldina Sultana, and Khandaker Monower Hossain. Electronic phase
+transition and enhanced optoelectronic performance of lead-free halide perovskites agei3 (a= rb, k) under pressure.
+Materials Today Communications, 31:103532, 2022. doi:10.1016/j.mtcomm.2022.103532.
+[43] Md Habibur Rahman, Md Jubair, Md Zahidur Rahaman, Md Shamim Ahasan, Kostya Ken Ostrikov, and
+Md Roknuzzaman. Rbsnx 3 (x= cl, br, i): promising lead-free metal halide perovskites for photovoltaics and
+optoelectronics. RSC advances, 12(12):7497–7505, 2022. doi:10.1039/D2RA00414C.
+[44] Abu Sadat Md Sayem Rahman and Kazi Md Shorowordi. First-principles study of novel non-toxic trigonal kgex3
+(x= br, i) perovskites: A potential for optoelectronic applications. Materials Science in Semiconductor Processing,
+186:109114, 2025. doi:10.1016/j.mssp.2024.109114.
+[45] Beyene Tesfaw Ayalew and Shiferaw Gadisa Kuma.
+Exploring cssncl3 as a lead-free halide perovskite:
+Insights from density functional theory.
+Advances in Condensed Matter Physics, 2026(1):2502469, 2026.
+doi:10.1155/acmp/2502469.
+[46] Claudio Zeni, Robert Pinsler, Daniel Zügner, Andrew Fowler, Matthew Horton, Xiang Fu, Zilong Wang, Aliaksan-
+dra Shysheya, Jonathan Crabbé, Shoko Ueda, et al. A generative model for inorganic materials design. Nature,
+639(8055):624–632, 2025. doi:10.1038/s41586-025-08628-5.
+[47] Luis Barros-Luque, Muhammed Shuaibi, Xiang Fu, Brandon M Wood, Misko Dzamba, Meng Gao, Ammar Rizvi,
+Matt Uyttendaele, C Lawrence Zitnick, and Zachary W Ulissi. The open materials 2024 (omat24) inorganic
+materials dataset and models. Nature Computational Science, 6(6):642–652, 2026. doi:10.1038/s43588-026-00996-w.
+[48] Philipp Höllmer, Thomas Egg, Maya M Martirossyan, Eric Fuemmeler, Zeren Shui, Amit Gupta, Pawan Prakash,
+Adrian Roitberg, Mingjie Liu, George Karypis, et al. Open materials generation with stochastic interpolants.
+arXiv preprint arXiv:2502.02582, 2025. doi:10.48550/arXiv.2502.02582.
+[49] Lowik Chanussot, Abhishek Das, Siddharth Goyal, Thibaut Lavril, Muhammed Shuaibi, Morgane Riviere, Kevin
+Tran, Javier Heras-Domingo, Caleb Ho, Weihua Hu, et al. Open catalyst 2020 (oc20) dataset and community
+challenges. Acs Catalysis, 11(10):6059–6072, 2021. doi:10.1021/acscatal.0c04525.
+[50] Aaron D Kaplan, Runze Liu, Ji Qi, Tsz Wai Ko, Bowen Deng, Janosh Riebesell, Gerbrand Ceder, Kristin A
+Persson, and Shyue Ping Ong. A foundational potential energy surface dataset for materials. arXiv preprint
+arXiv:2503.04070, 2025. doi:10.48550/arXiv.2503.04070.
+[51] Wei Bin How, Pol Febrer, Sanggyu Chong, Arslan Mazitov, Filippo Bigi, Matthias Kellner, Sergey Pozdnyakov,
+and Michele Ceriotti. A universal machine learning model for the electronic density of states. Digital Discovery, 5
+(4):1635–1649, 2026. doi:10.1039/D5DD00557D.
+[52] Sergey Pozdnyakov and Michele Ceriotti. Smooth, exact rotational symmetrization for deep learning on point
+clouds. Advances in Neural Information Processing Systems, 36:79469–79501, 2023. doi:10.52202/075280-3478.
+[53] Arslan Mazitov, Filippo Bigi, Matthias Kellner, Paolo Pegolo, Davide Tisi, Guillaume Fraux, Sergey Pozdnyakov,
+Philip Loche, and Michele Ceriotti. Pet-mad as a lightweight universal interatomic potential for advanced materials
+modeling. Nature Communications, 16(1):10653, 2025. doi:10.1038/s41467-025-65662-7.
+[54] Gopi Krishna Phani Dathar, Janakiraman Balachandran, Paul RC Kent, Adam J Rondinone, and P Ganesh.
+Li-ion site disorder driven superionic conductivity in solid electrolytes: a first-principles investigation of β-li 3 ps
+4. Journal of Materials Chemistry A, 5(3):1153–1159, 2017. doi:10.1039/C6TA07713G.
+[55] Takuya Kimura, Atsutaka Kato, Chie Hotehama, Atsushi Sakuda, Akitoshi Hayashi, and Masahiro Tatsumisago.
+Preparation and characterization of lithium ion conductive Li3SbS4 glass and glass-ceramic electrolytes. Solid
+State Ionics, 333:45–49, 2019. doi:10.1016/j.ssi.2019.01.017.
+[56] Shan Xiong, Zhantao Liu, Haibo Rong, Hai Wang, Malte McDaniel, and Hailong Chen. Na3SbSe4-xSx as sodium
+superionic conductors. Scientific Reports, 8:9146, 2018. doi:10.1038/s41598-018-27301-8.
+23
+
+
+[57] Shyue Ping Ong, Yifei Mo, William Davidson Richards, Lincoln Miara, Hyung Suk Lee, and Gerbrand Ceder.
+Phase stability, electrochemical stability and ionic conductivity of the Li10±1MP2X12 (M = Ge, Si, Sn, Al or
+P, and X = O, S or Se) family of superionic conductors. Energy & Environmental Science, 6:148–156, 2013.
+doi:10.1039/C2EE23355J.
+[58] Yan Wang, William Davidson Richards, Shyue Ping Ong, Lincoln J. Miara, Jae Chul Kim, Yifei Mo, and Gerbrand
+Ceder. Design principles for solid-state lithium superionic conductors. Nature Materials, 14:1026–1031, 2015.
+doi:10.1038/nmat4369.
+[59] Daniel S. Levine, Muhammed Shuaibi, Evan Walter Clark Spotte-Smith, Michael G. Taylor, Muhammad R.
+Hasyim, Kyle Michel, Ilyes Batatia, Gábor Csányi, Misko Dzamba, Peter Eastman, Nathan C. Frey, Xiang Fu, Vahe
+Gharakhanyan, Aditi S. Krishnapriyan, Joshua A. Rackers, Sanjeev Raja, Ammar Rizvi, Andrew S. Rosen, Zachary
+Ulissi, Santiago Vargas, C. Lawrence Zitnick, Samuel M. Blau, and Brandon M. Wood. The open molecules 2025
+(OMol25) dataset, evaluations, and models. arXiv preprint arXiv:2505.08762, 2025. doi:10.48550/arXiv.2505.08762.
+https://arxiv.org/abs/2505.08762.
+[60] Qiming Sun, Xing Zhang, Samragni Banerjee, Peng Bao, Marc Barbry, Nick S Blunt, Nikolay A Bogdanov,
+George H Booth, Jia Chen, Zhi-Hao Cui, et al. Recent developments in the pyscf program package. J. Chem.
+Phys., 153(2):024109, 2020. doi:10.1063/5.0006074.
+[61] Rui Li, Qiming Sun, Xing Zhang, and Garnet Kin-Lic Chan. Introducing gpu acceleration into the python-based
+simulations of chemistry framework. J. Phys. Chem. A, 129(5):1459–1468, 2025. doi:10.1021/acs.jpca.4c05876.
+[62] Alessandro Laio and Michele Parrinello. Escaping free-energy minima. Proc. Natl. Acad. Sci., 99(20):12562–12566,
+2002. doi:10.1073/pnas.202427399.
+[63] Alessandro Barducci, Giovanni Bussi, and Michele Parrinello. Well-tempered metadynamics: a smoothly converging
+and tunable free-energy method. Phys. Rev. Lett., 100(2):020603, 2008. doi:10.1103/PhysRevLett.100.020603.
+[64] Giovanni Bussi, Davide Donadio, and Michele Parrinello. Canonical sampling through velocity rescaling. J. Chem.
+Phys., 126(1):014101, 2007. doi:10.1063/1.2408420.
+[65] Rubicelia Vargas, Jorge Garza, Benjamin P. Hay, and David A. Dixon. Conformational study of the alanine
+dipeptide at the MP2 and DFT levels. J. Phys. Chem. A, 106(13):3213–3218, 2002. doi:10.1021/jp013952f.
+[66] Elisa Fadda and Robert J. Woods. Contribution of the empirical dispersion correction on the conformation of short
+alanine peptides obtained by gas-phase QM calculations. Can. J. Chem., 91(9):859–865, 2013. doi:10.1139/cjc-
+2012-0542.
+[67] Emre Sevgen, Federico Giberti, Hythem Sidky, Jonathan K. Whitmer, Giulia Galli, Francois Gygi, and Juan J.
+de Pablo. Hierarchical coupling of first-principles molecular dynamics with advanced sampling methods. J. Chem.
+Theory Comput., 14(6):2881–2888, 2018. doi:10.1021/acs.jctc.8b00192.
+[68] Alyssa J. R. Hensley, Yong Wang, and Jean-Sabin McEwen. Phenol deoxygenation mechanisms on fe(110) and
+pd(111). ACS Catal., 5(2):523–536, 2015. doi:10.1021/cs501403w.
+[69] Yunsung Lim, Hyunsoo Park, Aron Walsh, and Jihan Kim.
+Accelerating co2 direct air capture screening
+for metal-organic frameworks with a transferable machine learning force field.
+Matter, 8(7):102203, 2025.
+doi:10.1016/j.matt.2025.102203.
+[70] Ask Hjorth Larsen, Jens Jørgen Mortensen, Jakob Blomqvist, Ivano E Castelli, Rune Christensen, Marcin Dułak,
+Jesper Friis, Michael N Groves, Bjørk Hammer, Cory Hargus, et al. The atomic simulation environment—a python
+library for working with atoms. Journal of Physics: Condensed Matter, 29(27):273002, 2017. doi:10.1088/1361-
+648X/aa680e.
+[71] Ilyes Batatia, David P Kovacs, Gregor Simm, Christoph Ortner, and Gábor Csányi. Mace: Higher order equivariant
+message passing neural networks for fast and accurate force fields. Adv. Neural Inf. Process. Syst., 35:11423–11436,
+2022. doi:10.48550/arXiv.2206.07697.
+[72] Filippo Bigi, Paolo Pegolo, Arslan Mazitov, Jonathan Schmidt, and Michele Ceriotti.
+Pushing the
+limits of unconstrained machine-learned interatomic potentials.
+arXiv preprint arXiv:2601.16195, 2026.
+doi:10.48550/arXiv.2601.16195.
+24
+
+
+Supporting Information
+Contents
+A Execution graph implementation
+26
+A.1 Graph inputs and shared state
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+26
+A.2 Candidate and reference streams . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+26
+A.3 Join synchronization and phase-stability filtering . . . . . . . . . . . . . . . . . . . . . . . . .
+26
+A.4 Property routing and decision dispatch . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+28
+A.5 Aggregation, artifacts, and knowledge-graph persistence . . . . . . . . . . . . . . . . . . . . .
+28
+A.6 Parallelism model . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+28
+B Additional information for case studies and benchmarks
+30
+B.1
+Phase stability analyses for materials discovery . . . . . . . . . . . . . . . . . . . . . . . . . .
+30
+B.2
+Molecular case studies . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+32
+B.3 Widom insertion results . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+33
+B.4 Agentic benchmark of MLIP models
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+33
+B.5
+Comparison with a skill-based coding agent . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+34
+B.6
+Reproducibility benchmarks . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+36
+C Abridged chat transcripts
+37
+C.1 Materials discovery . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+37
+C.1.1
+Perovskite discovery . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+37
+C.1.2
+Superionic lithium-ion conductor discovery
+. . . . . . . . . . . . . . . . . . . . . . . .
+39
+C.2 Molecular energy-landscape exploration
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+40
+C.2.1
+Low-energy conformer search and PySCF validation . . . . . . . . . . . . . . . . . . .
+40
+C.2.2
+Two-dimensional enhanced sampling of alanine dipeptide
+. . . . . . . . . . . . . . . .
+44
+C.3 Adsorption and catalytic-reaction workflows . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+46
+C.3.1
+Adsorption-site search for H2 on Fe(100) . . . . . . . . . . . . . . . . . . . . . . . . . .
+46
+C.3.2
+Transition-state search on Fe(110)
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+48
+C.4 Widom insertion for metal-organic frameworks
+. . . . . . . . . . . . . . . . . . . . . . . . . .
+49
+C.4.1
+CO2 Widom insertion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+49
+C.4.2
+H2O Widom insertion . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+50
+C.5 Agentic benchmarking of machine-learned interatomic potentials
+. . . . . . . . . . . . . . . .
+51
+C.5.1
+Elasticity benchmark . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+51
+25
+
+
+A
+Execution graph implementation
+This section describes the implemented execution graph (Figure S1) for the MLIP workflow, including candidate
+and reference structure streaming, branch synchronization, phase-stability filtering, property routing, result
+aggregation, artifact writing, and optional knowledge-graph persistence.
+A.1
+Graph inputs and shared state
+The MLIP workflow is exposed to the outer conversational agent as the typed tool run_mlff_workflow. The
+tool receives an MLFFWorkflowRequest, whose fields specify the structure source or target compositions, MLIP
+backend, density-of-states backend, relaxation settings, optional phase-stability filtering settings, structure-
+generation settings, and whether selected semantic outputs should be pushed to the knowledge graph. The
+graph therefore does not execute directly from free text. The outer agent first converts the user request into a
+typed workflow invocation; the graph then executes deterministic Python nodes, with multiple instances of an
+inner LLM router used only to select downstream property nodes for each relaxed structure.
+At runtime, the graph stores a shared workflow state containing the summarized request from the original user
+prompt, the resolved MLIP input object, selected calculator settings, relaxation parameters, phase-stability
+thresholds, relaxed-structure outcomes, routing decisions, phase-diagram build records, workflow summary
+messages, and workspace artifact locations. This state is graph-local execution state. Runtime streams,
+calculator instances, and transient scheduling objects are not serialized as durable records.
+A.2
+Candidate and reference streams
+The upstream graph contains two branches from the start node: the candidate branch and the reference
+branch. They start concurrently if both are triggered from user intent.
+The candidate branch begins at the stream node generate_structures. Supported identifier types include
+cif, xyz, name, smiles, material_formula, and mp_id. Given an input path, the graph yields each .cif
+or .xyz file in the agent’s workspace directory. When the structure_generator_composition composition
+is specified, it invokes the configured OMatG structure generator, flattens the resulting batches, and yields
+each candidate structure individually. A mapped edge then spawns one relax_gen_structure task for each
+emitted candidate. The relaxed candidate outcomes are collected and tagged as a TaggedRelaxedBatch
+before entering the downstream synchronization join.
+The reference branch begins at prepare_mp_branch.
+This branch is active only when enable_phase_-
+stability_filter=True and identifier_type=structure_generator_composition.
+In that case, the
+branch queries the Materials Project for entries for the candidate chemical system, converts each entry’s
+structure to the internal structure representation, and streams one reference entry at a time. A mapped edge
+fans out one relax_mp_entry task per reference entry. The resulting relaxed objects are collected and used
+by build_phase_diagram to construct a pymatgen.PhaseDiagram from MLIP-evaluated reference energies.
+The result is tagged as a TaggedPhaseDiagram.
+When phase-stability filtering is disabled, or when the input type is not structure_generator_composition,
+the reference branch emits a placeholder token indicating that no phase diagram is active. This allows the
+same join topology to complete, after which the downstream stability-filtering node acts as a pass-through.
+Thus, high-throughput runs over supplied files or materials identifiers still use the same graph topology, but
+they do not build a Materials Project reference hull in the current implementation.
+A.3
+Join synchronization and phase-stability filtering
+The candidate and reference branches are synchronized by a single join that receives two tagged inputs: a
+TaggedRelaxedBatch from the candidate branch and a TaggedPhaseDiagram from the reference branch. The
+explicit tagged union prevents the stability filter from running before both the relaxed candidate batch and
+the phase-diagram token (or disabled-phase-diagram token) are available.
+The filter_by_stability stream node then emits a relaxed outcome for each candidate. If no phase
+diagram is enabled, each relaxed outcome is passed downstream unchanged. If a phase diagram is enabled,
+26
+
+
+Figure S1 Execution graph for the MLIP workflow in El Agente Potente. White rectangles represent executable
+graph nodes. Circles mark the graph start and end points. Filled black rectangles denote graph-control operators,
+such as fan-out from streamed inputs or synchronization of parallel branches. The diamond denotes the decision point
+that dispatches routed requests to property or terminal result nodes. The workflow starts with a candidate-structure
+branch and an optional Materials Project reference branch. Candidate structures are relaxed with the selected MLIP;
+reference entries, when enabled, are relaxed with the same MLIP and used to construct an internally consistent phase
+diagram. The two branches synchronize before phase-stability filtering. Passing structures are routed by an LLM
+property router to typed property-node configurations, while failed, filtered, or relaxation-only cases emit terminal
+result objects. Property outputs are grouped by relaxed structure, assembled into per-structure results, written to
+deterministic artifacts, and optionally persisted to the knowledge graph after graph completion.
+27
+
+
+the node evaluates the relaxed candidate with the same MLIP calculator, computes the energy above the
+MLIP-consistent hull, and compares it with e_above_hull_cutoff (the cutoff parameter defined by the agent
+based on the user request). Structures above the cutoff emit filtered outcomes and skip property calculations;
+structures below the cutoff continue to routing. When max_structures_per_composition_by_e_above_-
+hull is set, the graph can additionally retain only the lowest-energy-above-hull structures for each reduced
+composition. Relaxation failures also continue through the graph as typed failure outcomes rather than being
+silently dropped.
+A.4
+Property routing and decision dispatch
+Each outcome emitted by filter_by_stability is mapped to the stream node route_properties. Filtered
+structures yield the marker __FILTERED__; failed relaxations yield __RELAX_FAILED__. Successful relaxed
+structures are passed to the inner LLM property router together with the summarized user request and
+relaxed-structure metadata. The router returns a RouterDecision containing a list of typed property-node
+configurations. These configurations form a discriminated union whose discriminator is the node_name field,
+so node-specific inputs are validated before the corresponding calculation node is executed.
+The decision edge dispatches each routed property configuration to the matching property node. The current dis-
+patch targets are: MLFFMolecularDynamics, MLFFIonicConductivity, MLFFElasticity, MLFFHarmonicPhonon,
+MLFFQHAPhonon, MLFFAnharmonicPhonon, MLDensityOfStates, MLFFWidomInsertion, and MLFFGCMC. The
+same decision edge also routes terminal markers to relax_failed_result, filtered_result, or relax_-
+only_result. This ensures that each input structure produces a typed output, even when relaxation fails,
+phase-stability filtering rejects the structure, or the router selects no downstream property calculation.
+A.5
+Aggregation, artifacts, and knowledge-graph persistence
+Every terminal or property node returns a PropertyResultCarrier containing the structure internationalized
+resource identifier (IRI), chemical formula, typed result payload, and summary notes. A property_collect
+join groups these carriers by structure IRI.
+The final_collect join merges the grouped dictionaries
+from parallel branches, and assemble_outputs constructs a single MLFFOutput for each relaxed or terminal
+structure.
+The workflow writes deterministic workspace artifacts after graph aggregation. For successful relaxed structures,
+the output includes a per-structure output.json bundle that contains the relaxed structure and the realized
+property payloads. The run can also produce a structure-level property_summary.csv, pressure-resolved
+gcmc_results.csv, phase-diagram support files, trajectories, logs, and failure snapshots. When update_-
+graph=True, selected semantic roots are pushed to the knowledge graph after the graph completes: the
+workflow run, relaxation outcomes, routing decisions, phase-diagram build steps, and typed property results.
+Runtime streams and calculator objects are intentionally not persisted as knowledge-graph entities.
+A.6
+Parallelism model
+The graph exposes parallelism at three levels. First, candidate structures are streamed by generate_-
+structures, and a mapped edge launches one candidate-relaxation task per emitted structure. Second, when
+phase-stability filtering is active, Materials Project reference entries are streamed by prepare_mp_branch,
+and a mapped edge launches a reference relaxation task for each entry. These reference relaxations run
+concurrently with the candidate branch before synchronization at phase_diagram_collect. Third, after
+filtering, route_properties can emit multiple property configurations for each relaxed structure, and the
+mapped decision edge fans these out to independent property nodes.
+For N candidate structures, M Materials Project reference entries, and Ki routed property nodes for candidate
+i, the graph can expose up to N candidate-relaxation tasks, M reference-relaxation tasks, and P
+i Ki property
+tasks to the asynchronous execution layer. Actual hardware concurrency is bounded by the Python runtime,
+scheduler limits, available accelerator slots, and calculator-safety guards. The implementation therefore
+separates graph-level parallelism from physical resource assignment: the graph defines independent work units
+and synchronization points, while the runtime controls calculator reuse, GPU-slot assignment, and thread-safe
+model initialization.
+28
+
+
+Table S1 Execution semantics of the main MLIP graph stages.
+Graph stage
+Main node(s)
+Execution semantics
+Candidate streaming
+generate_structures
+Streams one or more candidate structures from iden-
+tifiers, directories, or composition-conditioned OMatG
+generation.
+Candidate relaxation
+relax_gen_structure,
+relax_collect
+Mapped relaxation fans out over emitted candidates; a
+join collects relaxed candidate outcomes.
+Reference branch
+prepare_mp_branch, relax_-
+mp_entry, mp_collect
+When enabled for generated compositions, streams Ma-
+terials Project reference entries and relaxes them with
+the same MLIP; otherwise emits a sentinel.
+Phase diagram
+build_phase_diagram,
+phase_diagram_collect
+Builds an MLIP-consistent phase diagram from relaxed
+reference entries and synchronizes the reference and can-
+didate branches through tagged join tokens.
+Stability filtering
+filter_by_stability
+Passes candidates through when no phase diagram is
+enabled; otherwise emits passing or filtered outcomes
+based on energy above hull.
+Property routing
+route_properties
+Uses the inner LLM router to produce typed property-
+node configurations for each successful relaxed structure;
+emits markers for failed or filtered cases.
+Decision dispatch
+Decision edge to property and
+terminal nodes
+Dispatches each routed configuration to the matching
+property node, or terminal markers to failure, filtered,
+or relaxation-only result nodes.
+Aggregation and output
+property_collect,
+final_-
+collect, assemble_outputs
+Groups property results by structure IRI, assembles one
+output object per structure, writes artifacts, and option-
+ally pushes selected semantic roots to the knowledge
+graph.
+29
+
+
+B
+Additional information for case studies and benchmarks
+B.1
+Phase stability analyses for materials discovery
+a
+b
+c
+d
+e
+Figure S2 Convex-hull analysis of generated lead-free halide perovskite candidates. Ternary phase diagrams for
+the lowest-Ehull generated candidates: a, CsSnCl3; b, KGeBr3; c, RbSnBr3; d, RbGeI3; and e, KGeI3. Open circles
+denote stable support entries, black lines denote MLIP hull tie lines, and green squares mark the selected generated
+candidates.
+30
+
+
+a
+b
+c
+d
+e
+Figure S3 Convex-hull analysis of generated Li-ion conductor candidates. Ternary phase diagrams for the lowest-Ehull
+generated candidates: a, Li12As4Te16; b, Li12Sb4Se16; c, Li12As4Se16; d, Li12Sb4Te16; and e, Li12Bi4Se16. Open circles
+denote stable support entries, black lines denote MLIP hull tie lines, and green squares mark the selected generated
+candidates.
+31
+
+
+B.2
+Molecular case studies
+b
+a
+Figure S4 DFT vibrational spectra of the lowest-energy reranked conformer. a, Harmonic infrared spectrum and b,
+Raman spectrum of the lowest-energy conformer obtained after DFT reranking of conformers generated using the
+MLIP-based conformational search. The selected structure was subsequently optimized and its harmonic vibrational
+frequencies, IR intensities, and Raman activities were calculated with PySCF at the ωB97X-D4/def2-TZVP level of
+theory. Gaussian broadening was applied to the discrete vibrational transitions for visualization.
+a
+b
+Figure S5 Agentic-driven metadynamics of alanine dipeptide. a, Two-dimensional free-energy surface projected onto
+the backbone dihedral angles ϕ and ψ, obtained from well-tempered metadynamics at 300 K using Orb-OMOL. The
+free energy is reported relative to the global minimum, located at approximately (ϕ, ψ) = (−77.5◦, 102.5◦) and marked
+by the red star. b, Corresponding sampling distribution in the ϕ–ψ space. The color scale reports the square root of
+the number of sampled configurations per bin, highlighting the regions explored during the metadynamics trajectory.
+32
+
+
+B.3
+Widom insertion results
+40
+45
+50
+55
+60
+QCO2
+st
+ (kJ mol
+1)
+0.5
+0.0
+0.5
+1.0
+1.5
+2.0
+2.5
+3.0
+log10 (SCO2/H2O)
+RIPPEN
+PEGBUA
+GAVYAG
+GELVID01
+ARAHIM
+Figure S6 Adsorption properties obtained from Widom insertion calculations. Scatter plot showing the relationship
+between the CO2 isosteric heat of adsorption, QCO2
+st
+, and the CO2/H2O Henry selectivity, log10(SCO2/H2O), for five
+representative MOFs taken from ref.69. Green points indicate MOFs whose predicted adsorption properties agree well
+with the reference values, whereas red points indicate MOFs that show modest deviations.
+B.4
+Agentic benchmark of MLIP models
+Prompt
+Please write a Python script that uses the available tools and functions in our MLFF_workflow to benchmark MatterSim,
+Orb-OMAT, and MACE-OMAT for predicting the bulk modulus and shear modulus of each structure in [insert folder_path].
+Use the corresponding file name as the mp-id for each entry. Save the final results for each model to a CSV file containing
+at least the following columns: mp_id, bulk_modulus, and shear_modulus. Generate a plot in your working space directory
+to compare the MLIP calculated results against the ground truth in elasticity_1000.csv with the unit in GPa from
+[insert folder_path].
+33
+
+
+100
+200
+300
+400
+Kvrh, DFT (GPa)
+100
+200
+300
+400
+Kvrh, FP (GPa)
+MatterSim, R2 = 0.873
+Orb-V3-OMAT, R2 = 0.864
+MACE-MH-1-OMAT, R2 = 0.871
+y = x
+600
+400
+200
+0
+200
+Gvrh, DFT (GPa)
+600
+400
+200
+0
+200
+Gvrh, FP (GPa)
+Figure S7 Agentic benchmarks of MLIPs for elastic-property prediction. Parity plots of MLIP-predicted and DFT
+reference Voigt–Reuss–Hill bulk moduli (Kvrh) and shear moduli (Gvrh). Predictions from MatterSim, Orb-V3-OMAT,
+and MACE-MH-1-OMAT were obtained using the agentic workflow for automated structure relaxation and elasticity
+calculations. The dashed line denotes ideal agreement (y = x).
+B.5
+Comparison with a skill-based coding agent
+For all Potente runs in this benchmark, ChatGPT 5.5 was used as the primary LLM for interpreting the
+user request and coordinating workflow execution, while ChatGPT 4.1 was used by the routing agents. The
+comparison coding agent used Claude Code with sonnet-4.6.
+Prompt
+Run UUID: [insert UUID]
+Please read the MOF structures from [insert folder_path] and perform GCMC simulations using CO2 molecules at 298 K
+and 1 bar. Run 5,000 equilibration steps followed by 5,000 production steps. Save the results into a CSV file.
+Note: The specific UUIDs used for the five runs were c8f6ad74-3f17-5802-b4f9-5b8f1f6d4782, 9cbf7e6f-cd71-59e5-8f8d-
+c0c5e61f4c2e, f41f5f11-44bf-5a9d-aec0-94d7d6603f8b, 9993100d-046b-4211-98b1-50e74f4b696e, 5118d853-a2e9-4c11-b37d-
+2a7d2e48e044. These UUIDs were not expected to affect agent behaviour; they were added solely to invalidate user prompt
+caching, which could otherwise compromise the independence of repeated runs.
+Across five independent runs by Potente for the processed HKUST-1 structure, C72H24Cu12O48, the
+MACE-DAC-1 model was consistently used for GCMC simulations. The predicted CO2 uptake was therefore
+consistent, giving an average loading of 73.53 ± 3.30 g/L, corresponding to 4.60 ± 0.21 CO2 molecules per
+cell. The average interaction energy was −1.09 ± 0.04 eV, with an average interaction energy per adsorbate
+of −0.247 ± 0.002 eV/CO2. These values are physically reasonable for CO2 adsorption in HKUST-1 under
+ambient conditions and indicate reproducible adsorption estimates across repeated short GCMC simulations.
+Because the production length was limited to 5,000 GCMC steps, these results represent screening-level
+adsorption predictions instead of fully converged adsorption isotherm data.
+We further submitted the same prompt to Claude Code equipped with the AtomisticSkills scientific skills
+library (23), which we use here as a representative open-ended skill-based coding agent. Fairchem was disabled
+so that the calculations used MACE-based models, improving comparability with Potente. Fairchem was
+disabled so that the values produced used MACE models and are more comparable to Potente. In all five
+runs, the agent completed the workflow by reading the HKUST-1 CIF file and the chem-sorption-gcmc skill,
+selecting the MACE-MH-1 model, and doing the GCMC calculations. They then checked the convergence
+traces and wrote the final CSV and JSON outputs. All the runs used MACE-MH-1 because it was the
+34
+
+
+recommended default, which is mentioned as an in-line comment inside the MACE’s wrapper module, mace_-
+wrapper.py1, listed beside other MACE models. Run CC#2 additionally relaxed the structure using the
+relax_structure skill from the MACE MCP server. Run CC#4 thought about relaxing the structure before
+deciding to skip the step. The other runs did not consider the skill. The five completed runs gave an average
+CO2 loadings of 1.25 ± 0.57 mmol/g, with an average estimated heats of adsorption of 13.81 ± 0.77 kJ/mol.
+The resulting 8–9% variation in loading is consistent with the expected stochastic variation from short GCMC
+production windows. The discrepancy between the AtomisticSkills and Potente results is attributed to the
+use of different MACE models.
+Table S2 Comparison of GCMC runs (HKUST-1, CO2, 298 K, 1 bar) when prompting Potente vs. Claude Code
+equipped with AtomisticSkills.
+Run
+Session
+time (min)
+Total tool
+calls
+LLM API
+calls
+CO2
+loading
+(mmol/g)
+Qst
+(kJ/mol)
+Total cost
+(USD)
+Total
+tokens
+P#1
+6.35
+1
+2
+2.080
+22.40
+0.150
+26,574
+P#2
+6.18
+1
+2
+1.804
+22.56
+0.154
+26,851
+P#3
+6.34
+1
+2
+2.031
+22.30
+0.149
+26,614
+P#4
+6.39
+1
+2
+1.824
+22.94
+0.158
+26,982
+P#5
+6.43
+1
+2
+1.717
+23.77
+0.150
+26,599
+CC#1
+19.13
+21
+17
+2.16
+14.41
+0.47
+656,240
+CC#2
+17.97
+21
+18
+0.763
+12.46
+0.65
+851,115
+CC#3
+15.73
+17
+15
+1.399
+13.54
+0.65
+828,348
+CC#4
+17.50
+30
+27
+1.385
+14.06
+0.88
+1,253,094
+CC#5
+18.58
+24
+21
+0.54
+14.6
+0.54
+820,080
+Potente Avg.
+6.41
+1
+3
+1.865
+17.21
+0.12
+22,541
+CC Avg.
+17.78
+22.60
+19.60
+1.249
+13.81
+0.64
+881,775
+1https://github.com/learningmatter-mit/AtomisticSkills/blob/ca695e1b89ea48613291c88bd8c73e71af2025c7/src/uti
+ls/mlips/mace/mace_wrapper.py#L18
+35
+
+
+Figure S9 Reproducibility of the manually scripted high-throughput workflow. Distributions of the standard deviations
+obtained from five independent executions of the same Python script using identical computational parameters for
+the Voigt–Reuss–Hill bulk modulus (KVRH), shear modulus (GVRH), and harmonic heat capacity at 300 K (CV ).
+The dashed and dotted vertical lines indicate the median and 95th percentile of the standard-deviation distributions,
+respectively.
+B.6
+Reproducibility benchmarks
+Figure S8 Reproducibility of El Agente Potente for high-throughput calculations. Distributions of the standard
+deviations obtained across five independent trials for the Voigt–Reuss–Hill bulk modulus (KVRH), shear modulus
+(GVRH), and harmonic heat capacity at 300 K (CV ). The dashed and dotted vertical lines indicate the median and
+95th percentile of the standard-deviation distributions, respectively.
+36
+
+
+Figure S10 Parity between El Agente Potente and the manually scripted workflow for high-throughput calculations.
+Comparison of the mean properties obtained over five independent executions of each workflow for the Voigt–Reuss–Hill
+bulk modulus (KVRH), shear modulus (GVRH), and harmonic heat capacity at 300 K (CV ). Each point represents the
+five-run average for one material, and the dashed line indicates perfect agreement (y = x).
+C
+Abridged chat transcripts
+The following abridged transcripts reproduce the user prompts, model-provided Thoughts, and final responses,
+while omitting tool calls and their return payloads.
+Local filesystem prefixes have been replaced with <workspace_path_redacted> and <repository_path_re
+dacted>; filenames, run identifiers, and relative artifact paths are otherwise preserved.
+C.1
+Materials discovery
+C.1.1
+Perovskite discovery
+Prompt Search existing literatures and propose five novel and reasonable compositions for promising perovskite materials
+with the general formula ABX3 using the ALEX_MP20_CSP structure generator. For each proposed composition, generate
+ten candidate structures, evaluate their phase stability. For each composition, select the structure with the lowest energy
+above the convex hull and calculate its bandgap.
+Æ Potente
+ Thoughts
+Evaluating energy calculations
+I’m thinking about how to approach this. If the energies are enormous, I should use 5.0 eV/atom. This could help
+bypass filtering while still computing the hull. I need to mention that the selected lowest energy configuration
+isn’t necessarily stable. It’ll be important to evaluate phase stability. I’m considering running five compositions in
+parallel, using commentary tools, and hopefully returning an output list. Let’s call for that!
+ Thoughts
+Evaluating material gaps and stability
+I’m working through some material data, focusing on gaps and stability. CsSnCl3 has the best stability but a gap
+of 1.31, while RbGeI3 has a balanced gap of 1.61 and low energy above the hull. KGeI3 might be metastable but
+has a significant gap. I’m considering materials like RbGeI3, KGeBr3, and CsSnCl3 for absorption purposes. I
+need to note the energy above hull thresholds, around 0.05, suggesting potential synthesizability. I’ll mention my
+literature search with proper citations later.
+37
+
+
+Æ Potente (continued)
+ Thoughts
+Gathering source citations
+I need to include that I’ve searched existing literature. Lead-free ABX3 halide perovskites are well-known, and
+I’m considering how cation size and tolerance factors stabilize 3D structures and influence bandgaps, with trends
+from Cl to I and comparing Sn to Pb. I should look for reliable sources for exact snippets. If I used the web for
+statements, I’ll need to cite those results, although the “Materials Project” is more of a tool reference rather than
+a web source, so no citations there. I’ll mention the term “novel” too!
+I searched the recent ABX3 perovskite literature and then ran the requested ALEX_MP20_CSP screening workflow. The
+literature basis I used was: lead-free ABX3 halide perovskites remain an active optoelectronic materials space; A-site
+size/tolerance-factor arguments are still widely used to assess formability; and halide/B-site substitutions are known to
+strongly tune band gaps, e.g. Cl/Br/I and Sn/Ge trends (42; 43; 44; 45). I therefore focused on all-inorganic, Pb-free,
+charge-balanced ABX3 halides using K/Rb/Cs on A, Ge/Sn on B, and Br/I/Cl on X. I treat these as reasonable underexplored
+screening proposals, not as a claim that every formula has never appeared in any database or publication.
+Workflow executed
+For each composition:
+• Structure generator: ALEX_MP20_CSP
+• Candidates generated: 10
+• Relaxation: MACE-OMAT, cell relaxed
+• Phase stability: MLFF-relaxed Materials Project chemical-system phase diagram
+• Selection: lowest energy above hull among the 10 generated candidates
+• Band gap: PETMADDOS density-of-states band gap
+• I used a high hull cutoff internally so that candidates were ranked rather than prematurely discarded; the reported
+selected structure is the lowest-energy-above-hull candidate.
+Results: selected lowest-hull structure per composition
+Composition
+A/B/X rationale
+Selected Ehull (eV/atom)
+Ehull range (eV/atom)
+Band gap (eV)
+Selected structure IRI
+CsSnCl3
+Cs+/Sn2+/Cl−, Pb-
+free Sn chloride ana-
+logue
+0.0151
+0.0151–0.0185
+1.31
+ConceptualAtoms_ce
+3c8fb7-f8d3-428a-9
+92b-4af354941774
+RbGeI3
+Rb+/Ge2+/I−,
+Ge-based
+iodide
+absorber candidate
+0.0241
+0.0241–0.0307
+1.61
+ConceptualAtoms_b8
+6073d3-3fac-4bb7-9
+d5b-fd4114314b07
+KGeBr3
+K+/Ge2+/Br−,
+smaller A with Br
+for moderate gap
+0.0306
+0.0306–0.0362
+1.51
+ConceptualAtoms_9c
+40e224-0f57-40a5-b
+739-605ae4754239
+RbSnBr3
+Rb+/Sn2+/Br−, Sn
+bromide narrow-gap
+candidate
+0.0351
+0.0351–0.0417
+0.774
+ConceptualAtoms_b9
+eb7962-8969-4788-b
+d61-782ae16ec4ae
+KGeI3
+K+/Ge2+/I−,
+compact-A
+Ge
+io-
+dide variant
+0.0579
+0.0579–0.0638
+1.28
+ConceptualAtoms_03
+95f82b-cf7d-432b-9
+eef-1326095eb759
+Shortlist interpretation
+Most promising from this screen: RbGeI3 and KGeBr3. They combine low predicted energy
+above hull with band gaps in the ~1.5–1.6 eV range, which is attractive for absorber-oriented screening. The general
+literature also supports Ge/Sn and halide substitution as a rational route for tuning lead-free ABX3 perovskite electronic
+structure (42; 43; 44; 45).
+Best phase-stability score: CsSnCl3, with the lowest selected energy above hull at ~0.015 eV/atom, though it is less “novel”
+than the Ge-centered K/Rb proposals and chloride chemistry may have different optical tradeoffs.
+Lower-priority but still reasonable: RbSnBr3 has good predicted metastability but a smaller computed gap, while KGeI3 has
+a useful ~1.28 eV gap but the highest energy above hull among the five selected structures.
+These are MLFF/DOS screening results; the next validation step would be higher-level DFT relaxation + band structure,
+ideally including spin–orbit coupling for Sn/I/Br-containing systems.
+Execution summary.
+Potente used a built-in literature search to identify chemically reasonable Pb-
+free ABX3 halide candidates and then launched five independent MLFF workflows, one for each proposed
+composition. Each workflow generated ten candidate structures with ALEX_MP20_CSP, relaxed them with
+MACE-OMAT, evaluated their energies above the convex hull, retained the lowest-hull candidate, and
+predicted its density-of-states band gap with PETMADDOS. All five workflow calls completed successfully.
+Intermediate search results, tool calls, tool-return payloads, internal paths, and call identifiers are omitted
+from this abridged transcript.
+38
+
+
+C.1.2
+Superionic lithium-ion conductor discovery
+Prompt Search the existing literature and propose five novel and reasonable compositions for Li-ion superionic conductors
+with the formula Li12M4X16 using the structure generator. For each proposed composition, generate 10 candidate structures
+and evaluate their phase stability.
+For each composition, select the structure with the lowest energy above the convex hull and calculate its ionic conductivity
+at 300 K. To perform the conductivity calculation, replicate the unit cell by a factor of 2 along the x, y, and z directions,
+then run NPT MD simulations with 100 ps of equilibration followed by a 100 ps production run. Use a logging interval of
+10 steps.
+Æ Potente
+ Thoughts
+Gathering final citations
+I need to finalize my results with proper citations since I used web sources. It’s essential to reference current
+literature to support my findings. The search results may not be perfect, but I can cite information like Li3PS4
+thio-LISICON, the high-temperature phase, and ORNL Li3+x[SixP]S4, which has higher conductivity. I’ll also look
+into design principles and find more direct sources for selenium or soft anions. Let’s search for these additional
+references!
+ Thoughts
+Choosing threshold wording
+I think I should aim to avoid using the word “typically” or possibly rephrase it to say “using a pragmatic 0.1
+threshold.” But, wait, I just realized that the threshold I’m referencing wasn’t actually used by the user. So, it
+might be better to clarify or rethink how I present this information. I’m trying to ensure that I communicate
+effectively and accurately for the user’s understanding.
+I searched the Li-ion solid-electrolyte literature, then used the structure generator/MLFF workflow to screen five Li12M4X16
+candidates. I interpreted Li12M4X16 as the 4-formula-unit cell of Li3MX4, with M mostly group-15 / pnictogen cations
+and X = Se/Te chalcogenides.
+Literature basis. I avoided the canonical benchmark Li3PS4 / Li12P4S16 because it is already heavily studied: Li3PS4 is a
+thio-LISICON solid electrolyte, nanoporous β-Li3PS4 has reported strongly enhanced room-temperature Li conductivity,
+and Li3+x[SixP1−x]S4 variants can exceed 1 mS/cm via Li-site splitting/disorder. (https://www.ornl.gov/publica
+tion/anomalous-high-ionic-conductivity-nanoporous-b-li3ps4?utm_source=openai) I also used the broader
+thio-LISICON lesson that replacing oxide frameworks with more polarizable sulfide frameworks can raise conductivity
+by orders of magnitude, and that pnictogen substitution in Li3SbS4-type thio-LISICONs can strongly alter Li transport.
+(https://pubs.rsc.org/en/content/articlehtml/2021/ma/d1ma00082a?utm_source=openai) Based on that, I proposed
+heavier / softer selenide and telluride Li3MX4 analogues as reasonable exploratory superionic-conductor candidates.
+Workflow run details
+For each composition I generated 10 candidate structures, relaxed them with MACE-OMAT, evaluated
+energy above the convex hull, retained the single lowest-Ehull structure, then ran Li ionic conductivity at 300 K using:
+• 2 × 2 × 2 cell replication
+• NPT Nose–Hoover-chain MD
+• 1 fs timestep
+• 100 ps equilibration = 100,000 steps
+• 100 ps production = 100,000 steps
+• log interval = 10 steps
+• direct 300 K conductivity estimate from MD
+I set a high phase-stability cutoff internally so that all generated candidates could be ranked; only the top-1 lowest
+energy-above-hull structure per composition was passed to MD.
+Results
+Rank by stability
+Proposed composition
+Reduced form
+Lowest Ehull (eV/atom)
+Ehull range (eV/atom)
+Candidates ≤0.10 eV/atom
+σion, 300 K (mS/cm)
+Li diffusion coefficient (cm2/s)
+1
+Li12Sb4Se16
+Li3SbSe4
+0.0618
+0.0618–0.1110
+7/10
+6.56
+6.71 × 10−8
+2
+Li12As4Se16
+Li3AsSe4
+0.0728
+0.0728–0.1602
+5/10
+9.14
+1.01 × 10−7
+3
+Li12Bi4Se16
+Li3BiSe4
+0.0755
+0.0755–0.1146
+5/10
+5.89
+6.16 × 10−8
+4
+Li12As4Te16
+Li3AsTe4
+0.0993
+0.0993–0.1402
+1/10
+43.16
+5.56 × 10−7
+5
+Li12Sb4Te16
+Li3SbTe4
+0.1038
+0.1038–0.1495
+0/10
+65.44
+8.70 × 10−7
+Interpretation
+Best balanced candidates:
+1. Li12Sb4Se16 / Li3SbSe4 — lowest energy above hull in this screen, with respectable 300 K conductivity of 6.56
+mS/cm.
+2. Li12As4Se16 / Li3AsSe4 — second-lowest hull energy and slightly higher conductivity, 9.14 mS/cm.
+39
+
+
+Æ Potente (continued)
+3. Li12Bi4Se16 / Li3BiSe4 — also near-hull, but Bi(V)-selenide chemistry should be treated cautiously despite the
+reasonable MLFF screening result.
+Highest conductivity but higher stability risk:
+• Li12As4Te16 and Li12Sb4Te16 gave very high predicted conductivities, 43.2 and 65.4 mS/cm, respectively. However,
+their hull energies are at or above ~0.10 eV/atom, especially Sb–Te, so I would treat these as high-risk/high-reward
+telluride leads.
+Selected structures / artifacts
+• Li12As4Se16 selected structure: https://elagente.ca/grafico/ConceptualAtoms_8166f92b-0e2e-4bc7-99b1-348
+e1ebb5e03
+Output JSON: <workspace_path_redacted>/call_mIuB9hPJt1jaT8c8dYM4YzRG/structures/As4Li12Se16_b4b20e
+82/output.json
+• Li12As4Te16 selected structure: https://elagente.ca/grafico/ConceptualAtoms_0347cf14-1233-4d40-a774-5fa
+467d05619
+Output JSON: <workspace_path_redacted>/call_6Qv34GYur6HHKtpl5w1GrpNy/structures/As4Li12Te16_087347
+a8/output.json
+• Li12Sb4Se16 selected structure: https://elagente.ca/grafico/ConceptualAtoms_6bd83854-77e1-452c-8b94-52c
+a5a3a4430
+Output JSON: <workspace_path_redacted>/call_AnCpe03Qil4ebIr5FoUBDVN2/structures/Li12Sb4Se16_e137b5
+f9/output.json
+• Li12Sb4Te16 selected structure: https://elagente.ca/grafico/ConceptualAtoms_c03f2753-5466-4c23-aaad-066
+63826d343
+Output JSON: <workspace_path_redacted>/call_xl6dLwr9hvlkpmzq7kCkg2F0/structures/Li12Sb4Te16_1277ee
+0d/output.json
+• Li12Bi4Se16 selected structure: https://elagente.ca/grafico/ConceptualAtoms_64725590-15df-49b1-90dc-4d1
+099aa5d0c
+Output JSON: <workspace_path_redacted>/call_ZxPU7zVfNZpSf6bpgjb7RSUd/structures/Bi4Li12Se16_d59d24
+32/output.json
+Recommendation: prioritize Li12Sb4Se16 and Li12As4Se16 for follow-up, because they combine near-hull stability with
+mS/cm-scale predicted 300 K Li conductivity.
+Execution summary.
+Potente used three built-in literature-search operations and then launched five
+independent MLFF workflows, one for each proposed composition. Each workflow generated ten structures,
+performed MACE-OMAT relaxation and convex-hull assessment, retained the lowest-hull candidate, replicated
+it into a 2×2×2 supercell, and ran 100 ps of NPT equilibration followed by 100 ps of NPT production dynamics
+for the direct 300 K conductivity estimate. All five workflow calls completed successfully. Intermediate search
+results, tool calls, and tool-return payloads are omitted from this abridged transcript.
+C.2
+Molecular energy-landscape exploration
+C.2.1
+Low-energy conformer search and PySCF validation
+Prompt Perform low energy conformer search for O=C(OCCOCCOCCOCCOC(=O)c1ccccc1)c1ccccc1 using Orb-OMol.
+Æ Potente
+ Thoughts
+Calculating energy results
+I need to finalize the results with the lowest energy and present a top 10 table. While I could convert eV to kcal
+using 1 eV = 23.0605 kcal/mol, it’s not necessary. I’ll mention the lowest energy values, like 0.023 eV = 0.54 kcal,
+but no additional calculations are needed. I’ll include artifact paths for the conformers, specifically noting the
+minimum_001.xyz. The top values will be calculated from MLFF potential energies, and I’ll mention that duplicates
+might exist.
+Completed the low-energy conformer search for:
+O=C(OCCOCCOCCOCCOC(=O)c1ccccc1)c1ccccc1
+40
+
+
+Æ Potente (continued)
+using Orb-OMOL as the MLFF backend.
+System: neutral singlet, C22H26O7
+Method: multiple-minimum Monte Carlo conformer search
+Conformers returned: 84
+Lowest-energy conformer: minimum_001.xyz
+Lowest Orb-OMOL energy: −37567.706940 eV
+Top low-energy conformers
+Rank
+File
+Energy / eV
+Relative / eV
+Relative / kcal mol−1
+1
+minimum_001.xyz
+−37567.706940
+0.000000
+0.00
+2
+minimum_002.xyz
+−37567.683503
+0.023437
+0.54
+3
+minimum_003.xyz
+−37567.679596
+0.027344
+0.63
+4
+minimum_004.xyz
+−37567.624909
+0.082031
+1.89
+5
+minimum_005.xyz
+−37567.624909
+0.082031
+1.89
+6
+minimum_006.xyz
+−37567.617097
+0.089844
+2.07
+7
+minimum_007.xyz
+−37567.609284
+0.097656
+2.25
+8
+minimum_008.xyz
+−37567.593659
+0.113281
+2.61
+9
+minimum_009.xyz
+−37567.585847
+0.121093
+2.79
+10
+minimum_010.xyz
+−37567.578034
+0.128906
+2.97
+Output artifacts
+• Run directory:
+<workspace_path_redacted>/call_MyMjmpZh1b3isjyggS5cdGqv
+• Run summary:
+<workspace_path_redacted>/call_MyMjmpZh1b3isjyggS5cdGqv/run_summary.txt
+• Per-structure JSON:
+<workspace_path_redacted>/call_MyMjmpZh1b3isjyggS5cdGqv/structures/C22H26O7_18900d31/output.json
+• Lowest conformer XYZ:
+<workspace_path_redacted>/call_MyMjmpZh1b3isjyggS5cdGqv/structures/C22H26O7_18900d31/low_energy_con
+formers/minimum_001.xyz
+Note: these are Orb-OMOL MLFF potential energies, not DFT electronic energies or thermochemical free energies.
+Execution summary.
+Potente invoked the MLFF workflow once for a multiple-minimum Monte Carlo
+conformer search using Orb-OMOL. The workflow returned 84 conformers and preserved the ranked structures
+and associated run artifacts. The tool call and its full return payload are omitted from this abridged transcript.
+Prompt Use PySCF to rerank the ten lowest-energy conformers from <workspace_path_redacted>/call_MyMjmpZh1b
+3isjyggS5cdGqv/structures/C22H26O7_18900d31/low_energy_conformers/. Optimize the lowest-energy conformer and
+calculate its infrared and Raman spectra. Generate the corresponding plots and report the results.
+Æ Potente
+ Thoughts
+Evaluating computational workflow
+I’m thinking about how to set up the workflow with the run_pyscf_workflow function. It seems I need to identify
+multiple files, possibly doing ten parallel calls for the SinglePointCalculation. After that, I’ll parse the energies
+and select the lowest one to run the workflow with optimization and frequency analysis.
+I should clarify if the workflow supports the Raman method while ensuring I’m using the right settings. If the
+GPU runs into issues, I might need to opt for parallel single-point calculations, but I’ll check the output carefully
+before proceeding. Let’s start with getting the energies and see how it goes from there.
+41
+
+
+Æ Potente (continued)
+ Thoughts
+Planning to generate plots
+I need to create plots using Python, possibly with CSV files. I have spectra arrays from previous analysis, but I’m
+concerned about input size. Instead of huge inputs, I could write arrays from results manually, as Python can’t
+access the assistant variable. Perhaps I can copy selected arrays for plotting? It seems like I need full spectra for
+effective visuals. I could also consider generating plot data in a CSV format, as the arrays are around 159 in length.
+ Thoughts
+Creating reduced frequency table
+I need to focus on including only the necessary data, like frequency, IR intensity, and Raman activity while omitting
+imaginary frequencies. I’m considering whether to paste arrays directly into a Python script or parse them from a
+saved JSON file. It seems like I might not have a JSON path available, but I could potentially use a chkfile and
+PySCF. If that’s not possible, I can manually construct a reduced table or generate plots, maybe as SVG or ASCII.
+I’ll aim to copy the arrays from the output into Python; they might be large but manageable.
+ Thoughts
+Analyzing imaginary frequencies
+It looks like I’ve found that there are no imaginary frequencies above the specified threshold, which is set at 50
+cm−1. However, I noticed that my frequency object has small imaginary values like 43j, 28j, and 8j, which are the
+low-frequency modes below that threshold. So, it’s important to mention these three negative modes (< 50 cm−1)
+present in the raw spectrum as floppy modes, even though they aren’t significant. I may want to exclude these
+negative frequencies when plotting.
+ Thoughts
+Formatting frequency arrays
+I’m planning to paste positive frequency arrays, skipping negatives, and using the same positive frequencies as
+before. I’ll hard code the frequencies and IR intensities while ensuring proper array lengths to avoid mismatches.
+Maybe Python can help check the lengths and truncate if necessary. I’ll need to format the frequency, IR, and
+Raman activities as strings with whitespace-separated numbers. For the frequency count, I want to make sure it
+reaches 159. Let’s start composing the code and utilize Matplotlib.
+Completed the PySCF reranking and spectroscopy workflow.
+Method used: PySCF wB97X-D4/def2-TZVP, restricted singlet, neutral C22H26O7.
+1. PySCF reranking of the 10 Orb-OMOL conformers
+Single-point PySCF energies were computed on the ten lowest
+Orb-OMOL conformer geometries.
+PySCF rank
+Original conformer
+Energy / Hartree
+∆E / eV
+∆E / kcal mol−1
+1
+minimum_001.xyz
+−1380.735863731819
+0.000000
+0.000
+2
+minimum_002.xyz
+−1380.734715595454
+0.031242
+0.720
+3
+minimum_007.xyz
+−1380.732312970846
+0.096621
+2.228
+4
+minimum_004.xyz
+−1380.732163548079
+0.100687
+2.322
+5
+minimum_003.xyz
+−1380.732126022578
+0.101708
+2.345
+6
+minimum_006.xyz
+−1380.732077070662
+0.103040
+2.376
+7
+minimum_005.xyz
+−1380.731990178972
+0.105405
+2.431
+8
+minimum_008.xyz
+−1380.730916692580
+0.134616
+3.104
+9
+minimum_010.xyz
+−1380.730896298119
+0.135171
+3.117
+10
+minimum_009.xyz
+−1380.730896162124
+0.135174
+3.117
+PySCF-lowest conformer: minimum_001.xyz
+2. Optimization and spectra for PySCF-lowest conformer
+minimum_001.xyz was then optimized with PySCF.
+• Initial single-point energy: −1380.735863731819 Hartree
+• Optimized electronic energy: −1380.740477950003 Hartree
+• Thermochemical total enthalpy, H: −1380.255766671495 Hartree
+• Thermochemical Gibbs free energy, G: −1380.336997404892 Hartree
+Frequency analysis found no significant imaginary frequencies under the 50 cm−1 threshold used by the workflow. The raw
+list contains three very low-frequency negative/floppy modes at approximately −43.94, −28.29, and −8.36 cm−1, which
+are below the threshold and typical for flexible large molecules.
+42
+
+
+Æ Potente (continued)
+3. Strongest IR peaks
+Rank
+Frequency / cm−1
+IR intensity / km mol−1
+1
+1820.08
+299.74
+2
+1341.50
+259.33
+3
+1824.61
+258.05
+4
+1325.29
+207.53
+5
+1349.25
+186.10
+6
+1316.41
+176.89
+7
+1321.35
+162.05
+8
+1337.67
+149.61
+9
+1216.39
+124.94
+10
+3032.78
+123.52
+11
+740.37
+117.44
+12
+1181.12
+115.63
+4. Strongest Raman peaks
+Rank
+Frequency / cm−1
+Raman activity / Å4 amu−1
+1
+3237.75
+306.42
+2
+3238.29
+256.31
+3
+3031.04
+228.94
+4
+3114.09
+154.60
+5
+3044.64
+143.03
+6
+3093.74
+131.95
+7
+3085.42
+121.72
+8
+3215.16
+103.86
+9
+3091.02
+97.72
+10
+3218.00
+93.56
+11
+3224.52
+79.07
+12
+3108.65
+74.73
+5. Generated files
+All plots and CSVs were written to:
+<workspace_path_redacted>/call_MyMjmpZh1b3isjyggS5cdGqv/structures/C22H26O7_18900d31/pyscf_rerank_spectra
+/
+Key files:
+• Reranking CSV:
+pyscf_conformer_rerank.csv
+• Reranking plot:
+pyscf_conformer_rerank.png
+• IR peak table:
+optimized_minimum_001_ir_raman_peaks.csv
+• IR spectrum plot:
+ir_spectrum_minimum_001.png
+• Raman spectrum plot:
+raman_spectrum_minimum_001.png
+• Machine-readable summary:
+summary.json
+Execution summary.
+Potente launched ten PySCF single-point calculations in parallel to rerank the
+Orb-OMOL conformers, selected minimum_001.xyz, and then invoked a further PySCF workflow for geometry
+optimization and vibrational analysis at wB97X-D4/def2-TZVP. It subsequently executed a Python plotting
+script to produce the reranking, IR, and Raman plots and their tabulated data. The twelve tool calls and
+their return payloads are omitted from this abridged transcript.
+43
+
+
+C.2.2
+Two-dimensional enhanced sampling of alanine dipeptide
+Prompt Run a two-dimensional enhanced-sampling calculation for alanine dipeptide using Orb-OMOL by writing a Python
+script. Use the supplied alanine_c7ax.xyz structure from <repository_path_redacted>/adaptive_sampling/examples
+/JCTC_2025_opeseabf/alanine_dipeptide/test_potente/. Use the NVT ensemble at 300 K with a 0.5 fs timestep, 1,000
+equilibration steps, and 100,000 production steps. Record frames every 100 steps. Define the collective variables and other
+enhanced-sampling settings, and report the results.
+Æ Potente
+ Thoughts
+Considering automatic index detection
+I’m thinking about using automatic index detection in a script with the ASE neighborlist to identify the phi/psi
+angles of the alanine dipeptide backbone, which would eliminate the need for prior inspection. The user has asked
+about defining CVs and settings, and I can set those torsions based on a chemical graph. I’ll call the Python
+REPL with the proper imports and use the API for constructing a MLFFWorkflowRequest, ensuring the schema
+field names match the tool. I’ll operate the script asynchronously and enhance the sampling configuration.
+ Thoughts
+Preparing concise report
+I need to create a final report that includes important details like the script path, settings, result paths, and
+frames. It’s essential to mention the initial psi of 302.6, which is equivalent to −57.387. I might consider including
+a summary of the minimum free energy as well. To gather this data, I could use Python to read the CSV for
+min/max values. It seems reasonable to utilize the python_repl for a quick summary. Overall, I should ensure the
+report includes these essential components.
+ Thoughts
+Deciding on features
+I need to focus on the last column samples that Bug chose. It looks like I should minimize the feature engineering
+(FE) aspect to keep things simple. I’m considering how to best utilize the results from these choices. It’s interesting
+to see how different approaches can impact the decision-making process. I’ll ensure that I’m paying attention to
+the outcomes as I proceed with this task!
+Completed the requested two-dimensional enhanced-sampling calculation for alanine dipeptide using Orb-OMOL via a
+Python script.
+Script executed
+Saved and executed:
+<workspace_path_redacted>/run_alanine_dipeptide_orb_omol_2d_enhanced_sampling.py
+Input structure used:
+<repository_path_redacted>/adaptive_sampling/examples/JCTC_2025_opeseabf/alanine_dipeptide/test_potente/a
+lanine_c7ax.xyz
+A working copy was saved as:
+<workspace_path_redacted>/alanine_c7ax_input.xyz
+Calculation settings
+• System: alanine dipeptide
+• Formula: C6H12N2O2
+• Atoms: 22
+• MLFF model: Orb-OMOL
+• Charge: 0
+• Spin multiplicity: 1
+• PBC: non-periodic molecule
+• Cell relaxation: disabled, relax_cell=False
+• Ensemble: NVT, Bussi thermostat
+• Temperature: 300 K
+• Timestep: 0.5 fs
+• Equilibration: 1,000 steps
+• Production: 100,000 steps
+• Frame/log interval: every 100 steps
+• Enhanced sampling method: 2D well-tempered metadynamics
+44
+
+
+Æ Potente (continued)
+Collective variables
+The script inferred the alanine-dipeptide backbone torsions from bonding and used zero-based atom
+indices:
+CV
+Definition
+Atom indices
+Initial value
+phi
+C acetyl–N–Cα–C carbonyl
+[4, 6, 8, 14]
+74.314◦
+psi
+N–Cα–C carbonyl–N methylamide
+[6, 8, 14, 16]
+302.613◦, equivalent to −57.387◦
+Enhanced-sampling grid/settings:
+• phi, psi range: [−180◦, 180◦]
+• Bin width: 5◦× 5◦
+• Total bins: 5184
+• Gaussian hill height: 1.0 kJ/mol
+• Hill widths: 10◦for both CVs
+• Hill deposition frequency: every 100 steps
+• Bias factor: 10.0
+• Periodic torsion bounds: [−180◦, 180◦] for both CVs
+Results
+The workflow completed successfully.
+Main run directory:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es
+Key output artifacts:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es/structures/C6H12N2O2_f5b4c1ed/enhanced_samplin
+g/trajectory.xyz
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es/structures/C6H12N2O2_f5b4c1ed/enhanced_samplin
+g/md.log
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es/structures/C6H12N2O2_f5b4c1ed/enhanced_samplin
+g/free_energy_001_metadynamics.csv
+Compact summary JSON:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_enhanced_sampling_summary.json
+Request/settings JSON:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_request_settings.json
+Free-energy surface summary
+The free-energy surface file has columns:
+phi_degree, psi_degree, free_energy_kj_mol, samples
+Summary:
+• Grid size: 5184 points
+• Visited bins: 2429/5184
+• Total samples: 100001
+• Free-energy unit: kJ/mol
+• Minimum free energy: 0.0 kJ/mol
+• Minimum located at approximately:
+– phi = −77.5◦
+– psi = 102.5◦
+– samples in bin: 43
+Lowest free-energy grid points:
+phi / ◦
+psi / ◦
+Free energy / kJ mol−1
+Samples
+−77.5
+102.5
+0.000
+43
+−82.5
+102.5
+0.161
+165
+−147.5
+157.5
+0.172
+89
+−82.5
+97.5
+0.283
+117
+−77.5
+107.5
+0.291
+178
+−147.5
+162.5
+0.305
+99
+−77.5
+97.5
+0.334
+63
+−147.5
+152.5
+0.390
+93
+−72.5
+102.5
+0.475
+56
+−72.5
+107.5
+0.494
+205
+The workflow reported trajectory_frames = 1001, consistent with recording frames every 100 steps over the production
+trajectory.
+Execution summary.
+Potente wrote and executed a Python script that inferred the alanine-dipeptide
+backbone torsions, constructed the Orb-OMOL enhanced-sampling request, and launched the two-dimensional
+metadynamics workflow. It then used two additional Python calls to inspect and summarize the resulting
+free-energy CSV. The three tool calls and their return payloads are omitted from this abridged transcript.
+45
+
+
+Prompt Generate plots of the sampling distribution and free-energy surface.
+Æ Potente
+ Thoughts
+Generating plots with Python
+I need to create plots using Python and possibly avoid web tools for this. First, I should inspect the CSV file and
+look at the trajectory data. I’ll generate a PNG file, and I might consider creating a sampling distribution from a
+grid of samples along with their free energy surfaces (FES). Combining these elements could also be useful. I’ll be
+using the Python REPL for this task!
+Generated the requested plots from the enhanced-sampling free-energy CSV.
+Plot files
+Sampling distribution:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es_plots/sampling_distribution_phi_psi.png
+Free-energy surface:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es_plots/free_energy_surface_phi_psi.png
+Combined side-by-side plot:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es_plots/sampling_and_fes_phi_psi.png
+Plot-generation script
+Saved and executed:
+<workspace_path_redacted>/plot_alanine_dipeptide_enhanced_sampling.py
+Source data
+Plots were generated from:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es/structures/C6H12N2O2_f5b4c1ed/enhanced_samplin
+g/free_energy_001_metadynamics.csv
+Summary
+• Total grid bins: 5184
+• Visited bins: 2429
+• Total samples: 100001
+• Free-energy minimum:
+– phi = −77.5◦
+– psi = 102.5◦
+– F = 0.0 kJ/mol
+– samples in minimum bin: 43
+A JSON summary of the plotting outputs was also saved here:
+<workspace_path_redacted>/alanine_dipeptide_orb_omol_2d_es_plots/plot_summary.json
+Execution summary.
+Potente wrote and executed a Python plotting script that read the enhanced-sampling
+free-energy CSV and produced separate sampling-distribution and free-energy-surface plots, a combined
+side-by-side figure, and a JSON plot summary. The tool call and its return payload are omitted from this
+abridged transcript.
+C.3
+Adsorption and catalytic-reaction workflows
+C.3.1
+Adsorption-site search for H2 on Fe(100)
+Prompt Write a python script to find the lowest-energy adsorption configurations of H2 on the sufficiently large Fe(100)
+slab. Report adsorption and relative energies and save all candidate geometries.
+46
+
+
+Æ Potente
+ Thoughts
+Considering adsorbate behavior
+I’m thinking about how the workflow treats intact adsorbates, and I wonder if MACE relaxation could allow for
+H–H dissociation if it’s unconstrained. During the search for adsorption sites, intact H2 is placed, but I’m curious
+if all adsorbates could become mobile and dissociate during relaxation. I shouldn’t assume that the final state will
+remain intact, so it’s essential to include potential paths in my considerations.
+Done — I wrote and executed the Python workflow script:
+h2_fe100_adsorption_search.py
+It generated a bcc Fe(100) slab and ran an MLFF adsorption-site search for H2 using MACE-OC20.
+Slab assumptions used
+• Fe phase: bcc α-Fe
+• Lattice parameter: 2.866 Å
+• Surface: Fe(100)
+• Slab size: 4 × 4 lateral repeat
+• Thickness: 5 layers
+• Vacuum: 15 Å
+• Slab atoms: Fe160
+• Cell kept fixed during adsorption relaxations
+• Top 2 slab layers + H2 allowed to relax
+The workflow found:
+• 49 raw adsorption sites
+• 4 symmetry-reduced sites
+• 12 relaxed site/orientation candidates
+• 10 distinct relaxed minima retained
+Lowest-energy H2/Fe(100) adsorption configurations
+Rank
+Adsorption energy / eV
+Relative energy / eV
+1
+−2.5177812576
+0.0000000000
+2
+−2.5148515701
+0.0029296875
+3
+−2.5141191483
+0.0036621094
+4
+−2.0657548904
+0.4520263672
+5
+−1.8260087967
+0.6917724609
+6
+−1.8163652420
+0.7014160156
+7
+−1.7849931717
+0.7327880859
+8
+−1.6230058670
+0.8947753906
+9
+−1.4433183670
+1.0744628906
+10
+−1.1463212967
+1.3714599609
+The best adsorption energy reported by the workflow, −2.5177812576 eV, matches the minimum candidate adsorption
+energy.
+Saved outputs
+Compact energy report:
+<workspace_path_redacted>/h2_fe100_adsorption_outputs/h2_fe100_candidate_energy_report.csv
+Adsorption result JSON:
+<workspace_path_redacted>/h2_fe100_adsorption_outputs/adsorption_result.json
+Raw MLFF output JSON:
+<workspace_path_redacted>/h2_fe100_adsorption_outputs/raw_mlff_outputs.json
+Input slab CIF:
+<workspace_path_redacted>/h2_fe100_adsorption_outputs/Fe100_bcc_4x4_5layer_vac15.cif
+Candidate relaxed geometries
+All retained relaxed minima were saved as .extxyz files. The lowest-energy one is:
+<workspace_path_redacted>/h2_fe100_adsorption_search/structures/Fe160_d6801a36/adsorption_site_search/H__
+H/relaxed_minima/minimum_01.extxyz
+The corresponding relaxation trajectory is:
+<workspace_path_redacted>/h2_fe100_adsorption_search/structures/Fe160_d6801a36/adsorption_site_search/H__
+H/relaxation_trajectories/site_candidate_01.extxyz
+All other retained minima are in the same relaxed_minima/ directory as minimum_02.extxyz through minimum_10.extxyz.
+Execution summary.
+Potente wrote and executed a Python workflow that constructed and validated
+a 160-atom bcc Fe(100) slab, launched a MACE-OC20 adsorption-site search for H2, ranked the relaxed
+47
+
+
+candidates, and saved the structures, trajectories, raw results, and compact energy report. The tool call and
+its return payload are omitted from this abridged transcript.
+C.3.2
+Transition-state search on Fe(110)
+Prompt Write a python script to perform transition state search for the structures from <workspace_path_redacted>/.
+Fix the bottom two layers and compare the results using MACE-OMAT and MACE-OC20. Generate a plot of the energy
+profile along the optimized transition-state pathway.
+Æ Potente
+ Thoughts
+Evaluating Python script for structure search
+I need to respond using a Python script that performs a transition state search for structures in a given directory.
+First, I have to check the files and generate a script that discovers these structures. I need to ensure that I
+maintain the same order of atoms for two endpoints. It seems like I might want to inspect the directory initially.
+Additionally, I should consider how the script can robustly find ASE-readable structures while handling constraints
+in the workflow.
+ Thoughts
+Creating workflow script for energy profiling
+I need to use the execute_mlff_workflow function with MLFFWorkflowRequest for two attempts. The goal is to
+compare MACE-OMAT and MACE-OC20 and plot the energy profile along the optimized pathway. The script
+will run two workflow requests, ensuring the endpoint has exactly two structures. If there are more than two files
+in the directory, I can use their names to select likely reactants or products. I’ll implement the script to handle
+constrained endpoints, detect pairs automatically, and manage potentially long computations.
+ Thoughts
+Identifying bottom layers in structure
+I’m contemplating how to identify the bottom two layers in my structure. It seems like clustering by unique
+z-values could work for separating reactants and products. If I have the same slab with adsorbates, I might need to
+fix atoms in the bottom two surface layers. However, it’s essential to note that the adsorbate might not actually be
+within those layers. I should also consider identifying the bottom layers based on their elements.
+Done — I wrote and executed the Python script.
+Script saved at:
+<workspace_path_redacted>/transition_state_compare_mace.py
+It discovered:
+reactant.xyz
+product.xyz
+and generated constrained endpoint files with the bottom two z-layers fixed:
+<workspace_path_redacted>/ts_mace_omat_vs_oc20/reactant_bottom_two_layers_fixed.extxyz
+<workspace_path_redacted>/ts_mace_omat_vs_oc20/product_bottom_two_layers_fixed.extxyz
+Assumptions used:
+• Slab normal: Cartesian z direction.
+• Bottom two layers identified by z-coordinate clustering.
+• Fixed atoms: 32 Fe atoms, indices 0–31.
+• Cell was kept fixed: relax_cell=False.
+• NEB/TS pathway used 7 images.
+• Initial refinement method: sella.
+• Models compared: MACE-OMAT and MACE-OC20.
+Results
+MACE-OMAT
+Energy profile relative to reactant, in eV:
+[0.000, 0.186, 0.899, 1.789, 0.659, -1.987, -2.278]
+Barrier:
+1.789 eV
+Reaction energy:
+-2.278 eV
+Pathway file:
+<workspace_path_redacted>/ts_mace_omat/structures/C6H7Fe64O_6145b6ac/transition_state_search/transition_s
+tate_search.extxyz
+48
+
+
+Æ Potente (continued)
+MACE-OC20
+Energy profile relative to reactant, in eV:
+[0.000, 0.118, 0.367, 0.607, 1.095, 0.539, 0.528]
+Barrier:
+1.095 eV
+Reaction energy:
++0.528 eV
+Pathway file:
+<workspace_path_redacted>/ts_mace_oc20/structures/C6H7Fe64O_e5863526/transition_state_search/transition_s
+tate_search.extxyz
+Plot generated
+The comparison plot was saved here:
+<workspace_path_redacted>/ts_mace_omat_vs_oc20/mace_omat_vs_oc20_ts_energy_profile.png
+Additional summary files:
+<workspace_path_redacted>/ts_mace_omat_vs_oc20/energy_profiles.json
+<workspace_path_redacted>/ts_mace_omat_vs_oc20/workflow_results_summary.json
+<workspace_path_redacted>/ts_mace_omat_vs_oc20/ts_search_assumptions.json
+In this run, MACE-OC20 predicted a lower barrier than MACE-OMAT: about 1.095 eV vs. 1.789 eV.
+Execution summary.
+Potente wrote and executed a Python script that located the reactant and product
+structures, identified and fixed the bottom two Fe layers, ran separate seven-image transition-state searches
+with MACE-OMAT and MACE-OC20, and plotted the two optimized energy profiles. The tool call and its
+return payload are omitted from this abridged transcript.
+C.4
+Widom insertion for metal-organic frameworks
+C.4.1
+CO2 Widom insertion
+Prompt Could you please perform Widom insertion calculations for the MOF structures located in <repository_path_re
+dacted>/potente/paper/cifs/ using CO2 molecules, with 10,000 insertion steps at 300 K?
+Æ Potente
+ Thoughts
+Considering response clarity
+I need to respond concisely and include a caveat regarding the 10,000 limit. The tool doesn’t show steps for
+confirmation, which might feel a bit unclear. It only returns the formula, not filenames. I could mention artifacts
+and suggest inspecting the summary CSV to check for filenames. If the user requested specific structures, let’s
+review the summary CSV, as it may include input names. I wonder if I should use bash cat for that?
+Done — I ran CO2 Widom insertion calculations for all 5 MOF CIF structures found in:
+<repository_path_redacted>/potente/paper/cifs/
+Settings used:
+• Adsorbate: CO2
+• Widom insertions: 10,000
+• Temperature: 300 K
+• Workflow: structure relaxation followed by Widom insertion
+• MLFF model: MACE-DAC
+Structure
+Formula
+Henry coefficient
+Avg. interaction energy
+Heat of adsorption
+ARAHIM_clean
+C32H32F20N16Nb4Ni4O4
+0.00465891 mol/kg Pa
+−0.437736 eV
+44.7294 kJ/mol
+GAVYAG_clean
+C52H32N20O16Zn4
+0.883432 mol/kg Pa
+−0.580164 eV
+58.4716 kJ/mol
+RIPPEN_clean
+C252H180N72Zn18
+0.377877 mol/kg Pa
+−0.519659 eV
+52.6338 kJ/mol
+GELVID01_clean
+C42H24Ni6O30
+1.808970 mol/kg Pa
+−0.631131 eV
+63.3893 kJ/mol
+PEGBUA_clean
+C56H64N48Zn8
+17.820547 mol/kg Pa
+−0.626451 eV
+62.9377 kJ/mol
+The highest Henry coefficient among these was for PEGBUA_clean, with 17.8205 mol/kg Pa.
+Outputs were written here:
+<workspace_path_redacted>/call_BX2wfG4qybWwCndU7WHXTQ1T/
+Summary files:
+• Run summary:
+<workspace_path_redacted>/call_BX2wfG4qybWwCndU7WHXTQ1T/run_summary.txt
+49
+
+
+Æ Potente (continued)
+• CSV summary:
+<workspace_path_redacted>/call_BX2wfG4qybWwCndU7WHXTQ1T/structures/property_summary.csv
+Execution summary.
+Potente invoked one MACE-DAC workflow over the five CIF structures, relaxed each
+framework, performed CO2 Widom insertion at 300 K, and inspected the resulting run and CSV summaries
+before reporting the adsorption descriptors. The workflow identifier MACE-DAC corresponds to the MACE-
+DAC-1 model named in the manuscript. The Widom routine used its default two-fold protocol, performing
+10,000 trial insertions per fold (20,000 total attempts per MOF–adsorbate pair); Potente received and
+reported the statistics aggregated over the two folds. The two tool calls and their return payloads are omitted
+from this abridged transcript.
+C.4.2
+H2O Widom insertion
+Prompt Could you please perform Widom insertion calculations for the MOF structures located in <repository_path_re
+dacted>/potente/paper/cifs/ using H2O molecules, with 10,000 insertion steps at 300 K?
+Æ Potente
+ Thoughts
+Summarizing results table
+I need to have a final concise summary that includes the results table paths, confirming that everything is completed.
+I’m a bit concerned because the tool result doesn’t clarify if it really reached 10,000. The query had that info,
+but I can’t see the steps. About the units — are they henry coefficient units, like mol/kg/Pa? I should avoid
+mentioning units unless they’re returned. Also, it seems like heat values in kJ/mol correspond to 62. I’ll state
+these as reported by the workflow and include the output paths.
+Completed the H2O Widom insertion calculations for the MOF CIF structures in:
+<repository_path_redacted>/potente/paper/cifs/
+Settings used:
+• Adsorbate: H2O
+• Temperature: 300 K
+• Insertion steps requested: 10,000
+• MLFF model: MACE-DAC
+• Structure handling: CIFs loaded from directory, structures relaxed before Widom insertion
+Run artifacts:
+• Run directory: <workspace_path_redacted>/call_esKijtjfmvDw8YhS2hMRkmyB
+• Run summary: <workspace_path_redacted>/call_esKijtjfmvDw8YhS2hMRkmyB/run_summary.txt
+• CSV summary: <workspace_path_redacted>/call_esKijtjfmvDw8YhS2hMRkmyB/structures/property_summary.c
+sv
+MOF formula
+Henry coefficient
+Avg. interaction energy
+Heat of adsorption
+C42H24Ni6O30
+1.659492
+−0.618802
+62.199618
+C52H32N20O16Zn4
+0.0038395
+−0.403087
+41.386351
+C32H32F20N16Nb4Ni4O4
+0.0109601
+−0.457209
+46.608320
+C252H180N72Zn18
+0.000322884
+−0.294943
+30.951988
+C56H64N48Zn8
+0.0533368
+−0.493991
+50.157254
+Per-structure Widom trajectory files were also written under each structure’s widom_insertion/H2O/ subdirectory in the
+run artifact folder.
+Execution summary.
+Potente invoked one MACE-DAC workflow over the five CIF structures, relaxed
+each framework, and performed H2O Widom insertion at 300 K before reporting the adsorption descriptors
+and saved artifacts. The workflow identifier MACE-DAC corresponds to the MACE-DAC-1 model named in the
+manuscript. The Widom routine used its default two-fold protocol, performing 10,000 trial insertions per fold
+(20,000 total attempts per MOF–adsorbate pair); Potente received and reported the statistics aggregated
+over the two folds. The tool call and its return payload are omitted from this abridged transcript.
+50
+
+
+C.5
+Agentic benchmarking of machine-learned interatomic potentials
+C.5.1
+Elasticity benchmark
+Prompt
+Please write a python script to benchmark the performance of the following MLIP models MatterSim/Orb-
+OMAT/MACE-OMAT available in our MLFF workflow on the bulk modulus and shear modulus for each structure from
+<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/User_Cases/High_Throughput/Elasticity/sam
+ple_1000/cifs/. Use the corresponding file name as the mp-id for each entry. Save the final results for each model to a
+CSV file containing at least the following columns: mp_id, bulk_modulus, and shear_modulus. Generate a plot in your
+working space directory to compare the MLIP calculated results against the ground truth in elasticity_1000.csv from
+<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/User_Cases/High_Throughput/Elasticity/sam
+ple_1000/.
+Æ Potente
+ Thoughts
+Planning plot generation
+I’m considering the ground truth CSV and its columns like mp_id, bulk_modulus, shear_modulus, and possibly
+some elasticity values like K_VRH or G_VRH. I need to implement a way to detect these columns. The user asked
+me to generate a plot in the working space directory, so I’ll use a scatter plot with matplotlib for bulk and shear
+against the ground truth. Additionally, I might create a combined summary CSV for each model and perhaps use
+joblib to assist in this process.
+Below is a standalone Python script you can save as, for example:
+benchmark_mlff_elasticity.py
+It will:
+• Read all .cif files from the requested directory.
+• Treat each CIF filename stem as the mp_id.
+• Run the MLFF workflow for each CIF with each model:
+– MatterSim
+– Orb-OMAT
+– MACE-OMAT
+• Request elastic properties through the workflow router.
+• Extract bulk_modulus and shear_modulus from the workflow output.
+• Save one CSV per model.
+• Load the ground-truth file elasticity_1000.csv.
+• Generate parity plots comparing MLIP predictions against ground truth.
+#!/usr/bin/env python3
+"""
+Benchmark MLIP elastic properties using the El Agente MLFF workflow.
+Models benchmarked:
+- MatterSim
+- Orb-OMAT
+- MACE-OMAT
+For each CIF in:
+<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/User_Cases/High_Throughput/Elasticity/sample_1000/
+cifs/
+the script:
+1. Uses the CIF filename stem as mp_id.
+2. Runs the MLFF workflow with elasticity requested.
+3. Extracts bulk_modulus and shear_modulus.
+4. Saves one CSV per model.
+5. Compares predictions against elasticity_1000.csv.
+6. Saves parity plots in the working directory.
+Usage:
+python benchmark_mlff_elasticity.py
+Optional:
+python benchmark_mlff_elasticity.py --max-structures 10
+python benchmark_mlff_elasticity.py --output-dir ./mlff_elasticity_benchmark
+"""
+from __future__ import annotations
+51
+
+
+Æ Potente (continued)
+import argparse
+import csv
+import json
+import math
+import os
+import sys
+import traceback
+from dataclasses import asdict, is_dataclass
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Tuple
+import pandas as pd
+# -------------------------------------------------------------------------
+# Try to import the MLFF workflow.
+#
+# Depending on the local El Agente / Gráfico installation, the import path may
+# differ slightly. Add or modify paths here if your repository exposes the
+# workflow from a different module.
+# -------------------------------------------------------------------------
+def import_run_mlff_workflow():
+candidates = [
+"domains.mlff.mlff_workflow_tools",
+"domains.mlff.tools.mlff_workflow_tools",
+"domains.mlff.mlff_tools",
+"domains.mlff.tools",
+"domains.materials.mlff_workflow_tools",
+]
+last_error = None
+for module_name in candidates:
+try:
+module = __import__(module_name, fromlist=["run_mlff_workflow"])
+return getattr(module, "run_mlff_workflow")
+except Exception as exc:
+last_error = exc
+raise ImportError(
+"Could not import run_mlff_workflow from known candidate modules. "
+"Please update import_run_mlff_workflow() with the correct local import path."
+) from last_error
+# -------------------------------------------------------------------------
+# Utilities
+# -------------------------------------------------------------------------
+def to_plain_object(obj: Any) -> Any:
+"""
+Convert dataclasses / pydantic models / arbitrary objects into plain Python
+dict/list/scalar containers where possible.
+"""
+if obj is None:
+return None
+if isinstance(obj, (str, int, float, bool)):
+return obj
+if isinstance(obj, Path):
+return str(obj)
+if is_dataclass(obj):
+return to_plain_object(asdict(obj))
+if isinstance(obj, dict):
+return {str(k): to_plain_object(v) for k, v in obj.items()}
+if isinstance(obj, (list, tuple, set)):
+return [to_plain_object(x) for x in obj]
+if hasattr(obj, "model_dump"):
+try:
+return to_plain_object(obj.model_dump())
+except Exception:
+pass
+52
+
+
+Æ Potente (continued)
+if hasattr(obj, "dict"):
+try:
+return to_plain_object(obj.dict())
+except Exception:
+pass
+if hasattr(obj, "__dict__"):
+try:
+return to_plain_object(vars(obj))
+except Exception:
+pass
+return obj
+def recursive_find_numeric(
+obj: Any,
+candidate_keys: Iterable[str],
+) -> Optional[float]:
+"""
+Recursively search nested dict/list structures for the first numeric value
+whose key matches one of candidate_keys.
+This is intentionally robust because the exact MLFFOutput schema may differ
+between workflow versions.
+"""
+candidate_keys_norm = {k.lower() for k in candidate_keys}
+def key_matches(k: str) -> bool:
+kk = k.lower()
+return kk in candidate_keys_norm
+def as_float(x: Any) -> Optional[float]:
+try:
+if x is None:
+return None
+val = float(x)
+if math.isfinite(val):
+return val
+except Exception:
+return None
+return None
+if isinstance(obj, dict):
+# First pass: direct key matches
+for k, v in obj.items():
+if key_matches(str(k)):
+val = as_float(v)
+if val is not None:
+return val
+# Second pass: recursive search
+for v in obj.values():
+found = recursive_find_numeric(v, candidate_keys_norm)
+if found is not None:
+return found
+elif isinstance(obj, list):
+for item in obj:
+found = recursive_find_numeric(item, candidate_keys_norm)
+if found is not None:
+return found
+return None
+def extract_elastic_moduli(workflow_output: Any) -> Tuple[Optional[float], Optional[float]]:
+"""
+Extract bulk and shear modulus from MLFF workflow output.
+The script checks several common field names used for elastic properties.
+Modify candidate key lists if your workflow emits different names.
+"""
+plain = to_plain_object(workflow_output)
+bulk_keys = [
+"bulk_modulus",
+53
+
+
+Æ Potente (continued)
+"bulk_modulus_vrh",
+"bulk_modulus_voigt_reuss_hill",
+"k_vrh",
+"kv_rh",
+"K_VRH",
+"K_vrh",
+"vrh_bulk_modulus",
+]
+shear_keys = [
+"shear_modulus",
+"shear_modulus_vrh",
+"shear_modulus_voigt_reuss_hill",
+"g_vrh",
+"gv_rh",
+"G_VRH",
+"G_vrh",
+"vrh_shear_modulus",
+]
+bulk = recursive_find_numeric(plain, bulk_keys)
+shear = recursive_find_numeric(plain, shear_keys)
+return bulk, shear
+def detect_ground_truth_columns(df: pd.DataFrame) -> Tuple[str, str, str]:
+"""
+Detect mp-id, bulk modulus, and shear modulus columns from ground-truth CSV.
+"""
+cols = list(df.columns)
+lower_to_original = {c.lower(): c for c in cols}
+mp_candidates = [
+"mp_id",
+"mp-id",
+"material_id",
+"material_id_mp",
+"id",
+"filename",
+]
+bulk_candidates = [
+"bulk_modulus",
+"bulk_modulus_vrh",
+"k_vrh",
+"K_VRH".lower(),
+"vrh_bulk_modulus",
+]
+shear_candidates = [
+"shear_modulus",
+"shear_modulus_vrh",
+"g_vrh",
+"G_VRH".lower(),
+"vrh_shear_modulus",
+]
+def find_col(candidates: List[str], label: str) -> str:
+for cand in candidates:
+if cand.lower() in lower_to_original:
+return lower_to_original[cand.lower()]
+raise ValueError(
+f"Could not detect {label} column in ground-truth CSV. "
+f"Available columns are: {cols}"
+)
+mp_col = find_col(mp_candidates, "mp_id")
+bulk_col = find_col(bulk_candidates, "bulk modulus")
+shear_col = find_col(shear_candidates, "shear modulus")
+return mp_col, bulk_col, shear_col
+def normalize_mp_id_from_filename(path: Path) -> str:
+"""
+Use the corresponding CIF filename as mp-id.
+54
+
+
+Æ Potente (continued)
+Example:
+/path/to/mp-1234.cif -> mp-1234
+"""
+return path.stem
+def maybe_strip_cif_suffix(x: Any) -> str:
+"""
+Normalize IDs from CSV or filenames for joining.
+"""
+s = str(x).strip()
+if s.endswith(".cif"):
+s = s[:-4]
+return s
+# -------------------------------------------------------------------------
+# Workflow execution
+# -------------------------------------------------------------------------
+def run_single_elasticity_calculation(
+run_mlff_workflow,
+cif_path: Path,
+model_name: str,
+relax_fmax: float,
+relax_steps: int,
+prefer_gpu: bool,
+) -> Dict[str, Any]:
+"""
+Run one MLFF workflow calculation for one CIF and one model.
+"""
+mp_id = normalize_mp_id_from_filename(cif_path)
+cif_text = cif_path.read_text()
+result_row: Dict[str, Any] = {
+"mp_id": mp_id,
+"cif_file": str(cif_path),
+"model_name": model_name,
+"bulk_modulus": None,
+"shear_modulus": None,
+"status": "failed",
+"error": None,
+"run_artifact_dir": None,
+"output_json_path": None,
+"summary_csv_path": None,
+}
+try:
+workflow_result = run_mlff_workflow(
+summarised_user_query=(
+"Benchmark elasticity for this bulk crystal structure. "
+"Relax the structure and calculate elastic properties, including "
+"bulk modulus and shear modulus."
+),
+identifier_type="cif",
+identifier=cif_text,
+model_name=model_name,
+relax_cell=True,
+relax_fmax=relax_fmax,
+relax_steps=relax_steps,
+prefer_gpu=prefer_gpu,
+)
+plain = to_plain_object(workflow_result)
+# MLFF workflow usually returns a list[MLFFOutput].
+# For a single CIF, use the first output.
+if isinstance(plain, list) and len(plain) > 0:
+first_output = plain[0]
+else:
+first_output = plain
+bulk, shear = extract_elastic_moduli(first_output)
+result_row["bulk_modulus"] = bulk
+result_row["shear_modulus"] = shear
+result_row["status"] = "success" if bulk is not None and shear is not None else "missing_moduli"
+55
+
+
+Æ Potente (continued)
+if isinstance(first_output, dict):
+result_row["run_artifact_dir"] = first_output.get("run_artifact_dir")
+result_row["output_json_path"] = first_output.get("output_json_path")
+result_row["summary_csv_path"] = first_output.get("summary_csv_path")
+except Exception as exc:
+result_row["error"] = "".join(
+traceback.format_exception_only(type(exc), exc)
+).strip()
+return result_row
+def save_rows_csv(rows: List[Dict[str, Any]], csv_path: Path) -> None:
+csv_path.parent.mkdir(parents=True, exist_ok=True)
+fieldnames = [
+"mp_id",
+"cif_file",
+"model_name",
+"bulk_modulus",
+"shear_modulus",
+"status",
+"error",
+"run_artifact_dir",
+"output_json_path",
+"summary_csv_path",
+]
+with csv_path.open("w", newline="") as f:
+writer = csv.DictWriter(f, fieldnames=fieldnames)
+writer.writeheader()
+for row in rows:
+writer.writerow({k: row.get(k) for k in fieldnames})
+# -------------------------------------------------------------------------
+# Plotting
+# -------------------------------------------------------------------------
+def make_parity_plots(
+output_dir: Path,
+model_csv_paths: Dict[str, Path],
+ground_truth_csv: Path,
+) -> None:
+import matplotlib.pyplot as plt
+import numpy as np
+gt = pd.read_csv(ground_truth_csv)
+gt_mp_col, gt_bulk_col, gt_shear_col = detect_ground_truth_columns(gt)
+gt = gt.copy()
+gt["_mp_id_norm"] = gt[gt_mp_col].map(maybe_strip_cif_suffix)
+n_models = len(model_csv_paths)
+fig, axes = plt.subplots(
+nrows=2,
+ncols=n_models,
+figsize=(6 * n_models, 11),
+squeeze=False,
+)
+summary_rows = []
+for col_idx, (model_name, pred_csv) in enumerate(model_csv_paths.items()):
+pred = pd.read_csv(pred_csv)
+pred = pred.copy()
+pred["_mp_id_norm"] = pred["mp_id"].map(maybe_strip_cif_suffix)
+merged = pred.merge(
+gt[["_mp_id_norm", gt_bulk_col, gt_shear_col]],
+on="_mp_id_norm",
+how="inner",
+)
+merged_success = merged[
+56
+
+
+Æ Potente (continued)
+merged["bulk_modulus"].notna()
+& merged["shear_modulus"].notna()
+& merged[gt_bulk_col].notna()
+& merged[gt_shear_col].notna()
+].copy()
+merged_out = output_dir / f"{model_name}_merged_with_ground_truth.csv"
+merged_success.to_csv(merged_out, index=False)
+for row_idx, prop in enumerate(["bulk", "shear"]):
+ax = axes[row_idx][col_idx]
+if prop == "bulk":
+x = merged_success[gt_bulk_col].astype(float)
+y = merged_success["bulk_modulus"].astype(float)
+xlabel = "Ground truth bulk modulus"
+ylabel = f"{model_name} bulk modulus"
+title = f"{model_name}: bulk modulus"
+else:
+x = merged_success[gt_shear_col].astype(float)
+y = merged_success["shear_modulus"].astype(float)
+xlabel = "Ground truth shear modulus"
+ylabel = f"{model_name} shear modulus"
+title = f"{model_name}: shear modulus"
+if len(x) == 0:
+ax.set_title(title + "\nNo matched successful data")
+ax.set_xlabel(xlabel)
+ax.set_ylabel(ylabel)
+continue
+mae = float(np.mean(np.abs(y - x)))
+rmse = float(np.sqrt(np.mean((y - x) ** 2)))
+if len(x) > 1:
+r = float(np.corrcoef(x, y)[0, 1])
+r2 = r * r
+else:
+r2 = float("nan")
+min_val = float(min(x.min(), y.min()))
+max_val = float(max(x.max(), y.max()))
+pad = 0.05 * (max_val - min_val) if max_val > min_val else 1.0
+ax.scatter(x, y, s=18, alpha=0.75)
+ax.plot(
+[min_val - pad, max_val + pad],
+[min_val - pad, max_val + pad],
+linestyle="--",
+linewidth=1.5,
+)
+ax.set_xlim(min_val - pad, max_val + pad)
+ax.set_ylim(min_val - pad, max_val + pad)
+ax.set_xlabel(xlabel)
+ax.set_ylabel(ylabel)
+ax.set_title(
+f"{title}\n"
+f"N={len(x)}, MAE={mae:.3f}, RMSE={rmse:.3f}, R2={r2:.3f}"
+)
+ax.grid(True, alpha=0.3)
+summary_rows.append(
+{
+"model_name": model_name,
+"property": prop,
+"n": len(x),
+"mae": mae,
+"rmse": rmse,
+"r2": r2,
+}
+)
+fig.tight_layout()
+plot_path = output_dir / "mlff_elasticity_parity_plots.png"
+fig.savefig(plot_path, dpi=300)
+plt.close(fig)
+57
+
+
+Æ Potente (continued)
+summary_df = pd.DataFrame(summary_rows)
+summary_df.to_csv(output_dir / "mlff_elasticity_benchmark_metrics.csv", index=False)
+print(f"Saved parity plot to: {plot_path}")
+print(f"Saved metrics to: {output_dir / ’mlff_elasticity_benchmark_metrics.csv’}")
+# -------------------------------------------------------------------------
+# Main
+# -------------------------------------------------------------------------
+def main() -> None:
+parser = argparse.ArgumentParser()
+parser.add_argument(
+"--cif-dir",
+type=Path,
+default=Path(
+"<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/"
+"User_Cases/High_Throughput/Elasticity/sample_1000/cifs/"
+),
+)
+parser.add_argument(
+"--ground-truth-csv",
+type=Path,
+default=Path(
+"<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/"
+"User_Cases/High_Throughput/Elasticity/sample_1000/elasticity_1000.csv"
+),
+)
+parser.add_argument(
+"--output-dir",
+type=Path,
+default=Path.cwd() / "mlff_elasticity_benchmark",
+)
+parser.add_argument(
+"--models",
+nargs="+",
+default=["MatterSim", "Orb-OMAT", "MACE-OMAT"],
+help="MLFF model names to benchmark.",
+)
+parser.add_argument(
+"--max-structures",
+type=int,
+default=None,
+help="Optional cap on number of CIFs for testing.",
+)
+parser.add_argument(
+"--relax-fmax",
+type=float,
+default=0.1,
+help="Relaxation force convergence threshold in eV/Angstrom.",
+)
+parser.add_argument(
+"--relax-steps",
+type=int,
+default=1000,
+help="Maximum geometry relaxation steps.",
+)
+parser.add_argument(
+"--no-gpu",
+action="store_true",
+help="Disable GPU preference.",
+)
+args = parser.parse_args()
+cif_dir: Path = args.cif_dir
+ground_truth_csv: Path = args.ground_truth_csv
+output_dir: Path = args.output_dir
+output_dir.mkdir(parents=True, exist_ok=True)
+58
+
+
+Æ Potente (continued)
+if not cif_dir.exists():
+raise FileNotFoundError(f"CIF directory does not exist: {cif_dir}")
+if not ground_truth_csv.exists():
+raise FileNotFoundError(f"Ground-truth CSV does not exist: {ground_truth_csv}")
+cif_files = sorted(cif_dir.glob("*.cif"))
+if args.max_structures is not None:
+cif_files = cif_files[: args.max_structures]
+if len(cif_files) == 0:
+raise RuntimeError(f"No CIF files found in {cif_dir}")
+print(f"Found {len(cif_files)} CIF files.")
+print(f"Output directory: {output_dir}")
+run_mlff_workflow = import_run_mlff_workflow()
+model_csv_paths: Dict[str, Path] = {}
+for model_name in args.models:
+print("=" * 80)
+print(f"Running model: {model_name}")
+print("=" * 80)
+rows: List[Dict[str, Any]] = []
+model_output_csv = output_dir / f"{model_name}_elasticity_results.csv"
+model_csv_paths[model_name] = model_output_csv
+for i, cif_path in enumerate(cif_files, start=1):
+mp_id = normalize_mp_id_from_filename(cif_path)
+print(f"[{model_name}] [{i}/{len(cif_files)}] {mp_id}")
+row = run_single_elasticity_calculation(
+run_mlff_workflow=run_mlff_workflow,
+cif_path=cif_path,
+model_name=model_name,
+relax_fmax=args.relax_fmax,
+relax_steps=args.relax_steps,
+prefer_gpu=not args.no_gpu,
+)
+rows.append(row)
+# Save incrementally so progress is not lost if the run is interrupted.
+save_rows_csv(rows, model_output_csv)
+print(
+f"
+status={row[’status’]}, "
+f"bulk={row[’bulk_modulus’]}, "
+f"shear={row[’shear_modulus’]}"
+)
+if row["error"]:
+print(f"
+error={row[’error’]}")
+print(f"Saved model results to: {model_output_csv}")
+make_parity_plots(
+output_dir=output_dir,
+model_csv_paths=model_csv_paths,
+ground_truth_csv=ground_truth_csv,
+)
+if __name__ == "__main__":
+main()
+Run it with:
+python benchmark_mlff_elasticity.py
+For a small test first:
+python benchmark_mlff_elasticity.py –max-structures 5
+The output directory will contain files such as:
+mlff_elasticity_benchmark/
+59
+
+
+Æ Potente (continued)
+|– MatterSim_elasticity_results.csv
+|– Orb-OMAT_elasticity_results.csv
+|– MACE-OMAT_elasticity_results.csv
+|– MatterSim_merged_with_ground_truth.csv
+|– Orb-OMAT_merged_with_ground_truth.csv
+|– MACE-OMAT_merged_with_ground_truth.csv
+|– mlff_elasticity_benchmark_metrics.csv
+‘– mlff_elasticity_parity_plots.png
+Execution summary.
+Potente inspected the available environment and then supplied a standalone bench-
+mark script that routed each CIF through the general MLFF workflow. The two shell-inspection calls and
+their return payloads are omitted from this abridged transcript.
+Prompt Can you just use the functions available for loading MLFF models and elasticity calculations, and then write a
+python script to do the benchmark?
+Æ Potente
+ Thoughts
+Inspecting environment and tools
+I need to respond with a script. First, I should inspect the environment since the user asked about using functions
+to load MLFF models and perform elasticity calculations. It seems I might need to check the repository. Earlier, I
+noticed the /app was missing, so I should locate the necessary functions. The user requested a script, not just to
+run a tool. I think I should look into Python imports and inspect the filesystem for more details.
+ Thoughts
+Exploring package domains
+I’m thinking that the repository may contain packages that extend beyond just depth levels. I need to identify the
+specific domains that are included. It seems like a crucial step to ensure I’m looking at everything involved and
+not missing any important details. It will help in providing a comprehensive understanding of what’s available and
+how it all connects. Let’s figure this out and see where it leads!
+ Thoughts
+Considering relaxation in calculations
+It sounds like I might need a relaxation function since the user mentioned “loading MLFF models and elasticity
+calculations” without a clear workflow. I think we can write a script that imports get_mlff_calculator and runs
+the elasticity calculations. Maybe the elasticity run can be a part of the relaxation process. I wonder if they want
+something more direct. To help, I might need to check the ground truth columns by using read_csv head.
+ Thoughts
+Adjusting the workflow
+I think it’s better to follow the MLFF workflow by first calling the relaxation function with the parameter
+relax_cell set to True. After that, I can run the elasticity on the relaxed atoms while keeping relax_structure
+set to False. It’s also important for me to inspect the signature of relax_structure to ensure everything aligns
+properly. I want to be accurate in my approach, so this step is crucial!
+ Thoughts
+Developing a script
+I need to create a script that includes direct functions. I’m thinking about using multiprocessing since loading
+calculations might not share easily and could run sequentially by model. For large datasets, processing 1000
+structures might take a long time. I’ll add features like resume options, max structures, and default values for
+norm or shear strain.
+It’s wise to cache the calculation state to avoid issues with failures, and for each CIF, I can assign atoms.calc to
+the calculator. Lastly, I want to save the results with necessary columns as requested by the user.
+60
+
+
+Æ Potente (continued)
+ Thoughts
+Considering final touches
+I want to finalize things by mentioning the path and maybe including usage details. I’m wondering if we should test
+the import to ensure everything works as expected. Perhaps running a command like –max 0 would be impossible?
+That thought leads me to consider running –help for more clarity. I definitely want to ensure that I have everything
+covered before wrapping this up!
+ Thoughts
+Finalizing the script
+I need to make sure the final version is concise. I wonder if I should include any harmless warnings, but I’m not
+sure it’s necessary unless the user cares about them. Maybe I could add a filter for those warnings? It’s not critical.
+I definitely want to include the location commands and mention the functions directly. I’ll note that no citations
+are needed either. Let’s get this wrapped up!
+Yes — I wrote the direct benchmark script here:
+<workspace_path_redacted>/benchmark_mlff_elasticity_direct.py
+It does not call the full run_mlff_workflow. It directly uses:
+from domains.mlffs.mlff_calculator import get_mlff_calculator
+from domains.mlffs.ase_utils import relax_structure, run_elasticity
+The script:
+• Loads each MLIP model once:
+– MatterSim
+– Orb-OMAT
+– MACE-OMAT
+• Reads CIFs from:
+<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/User_Cases/High_Throughput/Elasticity/sam
+ple_1000/cifs/
+• Uses each CIF filename stem as the mp_id.
+• Optionally relaxes each structure with relax_structure.
+• Runs elasticity with run_elasticity.
+• Saves one CSV per model with at least:
+mp_id, bulk_modulus, shear_modulus
+• Loads ground truth from:
+<repository_path_redacted>/potente/User_Cases_El_Agente_Potente/User_Cases/High_Throughput/Elasticity/sam
+ple_1000/elasticity_1000.csv
+• Generates a parity plot comparing MLIP-calculated values to ground truth.
+To run a quick smoke test:
+python benchmark_mlff_elasticity_direct.py –max-structures 5
+To run the full benchmark:
+python benchmark_mlff_elasticity_direct.py
+By default, outputs go to:
+./mlip_elasticity_direct_benchmark/
+Expected outputs include:
+mlip_elasticity_direct_benchmark/
+|– MatterSim_elasticity_results.csv
+|– Orb-OMAT_elasticity_results.csv
+|– MACE-OMAT_elasticity_results.csv
+|– MatterSim_merged_with_ground_truth.csv
+|– Orb-OMAT_merged_with_ground_truth.csv
+|– MACE-OMAT_merged_with_ground_truth.csv
+|– mlip_elasticity_metrics.csv
+‘– mlip_elasticity_parity.png
+Useful options:
+# Force CPU
+python benchmark_mlff_elasticity_direct.py –no-gpu
+# Use a specific GPU
+python benchmark_mlff_elasticity_direct.py –gpu-id 0
+# Skip initial relaxation
+python benchmark_mlff_elasticity_direct.py –no-relax
+# Re-run from scratch instead of resuming existing CSVs
+python benchmark_mlff_elasticity_direct.py –no-resume
+61
+
+
+Æ Potente (continued)
+# Write relaxed CIFs
+python benchmark_mlff_elasticity_direct.py –write-relaxed-cifs
+Execution summary.
+Potente inspected the installed MLFF packages and relevant function signatures,
+identified get_mlff_calculator, relax_structure, and run_elasticity, and wrote a direct benchmark
+script with resume, device-selection, and output options. The eighteen shell calls and their return payloads
+are omitted from this abridged transcript.
+Prompt please proceed
+Æ Potente
+ Thoughts
+Planning benchmark execution
+I think we need to run a script for a benchmark of 1000 ∗3, which sounds pretty intense. Should I start this now?
+I need to use the commentary tool and possibly run it in the background to avoid timeouts. The user is asking for
+us to proceed. I’m considering executing with nohup to keep it running smoothly, and maybe report the PID and
+log for reference. A smoke test could be a good idea before we launch the full benchmark in the background. I
+need to check the working directory too.
+ Thoughts
+Evaluating import issues
+I think I need to address slow warnings. It seems like I shouldn’t continue buffering until the imports are complete
+and the model is loaded. I’m wondering if the process is getting stuck during the download phase. I might have to
+check the CPU usage of the process to see if that’s contributing to the slowdown. It’s definitely important to keep
+an eye on these factors to ensure everything runs smoothly!
+Proceeding.
+I started the full direct MLIP elasticity benchmark in the background.
+PID: 238664
+Output directory:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark
+Log file:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/benchmark_20260609_181646.log
+You can monitor it with:
+tail-f<workspace_path_redacted>/mlip_elasticity_direct_benchmark/benchmark_20260609_181646.log
+Check whether it is still running:
+ps -p 238664
+The process is currently running. Outputs will be written under:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/
+Expected final files include:
+MatterSim_elasticity_results.csv
+Orb-OMAT_elasticity_results.csv
+MACE-OMAT_elasticity_results.csv
+mlip_elasticity_metrics.csv
+mlip_elasticity_parity.png
+Execution summary.
+Potente smoke-tested the direct benchmark, launched the full three-model calculation
+as a background process, and checked that it remained active. The three shell calls and their return payloads
+are omitted from this abridged transcript.
+62
+
+
+Prompt I think the unit between predicted and ground true is different, the predict values are in eV/A3, while the ground
+true is in GPa
+Æ Potente
+ Thoughts
+Adjusting calculations
+I need to respond and consider modifying the script since the user mentioned a different unit. I should verify the
+code to ensure it produces results in eV/A3. It looks like I might need to inspect older result values and potentially
+use bash for verification. I also have to adjust the script to convert eV/A3 to GPa, using a factor of 160.21766208.
+I should check the status of the process and make necessary adjustments to ensure everything runs smoothly.
+ Thoughts
+Organizing data outputs
+I need to clarify things by creating corrected CSV files named like MatterSim_elasticity_results_GPa.csv, along
+with a corrected parity plot. I should also set the script to write in GPa by default moving forward. It might be a
+good idea to back up the old raw files too. I’ll need to utilize the conversion factor from ASE units, checking if I
+can import ase.units.GPa in the process. Then, I’ll execute the necessary unit conversions.
+Yes, you’re right. The direct run_elasticity values are in eV/Å3, while elasticity_1000.csv is in GPa.
+I applied the conversion:
+1 eV/Å3 = 160.21766208 GPa
+I also patched the benchmark script so future runs convert predictions to GPa automatically while preserving the raw
+eV/Å3 values.
+Corrected outputs are now saved here:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/
+New corrected CSVs:
+MatterSim_elasticity_results_GPa.csv
+Orb-OMAT_elasticity_results_GPa.csv
+MACE-OMAT_elasticity_results_GPa.csv
+Each contains:
+mp_id
+bulk_modulus
+# GPa
+shear_modulus
+# GPa
+bulk_modulus_vrh
+# GPa
+shear_modulus_vrh
+# GPa
+bulk_modulus_ev_per_a3
+# raw
+shear_modulus_ev_per_a3
+# raw
+Corrected plot:
+mlip_elasticity_parity_GPa.png
+Corrected metrics:
+mlip_elasticity_metrics_GPa.csv
+Summary metrics after unit correction:
+MatterSim bulk:
+MAE = 13.99 GPa, RMSE = 27.49 GPa, R2 = 0.873
+MatterSim shear:
+MAE = 14.05 GPa, RMSE = 27.13 GPa, R2 = 0.663
+Orb-OMAT bulk:
+MAE = 16.88 GPa, RMSE = 28.50 GPa, R2 = 0.863
+Orb-OMAT shear:
+MAE = 13.94 GPa, RMSE = 28.67 GPa, R2 = 0.624
+MACE-OMAT bulk:
+MAE = 15.69 GPa, RMSE = 27.70 GPa, R2 = 0.871
+MACE-OMAT shear:
+MAE = 15.24 GPa, RMSE = 34.99 GPa, R2 = 0.439
+I left the original unconverted files in place, but the _GPa.csv files and _GPa.png plot are the corrected ones to use.
+Execution summary.
+Potente verified the unit mismatch, patched the direct benchmark to convert eV/Å3
+predictions to GPa using 160.21766208, produced corrected per-model CSVs and parity metrics, and retained
+the raw values and original outputs. The four shell calls and their return payloads are omitted from this
+abridged transcript.
+63
+
+
+Prompt can you update the plot?
+Æ Potente
+ Thoughts
+Updating the plot
+Alright, so the user is asking for an updated plot, and I think we may need to overwrite the original plot too. I
+should use the tool to copy the GPa plot to the canonical name or create a nicer version.
+When they say “updated plot,” it probably means replacing the current mlip_elasticity_parity.png with the
+corrected GPa version. I’ll go ahead and do that, and I’ll also think about capturing some additional info. I’ll use
+bash for this!
+Done — I updated the default plot to use the GPa-corrected predictions.
+Updated plot:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/mlip_elasticity_parity.png
+The GPa-specific copy is also still available:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/mlip_elasticity_parity_GPa.png
+I backed up the original unconverted plot as:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/mlip_elasticity_parity_eV_per_A3_original.png
+The default metrics file was also updated to the GPa-corrected version:
+<workspace_path_redacted>/mlip_elasticity_direct_benchmark/mlip_elasticity_metrics.csv
+Execution summary.
+Potente replaced the canonical parity plot and metrics file with their GPa-corrected
+versions while retaining both the explicit GPa copy and a backup of the original unconverted plot. The shell
+call and its return payload are omitted from this abridged transcript.
+64

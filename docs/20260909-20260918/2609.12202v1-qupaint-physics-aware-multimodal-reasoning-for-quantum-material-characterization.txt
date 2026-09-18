@@ -1,0 +1,662 @@
+Title: QuPAINT: Physics-Aware Multimodal Reasoning for Quantum Material Characterization
+
+URL Source: https://arxiv.org/pdf/2609.12202v1
+
+Published Time: Mon, 14 Sep 2026 00:23:21 GMT
+
+Number of Pages: 18
+
+Markdown Content:
+1
+
+# QuPAINT: Physics-Aware Multimodal Reasoning for Quantum Material Characterization *
+
+Sankalp Pandey, Xuan-Bac Nguyen, Hoang-Quan Nguyen, Tim Faltermeier, Nicholas Borys, Hugh Churchill, and Khoa Luu 
+
+https://uark-cviu.github.io/projects/qupaint/ 
+
+Abstract —Characterizing two-dimensional (2D) quantum materials by optical microscopy requires localizing exfoliated flakes and determining their layer thickness from subtle optical contrast and interference color to select suitable flakes for device fabrication. However, models face synthetic-to-real domain shifts and variation across materials, substrates, laboratories, and imaging conditions. We present QuPAINT, a physics-aware multimodal framework for transferable quantum flake characterization. The Synthetic Materials Framework (Synthia) generates diverse synthetic microscopy images while preserving layer-dependent optical behavior. Using these images, we construct QMat-Instruct, a multimodal instruction dataset with image-specific reasoning traces generated from verified annotations and constrained to observable optical cues. QuPAINT integrates these signals through Physics-Informed Attention (PIA), which injects substrate-relative optical priors into the visual representation to support grounded multimodal reasoning. For evaluation, we introduce QF-Bench, to our knowledge, the largest real-world benchmark for this problem, spanning diverse microscopy and substrate conditions. Using its verified annotations, we study counting, visual grounding, reasoning quality, confidence calibration, and transfer to an unseen material. QuPAINT-8B substantially outperforms prior methods and establishes state-of-the-art performance for both general and monolayer flake detection. Additional experiments show that image-grounded supervision improves strict spatial grounding and confidence calibration while preserving robust general flake detection on the unseen material. 
+
+Index Terms —Physics-Aware Instruction Tuning, 2D Quantum Material, Materials Discovery, Multimodal Large Language Models, Visual Reasoning, Cross-Domain Generalization. 
+
+✦
+
+1 INTRODUCTION 
+
+Atomically thin two-dimensional (2D) quantum materials such as graphene, MoS 2, WTe 2, h-BN, and related systems have emerged as a foundation for a new generation of electronic, photonic, and quantum devices due to properties such as quantum confinement, spin-valley coupling, and layer-dependent band topology [2]. These properties depend on the thickness, or number of layers, of the material flakes. 
+
+Why is this Problem Challenging? In optical microscopy, however, the layer count of a flake is not directly observed. Locating a flake is only the first step. The main challenge is determining its thickness from minute changes in re-flected color and intensity produced by thin-film interference. Adjacent layer categories can have nearly identical shape and texture and differ only through weak optical contrast relative to the surrounding substrate, while the observed appearance of the same layer can change substantially with material type, oxide thickness, illumination, camera response, focus, and white balance. Thus, building devices 
+
+Sankalp Pandey, Xuan-Bac Nguyen, Hoang-Quan Nguyen, and Khoa Luu are with Quantum AI Lab in the Department of Electrical Engineering & Computer Science, University of Arkansas, Fayetteville, AR 72701, USA. E-mail: {sankalpp, xnguyen, hn016, khoaluu}@uark.edu. Hugh Churchill is with the Department of Physics, University of Arkansas, Fayetteville, AR 72701, USA. E-mail: hchurch@uark.edu. Tim Faltermeier and Nicholas Borys are with the University of Utah, Salt Lake City, UT, USA. E-mail: timfaltermeier@montana.edu, nicholas.borys@utah.edu. The authors are affiliated with the MonArk NSF Quantum Foundry. 
+
+* A preliminary version of this work was accepted to the Findings Track of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), 2026 [1]. This manuscript substantially extends the conference version. 
+
+with exfoliated flakes relies on being able to answer a deceptively simple question: how many layers is this flake? 
+
+Figure 1 illustrates how this remains difficult for conventional detectors and general-purpose vision–language models, and how QuPAINT addresses the problem through physics-aware, visually grounded reasoning. In practice, quantum materials researchers must repeat-edly search optical microscopy images to find suitable flakes and estimate their thickness from subtle variations in optical contrast and interference color. This process is time-consuming and can be inconsistent across materials, substrates, laboratories, and imaging conditions. The exper-imental infrastructure supporting this workflow, including automated optical microscopy and controlled material prepa-ration, is shown in Figure 2. Moreover, reliable thickness confirmation often requires transferring the sample to an Atomic Force Microscope (AFM). Although AFM provides accurate layer measurements, it adds a characterization step that further limits device-fabrication throughput and scalability, as illustrated in Figure 3. 
+
+1.1 Extension of the Conference Version 
+
+This journal article extends our conference work [1] in both the supervision used to train the model and the evalua-tion used to study its behavior. In the conference version, we generated reasoning responses in QMat-Instruct using predefined templates. Although these templates provided structured physics-aware supervision, samples with the same layer category could receive similar explanations regardless of the specific optical properties visible in the image. arXiv:2609.12202v1 [cs.CV] 10 Sep 2026 2YOLOv11-x GPT-5.6 Sol High  
+
+> 👱
+> 🤖 There are 4 likely monolayer candidates in the image, based on their relatively faint, fairly uniform optical contrast compared with the brighter, more saturated, and more internally varied thicker flakes. Mono 1: [847, 303, 1035, 457] — large cyan V/L-shaped flake Mono 2: [542, 806, 654, 917] — small pale cyan flake Mono 3: [402, 965, 530, 1088] — long narrow light cyan flake Mono 4: [505, 18, 579, 76] — small faint flake near the top-center How many monolayer flakes are there in the image?
+
+Mask2Former 
+
+Input Image (w/ Monolayer GT) 
+
+> No monolayer found, subtle substrate-relative cues are missed
+> Fails to identify the true monolayer
+
+QuPAINT   
+
+> All flakes are first proposed as <boxes> from top-left to bottom-right. I then keep only those with faint contrast and low color variation from the substrate to identify mono layers. <CONCLUSION> The mono layer flakes are at: <box>38.36, 60.5, 5.76, 5.13</box> </CONCLUSION>
+> 👱
+> 🤖
+> How many monolayer flakes are there in the image?
+> Physics-aware reasoning grounded in substrate-relative optical cues Correct visual grounding and monolayer localization Subtle monolayer cue amid dominant thick flakes
+> Confident and plausible optical reasoning, but incorrect visual grounding
+> Zoomed Crop
+> Physics-Aware Reasoning
+> Substrate-Relative Optical Cues
+> Grounded Monolayer Prediction
+
+Fig. 1. Failure modes of conventional detectors and general-purpose commercial-grade vision–language models for monolayer identification. 
+
+Both the CNN-based YOLOv11-x detector and the Transformer-based Mask2Former detector fail to confidently locate any candidate monolayers, while GPT-5.6 Sol High provides plausible optical reasoning but incorrect visual grounding. QuPAINT instead grounds its prediction in substrate-relative optical cues and correctly localizes the monolayer. (Best viewed in color.) 79  
+
+> “Enabling Quantum Leap: Q-AMASE-i: MonArk Quantum Foundry: Rapidly Incubating Translational Advances in QISE with a 2D-Quantum Materials Pipeline (2D-QMaP),” NSF Award Amount: $20,000,000. Duration: Sep. 2021 – Aug. 2027.
+> (a) (b)
+
+Fig. 2. Real experimental infrastructure for 2D quantum material characterization. (a) Automated optical microscopy platform for imaging and characterizing exfoliated 2D material samples. (b) Glovebox-based experimental infrastructure for material preparation and handling under controlled conditions. Together, these systems illustrate the physical ex-perimental workflow that requires scalable, automated flake identification and layer characterization. Images courtesy of the MonArk NSF Quantum Foundry [3]. (Best viewed in color.) 
+
+In this work, we generate an image-specific reasoning trace for each training sample using a vision–language model provided with the verified ground-truth annotations. The generated response is constrained to evidence visible in the microscopy image, including relative contrast, color, boundaries, and appearance with respect to the surrounding substrate. It is also instructed not to rely on measurements that cannot be obtained from the input image, such as Raman spectroscopy, photoluminescence, AFM, or other external characterization techniques. This produces more diverse reasoning supervision while preserving the verified flake locations and layer labels. We further extend the evaluation beyond conventional detection performance. In addition to measuring whether the model correctly detects and classifies each flake, we study instruction following, spatial grounding, reasoning quality, and transfer across material systems. We also evalu-ate whether the model can generalize when one material is excluded from training. These experiments provide a more complete analysis of whether the model has learned transferable optical relationships rather than only patterns specific to the training dataset. 
+
+1.2 Why Conventional Vision Models Struggle? 
+
+Modern vision models, including CNN-based [4], [5] and Transformer-based [6], [7], [8], [9], [10], [11] approaches, are highly effective when object categories are supported by stable visual cues such as shape, texture, color, and spatial structure. In quantum flake characterization, however, these cues are often insufficient for distinguishing layer categories. A model may localize the flake correctly while still failing to infer its thickness, because mono-layer, bi-layer, and tri-layer regions can share nearly identical geometry and differ primarily through weak optical changes, as illustrated in Figure 4. A second difficulty is that the discriminative cues are not stable across acquisition settings. Changes in illumi-nation, camera response, substrate and oxide thickness, focus, and white balance can alter the observed appearance more strongly than the difference between neighboring layer categories. Consequently, a model trained on absolute appearance can learn acquisition-specific correlations rather than the relative optical relationship between the flake and its surrounding substrate. The learning problem is further complicated by limited and highly imbalanced supervision. Verified mono- and few-layer flakes are rare, while thick flakes dominate typical microscopy datasets. This makes high-capacity models prone to overfitting to the dominant classes or laboratory-specific appearance statistics, rather than learning the subtle cues required for layer identification. Finally, the desired output is not only a bounding box or semantic category. The model must infer a physical quantity, the number of layers, from weak optical evidence and provide a prediction that can be inspected and verified. These limitations motivate a formulation that incorporates physical priors and relative optical reasoning rather than relying only on conventional visual pattern recognition. 
+
+1.3 Limitations of Prior Work 
+
+Existing domain-specific systems [12], [13], [14] demonstrate the potential of automated flake characterization. However, these methods are developed and evaluated using a limited 3Capture microscopy image Transfer sample to AFM Measure thickness Correct flake? Locate candidate flake Done No Yes 
+
+(b) 
+
+> Select candidate flake More candidate flakes? No Yes
+
+(a) 
+
+Fig. 3. Overview of the real-data characterization pipeline and challenges in 2D material analysis. (a) Comparison between optical microscopy with AI-assisted analysis and AFM-based manual characterization. Optical microscopy enables rapid, scalable thickness prediction across many flakes, whereas AFM requires manual acquisition and measurement for individual flakes. (b) The conventional AFM characterization workflow requires repeated candidate selection, sample transfer, flake relocation, verification, and thickness measurement, resulting in substantial manual effort. (Best viewed in color.) Graphene  Wse2 Monolayer Bilayer Trilayer WS2 
+
+Fig. 4. Optical microscopy images of monolayer, bilayer, and trilayer flakes across different 2D materials exhibit only subtle visual differences, highlighting the difficulty of determining layer thickness directly from appearance. (Best viewed in color.) 
+
+set of materials, substrates, laboratories, or imaging condi-tions. In real experimental settings, changes in microscope illumination, camera sensors, magnification, substrate config-uration, and material type can substantially alter the optical appearance of the flakes. As a result, models trained using one acquisition pipeline generally do not transfer reliably to another laboratory or to unseen material systems. The field also lacks an established and standardized pro-tocol for measuring transfer across these domains. Existing methods are evaluated using different datasets, materials, and experimental configurations, making direct comparison difficult. It is therefore unclear whether their performance reflects transferable relationships between optical appearance and flake thickness or adaptation to a specific acquisition pipeline. These limitations motivate a framework that can learn from scarce, imbalanced supervision, incorporate phys-ical priors, and generalize across laboratories, materials, substrates, and imaging conditions. 
+
+1.4 Physics-Aware Reasoning 
+
+We formulate quantum flake characterization as a physics-aware multimodal reasoning task rather than only an object detection problem. Given an optical microscopy image, a Multimodal Large Language Model (MLLM) learns to compare the visible optical properties of each flake with the surrounding substrate and produce an interpretable response containing the number of flakes, their locations, their predicted layer categories, and the rationale behind each prediction. This formulation allows the model to use relative optical cues rather than relying only on absolute color or contrast values. In particular, the model can explicitly reason about whether a candidate region is brighter, darker, or differently colored than its surrounding substrate and relate these differences to the predicted layer category. The resulting response provides both the prediction and the evidence supporting it. Figure 5 summarizes the overall framework, including the physics-based data generation, multimodal 4Physics-Informed Reasoning Structured Final Conclusion Flake Candidate Enumeration   
+
+> QMat-Instruct Dataset
+> Flake Shape Pool Thickness selection
+> QuPAINT: Physics-Aware Instruction Tuning
+> nm
+> Material Properties Microscopy Info
+
+👱 
+
+🤖 I first scan the image and mark all flake-like regions, ordering them from top-left to bottom-right as <boxes>. Most of these candidates are either too dark or show clear, high-contrast edges, which is more consistent with thicker flakes. One region at <boxes> appears extremely faint with only a slight hue shift relative to the purple SiO$_2$/Si background. Its boundaries fade gradually into the substrate, giving a semi-transparent appearance rather than an opaque outline. These visual cues—very low contrast, subtle color shift, and soft edges—are characteristic of a monolayer. Conclusion: There is 1 monolayer flake at <boxes>. I review all candidate flakes at <boxes> and evaluate each against the expected appearance of a monolayer. A true monolayer should remain close to the background intensity, with only subtle optical contrast and a gentle color shift, while its edges should appear semi-transparent rather than abrupt. Among the candidates, the flake at <boxes> matches these criteria well: it is very faint, low contrast, and softly blended with the substrate, while the others are darker or exhibit stronger boundaries. Conclusion: Yes, this sample contains a monolayer flake. I identify all flake-like regions and then narrow them down to the monolayer candidates. Inspecting each region, only the area at <boxes> shows the low-contrast, faint appearance with a subtle hue shift and semi-transparent edges characteristic of a monolayer. The remaining candidates are more saturated, higher contrast, or have crisper boundaries, indicating thicker flakes. Conclusion: The monolayer flake is located at <boxes>. 
+
+👱 
+
+👱 
+
+> Synthia
+
+🤖 
+
+🤖 
+
+> How many monolayer flakes are there in the image? Confirm if this sample includes mono layer flakes. Locate all the mono layer flakes in the image.
+
+Fig. 5. Overview of the proposed QuPAINT framework. Synthia generates physics-grounded synthetic microscopy images with realistic flake appearances, while QMat-Instruct provides multimodal, physics-aware instruction supervision. These components support QuPAINT , which combines physics-informed visual representations with multimodal reasoning for grounded quantum material characterization. (Best viewed in color.) 
+
+instruction supervision, and physics-informed reasoning components used by QuPAINT. 
+
+1.5 Contributions of this Work 
+
+In summary, this work has four main contributions. First, we introduce Synthetic Materials Framework (Synthia) ,a physics-based data generation framework that renders realistic quantum material flakes using thin-film interference modeling, CIE color representations, and substrate-specific color calibration. The generated flakes are composited onto real microscopy images while avoiding overlap with existing flakes. Synthia increases the number and diversity of rare mono- and few-layer examples that are difficult to collect and label through real experiments. Second, we construct QMat-Instruct , a large-scale mul-timodal instruction dataset for quantum material character-ization. We replace fixed reasoning templates with image-specific reasoning traces generated from verified annotations. The generated responses are constrained to optical evidence visible in the image and describe each flake using relative differences with respect to the surrounding substrate. This keeps the reasoning supervision applicable across different materials and substrate configurations without directly pro-viding material identity or oxide thickness. Third, we propose Physics-Aware Instruction Tuning (QuPAINT) , a physics-aware multimodal framework con-taining a Physics-Informed Attention (PIA) module. PIA uses the relative LAB contrast between each image region and its surrounding substrate to emphasize physically meaningful visual cues. This allows QuPAINT to focus on faint mono-and few-layer flakes rather than simply prioritizing regions with the strongest absolute contrast. Finally, we establish QF-Bench , a multi-material bench-mark for optical microscopy-based characterization of 2D material flakes. QF-Bench contains 280,526 annotated flakes across eight material systems and multiple experimental settings. To the best of our knowledge, it is the largest real-world benchmark for this problem. Using QF-Bench, we evaluate conventional flake detection together with instruction following, spatial grounding, reasoning behavior, and transfer to a material held out from training. By bringing diverse materials and acquisition settings into a single bench-mark, QF-Bench provides the community with a common testbed for reproducible comparison across methods and for measuring whether performance transfers beyond the conditions observed during training. This addresses a major limitation of existing evaluation protocols and provides a stronger foundation for developing generalizable automated 2D material characterization systems for real-world use. 
+
+2 RELATED WORK 
+
+2.1 Automated 2D Material Characterization 
+
+The promise of 2D materials for quantum technologies and algorithms [15], [16], [17], [18], [19], [20], [21], [22], [23], [24], [25] has driven sustained interest in identifying and charac-terizing exfoliated flakes with automated inspection [14], [26], [27], [28], [29], [30], [31], [32], [33], [34], [35], [36]. The problem was first cast as dense prediction, with UNet variants [37], [38] and Mask R-CNN detectors [4], [12] operating directly on optical micrographs, and was later refined through attention with soft labels [15], explicit handling of missed flakes [39], and extension to compositionally heterogeneous samples [40]. Classical alternatives such as Gaussian mixture models offer interpretability [13] but degrade under the illumination and noise variation of real acquisition. Scaling this pipeline has taken two forms: instrumentation, where automated microscopes survey large substrate areas to support statistical analysis [35], and representation, where 2D-material foun-dation models [14] and general segmentation backbones [7], [41] supply transferable priors. Increasingly, characterization is treated not as a standalone task but as one stage of a closed loop spanning exfoliation, sample handling, and downstream device assembly [27], [28], [30], [31], [36], [42], [43]. Two 5
+
+obstacles limit how far this progress carries. Accuracy achieved on one material rarely survives the move to another, a failure that continual-learning formulations mitigate by preserving earlier materials while accommodating new ones [23], and models fit to simulated flakes lose calibration on measured data unless adaptation is anchored in the optics that produce flake contrast [44]. 
+
+2.2 Multimodal Large Language Models (MLLMs) 
+
+A parallel line of work equips language models to reason over perceptual input. Contrastive pretraining first estab-lished shared image-text representations [45], [46], after which instruction tuning coupled frozen visual encoders to pretrained LLMs and opened the door to free-form visual dialogue [47], [48], [49]. Subsequent efforts have targeted deliberate reasoning [50], cooperation among specialized agents [51], downstream task alignment [52], [53], and robustness when the test distribution departs from training [54], while proprietary and open systems at scale have broadened coverage from static images to video [55], [56], [57]. Handling video has in turn motivated dedicated treatments of time, including state space models for long motion sequences [58], event-level temporal grounding [59], and training-free frame selection for long-form inputs [60]. Transferring these capabilities to science has proven harder. Materials-oriented systems have begun to pair structural representations with language for property prediction [61], and a set of benchmarks now probes multimodal reasoning over authentic characterization data [62], [63], [64], [65]. Their collective picture is that factual recall and routine extraction are largely solved, whereas subtle perceptual discrimination and inference chained through physical constraints are not [62], [64]. This is precisely the regime that layer counting occupies, where the evidence is a few percent of contrast rather than an object category, and where purely vision-centric models struggle to generalize across domains . We there-fore extend our conference framework [1] with a physics-informed multimodal design that ties observed appearance to the optical properties responsible for it. 
+
+3 CHALLENGES AND LIMITATIONS OF EXISTING 
+
+QUANTUM MATERIALS DATASETS 
+
+3.1 Challenges in Data Collection 
+
+Two-dimensional (2D) quantum materials, including graphene and transition-metal dichalcogenides (TMDs), are commonly produced through mechanical exfoliation. In this process, a bulk crystal is repeatedly cleaved using adhesive tape until atomically thin flakes are obtained and transferred onto a substrate, such as SiO 2/Si. Although mechanical exfoliation is simple and inexpensive, the process is inherently random. The resulting flakes can have different shapes, sizes, and thicknesses, with no direct control over where flakes with a particular number of layers will appear. Producing a large number of random flakes is relatively simple, as a single exfoliation attempt can generate thousands of flakes. However, constructing a dataset containing flakes with specific layer numbers, such as monolayer, bilayer, or few-layer regions, is much more difficult. Because the exfoliation process does not provide direct control over             
+
+> TABLE 1 Comparison of dataset synthesis techniques between MaskTerial [14] and Synthia.
+> Technique Aspect MaskTerial [14] Synthia (Ours)
+> Flake shapes from multi-material sources ✓✓
+> Physics-based optical simulation (TMM) ✓✓
+> Personalized color calibration ✗✓
+> Using CIE standard ✗✓
+> Avoid overlapping with existing flakes ✗✓
+
+flake thickness, researchers must search among a much larger number of thick flakes, artifacts, and other unsuitable regions. This flake-hunting and labeling process is time-consuming. Optical microscopy images can be collected quickly, but they do not directly measure layer thickness. Instead, researchers estimate thickness from optical contrast and interference color, both of which can change with microscope illumination, camera response, substrate config-uration, and other imaging conditions. Reliable thickness confirmation therefore commonly requires Atomic Force Microscopy (AFM). Each candidate flake must be relocated under the AFM, measured at the nanometer scale, and then matched back to its location in the original optical microscopy image. This alignment between optical and AFM measurements requires substantial manual effort and limits data-collection throughput. As a result, constructing quantum flake datasets for AI training is both labor-intensive and difficult to scale. The combination of random flake generation, uncertain thickness estimation from optical images, and slow AFM-based verification limits the amount of accurately labeled data that can be collected. Figure 3 provides an overview of this data-collection process. 
+
+3.2 Limitations of Existing Synthetic Datasets 
+
+MaskTerial [14] introduced physics-based rendering for generating large-scale synthetic datasets of 2D material flakes. However, its synthesis pipeline has several limitations that can increase the difference between synthetic and real microscopy images. First, its optical simulation does not include image-specific color calibration, which can cause the simulated flake colors to differ from those observed under a particular microscope. Second, it does not explicitly use the CIE color standard when converting the simulated optical response into image colors. This can limit how well the generated data transfers across microscopes with different illumination and camera settings. In addition, the synthetic flakes are placed without explic-itly accounting for flakes already present in the background image. This can produce unrealistic overlap or physically inconsistent stacking between synthetic and existing flakes. Table 1 summarizes the differences between the previous synthesis method and our proposed framework. 
+
+4 SYNTHETIC MATERIALS FRAMEWORK (S YNTHIA )
+
+In this section, we introduce Synthia , a physics-based syn-thetic data generation framework for 2D quantum materials. Synthia generates realistic microscopy images containing 6
+
+flakes with controlled material types, layer numbers, lo-cations, and optical properties. It combines a multilayer optical model with color calibration and substrate-aware flake placement to reduce the difference between synthetic and real microscopy images. The images and verified an-notations generated by Synthia are then used to construct 
+
+QMat-Instruct , a multimodal instruction dataset for training MLLMs to identify, localize, and reason about quantum flakes. 
+
+4.1 Multilayer Optical Model 
+
+To generate realistic images of 2D material flakes on common substrates, we model their optical appearance using the 
+
+Transfer Matrix Method (TMM) [66]. TMM models the thin-film interference produced by the material, oxide layer, and substrate. This allows us to compute the wavelength-dependent reflectance and optical contrast for flakes with different thicknesses. 
+
+Optical Model. Consider a multilayer stack containing L thin layers, indexed by l = 1 , 2, . . . , L . The incident medium and substrate are represented by layers 0 and L+1 , respectively, and are assumed to be semi-infinite. Each layer l is defined by its complex refractive index nl(λ) + ik l(λ) and physical thickness dl.When light with wavelength λ enters the stack at normal incidence, it undergoes multiple reflections and transmis-sions at the interfaces between the layers. At the interface between layers l and l+1 , the reflection and transmission coefficients are determined by the Fresnel equations as in Equation (1): 
+
+rl,l +1 = nl − nl+1 
+
+nl + nl+1 
+
+, tl,l +1 = 2nl
+
+nl + nl+1 
+
+. (1) Propagation through each layer introduces a phase delay 
+
+δl = 2πn l dl 
+
+> λ
+
+, which is represented using a propagation matrix 
+
+Pl. The total electric field across the multilayer stack can then be computed using the transfer-matrix formulation in Equation (2): 
+
+vu
+
+!
+
+= M0,1
+
+> L
+
+Y
+
+> l=1
+
+Pl Ml,l +1 
+
+! u0
+
+0
+
+!
+
+, (2) where u0 = 1 is the incident field amplitude, v is the reflected field amplitude, and u is the transmitted field amplitude in the substrate. The wavelength-dependent reflectance is then computed as R(λ) = |v/u 0|2.
+
+Reflectance Computation for Synthetic Flakes. When we synthesize flakes, each flake is represented as a multilayer stack consisting of (1) air as the incident medium, (2) a 2D material layer with thickness dflake determined by its number of layers, (3) an oxide layer, such as SiO 2, with thickness 
+
+dSiO2 , and (4) a semi-infinite silicon substrate. We sample wavelengths λ ∈ [400 , 700] nm at D discrete intervals and compute R(λ) using Equation (2). Repeating this process across different materials and layer thicknesses produces the reflectance spectra used to determine the appearance of the synthetic flakes. 
+
+Color-Space Conversion. To convert the simulated re-flectance spectrum into RGB values, we integrate the re-flectance over the visible wavelength range using the CIE 1931 color-matching functions S(λ) and a standard illumi-nant spectrum I(λ), as shown in Equation (3): 
+
+x =
+
+Z λmax 
+
+> λmin
+
+S(λ)I(λ)R(λ)dλ ≈
+
+> D
+
+X
+
+> i=1
+
+S(λi)I(λi)R(λi), (3) where S(λ) ∈ R3×1 represents the three color-matching functions used to obtain the (R, G, B ) components. In matrix form, the conversion can be expressed as x = S⊤(I ◦ R),where ◦ denotes element-wise multiplication. 
+
+Implementation. We implement the multilayer optical model using the Python package tmm [66]. For each material, including graphene, MoS 2, WSe 2, and h-BN, we define the wavelength-dependent refractive index functions n(λ)
+
+and k(λ). We then compute the reflectance spectrum for each material and layer thickness. We convert the resulting reflectance spectra into RGB values and use them to render synthetic flakes that are combined with real microscopy backgrounds. 
+
+4.2 Details of Synthia 
+
+Synthia generates synthetic 2D material flakes across dif-ferent materials, substrates, and layer thicknesses. Its core component is the multilayer optical model described in Sec-tion 4.1, which simulates thin-film interference to determine the expected color and contrast of each flake. However, the optical model alone does not account for all of the variations observed in real microscopy images. The same material and layer thickness can appear different under changes in microscope illumination, camera white balance, and substrate color. To account for these differences, Synthia includes two additional components: the White-Balance-Aware 
+
+and Substrate-Aware modules. The White-Balance-Aware module adjusts the generated colors according to the color characteristics of the target microscopy image, while the Substrate-Aware module identifies valid substrate regions for physically plausible flake placement. Synthia uses a Physics-Informed Attention (PIA) module, denoted by FPIA , to identify substrate regions that are suitable for synthetic flake placement. This prevents the generated flakes from being placed over existing flakes or other unsuitable image regions. The PIA module is described in Section 5.6, and the complete Synthia generation procedure is provided in Algorithm 1. Figure 7 compares Synthia with MaskTerial and real monolayer flakes, illustrating how Synthia better preserves the subtle flake–substrate contrast observed in real microscopy images. 
+
+4.3 QMat-Instruct Dataset 
+
+Lack of an Instruction Dataset for MLLMs. Previous work in 2D material characterization has mainly formulated the problem as image-based detection, classification, or segmen-tation. These datasets provide labels such as bounding boxes, masks, or layer categories, but they are not designed to train MLLMs to interpret microscopy images and produce structured responses about the flakes. To our knowledge, no large-scale multimodal instruction dataset is currently designed for quantum flake characterization. 
+
+Proposed QMat-Instruct Dataset. To support multimodal instruction tuning in this domain, we construct QMat-Instruct , a large-scale instruction dataset for quantum 7
+
+material characterization. Synthia allows us to generate microscopy images containing flakes with controlled material types, layer numbers, locations, and optical properties. These images provide the visual inputs and verified annotations needed to generate instruction–response pairs at scale. Each QMat-Instruct sample contains a microscopy image, an instruction, and a structured response. The instructions cover common tasks in quantum material characterization, including flake counting, localization, layer identification, and binary verification. Example instructions include: "How many monolayer flakes are in the image?", "Locate the monolayer flakes" and "Does this sample contain a monolayer flake?" In the conference version of QMat-Instruct, we generated reasoning responses using predefined templates based on the corresponding flake annotations. While these templates provide structured physics-aware supervision, they do not account for the specific optical appearance of each image. In this journal extension, we instead generate an image-specific reasoning trace for each sample using a vision–language model together with the verified ground-truth annotations. Figure 6 showcases the differences in how the VLM generates image–grounded reasoning rather than injecting a templated explanation. The generated reasoning is constrained to evidence that is visible in the optical microscopy image. This includes the relative contrast, color, boundaries, and appearance of each flake with respect to the surrounding substrate. The reasoning is also restricted from using information that cannot be obtained from the input image, such as AFM, Raman spectroscopy, photoluminescence, or other external measurements. Rather than relying on fixed absolute colors, the generated descriptions emphasize relative optical cues so 
+
+Algorithm 1 Synthetic 2D Materials (Synthia)                                                                                                                  
+
+> Require: Reference microscopy image Iref , Optical model T, Color projector Φ, Material type s, Physics-Informed Attention function
+> FPIA
+> Ensure: Synthetic microscopy image Iout
+> // — White-Balance-Aware Module —
+> 1: cref sub ←MedianColor (Iref )
+> 2: Rsub (λ)← T ({air ,SiO 2,Si }, t sub , λ )
+> 3: c0
+> sub ←Φ( Rsub (λ), I (λ))
+> 4: g←cref sub ⊘c0
+> sub ▷Compute personalized white-balance gain based on reference substrate color
+> // — Substrate-Aware Module —
+> 5: A← F PIA (Iref )
+> 6: ˜A←Normalize (A)
+> 7: Msub ←1{˜A<Perc 90 ( ˜A)}▷Detect clean substrate areas for valid flake placement
+> // — Synthetic Flake Generation —
+> 8: for i= 1 to Nflakes do
+> 9: Mi←RandomFlakeMask() 10: ti←SampleThickness (s)
+> 11: Find valid coordinates (ui, v i)such that Msub [vi:vi+hi, u i:
+> ui+wi]⊙Mi≡0▷Avoid overlapping flakes 12: Ri(λ)← T ({air , s, SiO 2,Si }, t i, λ )
+> 13: ci←Φ( Ri(λ), I (λ)) ▷Compute flake color via optical model 14: ci←g⊙ci▷Apply White-Balance-Aware correction 15: Iref [vi:vi+hi, u i:ui+wi]←ciMi+Iref [vi:vi+hi, u i:
+> ui+wi](1 −Mi)
+> 16: end for
+> 17: Iout ←Iref
+> 18: Return: Iout
+
+that the supervision can be applied across different materials, substrates, and imaging conditions. As a result, QMat-Instruct provides both structured task supervision and image-specific reasoning supervision for quantum flake characterization. The dataset teaches the MLLM not only to identify and localize flakes, but also to connect their visible optical appearance with the predicted layer category through both vision and language. 
+
+5 THE PROPOSED METHOD 
+
+QuPAINT takes an optical microscopy image I ∈ RH×W ×C
+
+together with a textual instruction T = {T1, . . . , T L} and generates a response that characterizes the visible 2D material flakes. As illustrated in Figure 8, the output can include the number of detected flakes, their spatial locations, and their predicted layer categories. The framework contains three main components: (1) aVision Transformer (ViT) for extracting visual features from the microscopy image, (2) a Physics-Informed Attention (PIA) module for providing an optical contrast prior, and 
+
+(3) an MLLM that combines the image and instruction representations to generate the final response. 
+
+5.1 Vision Encoder with Physics-Informed Attention (PIA) 
+
+Given the microscopy image I, the vision encoder Enc v
+
+produces a sequence of k patch-level visual representations as defined in Equation (4): 
+
+zv = Enc v (I),zv = [ v1, . . . , vk ], vi ∈ Rd. (4) To incorporate the optical appearance of the sample into these representations, PIA provides one contrast value for each corresponding image patch. As detailed in Section 5.6, these values are collected as α = [α1, . . . , α k] ∈ [0 , 1] k
+
+and quantify the difference between each patch and the surrounding substrate in CIELAB space. We allow this prior to be calibrated during training because the measured appearance may vary with factors such as illumination, white balance, camera response, and substrate appearance. 
+
+5.2 Learnable PIA Correction 
+
+The PIA scores provide a physical prior, but they are computed directly from the image and cannot adapt during training. We therefore apply a small learnable correction to the PIA values. For each patch i, the corrected attention weight is represented as illustrated in Equation (5): 
+
+βi = σ(wα i + b), βi ∈ [0 , 1] , w, b ∈ R, (5) where σ(·) is the logistic sigmoid function. The learnable parameters w and b allow the model to adjust the scale and bias of the PIA scores during training without requiring an additional supervision signal. Then, Equation (6), shows how the corrected weight is then applied to the corresponding visual token: 
+
+˜vi = βivi, ˜zv = [ ˜ v1, . . . , ˜vk ]. (6) This allows the model to adjust the PIA scores during training while still using the optical contrast as a physical prior. 8  
+
+> Fig. 6. Comparison between template-based and LLM-generated reasoning for monolayer identification. Given the same microscopy image and candidate flake regions, the template-based approach follows a fixed, predefined reasoning structure to enumerate candidates and determine the final monolayer predictions. In contrast, the LLM generates a free-form, image-grounded explanation that describes the optical appearance of individual candidates, including contrast, color shift, transparency, and interference cues, before producing the final prediction.
+
+## Real Monolayer Synthia MaskTerial    
+
+> Fig. 7. Qualitative comparison of synthetic monolayer flakes. Real monolayer flakes are shown alongside synthetic samples generated by Synthia and MaskTerial. Synthia produces subtler flake–substrate contrast that more closely resembles the real monolayer examples, while MaskTerial produces stronger visual separation from the surrounding substrate. (Best viewed in color.)
+
+5.3 Text Encoder 
+
+In parallel with the visual pathway, the L instruction tokens are mapped to their corresponding textual representations by Enc t, as defined in Equation (7): 
+
+zt = Enc t(T),zt = [ t1, . . . , tL ], tj ∈ Rd. (7) The instructions in QMat-Instruct cover tasks such as flake counting, localization, layer identification, and verifi-cation. The corresponding responses provide supervision about the predicted flakes and the optical properties used to distinguish their layer categories. 
+
+5.4 Multimodal Fusion and Decoding 
+
+After applying the physics-informed modulation, the result-ing visual sequence ˜zv is paired with the encoded instruction 
+
+zt to condition the MLLM generation process. The resulting output sequence is defined in Equation (8): 
+
+Y = LLM (˜ zv , z t), Y = [ y1, . . . , y M ], (8) where Y is the generated response and M is the number of output tokens. Depending on the instruction, the response can contain the number of flakes, their locations, predicted layer categories, and the optical evidence used to support the predictions. 
+
+5.5 Training Objective 
+
+We train QuPAINT using the standard autoregressive language-modeling loss over the QMat-Instruct responses as shown in Equation (9): 
+
+LLM = − 1
+
+M
+
+> M
+
+X
+
+> j=1
+
+log Pθ (yj | y<j , ˜zv , z t) . (9) No separate supervision is applied to the PIA correction. The parameters (w, b ) are optimized together with the 9Multimodal Large Language Model 
+
+> Physics-Guided Visual Features Visual Features Physics Prior Text Features
+> 𝑧 !
+> Vision Encoder Physics-Informed Attention (PIA) Text Tokenizer “Where is the location of the monolayer flake?”
+> 𝑧 "
+> "𝑧 !
+> 𝑎 𝑥
+> User Instructions Microscopy Image
+> Physics-Aware Reasoning Faint contrast relative to the substrate, a color shift, and soft edges indicate a monolayer.
+> Physics-Informed Attention (PIA)
+
+Fig. 8. Overview of the proposed QuPAINT framework. Physics-Informed Attention (PIA) extracts optical contrast priors from the microscopy image to modulate the visual features, producing physics-guided representations that are combined with the text instruction in the MLLM for physics-aware reasoning and flake localization. 
+
+model through the language-modeling loss. During inference, given a microscopy image and instruction (I, T), the model generates the requested flake characterization. 
+
+5.6 Physics-Informed Attention (PIA) 
+
+Motivation. Physics-Informed Attention (PIA) provides the vision encoder with an image-derived prior that indicates re-gions with optical differences from the surrounding substrate. These differences are governed by thin-film interference between the material, oxide layer, and underlying substrate, resulting in layer-dependent changes in observed color and intensity. This behavior can be modeled using the transfer-matrix formulation described in Section 4.1. Directly applying this model requires acquisition-specific information such as wavelength-dependent optical constants, illumination characteristics, substrate parameters, and camera response, but these quantities are not always available for microscopy images collected across different experimental settings. Thus, we estimate the relevant optical contrast from the observed image. By using the PIA, we compare the appearance of each image region with the surrounding substrate in CIELAB space, where the luminance L∗ and chromatic information a∗ and b∗ are represented separately. The resulting color difference provides an image-space proxy for the optical variations associated with the presence and thickness of a 2D material. 
+
+5.7 PIA Approximation of Optical Contrast 
+
+To construct the PIA prior from the microscopy image, we measure how strongly the appearance of each spatial region differs from the estimated substrate. First, we relate this observed difference to the image-formation process. Let 
+
+R(x, λ ) denote the spectral reflectance at position x, and let Rbg (λ) denote the reflectance of the bare substrate. For a camera channel c, the measured intensity depends on the reflectance, illumination spectrum E(λ), and camera sensitivity Sc(λ) as shown in Equation (10): 
+
+Ic(x) = 
+
+Z
+
+R(x, λ )E(λ)Sc(λ) dλ, Ibg  
+
+> c
+
+=
+
+Z
+
+Rbg (λ)E(λ)Sc(λ) dλ. 
+
+(10) The corresponding measurements across the three color channels form I(x) = ( IR, I G, I B ) and Ibg = ( Ibg  
+
+> R
+
+, I bg  
+
+> G
+
+, I bg  
+
+> B
+
+)
+
+for the substrate. The RGB values are converted to CIELAB space using the mapping in Equation (11): 
+
+Φ : R3 → R3, (L∗, a ∗, b ∗) = Φ( I). (11) Then, the PIA quantifies the optical difference at position 
+
+x using the Euclidean distance between the CIELAB repre-sentation of the observed region and the substrate as shown in Equation (12): 
+
+∆E(x) = Φ( I(x)) − Φ( Ibg ) 2
+
+=
+
+q
+
+(L∗(x) − L∗
+
+> bg
+
+)2 + ( a∗(x) − a∗
+
+> bg
+
+)2 + ( b∗(x) − b∗
+
+> bg
+
+)2
+
+.
+
+(12) A larger ∆E(x) indicates a stronger deviation from the substrate appearance and assigns greater importance to that region in the PIA prior. A derivation of Equation (12) is provided in the appendix. Since an explicit substrate mask is not assumed, we estimate Ibg from the dominant background appearance of the microscopy image and evaluate the contrast over non-overlapping patches to construct the PIA map. 
+
+5.8 Implementation 
+
+We compute the PIA prior at the patch resolution used by the vision encoder. For each microscopy image, the substrate appearance is approximated by the median RGB value over the image, while each patch {P k} is represented by its median RGB value as represented by Equation (13): 
+
+Ibg = median x∈image I(x),
+
+bIk = median x∈P k I(x). (13) 10 
+
+Algorithm 2 Physics-Informed Attention Module                                                                             
+
+> Require: Image I∈RH×W×3, image size (H, W ), patch size (h, w )
+> Ensure: Perceptual attention map ALAB ∈RH×W
+> 1: function PIA( I,(H, W ),(h, w ))2: Resize Ito (H, W )
+> 3: Ibg ←median x∈I(I(x))
+> 4: ILAB bg ←Φ( Ibg )
+> 5: Initialize attention list A= [ ]
+> 6: for each patch Pkin Iof size (h, w )do
+> 7: bIk←median x∈P k(I(x))
+> 8: bILAB
+> k←Φ( bIk)
+> 9: ∆Ek=bILAB
+> k−ILAB bg 2
+> 10: Append ∆Ekto A
+> 11: end for
+> 12: Reshape Ainto ALAB of size (H, W )
+> 13: Normalize ALAB ←(ALAB −min) /(max −min)
+> 14: return ALAB
+> 15: end function
+
+Using these estimates, we assign each patch a contrast value based on its CIELAB distance from the estimated substrate, as shown in Equation (14): PIA-score [k] = Φ( bIk) − Φ( Ibg ) 2 . (14) The collection of patch-level scores forms the PIA map. Higher values emphasize regions whose optical appearance differs more strongly from the substrate, providing the model with a spatial prior derived from the microscopy image without requiring material-specific optical parameters. Algorithm 2 summarizes the computation, while Figure 9 compares the PIA signal α with Grad-CAM responses from YOLO11x and query cross-attention from MaskTerial. Across the examples, α more directly localizes substrate-relative optical differences around flake regions while suppressing diffuse responses over the surrounding substrate. 
+
+6 IMAGE -G ROUNDED REASONING SUPERVISION 
+
+6.1 Image-Specific Reasoning 
+
+The conference version of QuPAINT used predefined reason-ing templates to construct the supervision for each training example. Verified flake locations and layer categories were inserted into these templates to produce a consistent response structure. While this provided stable supervision for the expected output format, the resulting explanations were largely shared across samples and did not account for the optical appearance of an individual microscopy image. In this work, we instead generate a reasoning trace that is specific to each training image. An annotator vision– language model (VLM) receives the microscopy image, along with the verified flake locations and layer labels, and is asked to describe the visible optical evidence that supports the provided annotations. As a result, different samples with the same layer category can receive different explanations based on their observed contrast, color, boundaries, and appearance relative to the surrounding substrate. 
+
+6.2 Reasoning Generation from Verified Ground Truth 
+
+Synthia provides the exact locations and layer labels of the flakes inserted into each synthetic microscopy image. We therefore separate reasoning generation from detection and classification. Rather than asking the annotator VLM to independently determine where the flakes are or which layer category they belong to, we provide these verified annota-tions directly and ask it only to explain the corresponding visual evidence. The bounding boxes and layer labels are consequently fixed by the Synthia ground truth, while only the reasoning span is generated by the annotator. This prevents errors in annotator localization or classification from changing the supervision targets and keeps the generated explanation grounded in known labels. The final response retains the same <CONCLUSION> 
+
+structure used during instruction tuning and inference. The enumeration and conclusion are constructed from the verified annotations, while the template-based explanation is replaced by the image-specific reasoning generated by the VLM. This preserves a consistent output format while introducing sample-dependent supervision. 
+
+6.3 Constraints on Generated Reasoning 
+
+We constrain the annotator to generate explanations using only information that is available from the optical microscopy image. The full system prompt is given in Figure 10. 
+
+Visible Optical Evidence. The reasoning is restricted to di-rectly observable properties of the flake and its surrounding substrate. These cues include relative contrast and brightness, thin-film interference color, transparency, edge visibility, and the uniformity of the flake interior. We explicitly exclude evidence from external charac-terization techniques such as photoluminescence, Raman spectroscopy, second-harmonic generation, and Atomic Force Microscopy (AFM). Such measurements are not contained in the input image and are therefore unavailable to QuPAINT at inference time. Restricting the supervision to visible optical Input Image YOLO11x MaskTerial Input Image PIA     
+
+> Fig. 9. Comparison of Grad-CAM for YOLO11x, query cross-attention for MaskTerial, and the proposed physics-informed attention signal α.YOLO11x responds broadly to substrate texture, and MaskTerial mainly highlights regions after committing to an object. In contrast, αis derived from substrate-relative optical contrast and localizes flake regions without labels or retraining across materials and microscopes. (Best viewed in color.) 11
+
+evidence ensures that the generated reasoning is based on the same source of information available to the downstream model. 
+
+Relative Optical Cues. The observed appearance of a 2D material can vary substantially with material type, oxide thickness, illumination, camera response, and other acquisi-tion conditions. Because material identity and oxide thickness are not provided to QuPAINT during inference, the annotator is not instructed to associate a layer category with a fixed absolute color or intensity. Instead, each flake is described relative to the surrounding substrate and other visible regions in the image. For example, the annotator may describe a candidate as faint, low-contrast, brighter, darker, or more transparent than the local substrate. This formulation reduces dependence on acquisition-specific absolute appearance and more closely matches the infor-mation available during inference. This constraint concerns the construction of the reasoning supervision rather than an assumption of improved transfer. We evaluate the cross-domain behavior of both supervision strategies in Sec. 7.5, where their transfer performance is comparable. 
+
+6.4 Annotator Model 
+
+We generate all reasoning traces using an open-source annotator, Qwen3-VL-30B-A3B-Thinking, served locally with vLLM across four GPUs. Before annotation, we resize each training image so its maximum side is 1024 pixels. The annotator is instructed to produce a concise reasoning trace of two to four sentences, with generation limited to 512 
+
+tokens using temperature 0.7 and top-p 0.95 .Because the verified enumeration and conclusion are constructed separately from the ground-truth annotations, we retain only the reasoning portion of the annotator output. We remove any preamble, bounding boxes, or conclusion generated by the VLM during post-processing. The resulting reasoning span is then combined with the deterministic enu-meration and <CONCLUSION> spans used by the instruction-tuning format. We use an open-source annotator so that reasoning generation can be performed locally without dependence on an external API, and the resulting supervision can be released together with the dataset. The annotation pipeline is not tied to a particular VLM. Another annotator can be substituted while retaining the same microscopy images, verified annotations, prompts, and output constraints. 
+
+7 EXPERIMENTAL RESULTS 
+
+We evaluate QuPAINT from several perspectives. We first report the general and mono-layer flake detection results from the conference version. We then evaluate instruction following and spatial grounding, study the effect of the proposed image-grounded reasoning supervision, analyze the contribution of the physics-aware components, and evaluate generalization to a material that is absent from training. 
+
+7.1 Implementation Details and Benchmarking 
+
+Implementation Details. Our framework uses InternViT as the visual backbone. We resize each microscopy image                                                                                               
+
+> You are an expert in optical microscopy of 2D materials on an SiO2/Si substrate. Given the image and the verified monolayer flakes, write 2 to 4sentences of grounded visual analysis: first describe the substrate/background, then explain why the monolayer flakes read as monolayers from their visible optical contrast, interference color, and transparency RELATIVE to the substrate and to the other (thicker) flakes in the image. Rules: reason ONLY from what is visible; do NOT assume or state the material or the oxide thickness; do NOT rely on absolute color; NEVER mention Raman, AFM, photoluminescence, or any non-optical modality. Output ONLY the analysis sentences -no preamble, no ‘Okay’/‘Let me’, no lists, no bounding boxes, no conclusion.
+> Fig. 10. System prompt used for reasoning generation. The two con-straints of Sec. 6 are enforced directly in the prompt: reasoning is restricted to visible optical evidence, and flakes are described relative to the substrate rather than by absolute color.
+
+to 448 × 448 and divide it into non-overlapping 14 × 14 
+
+patches. The text encoder is initialized from Qwen3 [67]. We train the model with AdamW at a learning rate of 2 ×
+
+10 −5, weight decay of 1 × 10 −4, and a batch size of 4. The model is trained for 2 epochs using 16 A100 GPUs. We apply random cropping, horizontal flipping, and color jitter in CIELAB space to improve robustness to illumination and white-balance changes. During inference, we generate the responses using a decoding temperature of T = 0 .2.
+
+Training Dataset. We train QuPAINT using a hybrid dataset containing both real microscopy images and physics-based synthetic samples. The real images contain flakes collected under different illumination and magnification settings on 180 nm SiO 2/Si substrates, following experimental setups similar to prior work [12]. Each image contains approxi-mately 30 annotated flakes. To increase the number of scarce mono- and few-layer examples, we generate additional samples using physics-based thin-film simulation and color rendering that matches the appearance of real microscopy images. The training data covers BN, Graphene, MoS 2, MoSe 2, MoWSe 2, WS 2,WSe 2, and WTe 2. Each image is paired with multiple physics-aware instruction–response examples describing the visible flakes, their layer categories, and their optical properties. We generate 50,000 samples for each material, for a total of 400,000 training samples. 
+
+Extension Setup. The controlled experiments introduced in this journal extension use a separate configuration described in Section 7.3. We train the compared models from scratch using the same setup so that they differ only in the supervi-sion target. Compared with the configuration used for the released models, these experiments use a smaller training budget. Each model is trained for one epoch using four A100 GPUs with a per-device batch size of 1 and gradient accumulation of 4, resulting in an effective batch size of 
+
+16 . We use sequence packing with a maximum budget of 
+
+8192 tokens per packed sample. The optimizer, learning rate, backbone, and decoding temperature ( T = 0 .2) remain unchanged. Every variant is trained using the same 10 ,000 -image subset. This corresponds to 2.5% of the 400,000 samples used to train the released models in Table 3. These extension 12                                         
+
+> TABLE 2 Number of annotated flakes in QF-Bench for each material and layer category.
+> Material Mono Few Thick Total
+> BN 13 111 10,100 10,224 Graphene 1,856 2,081 4,270 8,207 MoS 2246 536 108,352 109,134 MoSe 224 32 1,327 1,383 MoWSe 2935 293 337 WS 243 52,144 2,192 WSe 2207 35 6,195 6,437 WTe 2148 582 141,882 142,612
+> Total 2,546 3,417 274,563 280,526
+
+experiments therefore isolate the effect of the supervision signal under the same reduced training budget, rather than reproduce the absolute performance of the released models. For AP evaluation, the confidence assigned to each predicted box is computed using the geometric mean token probability over the tokens corresponding to that box, weighted by the logarithm of the box area. We remove duplicate predictions using non-maximum suppression with an IoU threshold of 0.3. We apply the same decoding and ranking procedure to every variant. Since the extension configuration and regenerated training corpus differ from those used for the released models in Table 3, we only compare absolute results between models within the same extension experiment. 
+
+Extension Corpus. We regenerate the training corpus for this work using the same Synthia generation procedure. The real component consists of reviewed microscopy images from our in-house material collections acquired on 180 nm SiO 2/Si substrates. We retain the reviewed flake annotations, allowing each generated composite to contain both real and synthetic flakes. We generate synthetic mono- and few-layer flakes for seven of the eight benchmark materials: MoS 2, MoSe 2, WS 2,WSe 2, Graphene, hBN, and MoWSe 2. WTe 2 is deliberately ex-cluded from the extension training corpus so that Section 7.5 can evaluate transfer to a material that is never observed during training. The regenerated corpus contains 40,000 composite images, and each extension variant is trained on the same 10 ,000 -image subset. 
+
+Train/Test Separation. No image from QF-Bench is used during training. WTe 2 is also excluded entirely from the extension training corpus. Although its optical constants are available, we do not use them during synthetic generation, and no real or synthetic WTe 2 flakes are observed during training. We use WTe 2 as the held-out material in Section 7.5. 
+
+QF-Bench. We evaluate the models using QF-Bench , which combines public microscopy datasets with our in-house col-lection. The benchmark contains eight 2D materials imaged under different microscopy and substrate conditions. Each image contains bounding-box and layer annotations for mono-layer (1L), few-layer (2–4L), and thick (5+L) flakes. QF-Bench contains 280,526 annotated flakes in total. Table 2 shows the distribution across the different materials and layer categories. 
+
+7.2 Main Flake Detection Results 
+
+We first evaluate the released QuPAINT models on general and mono-layer flake detection. Table 3 compares QuPAINT with standard object detectors and existing methods de-veloped for quantum material characterization. We report COCO-style AP, AP 50 , and AP 75 .As shown in Table 3, QuPAINT consistently improves as the model size increases and achieves the strongest perfor-mance across all reported detection metrics. QuPAINT-8B reaches an AP of 45 .6 for general flake detection and 37 .3 for mono-layer detection. Mono-layer detection remains more difficult across all methods because these flakes generally exhibit weaker optical contrast with respect to the surround-ing substrate. As shown in Table 3, QuPAINT consistently improves as the model size increases and achieves the strongest performance across all reported detection metrics. QuPAINT-8B reaches an AP of 45 .6 for general flake detection and 37 .3 for mono-layer detection. Mono-layer detection remains more difficult across all methods because these flakes generally exhibit weaker optical contrast with respect to the surrounding substrate. Figure 11 provides qualitative comparisons with YOLOv11-x and MaskTerial on QF-Bench. Across the examples, QuPAINT-4B more closely matches the ground-truth mono-layer regions, while the baseline methods exhibit missed detections or spurious predictions. 
+
+7.3 Instruction-Following and the Effect of Reasoning Supervision 
+
+To evaluate the two supervision strategies beyond standard detection AP, we report the instruction-following, grounding, and confidence metrics summarized in Table 4. For counting, 
+
+Count Err. denotes the mean absolute error between the predicted and ground-truth number of flakes. For localiza-tion, Grnd.@50 and Grnd.@75 denote grounding accuracy at IoU thresholds of 0.5 and 0.75 , respectively, measuring the fraction of ground-truth targets successfully localized at each threshold. Loc. Prec.@50 measures the fraction of predicted boxes that correspond to a ground-truth flake at IoU 0.5.Finally, Conf. AUC denotes the area under the receiver operating characteristic curve obtained using the model’s per-box confidence as the ranking score and prediction correctness as the binary target. Higher AUC indicates that the model more reliably assigns greater confidence to correct predictions than to incorrect ones. We use this evaluation to isolate the main supervision change introduced in the journal extension. The conference version uses fixed reasoning templates, while the journal version replaces the template text with the image-specific reasoning generated from verified annotations described in Section 6. The two models use the same backbone, 10 ,000 training images, an-notations, instruction phrasing, optimizer configuration, and decoding settings. The enumerated flake boxes are generated in a fixed top-left to bottom-right order, while the final conclusion is constructed deterministically from the ground-truth annotations for both models. Thus, the only difference between the two supervision targets is the reasoning span between the enumeration and final conclusion. Image-grounded reasoning does not increase the number of flakes the model successfully grounds. As shown in Table 4, grounding accuracy at IoU 0.5 is identical at 29 .3 for both 13 
+
+TABLE 3 Performance comparison on general and mono-layer flake detection tasks. 
+
+General Flake Detection Mono-Layer Flake Detection Complexity Detector AP AP 50 AP 75 AP AP 50 AP 75 #Param FLOPs 
+
+MaskRCNN-R50 [4] 18.7 36.5 17.8 9.8 28.9 9.0 44M 134.4B MaskRCNN-R101 [4] 20.3 38.1 18.9 11.1 30.6 10.3 63M 334.8B ViTDet (base) [68] 17.4 35.2 16.5 8.7 27.6 7.8 86M 1.3T ViTDet (large) [68] 18.9 37.0 17.3 9.9 29.8 8.5 300M 4.1T YOLOv11-m [69] 24.8 41.9 21.1 17.0 27.2 16.4 20M 68.0B YOLOv11-l 26.9 43.0 23.5 18.9 29.8 17.3 25M 86.9B YOLOv11-x 29.6 44.5 24.6 19.8 31.3 18.7 57M 194.9B Co-DETR [70] 22.7 35.9 23.3 12.2 25.3 11.4 304M 119.4B RT-DETRv2 [71] 27.5 37.2 27.0 17.5 37.8 14.7 76M 259.0B MaskTerial [14] 23.8 41.0 25.4 16.8 35.5 17.2 45M 150.7B 
+
+φ-Adapt [44] 30.3 49.1 27.4 24.1 38.2 23.4 91M 368.3B QuPAINT-1B 36.9 50.7 38.6 28.0 42.9 29.5 1.1B 1.5T QuPAINT-2B 38.7 53.6 41.2 30.2 45.5 32.0 2.3B 3.4T QuPAINT-4B 42.4 58.2 46.8 34.1 50.2 38.0 4.7B 7.9T 
+
+QuPAINT-8B 45.6 60.5 47.9 37.3 52.8 39.9 8.5B 14.5T Ground Truth QuPAINT YOLO-11x MaskTerial 
+
+Fig. 11. Qualitative comparison of monolayer flake detection. Representative examples comparing ground-truth annotations with predictions from YOLO-11x, MaskTerial, and QuPAINT. QuPAINT more closely matches the ground-truth monolayer locations, while the baseline methods exhibit missed detections or spurious predictions. (Best viewed in color.) 
+
+TABLE 4 Instruction-following, grounding, and confidence results on the 1,186 
+
+QF-Bench images common to both runs. Confidence AUC is reported for the mono-layer task.                     
+
+> Model Count Err. ↓Grnd.@50 ↑Grnd.@75 ↑Loc. Prec.@50 ↑Conf. AUC ↑
+> Template-Based 2.57 29.3 13.8 18.3 0.820 Image-Grounded 2.77 29.3 15.5 19.6 0.846
+
+supervision strategies. Thus, replacing the fixed templates with image-specific reasoning does not cause the model to find flakes that the template-based model would otherwise miss. As further shown in Table 4, the difference becomes more visible under stricter localization and ranking criteria. Grounding accuracy at IoU 0.75 increases from 13 .8 to 15 .5,while localization precision at IoU 0.5 increases from 18 .3 to 
+
+19 .6.For monolayer predictions matched to the ground truth, the mean IoU changes only from 0.6875 to 0.6931 for mono-layer flakes. General-flake mean IoU similarly changes from 
+
+0.7178 to 0.7122 . These differences are small, indicating that the improvement is not primarily due to better-shaped or more tightly aligned boxes. Instead, the results suggest that the model identifies and ranks correct predictions more reliably. This effect is most clearly reflected in the model’s confidence ranking. We measure the AUC between the model’s own per-box confidence and the actual correctness of each prediction. For mono-layer detection, confidence AUC increases from 0.820 with template-based supervision 14 
+
+to 0.846 with image-grounded supervision. The same trend is observed for general flake detection, where AUC increases from 0.821 to 0.826 . Unlike the task-specific changes in localization metrics, confidence improves consistently across both settings. Image-grounded reasoning therefore does not substantially change which flakes are detected, but it yields a ranking signal that separates correct predictions from incorrect ones more reliably. Counting performance moves slightly in the opposite direction. The absolute counting error increases from 2.57 
+
+to 2.77 . Both models primarily over-count the number of flakes, with a mean signed error of +2 .37 for template-based supervision and +2 .54 for image-grounded supervision. Thus, the image-grounded reasoning does not improve counting accuracy under this evaluation. 
+
+Image-Specific Descriptions. Although the two models obtain similar localization performance, the reasoning text they generate differs substantially. The template-based model produces the same description on 75 .3% of benchmark images, and only 19 .4% of its descriptions are distinct. In comparison, the image-grounded model produces a distinct description on 81 .5% of the images. We further evaluate whether this variation corresponds to measurable optical properties of the input image. We group descriptions by the optical vocabulary they use and compare them with the measured ∆E of the annotated flakes. Images whose descriptions contain low-contrast terms such as faint , minimal , or subtle have a median flake ∆E of 20 .1.In comparison, images whose descriptions contain higher-contrast terms such as distinct , pronounced , or sharp have a median ∆E of 21 .6. This difference is statistically significant under a Mann–Whitney test ( p = 0 .03 , n = 1 ,186 ). The generated descriptions are also consistent with the measured optical differences between layer categories. Using the ground-truth annotations, mono-layer flakes have a median ∆E of 8.1, compared with 20 .8 for thick flakes. Thus, descriptions that characterize mono-layer flakes as having weak or minimal contrast align with the optical measurements in the benchmark rather than following a generic description. These results show that image-grounded supervision produces descriptions that are more specific to the individual image and are consistent with its measured optical properties, even when the two supervision strategies remain comparable in localization performance. 
+
+7.4 Ablation: Physics-Aware Description and PIA 
+
+We next study the individual contributions of the Physics-Aware Description (PAD) and Physics-Informed Attention (PIA) components. Table 5 reports the performance obtained when each component is enabled independently and when both are used together for mono-layer flake detection. Both components improve mono-layer detection indepen-dently. As shown in Table 5, adding PIA increases AP from 
+
+28 .1 to 30 .6, while PAD increases AP to 31 .7. Using both components provides the strongest result, reaching an AP of 
+
+34 .1, AP 50 of 50 .2, and AP 75 of 38 .0.The combined improvement of +6 .0 AP is close to the sum of the individual gains from PIA ( +2 .5) and PAD ( +3 .6). This suggests that the physics-aware textual supervision and physics-informed visual prior provide largely complemen-tary information to the model. The final row corresponds to                     
+
+> TABLE 5 Ablation of Physics-Aware Description (PAD) and Physics-Informed Attention (PIA) on mono-layer flake detection.
+> PAD PIA AP AP 50 AP 75
+> ✗✗28.1 42.7 30.3
+> ✗✓30.6 44.8 32.6
+> ✓✗31.7 46.5 33.4
+> ✓✓34.1 50.2 38.0
+
+the released QuPAINT-4B model in Table 3 and reproduces its mono-layer detection results. 
+
+7.5 Cross-Material and Unseen-Material Generalization 
+
+The experiments in this subsection use the reduced-budget extension models described in Section 7.3, so their absolute values are not directly comparable with the released models in Table 3. The optical appearance of a flake can change with the material, substrate, microscope, and imaging con-ditions. We therefore evaluate QuPAINT on WTe 2, the only benchmark material that is completely excluded from the extension training corpus. This allows us to measure transfer to a material whose optical response is never observed during training. As shown in the cross-material detection results in Table 6, image-grounded supervision consistently improves detection sensitivity across materials. Recall increases on seven of the eight evaluated materials and on six of the seven materials observed during training. The largest improvement occurs for Graphene, where recall increases from 37 .4 to 51 .3,followed by hBN ( 68 .6 to 74 .6) and WSe 2 (14 .2 to 18 .7). MoS 2
+
+is the only material for which recall decreases by 0.5 points. The per-material results in Table 6 show that the benefit of image-grounded supervision is not confined to a particular dataset size. F1 improves on larger material subsets such as Graphene and WSe 2, as well as on smaller subsets such as MoSe 2 and WS 2. The largest improvement occurs on Graphene, where F1 increases from 37 .5 to 43 .4 across 8,207 annotated flakes. Overall, macro-F1 increases from 27 .1 to 
+
+28 .6, indicating improved aggregate detection performance across material-dependent variations in optical appearance. The held-out WTe 2 evaluation directly tests a material completely excluded from the extension training corpus. Despite WTe 2 containing 142,612 annotated flakes, the largest material subset in QF-Bench, both supervision strategies achieve the same F1 score of 23 .0. Thus, image-grounded supervision improves aggregate cross-material performance while preserving detection performance on the unseen material. 
+
+8 CONCLUSION AND LIMITATIONS 
+
+Conclusions. In this work, we presented a complete frame-work for automated characterization of 2D quantum mate-rials from optical microscopy images. We introduced Syn-thia , a physics-based synthetic data generation framework for producing realistic microscopy images across different materials and layer thicknesses. Using these images and their verified annotations, we constructed QMat-Instruct , a large-scale multimodal instruction dataset for quantum flake characterization. We further introduced QuPAINT, which 15 
+
+TABLE 6 Cross-material detection performance at IoU 0.5. Image-grounded supervision improves macro-F1 across QF-Bench while preserving performance on the held-out WTe 2 material. 
+
+Material #Flakes F1 Template-based Image-grounded 
+
+Graphene 8,207 37.5 43.4 
+
+hBN 10,224 42.6 42.5 MoS 2 109,134 18.8 17.9 MoSe 2 1,383 18.6 20.6 
+
+MoWSe 2 337 39.4 38.4 WS 2 2,192 17.7 20.5 
+
+WSe 2 6,437 19.0 22.8 
+
+WTe 2 (held out) 142,612 23.0 23.0 
+
+Macro-F1 – 27.1 28.6 
+
+combines multimodal instruction tuning with a Physics-Informed Attention (PIA) prior for identifying and char-acterizing flakes from optical microscopy images. In this work, we replace the template-based chain-of-thought supervision used in the conference version with image-specific reasoning generated from verified flake anno-tations and the optical evidence visible in each microscopy image. This allows the reasoning supervision to describe the appearance of individual flakes instead of relying on fixed templates. We also extend the evaluation through QF-Bench to study instruction following, grounding, reasoning supervision, and generalization in addition to standard flake-detection performance. 
+
+Limitations. Our approach still has several limitations. Syn-thetic images cannot capture every variation observed across microscopes, substrates, defects, and imaging conditions, so a domain gap can remain when applying the model to new settings. In addition, the optical appearance of a flake depends on factors such as material type, oxide thickness, illumination, and camera response, which can make layer identification ambiguous from a single optical image. Finally, QF-Bench remains highly imbalanced toward thick flakes, while verified monolayer and few-layer samples are much rarer. 
+
+9 DATA AVAILABILITY 
+
+The data supporting the findings of this work are available from the corresponding author upon reasonable request. 
+
+REFERENCES 
+
+[1] X. B. Nguyen, H.-Q. Nguyen, S. Pandey, T. Faltermeier, N. Borys, H. Churchill, and K. Luu, “Qupaint: Physics-aware instruction tuning approach to quantum material discovery,” in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) Findings , June 2026, pp. 8684–8694. [2] M. A. Islam, S. Khan, J. J. Mim, S. M. M. Rahman, M. A. I. Patwary, M. S. Islam, and N. Hossain, “Recent advances of 2d materials in semiconductor application: A review,” Advanced Sensor and Energy Materials , vol. 4, no. 4, p. 100161, 2025. [Online]. Available: https:// www.sciencedirect.com/science/article/pii/S2773045X25000287 [3] MonArk NSF Quantum Foundry, “Monark nsf quantum foundry,” https://www.monarkfoundry.org/. [4] K. He, G. Gkioxari, P. Dollár, and R. Girshick, “Mask r-cnn,” in 
+
+Proceedings of the IEEE international conference on computer vision ,2017, pp. 2961–2969. [5] J. Redmon, S. Divvala, R. Girshick, and A. Farhadi, “You only look once: Unified, real-time object detection,” in Proceedings of the IEEE conference on computer vision and pattern recognition , 2016, pp. 779–788. [6] I. Robinson, P. Robicheaux, M. Popov, D. Ramanan, and N. Peri, “Rf-detr: Neural architecture search for real-time detection transformers,” 2025. [Online]. Available: https://arxiv.org/abs/ 2511.09554 [7] N. Ravi, V. Gabeur, Y.-T. Hu, R. Hu, C. Ryali, T. Ma, H. Khedr, R. Rädle, C. Rolland, L. Gustafson et al. , “Sam 2: Segment anything in images and videos,” arXiv preprint arXiv:2408.00714 , 2024. [8] Y. Peng, H. Li, P. Wu, Y. Zhang, X. Sun, and F. Wu, “D-fine: Redefine regression task in detrs as fine-grained distribution refinement,” 2024. [Online]. Available: https://arxiv.org/abs/2410.13842 [9] H. Zhou, Y. Liu, C. Mo, W. Li, B. Peng, and L. Liu, “When pixel difference patterns meet vit: Pidivit for few-shot object detection,” in Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV) , October 2025, pp. 24 309–24 318. [10] M. Assran, A. Bardes, D. Fan, Q. Garrido, R. Howes, Mojtaba, Komeili, M. Muckley, A. Rizvi, C. Roberts, K. Sinha, A. Zholus, S. Arnaud, A. Gejji, A. Martin, F. R. Hogan, D. Dugas, P. Bojanowski, V. Khalidov, P. Labatut, F. Massa, M. Szafraniec, K. Krishnakumar, Y. Li, X. Ma, S. Chandar, F. Meier, Y. LeCun, M. Rabbat, and N. Ballas, “V-jepa 2: Self-supervised video models enable understanding, prediction and planning,” 2025. [Online]. Available: https://arxiv.org/abs/2506.09985 [11] O. Siméoni, H. V. Vo, M. Seitzer, F. Baldassarre, M. Oquab, C. Jose, V. Khalidov, M. Szafraniec, S. Yi, M. Ramamonjisoa, F. Massa, D. Haziza, L. Wehrstedt, J. Wang, T. Darcet, T. Moutakanni, L. Sentana, C. Roberts, A. Vedaldi, J. Tolan, J. Brandt, C. Couprie, J. Mairal, H. Jégou, P. Labatut, and P. Bojanowski, “Dinov3,” 2025. [Online]. Available: https://arxiv.org/abs/2508.10104 [12] S. Masubuchi, E. Watanabe, Y. Seo, S. Okazaki, T. Sasagawa, K. Watanabe, T. Taniguchi, and T. Machida, “Deep-learning-based image segmentation integrated with optical microscopy for automatically searching for two-dimensional materials,” npj 2D Materials and Applications , vol. 4, no. 1, p. 3, 2020. [13] J.-L. Uslu, T. Ouaj, D. Tebbe, A. Nekrasov, J. H. Bertram, M. Schütte, K. Watanabe, T. Taniguchi, B. Beschoten, L. Waldecker et al. ,“An open-source robust machine learning platform for real-time detection and classification of 2d material flakes,” Machine Learning: Science and Technology , vol. 5, no. 1, p. 015027, 2024. [14] J.-L. Uslu, A. Nekrasov, A. Hermans, B. Beschoten, B. Leibe, L. Waldecker, and C. Stampfer, “Maskterial: A foundation model for automated 2d material flake detection,” Digital Discovery , 2025. [15] X. B. Nguyen, A. Bisht, B. Thompson, H. Churchill, K. Luu, and S. U. Khan, “Two-dimensional quantum material identification via self-attention and soft-labeling in deep learning,” IEEE Access ,vol. 12, pp. 139 683–139 691, 2024. [16] X.-B. Nguyen, H.-Q. Nguyen, H. Churchill, S. U. Khan, and K. Luu, “Quantum visual feature encoding revisited,” Quantum Machine Intelligence , vol. 6, no. 2, p. 61, 2024. [17] X.-B. Nguyen, H.-Q. Nguyen, S. Y.-C. Chen, S. U. Khan, H. Churchill, and K. Luu, “Qclusformer: A quantum transformer-based framework for unsupervised visual clustering,” in 2024 IEEE International Conference on Quantum Computing and Engineering (QCE) , vol. 2. IEEE, 2024, pp. 347–352. [18] J. B. Holliday, B. Morgan, H. Churchill, and K. Luu, “Hybrid quantum tabu search for solving the vehicle routing problem,” in 2024 IEEE international conference on quantum computing and engineering (QCE) , vol. 2. IEEE, 2024, pp. 353–358. [19] X.-B. Nguyen, H.-Q. Nguyen, H. Churchill, S. U. Khan, and K. Luu, “Hierarchical quantum control gates for functional mri understanding,” in 2024 IEEE Workshop on Signal Processing Systems (SiPS) . IEEE, 2024, pp. 159–164. [20] H.-Q. Nguyen, X. B. Nguyen, S. Y.-C. Chen, H. Churchill, N. Borys, S. U. Khan, and K. Luu, “Diffusion-inspired quantum noise mitigation in parameterized quantum circuits,” Quantum Machine Intelligence , vol. 7, no. 1, p. 55, 2025. [21] H.-Q. Nguyen, X.-B. Nguyen, S. Pandey, S. U. Khan, I. Safro, and K. Luu, “Qmoe: A quantum mixture of experts framework for scalable quantum neural networks,” in 2025 IEEE International Conference on Quantum Computing and Engineering (QCE) , vol. 2. IEEE, 2025, pp. 223–228. [22] J. B. Holliday, D. Blount, H. Q. Nguyen, S. U. Khan, and K. Luu, “Quadro: A hybrid quantum optimization framework for drone de-16 
+
+livery,” in 2025 IEEE International Conference on Quantum Computing and Engineering (QCE) , vol. 1. IEEE, 2025, pp. 2090–2100. [23] S. Pandey, X. B. Nguyen, N. Borys, H. Churchill, and K. Luu, “Cliff: Continual learning for incremental flake features in 2d material identification,” arXiv preprint arXiv:2508.17261 , 2025, aI4Mat Work-shop, NeurIPS 2025 (non-archival). [24] J. B. Holliday, E. Osaba, and K. Luu, “An advanced hybrid quantum tabu search approach to vehicle routing problems,” Quantum Machine Intelligence , vol. 8, no. 1, p. 37, 2026. [25] V.-Q.-H. Nguyen, H.-Q. Nguyen, S. U. Khan, I. Safro, and K. Luu, “Quacod: Quantum optimization via coordinate descent for scalable drone scheduling,” 2026 IEEE International Conference on Quantum Computing and Engineering (QCE) , 2026. [26] A. Dendukuri, B. Keeling, A. Fereidouni, J. Burbridge, K. Luu, and H. Churchill, “Defining quantum neural networks via quantum time evolution,” 2020. [Online]. Available: https://arxiv.org/abs/1905.10912 [27] T. Ouaj, C. Arnold, J. Azpeitia, S. Baltic, J. Barjon, J. Cascales, H. Cun, D. Esteban, M. Garcia-Hernandez, V. Garnier, S. K. Gautam, T. Greber, S. Said Hassani, A. Hemmi, I. Jiménez, C. Journet, P. Kögerler, A. Loiseau, C. Maestre, M. Metzelaars, P. Schmidt, C. Stampfer, I. Stenger, P. Steyer, T. Taniguchi, B. Toury, K. Watanabe, and B. Beschoten, “Benchmarking the integration of hexagonal boron nitride crystals and thin films into graphene-based van der waals heterostructures,” 2D Materials , vol. 12, no. 1, p. 015017, Dec. 2024. [Online]. Available: http://dx.doi.org/10.1088/2053-1583/ad96c9 [28] T. Ouaj, L. Kramme, M. Metzelaars, J. Li, K. Watanabe, T. Taniguchi, J. H. Edgar, B. Beschoten, P. Kögerler, and C. Stampfer, “Chemically detaching hbn crystals grown at atmospheric pressure and high temperature for high-performance graphene devices,” 
+
+Nanotechnology , vol. 34, no. 47, p. 475703, Sep. 2023. [Online]. Available: http://dx.doi.org/10.1088/1361-6528/acf2a0 [29] C. Steiner, R. Rahmel, F. Volmer, R. Windisch, L. H. Janssen, P. Pesch, K. Watanabe, T. Taniguchi, F. Libisch, B. Beschoten et al. , “Current-induced brightening of vacancy-related emitters in hexagonal boron nitride,” Physical Review Research , vol. 7, no. 3, p. L032037, 2025. [30] J. McKenzie, N. Sharma, and X. Liu, “Fabrication of pristine 2d heterostructures for scanning probe microscopy,” APL Materials , vol. 12, no. 7, p. 070602, 07 2024. [Online]. Available: https://doi.org/10.1063/5.0213542 [31] L. Jäckering, K. G. Wirth, L. Conrads, J. B. Profe, A. Rothstein, H. Kyoseva, K. Watanabe, T. Taniguchi, D. M. Kennes, C. Stampfer 
+
+et al. , “Super-resolution imaging of nanoscale inhomogeneities in hbn-covered and encapsulated few-layer graphene,” Advanced Science , vol. 12, no. 14, p. 2409039, 2025. [32] A. Pálinkás, K. Márity, K. Kandrai, Z. Tajkov, M. Gmitra, P. Vancsó, L. Tapasztó, and P. Nemes-Incze, “Identification of graphite with perfect rhombohedral stacking by electronic raman scattering,” 
+
+Carbon , vol. 230, p. 119608, 2024. [Online]. Available: https://www. sciencedirect.com/science/article/pii/S0008622324008273 [33] Y. Hattori, T. Taniguchi, K. Watanabe, and M. Kitamura, “Identification of exfoliated monolayer hexagonal boron nitride films with a digital color camera under white light illumination,” 
+
+Nanotechnology , vol. 35, no. 37, p. 375704, jun 2024. [Online]. Available: https://doi.org/10.1088/1361-6528/ad58e7 [34] M. Wegerhoff, M. Scharfstädt, S. Linden, and A. Bergschneider, “Coherent interaction of 2 s and 1 s exciton states in transition-metal dichalcogenide monolayers,” Physical Review Letters , vol. 134, no. 23, p. 236901, 2025. [35] J. G. Crimmann, M. N. Junker, Y. M. Glauser, N. Lassaline, G. Nagamine, and D. J. Norris, “High-throughput optical iden-tification and statistical analysis of atomically thin semiconductors,” 
+
+Advanced Optical Materials , vol. 13, no. 16, p. 2500150, 2025. [36] E. D. Courtney, M. Pendharkar, N. J. Bittner, A. L. Sharpe, and D. Goldhaber-Gordon, “Automated tabletop exfoliation and identification of monolayer graphene flakes,” Review of Scientific Instruments , vol. 96, no. 5, 2025. [37] O. Ronneberger, P. Fischer, and T. Brox, “U-net: Convolutional networks for biomedical image segmentation,” in International Con-ference on Medical image computing and computer-assisted intervention .Springer, 2015, pp. 234–241. [38] B. Han, Y. Lin, Y. Yang, N. Mao, W. Li, H. Wang, K. Yasuda, X. Wang, V. Fatemi, L. Zhou et al. , “Deep-learning-enabled fast optical identification and characterization of 2d materials,” Advanced Materials , vol. 32, no. 29, p. 2000953, 2020. [39] K. Luu, X. B. NGUYEN, and H. Churchill, “Automatically detecting false negative objects in 2d material detection data sets,” Aug. 22 2024, uS Patent App. 18/443,058. [40] J. He, Y. Zhang, J. Wang, T. Wang, P. Zhang, C. Cai, J. Yang, X. Lin, and X. Yang, “Rapid morphology characterization of two-dimensional TMDs and lateral heterostructures based on deep learning,” arXiv preprint arXiv:2503.00470 , 2025. [41] A. Kirillov, E. Mintun, N. Ravi, H. Mao, C. Rolland, L. Gustafson, T. Xiao, S. Whitehead, A. C. Berg, W.-Y. Lo et al. , “Segment anything,” in Proceedings of the IEEE/CVF international conference on computer vision , 2023, pp. 4015–4026. [42] J. Yang, R. A. Yin, C. Jiang, Y. Hu, X. Zhu, X. Hu, S. Kumar, X. Wang, X. Zhai, K. Rong, Y. Zhu, T. Zhang, Z. Yin, J. Kong, N. Z. Gong, Z. Ren, and H. Wang, “Zero-shot autonomous microscopy for scalable and intelligent characterization of 2D materials,” ACS Nano , vol. 19, no. 40, pp. 35 493–35 504, 2025. [43] I. Mandal, J. Soni, M. Zaki, M. M. Smedskjaer, K. Wondraczek, L. Wondraczek, N. N. Gosvami, and N. M. A. Krishnan, “Au-tonomous microscopy experiments through large language model agents,” arXiv preprint arXiv:2501.10385 , 2025. [44] H.-Q. Nguyen, X. B. Nguyen, S. Pandey, T. Faltermeier, N. Borys, H. Churchill, and K. Luu, “ φ-Adapt: A physics-informed adapta-tion learning approach to 2D quantum material discovery,” arXiv preprint arXiv:2507.05184 , 2025. [45] A. Radford, J. W. Kim, C. Hallacy, A. Ramesh, G. Goh, S. Agarwal, G. Sastry, A. Askell, P. Mishkin, J. Clark et al. , “Learning transferable visual models from natural language supervision,” in International conference on machine learning . PmLR, 2021, pp. 8748–8763. [46] C. Jia, Y. Yang, Y. Xia, Y.-T. Chen, Z. Parekh, H. Pham, Q. Le, Y.-H. Sung, Z. Li, and T. Duerig, “Scaling up visual and vision-language representation learning with noisy text supervision,” in International conference on machine learning . PMLR, 2021, pp. 4904–4916. [47] J. Li, D. Li, S. Savarese, and S. Hoi, “Blip-2: Bootstrapping language-image pre-training with frozen image encoders and large language models,” in International conference on machine learning . PMLR, 2023, pp. 19 730–19 742. [48] H. Liu, C. Li, Q. Wu, and Y. J. Lee, “Visual instruction tuning,” 
+
+Advances in neural information processing systems , vol. 36, pp. 34 892– 34 916, 2023. [49] W. Dai, J. Li, D. Li, A. Tiong, J. Zhao, W. Wang, B. Li, P. Fung, and S. Hoi, “InstructBLIP: Towards general-purpose vision-language models with instruction tuning,” in Thirty-seventh Conference on Neural Information Processing Systems , 2023. [Online]. Available: https://openreview.net/forum?id=vvoWPYqZJA [50] G. Xu, P. Jin, Z. Wu, H. Li, Y. Song, L. Sun, and L. Yuan, “Llava-cot: Let vision language models reason step-by-step,” in Proceedings of the IEEE/CVF International Conference on Computer Vision , 2025, pp. 2087–2098. [51] Y. Dong, Z. Liu, H.-L. Sun, J. Yang, W. Hu, Y. Rao, and Z. Liu, “Insight-v: Exploring long-chain visual reasoning with multimodal large language models,” in Proceedings of the Computer Vision and Pattern Recognition Conference , 2025, pp. 9062–9072. [52] Z. Yan, Z. Li, Y. He, C. Wang, K. Li, X. Li, X. Zeng, Z. Wang, Y. Wang, Y. Qiao et al. , “Task preference optimization: Improving multimodal large language models with vision task alignment,” in Proceedings of the Computer Vision and Pattern Recognition Conference , 2025, pp. 29 880–29 892. [53] W. Tan, Q. Cao, Y. Zhan, C. Xue, and C. Ding, “Beyond human data: Aligning multimodal large language models by iterative self-evolution,” in Proceedings of the AAAI Conference on Artificial Intelligence , vol. 39, no. 7, 2025, pp. 7202–7210. [54] Z. Xu, Z. Wang, X. Jiang, D. Li, D. Cheng, and N. Wang, “Reasoning-driven multimodal LLM for domain generalization,” in International Conference on Learning Representations (ICLR) , 2026. [55] J. Achiam, S. Adler, S. Agarwal, L. Ahmad, I. Akkaya, F. L. Aleman, D. Almeida, J. Altenschmidt, S. Altman, S. Anadkat et al. , “Gpt-4 technical report,” arXiv preprint arXiv:2303.08774 , 2023. [56] J. Bai, S. Bai, Y. Chu, Z. Cui, K. Dang, X. Deng, Y. Fan, W. Ge, Y. Han, F. Huang et al. , “Qwen technical report,” arXiv preprint arXiv:2309.16609 , 2023. [57] Z. Chen, J. Wu, W. Wang, W. Su, G. Chen, S. Xing, M. Zhong, Q. Zhang, X. Zhu, L. Lu et al. , “Internvl: Scaling up vision foundation models and aligning for generic visual-linguistic tasks,” in Proceedings of the IEEE/CVF conference on computer vision and pattern recognition , 2024, pp. 24 185–24 198. [58] Z. Zhang, A. Liu, I. Reid, R. Hartley, B. Zhuang, and H. Tang, “Motion mamba: Efficient and long sequence motion generation,” 17 
+
+in European Conference on Computer Vision . Springer, 2024, pp. 265–282. [59] L. Qian, J. Li, Y. Wu, Y. Ye, H. Fei, T.-S. Chua, Y. Zhuang, and S. Tang, “Momentor: Advancing video large language model with fine-grained temporal reasoning,” arXiv preprint arXiv:2402.11435 ,2024. [60] S. Liu, C. Zhao, T. Xu, and B. Ghanem, “Bolt: Boost large vision-language model without training for long-form video understand-ing,” in Proceedings of the Computer Vision and Pattern Recognition Conference , 2025, pp. 3318–3327. [61] Y. Tang, W. Xu, J. Cao, J. Ma, W. Gao, S. Farrell, N. B. Erichson, M. W. Mahoney, A. Nonaka, and Z. Yao, “A multimodal large language model for materials science,” Nature Machine Intelligence ,2026, preprint: arXiv:2502.13107. [62] Z. Lai, Y. Zheng, Z. Cai, H. Lyu, J. Yang, H. Liang, Y. Hu, and B. Wang, “Can multimodal LLMs see materials clearly? a multimodal benchmark on materials characterization,” in Findings of the Association for Computational Linguistics: EMNLP 2025 , Suzhou, China, 2025, pp. 4384–4404. [63] Y. Weng, L. Gao, L. Zhu, and J. Huang, “MatQnA: A benchmark dataset for multi-modal large language models in materials charac-terization and analysis,” arXiv preprint arXiv:2509.11335 , 2025. [64] N. Alampara, M. Schilling-Wilhelmi, M. Ríos-García, I. Mandal, P. Khetarpal, H. S. Grover, N. M. A. Krishnan, and K. M. Jablonka, “Probing the limitations of multimodal language models for chem-istry and materials research,” Nature Computational Science , vol. 5, pp. 952–961, 2025. [65] T. Han, Y. Zhang, J. Wang, Y. Wu, W. Y. Chiu, Z. Li, Y. Zhang, J. Wang, Y. Zhou, C. Zhao, J. Li, J. Li, Q. Jin et al. , “Science edge evaluation: SEE the missing step toward real scientific discovery,” 
+
+arXiv preprint arXiv:2608.06931 , 2026. [66] S. J. Byrnes, “Multilayer optical calculations,” 2020. [Online]. Available: https://arxiv.org/abs/1603.02720 [67] A. Yang, A. Li, B. Yang, B. Zhang, B. Hui, B. Zheng, B. Yu, C. Gao, C. Huang, C. Lv et al. , “Qwen3 technical report,” arXiv preprint arXiv:2505.09388 , 2025. [68] Y. Li, H. Mao, R. Girshick, and K. He, “Exploring plain vision transformer backbones for object detection,” 2022. [Online]. Available: https://arxiv.org/abs/2203.16527 [69] G. Jocher, J. Qiu, M. Liu, S. Lyu, F. C. Akyon, and M. E. Kalfaoglu, “Ultralytics YOLO26: Unified Real-Time End-to-End Vision Models,” 2026. [Online]. Available: https://arxiv.org/abs/2606.03748 [70] Z. Zong, G. Song, and Y. Liu, “Detrs with collaborative hybrid assignments training,” in 2023 IEEE/CVF International Conference on Computer Vision (ICCV) . IEEE, 2023, pp. 6725–6735. [71] W. Lv, Y. Zhao, Q. Chang, K. Huang, G. Wang, and Y. Liu, “Rt-detrv2: Improved baseline with bag-of-freebies for real-time detection transformer,” arXiv preprint arXiv:2407.17140 , 2024. 
+
+Sankalp Pandey is a Ph.D. student in Computer Science and Distinguished Doctoral Fellow at the University of Arkansas. He works in the Quantum AI Lab and the Computer Vision & Image Un-derstanding Lab, where is advised by Professor Khoa Luu. He received B.S. degrees in Com-puter Science and Computer Engineering, with honors, from the University of Arkansas, along with minors in Mathematics and Data Analytics. His research focuses on multimodal and agentic learning systems for materials science. His work has been presented at venues including CVPR Findings, NeurIPS workshops, and IEEE Quantum Week workshops, and he contributes to the development of open-source deep learning tools for scientific discovery. 
+
+Xuan-Bac Nguyen got PhD of CSCE - University of Arkansas in the United States, where he was under the guidance and supervision of Professor Khoa Luu. He holds a Master’s degree in Com-puter Science from Chonnam National University, where he worked alongside Professor Gueesang Lee. His academic journey began with a B.Sc. degree in Electronics and Telecommunication from the University of Engineering and Technol-ogy, Vietnam National University. Bac’s research primarily focuses on areas such as Computer Vision, Unsupervised Learning, Self-supervised Learning, and more. He has consistently demonstrated his expertise in these fields and has actively contributed to the academic community. His research publications have been accepted in CVPR, TPAMI, and many others. 
+
+Hoang-Quan Nguyen is a PhD candidate at the University of Arkansas, where he is supervised by Dr. Khoa Luu. He is a research assistant at the Computer Vision and Image Understanding Lab. In 2022, he received his B.Sc. degree in Computer Science from the Honors Program at the University of Science, VNU-HCM, under the supervision of Dr. Khoa Luu and Dr. Son Tran. His research interest includes computer vision, deep learning, and quantum machine learning. 
+
+Tim Faltermeier is a PhD candidate in Physics at Montana State University working under the supervision of Dr. Nicholas Borys. He is a re-search assistant working on instrumentation de-velopment for the MonArk NSF Quantum Foundry. He received his B.Sc. in Physics from Wyoming State University and his M.Sc. in Physics from Montana State University. His research interests include the development of automated laboratory equipment and nano-optical spectroscopy of low-dimensional materials. 
+
+Nicholas Borys is an Associate Professor of Physics at Montana State University and co-associate Director of the MonArk NSF Quan-tum Foundry. He received his Ph.D. in Physics from the University of Utah, following earlier work in software development at Boeing and a B.S. in Mathematics and Computer Science from the Col-orado School of Mines. His research focuses on quantum optics, 2D materials, and nano-optical spectroscopy, with an emphasis on cryogenic and ultrafast characterization of low-dimensional quantum materials. Prior to joining MSU, he was a project scientist at the Molecular Foundry at Lawrence Berkeley National Laboratory. Dr. Borys currently leads an experimental research group advancing quantum materials and devices for emerging technologies in sensing, communication, and quantum information. 18 
+
+Hugh Churchill received the Ph.D. degree in physics from Harvard University in 2012. He was a Pappalardo Postdoctoral Fellow in physics at MIT. He is currently a Professor and the 21st Century Chair of Nanophysics with the Depart-ment of Physics, University of Arkansas (UA). He is also the Associate Director of Operations at MonArk NSF Quantum Foundry. Since 2015, he has led the Quantum Device Laboratory, UA. His research interests include quantum materials and devices, low-dimensional materials, quantum transport, optoelectronics, and automation of experiments. 
+
+Khoa Luu is an Associate Professor and the Director of the Quantum AI Lab and the Computer Vision and Image Understanding (CVIU) Lab in the Department of Computer Science & Com-puter Engineering at the University of Arkansas, Fayetteville. He is affiliated with the NSF MonARK Quantum Foundry. He serves as an Associate Editor with ACM Computing Surveys and IEEE Transactions on Quantum Engineering. He is also an Area Chair for major AI conferences, including CVPR, NeurIPS, ICML, ICLR, WACV, and AAAI, and has organized the IEEE/CVF CVPR Precognition Workshop 2019-2026. He is the Program Chair of the International Conference on Quantum Computing Infrastructure and Technology Trento, Italy, 2026, Secure and Trustworthy Quantum Machine Learning (SaTQuML) at NeurIPS 2026, and IEEE GreenTech in 2024. Prior to joining the University of Arkansas, he was with CyLab Biometrics Center at Carnegie Mellon University (CMU), as Research Project Director. His research spans multimodal and generative AI, foundation models, trustworthy and continual learning, computer vision, biometrics, autonomous perception and human–robot intelligence, vision–brain modeling, quantum machine learning, and AI-assisted quantum-material discovery. He has coauthored more than 150 publications, eight patents and three Best Paper awards. He was selected to the National Academy of Inventors, University of Arkansas Chapter, 2024. He was a vice chair of the Montreal Chapter of IEEE SMCS in Canada from September 2009 to March 2011.

@@ -1,0 +1,426 @@
+Title: pyeCE: A Python Implementation of the Embedded Cluster Expansion
+
+URL Source: https://arxiv.org/pdf/2609.10190v1
+
+Published Time: Thu, 10 Sep 2026 01:08:20 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+# pyeCE : A Python Implementation of the Embedded Cluster Expansion 
+
+Yann L. Müller, 1, 2 Claire A. Paetsch, 1, 2 and Anirudh Raju Natarajan 1, 2, ∗
+
+> 1
+
+Laboratory of materials design and simulation (MADES), Institute of Materials, École Polytechnique Fédérale de Lausanne 
+
+> 2
+
+National Centre for Computational Design and Discovery of Novel Materials (MARVEL), École Polytechnique Fédérale de Lausanne 
+
+The cluster expansion is a widely used approach for predicting the finite-temperature thermodynamics of alloys from zero-kelvin first-principles calculations, but its conventional formulation becomes intractable for materials with more than three or four chemical species. High-entropy alloys have therefore remained largely out of reach. We present pyeCE , an open-source Python library that implements the embedded clus-ter expansion (eCE), in which machine learning maps many chemical species onto a smaller set of effective species and thereby limits the growth in the number of cluster functions. pyeCE provides the complete mod-eling workflow, including the construction of symmetry-adapted descriptors with a learnable per-sublattice chemical embedding, a neural-network energy model, ladder-based training, uncertainty quantification, and finite-temperature simulations through Monte Carlo sampling. Built on the PyTorch and pymatgen libraries, it supports systems with multiple species on multiple sublattices and runs on graphics processing units. We demonstrate the package on two material systems. In the first, a single model spanning the full composition space of a 9-component refractory alloy resolves short-range order and order–disorder behavior. This model enables rapid screening for compositions with strong Cr clustering, a feature linked to the formation of a con-tinuous, corrosion-resistant oxide scale. In the second, a model of hydrogen dissolution in a Mo–Nb–W alloy reproduces the composition dependence of hydrogen uptake and resolves the interstitial environments that hydrogen occupies. The modular design of pyeCE allows it to be extended to problems beyond alloy thermody-namics, including kinetics, defect energetics, and the coupling of chemical order to magnetic and vibrational degrees of freedom. 
+
+I. INTRODUCTION 
+
+Predicting the finite-temperature properties of materials from zero-kelvin electronic structure calculations is an im-portant step towards the design of structural, energy, and electronic materials, and is central to understanding phase transformations and transport mechanisms[1]. This link be-tween the zero-kelvin and finite-temperature descriptions is commonly established through an atomistic surrogate model that reproduces the energetics of a system at a fraction of the cost of first-principles calculations. The model is then coupled with a finite-temperature sampling method such as molecular dynamics, Monte Carlo simulation, or a com-bination of the two together with free-energy integration techniques. Empirical interatomic potentials[2], machine-learned interatomic potentials[3, 4], and on-lattice models such as the cluster expansion[5] are all widely used for this purpose. For alloys with a few chemical species, on-lattice cluster expansions are straightforward to parameterize, accurately reproduce ground-state energetics, and are readily sampled with Monte Carlo techniques to estimate finite-temperature properties. These features have made the cluster expansion a versatile tool across materials science. It is commonly used to construct phase diagrams and to model order–disorder tran-sitions in alloys [1, 6–8]. The formalism extends to systems with vacancies on one or more sublattices, which has led to its extensive use in modeling the intercalation of lithium, sodium, and magnesium in battery cathodes [9–12], the equi-librium vacancy concentration in alloys [13, 14], and the up- 
+
+> ∗anirudh.natarajan@epfl.ch
+
+take of oxygen, carbon, nitrogen, and hydrogen in metals [15–18]. Coupling an energy cluster expansion with a second cluster expansion for migration barriers extends the frame-work to vacancy-mediated transport [19–21]. The frame-work also captures the influence of local chemical order on planar defects such as surfaces and generalized stacking faults, providing a route to predicting the defect properties that govern dislocation behavior and fracture [22, 23]. Fi-nally, it can incorporate atomistic degrees of freedom beyond chemical disorder, including vibrational and magnetic excita-tions and their coupling [24–30]. Extracting finite-temperature properties from any atom-istic model requires an appropriate coarse-graining proce-dure. Free energies yield phase diagrams, ensemble aver-ages of the occupations of neighboring sites quantify short-range order, and the time evolution of atomic positions gives diffusion coefficients. For on-lattice cluster expansions, the Metropolis–Hastings algorithm provides a simple basis for Monte Carlo sampling in ensembles ranging from canon-ical to semi-grand canonical [31, 32]. Umbrella sampling reaches the unstable regions of the free energy that serve as input to longer-length-scale methods such as phase-field modeling [33]. Diffusion is treated with rejection-free ki-netic Monte Carlo built on the migration-barrier expansion. Combined with vacancy concentrations and thermodynamic factors, this approach yields the Onsager transport coeffi-cients and, in turn, non-dilute diffusion coefficients at finite temperature[20]. A cluster expansion package must there-fore supply not only the energy model but also the sampling machinery that converts it into finite-temperature properties, together with the statistical tools needed to judge when those properties have converged. Despite this broad utility, extending the cluster expansion arXiv:2609.10190v1 [cond-mat.mtrl-sci] 9 Sep 2026 2to alloys containing more than three or four chemical species has remained a long-standing challenge. The number of clus-ter functions grows polynomially with the number of species, which makes conventional cluster expansions for such sys-tems difficult or impossible to parameterize. This limitation has kept the cluster expansion from being applied to multi-principal-element alloys, also known as high-entropy alloys, where phase stability near the center of composition space is of particular interest. The embedded cluster expansion (eCE) formalism ad-dresses this challenge by using machine learning to iden-tify chemical similarities between the elements of an alloy [34]. An alloy with many chemical species is treated as one with fewer effective species, which substantially reduces the number of cluster functions while retaining accuracy. The embedding is a learned low-dimensional projection of the site-basis functions that is optimized jointly with the energy model, so the effective species are determined by the train-ing data rather than chosen in advance. Established cluster expansion packages such as CASM, ICET, smol, and ATAT implement the conventional formalism and provide mature tools for cluster enumeration, model fitting, and Monte Carlo sampling [35–39]. None of them support a learned chemical embedding, so the number of species they can treat remains limited by the growth in the number of cluster functions. Here, we introduce pyeCE , a general and extensible Python library for graphics-processing-unit (GPU) acceler-ated Monte Carlo simulations of high-entropy alloys with an arbitrary number of alloying elements. pyeCE imple-ments the eCE formalism and provides the full suite of tools needed to parameterize on-lattice cluster expansions. These include the mapping of atomic structures to ideal lattices and the assembly of an eCE model from clusters of interest and symmetry-adapted site descriptors, with flexible chem-ical embeddings and neural-network architectures. The li-brary also builds training sets, trains the model, and quan-tifies the uncertainty of its predictions. Built on the py-matgen [40] and PyTorch [41] libraries, pyeCE gives users ac-cess to a broad materials-science software ecosystem and supports systems with multiple species on multiple sublat-tices. A trained model can be compiled for fast evaluation on CUDA-enabled GPUs, and finite-temperature properties are obtained from Monte Carlo simulations in several ensembles, with automatic assessment of the confidence interval of each predicted quantity. The modular structure of pyeCE separates the description of the lattice, the energy model, and the sam-pling algorithm, so that the same infrastructure can be reused to build cluster-expansion models of properties beyond bulk chemical thermodynamics.  
+
+> II. BUILDING AND DEPLOYING ECE MODELS WITH
+> PYECE
+
+Predicting finite-temperature properties with an embed-ded cluster expansion proceeds in four stages, namely build-ing the eCE model, assembling a training set, training the model, and sampling thermodynamic properties. pyeCE uni-fies these stages in a single modular workflow, shown in fig. 1, that mirrors the structure of the established cluster expan-sion packages described above. The library implements the embedded cluster expansion formalism [34], which extends on-lattice cluster expansions to alloys with many chemical species, and accelerates model evaluation and Monte Carlo sampling on GPUs. Each stage is accessible through both a command-line interface and a Python API. The remainder of this section describes each stage in detail.  
+
+> A. Building the eCE Model
+
+On-lattice cluster expansion (CE) models are parameter-ized to reproduce how a property depends on the chemical ordering over a parent crystal structure. In an eCE model, an extensive property such as the total energy is expressed as a sum of site contributions. We represent any arrange-ment of elements over the lattice sites as an occupation vec-tor ⃗σ = ( σ 1, σ 2, . . . ), where σi is the index of the chemical species occupying site i. The property x(⃗σ) is then: 
+
+x(⃗σ) = X
+
+> i
+
+xi(⃗σ) (1) where xi is the site property at site i. Equation (1) ensures that x(⃗σ) scales with system size. The occupation vector ⃗σ encodes the chemical arrange-ment, but it is more convenient to work with descriptors of local ordering built from atomic clusters centered on site i. In both the eCE model and conventional cluster expansion mod-els, these descriptors are stratified into contributions from points (one-body), pairs (two-body), triplets (three-body), and higher-order clusters. Clusters related by a space-group symmetry operation of the primitive crystal structure form an orbit . A descriptor is made symmetry-invariant by sum-ming the contribution of a cluster over all clusters in its orbit that radiate from site i.Figure 2 illustrates the essential steps taken within pyeCE 
+
+to predict xi at each site i. First, the site-basis functions are evaluated for the species occupying each site in the neigh-borhood of site i. These are then projected into a lower-dimensional space. Tensor products of the projected site-basis functions are symmetrized by summing over all cluster functions related by symmetry, yielding symmetry-invariant descriptors. These descriptors serve as inputs to a neural net-work that computes xi.
+
+pyeCE provides a set of modular classes for constructing the elements of the eCE model illustrated in fig. 2. The Prim 
+
+object encodes the primitive crystal structure and the chemi-cal degrees of freedom at each site, as shown in fig. 1. Clusters are enumerated up to a user-defined maximum size (number of atoms including the central site) and a maximum pairwise distance between sites. The OrbitTree object holds all clusters included in the eCE model. The build command automates the construction of the embedding, the site de-scriptors, and the computational graph of the neural-network energy model. 3                
+
+> FIG. 1. General workflow of pyeCE . (1) The eCE model is con-structed from the site-basis embedding, the site descriptors, and the site energy model. (2) A training set of symmetrically distinct or-derings is enumerated, evaluated with first-principles calculations, and mapped onto the parent lattice. (3) The model is trained using PyTorch by simultaneously optimizing the transformation matrix
+> Tand the site energy model. (4) Finite-temperature properties are predicted by Monte Carlo simulations.
+> FIG. 2. Schematic of the embedded cluster expansion formalism. Given the neighborhood configuration ⃗σiof site i, the site-basis functions φare projected onto the embedded site-basis functions
+> ˜φthrough the learned transformation T. Symmetry-invariant site descriptors ⃗Θare then computed as in a conventional cluster expan-sion. These descriptors serve as input to a feedforward neural net-work that evaluates the site property xi. The dependence of these quantities on the configuration is suppressed for clarity.
+> 1. Embedding the Chemical Species
+
+As in a conventional cluster expansion, the state of a site in a c-component alloy is described by c linearly independent site-basis functions φ0, φ 1, . . . , φ c−1. Their values evaluated on the c species form the c × c chemical embedding matrix 
+
+φ, with elements φij = φi(j), where φi is the ith site-basis function and j indexes the species. Each row of φ lists the values of one site-basis function across the c species, and each column gives the values of all c site-basis functions for a sin-gle species. The eCE formalism then embeds the c site-basis functions in a lower-dimensional space via a linear transformation: 
+
+( ˜ φ0, ˜φ1, . . . , ˜φk−1)T = T (φ0, φ 1, . . . , φ c−1)T (2) The transformation matrix T ∈ Rk×c projects the c site-basis functions onto k < c embedded functions ˜φ. The embed-ded site-basis functions no longer span the full compositional space, so the c vectors mapping the c chemical species onto 
+
+Rk become linearly dependent. The transformed embedding matrix is ˜φ = T φ ∈ Rk×c, and the c-component system is effectively treated as a pseudo-k-component system. Figure 3 shows an example with c = 4 species mapped to 
+
+k = 3 embedded site-basis functions. The zeroth function is always set to the constant ˜φ0 = 1 , following the conven-tional CE formalism. This choice enables a hierarchical ex-pansion organized by the number of atoms in each cluster. The transformation matrix T is learned during model training to identify the embedded site-basis functions that best capture the chemical similarities among the elements in the training set. Whereas conventional CE models treat 
+
+c species as c linearly independent vectors, fitting T encodes the dependencies among species and effectively reduces the number of independent chemical degrees of freedom. Throughout the remainder of this section, we use the em-bedded site-basis functions ˜φν to describe the eCE frame-work and its implementation in pyeCE . A conventional clus-4         
+
+> FIG. 3. Illustration of the embedded site-basis functions that map
+> c= 4 species onto k= 3 . The four chemical species are represented by four colors (yellow, blue, red, and green). Each species maps to one of four linearly dependent vectors (1 ,˜φ1,˜φ2)Tin R3.
+
+ter expansion follows as a special case by setting T to the identity matrix, and therefore entails no loss of generality.  
+
+> 2. Constructing Site Descriptors
+
+Local ordering descriptors are constructed by taking prod-ucts of site-basis functions across multiple sites. Cluster func-tions , denoted ˜Φ⃗α (⃗σ), are computed as: 
+
+˜Φ⃗α (⃗σ) = Y
+
+> (i,ν )∈⃗α
+
+˜φν (σi) (3) where ⃗α is a list of N tuples, each pairing a site index i in the cluster with a site-basis function index ν. When c lin-early independent site-basis functions are used to construct the cluster functions of eq. (3), they form a complete basis[5], and any function of the configuration ⃗σ can be expanded in terms of this basis. A scalar property x invariant under the space-group symmetry operations of the parent crystal struc-ture can then be written as: 
+
+x(⃗σ) = X
+
+> Ω⃗α
+
+JΩ⃗α
+
+X⃗β∈Ω⃗α
+
+˜Φ⃗ β (⃗σ) = X
+
+> Ω⃗α
+
+JΩ⃗α ΘΩ⃗α (⃗σ) (4) where Ω⃗α is the orbit of cluster functions related by symme-try and ΘΩ⃗α are the corresponding symmetry-invariant de-scriptors. The coefficients JΩ⃗α , called effective cluster interac-tions (ECI), are learned from a training set of first-principles calculations. When interactions are short-ranged, the expan-sion can be truncated to clusters whose atoms lie within a cutoff radius. Site-centric local descriptors of ordering can be con-structed in a manner similar to ΘΩ⃗α to parameterize the site contributions xi in eq. (1)[42]: 
+
+ΘΩi⃗ α (⃗σ) = X⃗β∈Ωi⃗ α
+
+Y
+
+> (j,ν )∈⃗β
+
+˜φν (σj ) (5) where Ωi⃗ α is the set of symmetrically equivalent cluster func-tions built from clusters that radiate from site i.
+
+pyeCE implements cluster expansions based on the site-centric descriptors of eq. (5). The neighborhood of site i con-sists of all sites that form a cluster with it for which a clus-ter function contributes to the local ordering descriptor. The       
+
+> FIG. 4. Illustration of the construction of the input matrix η. The example configuration contains 4 atomic sites (1, 2, 3, and 4). The neighborhood of each site consists of the site itself (A) and its 4 near-est neighbors (B, C, D, and E). Element ηij of the input matrix holds the chemical species at neighborhood position jof the ith atomic site.
+
+chemical arrangement within the neighborhood of each site is collected in a matrix η, where each row corresponds to one central site and lists the occupancy of that site followed by the occupancies of its neighbors in a fixed order. In the example of fig. 4, 4 central sites (labeled 1–4) each have a neighbor-hood of 5 sites (A–E). The matrix η is therefore 4 × 5, with el-ement ηij giving the occupancy of the jth neighbor of the ith central site. This matrix contains all the information needed to evaluate the site property xi across the crystal. 
+
+pyeCE builds the site descriptors efficiently through tensor operations in PyTorch. For each central site, the site-basis function values for all relevant clusters are collected in a de-scriptor matrix, where each row corresponds to one cluster function ˜Φ⃗α and each column to a site in the cluster. The number of columns equals the body-order of the largest clus-ter, and shorter clusters are padded with the constant ˜φ0 = 1 .Because site-centric neighborhoods share a fixed ordering, this matrix is constructed once at model initialization using a lookup table. Cluster functions are obtained by taking the product across all entries in each row of the descriptor matrix. Symmetrized descriptors are then computed by summing all rows that be-long to the same orbit. Grouping clusters of the same or-bit consecutively allows this summation to be performed via scatter-reduction operations, enabling efficient GPU acceler-ation. 5  
+
+> FIG. 5. Illustration of the construction of symmetry-invariant site descriptors for an alloy with two site-basis functions on a square lattice. The toy eCE model includes four orbits: the empty, point, nearest-neighbor pair, and smallest triplet clusters. The neighbor-hood consists of the central site (A) and its nearest neighbors (B, C, D, and E). The descriptor matrix collects the cluster functions of all clusters in the site-centric orbits, with shorter clusters padded by the constant 1. Site descriptors ⃗Θare computed by taking the prod-uct of the entries in each row and summing rows belonging to the same orbit.
+
+Figure 5 illustrates this construction for an alloy with two site-basis functions on a square lattice with empty, point, nearest-neighbor pair, and triplet clusters. The four orbits yield four entries in the site descriptor vector ⃗ Θ.The site descriptor construction contains no learnable pa-rameters, but depends on two classes of hyperparameters, namely the number of embedded site-basis functions k and the set of clusters to include. Together, the chemical em-bedding and the site descriptor construction act as an en-coder that maps the local chemical arrangement into a fixed-dimensional, symmetry-invariant representation of the local chemical ordering.            
+
+> 3. Evaluating the Site Property
+> FIG. 6. Illustration of a site property feedforward neural network. The input layer corresponds to the site descriptors ⃗Θ. The neural network is composed of 2 hidden layers. The final hidden layer pro-duces the latent features ⃗f. The final neuron outputs the site prop-erty xi. The weights w={w1,w2,w3}and biases in each layer are the trainable parameters.
+
+A feedforward neural network takes the site descriptors ⃗ Θ
+
+as input and evaluates the site property xi at site i, as illus-trated in fig. 6. The total property x is then the sum of all site contributions, in accordance with eq. (1). This approach gen-eralizes the conventional linear CE model of eq. (4), which is equivalent to a single-layer network whose weights are the ECI coefficients JΩ⃗α , and follows the framework of Natarajan and Van der Ven [42].  
+
+> B. Assembling a Training Set
+
+Parameterizing an eCE model requires a training set of symmetrically distinct chemical arrangements of the c
+
+species over the parent crystal structure and their associated energies. Symmetrically distinct arrangements can be sys-tematically enumerated with established algorithms[43], and their formation energies or other properties of interest eval-uated by first-principles calculations, typically based on den-sity functional theory (DFT). These structure–energy pairs constitute the training set. Properties of interest, such as formation energies, are typ-ically evaluated for the relaxed chemical arrangement, in which ionic and cell relaxation lower the total energy to a local minimum, so the lattice vectors and atomic coordinates differ from those of the ideal structure. On-lattice models as-sume atoms sit on ideal sites, so each relaxed structure must be mapped onto the parent lattice. Structures for which this mapping is ambiguous or poorly conditioned must be identi-fied and discarded before training. 6Mapping a child structure onto a parent structure is a two-step process that first matches lattices and then assigns atomic sites [44]. The parent lattice L and child lattice S are related by an integer transformation matrix T and a defor-mation matrix D such that: 
+
+L · T = D · S (6) Here, L = [ ⃗ l1,⃗ l 2,⃗ l 3] and S = [ ⃗s 1,⃗s 2,⃗s 3] are 3 × 3 matrices containing the parent and child lattice vectors, respectively, and det( T ) equals the ratio of the number of atoms in the child cell to the number in the parent primitive cell. The robust crystal structure mapping algorithm of Thomas 
+
+et al. [44] rigorously maps a deformed child structure onto a reference parent crystal structure. However, it can be com-putationally slow, particularly for the small-distortion struc-tures that make up a large fraction of training sets. pyeCE 
+
+provides a faster structure matching algorithm that is valid when the child and parent structures share nearly the same orientation and lattice parameters, so that D ≈ I. In this limit, eq. (6) becomes: 
+
+L · T = ( I + dD ) · S
+
+where dD = D − I is the deviation of D from the identity. Left-multiplying by L−1 and rearranging gives: 
+
+L−1 · S = T − L−1 · dD · S
+
+Since T is an integer matrix by definition, L−1 · S ≈ T up to the small perturbation L−1 · dD · S. Finding T is therefore a closest vector problem (CVP), namely identifying the lattice point in L nearest to each child lattice vector, 
+
+Ti1, T i2, T i3 = arg min  
+
+> Tij ∈Z
+> 3
+
+X
+
+> j=1
+
+Tij ⃗ lj −⃗s i , ∀ i = 1 , 2, 3 (7) This problem is NP-hard. Babai’s rounding algorithm finds an approximate solution by rounding each element of L−1 ·
+
+S to the nearest integer [45], and performs better when the parent lattice vectors form a Lenstra–Lenstra–Lovász (LLL)-reduced basis [46]. Figure 7 illustrates the mapping process. First, the lattice vectors of the child structure are matched to the nearest par-ent lattice points by rounding L−1 · S to the nearest integer. Misorientation embeds a rotation in D whose off-diagonal elements are not small, and the algorithm can then fail. Once the lattice is matched, atomic sites are assigned by solving a linear assignment problem following the method-ology of Thomas et al. , which minimizes the total displace-ment between child and parent sites. Each mapped structure is then assigned a lattice deformation score and an atomic displacement score using the same metrics. Structures whose scores exceed user-defined thresholds are discarded from the training set. Because pyeCE uses the approximate CVP so-lution rather than full enumeration, these scores are conser-vative. They may overestimate the true mapping cost, but never underestimate it, so no poorly mapped structure is in-correctly accepted. The fast algorithm can therefore be ap-plied first, with structures of high deformation score passed  
+
+> FIG. 7. Illustration of the fast structure matching algorithm. The gray cell is the parent structure and the blue dots are the parent lattice sites. The orange cell is the child structure, whose lattice vectors are shown as orange arrows. The mapping rounds each child lattice vector to the nearest parent lattice point, then assigns each child atomic site to the nearest parent site.
+
+to the full algorithm in a second pass to recover any config-urations that the approximation may have rejected.  
+
+> C. Training the Model
+
+Having built the eCE model and assembled the training set, we optimize the model parameters to reproduce the training data. The neural network and the learnable embedded site-basis functions render the model nonlinear, precluding the linear least-squares fitting used in conventional cluster ex-pansions. The model is trained by minimizing the loss func-tion 
+
+L(T , w) = X
+
+> i
+
+ x(⃗σ i) − xeCE (⃗σ i; T , w)2 + Lreg (T , w)
+
+(8) where w are the weights of the neural-network site prop-erty model and Lreg is a regularization term. Training uses gradient-descent optimizers from PyTorch. Overfitting is controlled by L2 regularization (weight decay), early stop-ping, and learning-rate scheduling. In addition to these stan-dard tools, the training proceeds iteratively, progressively in-corporating descriptors for larger clusters. This ladder train-ing improves robustness and helps avoid local minima. 7In practice, eCE models containing only pair clusters with cutoff radii between 8 Å and 10 Å and the first few triplet clus-ters may be sufficient. Ladder training is typically divided into three to six steps, with the first step containing only the first and second nearest-neighbor pair clusters. This step ac-counts for the largest reduction in loss and can use a rela-tively large learning rate, around 10 −2. 
+
+> 1. Estimating Prediction Errors
+
+Prediction errors are inevitable in any surrogate model, and reliable error estimates are important for assessing the confidence of individual predictions. pyeCE implements two techniques to estimate the prediction uncertainty of a trained model. The first is the committee method, in which multiple models are trained with identical hyperparameters but dif-ferent random initial weights. Each model converges to a slightly different solution because of the initialization and the stochasticity of gradient descent. An error estimate ˆσCM ϵ (⃗σ)
+
+for configuration ⃗σ is obtained from the root-mean-square of their deviations from the committee mean: 
+
+ˆσCM ϵ (⃗σ) = 
+
+vuut 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+ϵ2 
+
+> i
+
+(⃗σ) (9) where ϵi(⃗σ) = x ieCE (⃗σ) − ¯x eCE (⃗σ) is the deviation of the ith model from the committee average ¯xeCE (⃗σ) =
+
+> 1
+> N
+
+PNi=1 xieCE (⃗σ). Although robust and straightforward, this method is computationally demanding, as it requires training multiple models and evaluating each configuration with all of them. The second method, following Bigi et al. [47], estimates the error from the latent features ⃗ f of the last layer of the trained network (fig. 6). The error estimate ˆσLL ϵ (⃗σ) is given by: 
+
+ˆσLL ϵ (⃗σ) = 
+
+q
+
+α⃗f T (⃗σ)( F T F + ξ2I)−1⃗ f (⃗σ) (10) where F is a matrix whose ith row holds the last-layer fea-tures of the network evaluated at the ith training config-uration, α is a calibration parameter set so that the mean error estimate matches the training root-mean-square er-ror (RMSE), and ξ is a small regularization parameter. This method requires only a single training run and minimal ad-ditional computation.  
+
+> D. Sampling Thermodynamic Properties
+
+eCE models are sampled with the same statistical-mechanics techniques as conventional cluster expansions, giving access to thermodynamic properties, free energies, and phase stability as functions of temperature and compo-sition. For a thermodynamic ensemble with energy ω, the probability of observing configuration ⃗σ is: 
+
+P(⃗σ) = 1
+
+Z exp   − βω (⃗σ) 
+
+with Z = X exp   − βω (⃗σ)  (11) where the sum runs over all microstates commensurate with the boundary conditions of the ensemble. Markov chain Monte Carlo (MCMC) methods such as the Metropolis algorithm [31, 32] construct an ergodic Markov chain whose configurations sample P, so that ensemble av-erages become time averages along the chain: 
+
+⟨X⟩ = X⃗σ
+
+X(⃗σ)P(⃗σ) ≈ lim  
+
+> N→∞
+
+1
+
+N
+
+> N
+
+X
+
+> i
+
+Xi (12) where Xi = X(⃗σ i) and ⃗σ i is the ith configuration drawn from P (eq. (11)). Each step proposes a new configuration according to a user-defined proposal distribution, typically swapping two atoms in the canonical ensemble or changing the species on one site in the semi-grand canonical ensemble. Evaluating the property Xt at every step t yields a time series, such as the one in fig. 8. Property  Teq Timeseries Estimator Confidence interval 
+
+# Step Neff      
+
+> FIG. 8. Illustration of a time series resulting from a Metropolis Monte Carlo simulation. The upper plot shows the evolution of the property with the number of MC steps performed, together with the sample-mean estimator ˆμXand its confidence interval. The lower plot shows the number of effective uncorrelated samples Nef f con-tained in the time series from a given MC step to the end. The equi-libration time corresponds to the MC step with the largest number of effective samples.
+
+The time average in eq. (12) is the sample-mean estimator 
+
+ˆμX of the ensemble average ⟨X⟩. It is unbiased and con-verges to ⟨X⟩ as the number of samples grows. Two features 8of MCMC data complicate its use. First, successive configu-rations are correlated. Second, the chain begins away from equilibrium, so its early samples must be discarded. pyeCE 
+
+accounts for both before reporting an average and its confi-dence interval. As the chain produces correlated samples, the variance of 
+
+ˆμX is not simply σ2 
+
+> X
+
+/N . For a time series it is: 
+
+V[ˆ μX ] = 1
+
+N σ2
+
+> X
+
+
+
+1 + 2  
+
+> N−1
+
+X
+
+> n=1
+
+ 1 − nN
+
+Cn
+
+
+
+with Cn = Cov (Xi, X i+n)
+
+σ2
+
+> X
+
+(13) where σ2 
+
+> X
+
+is the variance of the property X and Cn is the autocorrelation at lag n. The first term is the variance of the sample mean for independent samples. The second term cor-rects for correlation between samples. When the autocorre-lation is positive, this correction is positive and V[ˆ μX ] de-cays more slowly than the independent-sample rate of 1/N 
+
+[48, 49]. Equivalently, the time series carries only Nef f =
+
+σ2 
+
+> X
+
+/V[ˆ μX ] effective uncorrelated samples [49]. Correlation can be handled either by evaluating eq. (13) directly or by re-taining every N/N ef f th sample and applying the standard estimators for uncorrelated samples. Averages must be computed only over the equilibrated portion of the chain. Samples drawn before the chain reaches its equilibrium distribution reflect the initial configuration and bias the average. pyeCE locates the equilibration time with the algorithm of Chodera [49]. For each step t =1, 2, . . . , N , the algorithm computes Nef f over the window from t to N and takes the equilibration time as the step that maximizes Nef f . Figure 8 illustrates this construction. From the equilibrated, decorrelated samples, pyeCE re-ports ˆμX together with a confidence interval that quantifies convergence. The interval is constructed at a user-specified confidence level from the variance in eq. (13), assuming that 
+
+ˆμX follows a t-distribution. Figure 8 schematically shows this estimator and its confidence interval as a function of MC step. 
+
+pyeCE evaluates ensemble averages of configuration-dependent properties on the fly. At each uncorrelated sample it evaluates all requested properties and continues the simu-lation until they converge within a user-specified tolerance. Properties that are already implemented include sublattice compositions for long-range order (LRO) parameters, clus-ter occupation probabilities, and the associated short-range order (SRO) parameters.  
+
+> III. APPLICATIONS
+
+pyeCE is a modular codebase for studying the finite-temperature thermodynamics of complex concentrated al-loys. We illustrate its capabilities through two case studies. The first characterizes the thermodynamics and short-range order of high-entropy refractory alloys for high-temperature and extreme-environment use. The second predicts hydro-gen dissolution in a ternary alloy of current interest for fu-sion and energy storage.  
+
+> A. Thermodynamics of a 9-component refractory alloy
+
+Multicomponent refractory alloys comprising elements in groups 4, 5, and 6 of the periodic table are attractive for their high-temperature properties and tunable mechanical strength. However, questions remain about their stability as a disordered solid solution at lower temperatures, their corrosion resistance, and the nature of short-range order in these systems. The first application studies the thermody-namic properties of BCC alloys in the Cr–Hf–Mo–Nb–Ta– Ti–V–W–Zr system. We parameterized the eCE model by embedding the 9 independent site-basis functions within a three-dimensional space, effectively treating the alloy as a pseudo-ternary system. The first 8 nearest-neighbor pairs and the smallest triplet cluster were considered. The site en-ergy model was a feedforward neural network with 3 hidden layers of 128, 128, and 32 nodes. 0 1000 2000 3000 4000 5000 Number data 0510 15 20 25 RMSE (meV/atom) training remaining-data SQS 
+
+> FIG. 9. Root-mean-square error (RMSE) of the eCE model for the Cr–Hf–Mo–Nb–Ta–Ti–V–W–Zr system as a function of the num-ber of structures in the training set during active learning. Errors are shown for the training set (black), the structures remaining in the data reservoir (orange), and the held-out special quasi-random structure (SQS) test set (green). Solid lines and shaded bands denote the mean and standard deviation of the RMSE over 10 independent training runs.
+
+We used the error-estimation tools in pyeCE to build a training set spanning the full 9-component composition space by active learning, iteratively adding the structures with the largest predicted errors from a pool of reservoir structures. The initial training set contained the pure ele-ments and all symmetrically distinct decorations of a 2-atom supercell. We constructed a reservoir of candidate structures with the Hart and Forcade enumeration algorithm [43]. At each iteration, we trained a model on the current training set and evaluated the last-layer uncertainty ˆσLL ϵ of every reser-voir structure. We then added the 100 highest-uncertainty 9structures, together with their DFT energies, to the training set, and repeated until the training set contained 5000 struc-tures. To trace how the error evolves during this procedure, we used a large database of DFT calculations from previous studies[13, 34]. Because every structure in this database al-ready has a DFT energy, we could track not only the training error but also the prediction error on the reservoir structures not yet added to the training set. eCE models are used pri-marily to probe disordered solid solutions, so we also assem-bled a held-out test set of equiatomic special quasi-random structures (SQS). These SQS were never seen during train-ing and therefore measured the accuracy of the model in the disordered state. Figure 9 shows how the training, reservoir, and test er-rors evolve with training-set size. We performed 10 inde-pendent training runs and estimated the mean and standard deviation of the RMSE for each dataset using the commit-tee method described above. The training error converged to 
+
+≈ 5 meV/atom. The reservoir error converged more slowly, reaching 10 meV/atom only after about 4000 structures had been added to the training set. The test error on the SQS converged faster than the reservoir error and stabilized near 6 meV/atom. −1 0 1
+
+# Site-basis function 1 ( ˜ ϕ1)
+
+−1.5 
+
+−1.0 
+
+−0.5 0.0 0.5 1.0 1.5 
+
+> Site-basis function 2 ( ˜ ϕ2)
+
+# Ti Zr Hf VNb Ta Cr Mo W
+
+> FIG. 10. Projection of the 9 chemical species onto the two non-trivial embedded site-basis functions. The color of each marker denotes the periodic-table group of the element and the marker shape denotes its period.
+
+The learned transformation matrix T maps the 9 chemical species into a three-dimensional space with one dimension fixed to the constant ˜φ0 = 1 . The resulting vectors offer a data-driven measure of the chemical similarities and dissim-ilarities among the elements. Figure 10 shows the projection of each element onto the two non-trivial embedded site-basis functions. The elements are ordered by group and period, mirroring their arrangement in the periodic table. The 3d el-ements occupy the lower-left region of the space, while the 
+
+4d and 5d elements appear toward the upper right. Elements within each group are also separated. These results indicate that the eCE model recovers chemical relationships consis-tent with the periodic table. Having parameterized an accurate model, we performed canonical Monte Carlo simulations for all 502 equiatomic al-loys formed from 2 to 9 of the elements in this system, using the same Monte Carlo parameters as in [13]. We used these simulations to characterize the SRO in the disordered state at multiple temperatures. Ti Zr Hf V Nb Ta CrMo W WMo Cr Ta Nb VHf Zr Ti Hf Ta W Zr Nb Mo Ti V Cr 
+
+> Attractive Repulsive
+
+# IV V VI 
+
+# -0.2 -0.15 -0.1 -0.05 0.0 0.05 0.1 0.15 0.2 SRO  
+
+> FIG. 11. Warren–Cowley short-range order parameters for all el-ement pairs in the equiatomic 9-component alloy at 2200 K. Red (negative) values indicate attraction between the two species and green (positive) values indicate repulsion. Elements are ordered by periodic-table group, with black boxes outlining the group 4, 5, and 6 blocks. The inset shows the arrangement of the 9 elements by group and period.
+
+Figure 11 shows the Warren–Cowley short-range order pa-rameters [50–52] for all pairs in the equiatomic 9-component alloy at 2200 K. A negative value indicates that the two species are found as neighbors more frequently than in a ran-dom alloy. Elements of group 4 tend to be attracted to those of group 6, while being repelled by group 5 elements. SRO between elements of the same group, specifically groups 5 and 6, is positive, indicating that these elements do not clus-ter with others of the same group, consistent with previous work [34]. SRO can be used to probe the corrosion resistance of mul-ticomponent alloys. Clustering of Cr atoms in the disor-dered state, corresponding to negative Cr-Cr SRO, has been shown [53] to enable passivating oxide films to form a contin-uous oxide scale, addressing a major challenge facing refrac-tory alloys. Achieving Cr clustering is difficult. The trends in fig. 11 and the results of Müller and Natarajan [34] both show fewer Cr-Cr pairs than in a perfectly random alloy. Fig-ure 12 shows the Cr-Cr SRO across all equiatomic alloys in the 9-component space, plotted for temperatures above the 10 0 2 4 6 8 10 Rescaled temperature T −Tc Tc          
+
+> −0.05 0.00 0.05 0.10 0.15 0.20 0.25 0.30 0.35 0.40 Cr-Cr SRO 02000 4000 6000 Temperature (K)
+> −0.05
+> −0.04
+> −0.03
+> −0.02
+> −0.01 0.00 Cr-Cr SRO Alloy of Cr with: Group 4 Group 5 Group 6 Groups 4 + 5 Groups 4 + 6 Groups 5 + 6 Groups 4 + 5 + 6
+> FIG. 12. Warren–Cowley Cr-Cr SRO parameter for all Cr-containing equiatomic alloys in the 9-component space as a function of the rescaled temperature (T−Tc)/T c, where Tcis the order-disorder transition temperature of each alloy. Curves are colored by the periodic-table groups of the elements alloyed with Cr. Negative val-ues indicate Cr clustering. The inset shows the alloys with negative Cr-Cr SRO as a function of absolute temperature.
+
+order-disorder transition temperature of each alloy. We iden-tified this transition temperature from the divergence in the heat capacity computed from canonical Monte Carlo simu-lations. Most refractory alloys show positive Cr-Cr SRO, in-dicating that Cr atoms repel each other. We found, however, that only 5 Cr-containing alloys display attractive Cr-Cr SRO, namely CrMo, CrMoV, CrMoZr, CrMoVZr, and CrMoVW (in-set, fig. 12). Among these, CrMo and CrMoV maintain attrac-tive SRO over a wide temperature range below 3000 K. The disordered solid solution in the Zr-containing alloys is stable only above 3500 K, and CrMoVW shows negative Cr-Cr SRO only within 100 K above the critical temperature. These re-sults highlight the role of Mo in promoting Cr clustering and, potentially, passivating oxide formation in refractory alloys, and demonstrate the utility of eCE models for rapidly screen-ing alloy compositions for target thermodynamic properties.  
+
+> B. Hydrogen dissolution in refractory alloys
+
+Multicomponent alloys are attractive candidates for sta-tionary hydrogen storage [54–56] and for the refrac-tory, plasma-facing components of fusion reactors, where hydrogen-isotope retention and transport remain open con-cerns [57]. In both settings, hydrogen dissolution and the underlying hydrogen-metal interactions govern performance and determine which local environments hydrogen occupies. Here we study hydrogen dissolution in a ternary Mo–Nb–W alloy. Its elements belong to groups 5 and 6 of the periodic table, and their contrasting affinities for hydrogen make the system an illustrative example [58]. We model the alloy with disorder over two sublattices of a parent BCC crystal structure. The sites of the BCC host are occupied by Mo, Nb, or W, and the tetrahedral intersti-tial sublattice by either hydrogen or a vacancy. We assign the two sublattices different embedding dimensions, treating the ternary metal sublattice as a pseudo-binary system and applying no embedding on the interstitial sublattice. The training dataset contains 1703 symmetrically distinct arrangements of Mo, Nb, W, and H over the two sublattices of the parent crystal structure. It includes unary, binary, and ternary decorations of the metal sublattice in supercells of up to 12 metal atoms. Hydrogen-bearing orderings, with a hydrogen-to-metal ratio (H/M) of up to 2.0, are enumerated in supercells of up to 5 metal atoms. A further 72 configura-tions use large supercells of 54 metal atoms and capture di-lute hydrogen in a disordered metal, namely hydrogen pairs in the pure metals together with binary and ternary SQS each containing a single hydrogen atom. Together these arrange-ments span the quaternary Mo–Nb–W–H composition space. The energy of each configuration was computed with DFT as implemented in the Vienna Ab initio Simulation Package (VASP) [59, 60], using the same computational settings as in previous studies [13, 34]. The atomic positions and lattice pa-rameters of orderings in small supercells were fully relaxed. In the 54-metal-atom supercells, only the atomic positions were relaxed, with the lattice parameters held fixed at those of the corresponding hydrogen-free metal composition. We parameterized an eCE model with empty, point, and pair clusters up to a cutoff radius of 8 Å, using Chebyshev site-basis functions on the metal sublattice [38] and an oc-cupation basis on the interstitial sublattice, and a feedfor-ward neural network with three hidden layers of 32, 32, and 8 nodes. We partitioned the 1703 configurations into train-ing (1362), validation (177), and test (164) sets. The trained model reaches mean absolute errors of 3.2, 9.4, and 10.9 meV per metal atom on the training, validation, and held-out test sets, respectively. Experiments measure the amount of hydrogen dissolved in a metal through the pressure-composition isotherm. Since the partial pressure of hydrogen can be related to its chemical potential μH , an analogous isotherm can be computed with semi-grand canonical Monte Carlo simulations that vary μH
+
+at fixed metal composition and temperature. Because slow diffusion keeps the metal atoms immobile, we froze the metal sublattice into an arrangement representative of the high-temperature configuration retained during synthesis. For each alloy, a snapshot of the metal ordering was drawn from canonical Monte Carlo simulations at 2000 K. This temper-ature lies above the order–disorder transition temperatures of the Mo–Nb–W alloys, ensuring that the frozen host rep-resents the disordered solid solution. The simulations used a 9 ×9×9 supercell of the conventional bcc crystal contain-ing 1458 metal atoms and 8748 tetrahedral interstitial sites. 11 Holding the metal configuration fixed, we then varied μH at 300 K while allowing hydrogen to enter and leave the inter-stitial sublattice freely. At each chemical potential, the Monte Carlo simulation was continued until the 95% confidence in-terval of the energy fell below 1 meV per metal atom. Ensem-ble averages were computed from at least 100 uncorrelated samples. 0.0 0.2 0.4 0.6 0.8 1.0 
+
+# H/M 
+
+0.6 0.4 0.2 0.0 0.2 
+
+> H (eV / H atom)
+
+Nb Mo W
+
+NbW MoNb MoW Mo 2NbW MoNb 2WMoNbW 2
+
+Nb MoNbW 
+
+FIG. 13. Computed variation in the ensemble-averaged hydrogen-to-metal ratio ⟨H/M ⟩ with hydrogen chemical potential μH at 300 K for representative Mo–Nb–W alloys, color-coded by alloy composition. The metal sublattice was held fixed in an arrangement drawn from Monte Carlo simulations at 2000 K while hydrogen was allowed to enter and leave the interstitial sublattice. 
+
+Figure 13 shows how alloy chemistry controls the amount of hydrogen dissolved at 300 K. At fixed μH , pure Nb dis-solves the most hydrogen, Nb-rich alloys dissolve substan-tially more than Nb-lean alloys, and W-rich alloys dissolve the least. These trends track the stronger affinity of the group 5 element Nb for hydrogen relative to the group 6 elements Mo and W. The precise identity of the group 6 element has little effect on hydrogen solubility. For instance, replacing about half of the Mo in equiatomic MoNb with W, giving MoNb 2W, leaves the dissolved hydrogen almost unchanged. In a multicomponent alloy, the metal atoms forming the tetrahedron around a dissolved hydrogen atom are likely to interact strongly with hydrogen. Consequently, environ-ments rich in metals that interact favorably with hydrogen, such as Nb, should be preferentially populated relative to environments containing W. To assess this, we counted the nearest-neighbor hydrogen-metal pairs and compared their number with the value expected if hydrogen occupied the 1.0 1.5 2.0 2.5 3.0 
+
+> NH Mobs /N disordered H M
+
+## H-Nb 
+
+> 0.2 0.4 0.6 0.8 1.0 1.2 1.4
+> NH Mobs /N disordered H M
+
+## H-Mo     
+
+> 0.00 0.25 0.50 0.75 1.00 0.2 0.4 0.6 0.8 1.0 1.2 1.4
+> NH Mobs /N disordered H M
+
+## H-W 
+
+> Nb NbW MoNb Mo 2NbW MoNb 2WMoNbW 2
+> MoNbW
+
+## H/M 
+
+FIG. 14. Ratio of the number of nearest-neighbor hydrogen-metal pairs, ⟨N obs H−M ⟩, to the number expected for a random hydrogen distribution, N disordered H−M , as a function of the hydrogen content 
+
+⟨H/M ⟩ at 300 K. The three panels separate the H-Nb, H-Mo, and H-W interactions, with curves color-coded by alloy composition. Ratios above the dashed reference indicate preferred coordination, below it a disfavored environment. As in fig. 13, the metal sublattice was held fixed while hydrogen was allowed to enter and leave the interstitial sublattice. 12 interstitial sites at random. A ratio of one corresponds to a random distribution, a value greater than one to preferred coordination, and a value less than one to a disfavored envi-ronment. Figure 14 shows the ratio, ⟨N obs H−M ⟩/N disordered H−M , for each hydrogen-metal pair across the representative alloys. In ev-ery multicomponent alloy, hydrogen preferentially segre-gates to Nb-containing environments and occupies fewer W-containing environments than in a random distribution. The number of H-Mo pairs is also below the random value in all but MoNbW 2. Hydrogen therefore prefers Nb to Mo, and Mo to W, the order expected from the stronger affinity of the group 5 element. The H-W ratio is the most uniform across compositions, staying low in every alloy and rising only slightly as the W fraction grows and hydrogen can no longer avoid W neighbors. The Nb-rich ternary MoNb 2Wand the equiatomic binaries MoNb and NbW behave almost identically in both figures (figs. 13 and 14). All three contain the same Nb fraction, and because both group 6 elements are unfavorable neighbors, exchanging Mo for W leaves the Nb-coordinated environments unchanged.  
+
+> IV. CONCLUSION AND OUTLOOK
+
+We introduced pyeCE , a Python package that implements the embedded cluster expansion formalism and provides a complete workflow for building, training, and deploying on-lattice models of multicomponent alloys. From a primitive cell, pyeCE assembles a symmetry-adapted eCE model for systems with any number of species distributed over one or more sublattices, and learns a per-sublattice chemical embed-ding that adapts to the alloy chemistry. The site energy model is parameterized by a neural network, and pyeCE quantifies the uncertainty of its predictions. Trained models are coarse-grained with rigorous statistical-mechanics methods to ob-tain finite-temperature thermodynamic properties. Built on 
+
+pymatgen and PyTorch , it draws on established optimization algorithms and standard machine-learning workflows, and runs on GPUs. The full pipeline is exposed through both the command-line interface and the Python API. The central advantage of the eCE formalism is that it over-comes the rapid growth in the number of cluster functions that has long limited the conventional cluster expansion to alloys of no more than three or four chemical species. By embedding many chemical species into a small set of effec-tive ones, eCE keeps the number of cluster functions tractable while preserving the accuracy needed to resolve formation energies, short-range order, and phase stability. The two applications presented here illustrate this capability. A sin-gle model spanning a 9-component refractory system repro-duced short-range order and order–disorder behavior across the full composition space, while a model of the Mo–Nb–W– H system captured hydrogen dissolution over coupled metal and interstitial sublattices. Together, these examples show that accurate, first-principles-based thermodynamic model-ing of high-entropy alloys is now within reach. The modular design of pyeCE opens several directions for future work. The same infrastructure can support richer on-lattice models that couple chemical order to atomic dis-placements, magnetism, and lattice strain. It can also ac-commodate custom Monte Carlo schemes such as biased-ensemble sampling. The framework extends to properties beyond bulk thermodynamics, including migration barriers for diffusion, surface energetics, and the unstable stacking-fault energies that characterize planar defects. These exten-sions would connect complex alloy chemistries to the me-chanical response that governs high-strength structural ap-plications and to functional properties such as catalysis and energy storage. They would also enable a quantitative test of long-hypothesized high-entropy-alloy phenomena, sluggish diffusion among them, that have proven difficult to model. By coupling an interpretable chemical embedding with GPU-accelerated sampling, pyeCE bridges atomistic calculations and finite-temperature properties, and establishes a founda-tion for the computational design of high-entropy alloys.  
+
+> V. CODE AVAILABILITY
+
+The source code is publicly available at https:// github.com/epfl-mades/pyece , and the package is distributed through PyPI at https://pypi.org/ project/pyece-mades/ . 
+
+> VI. ACKNOWLEDGMENTS
+
+This research was supported by the Swiss National Science Foundation through the NCCR MARVEL, a National Cen-tre of Competence in Research (grant number 205602), and through grant number 215178. The authors also acknowledge access to Eiger at the Swiss National Supercomputing Centre under project ID mr30, allocated from the NCCR MARVEL share.     
+
+> [1] A. Van der Ven, J. Thomas, B. Puchala, and A. Natarajan, First-Principles Statistical Mechanics of Multicomponent Crystals, Annual Review of Materials Research 48 , 27 (2018), _eprint: https://doi.org/10.1146/annurev-matsci-070317-124443. [2] M. S. Daw and M. I. Baskes, Embedded-atom method: Deriva-tion and application to impurities, surfaces, and other defects in metals, Phys. Rev. B 29 , 6443 (1984). [3] R. Drautz, Atomic cluster expansion for accurate and transfer-able interatomic potentials, Phys. Rev. B 99 , 014104 (2019). [4] J. Behler and M. Parrinello, Generalized neural-network repre-sentation of high-dimensional potential-energy surfaces, Phys. Rev. Lett. 98 , 146401 (2007). [5] J. M. Sanchez, F. Ducastelle, and D. Gratias, Generalized cluster description of multicomponent systems, Physica A: Statistical
+
+13 
+
+Mechanics and its Applications 128 , 334 (1984). [6] Y. L. Müller and A. R. Natarajan, First-principles thermody-namics of precipitation in aluminum-containing refractory al-loys, Acta Materialia 274 , 119995 (2024). [7] A. R. Natarajan and A. Van der Ven, First-principles investi-gation of phase stability in the Mg-Sc binary alloy, Physical Review B 95 , 214107 (2017). [8] C. Linderälv, J. M. Rahm, and P. Erhart, High-Throughput Characterization of Transition Metal Dichalcogenide Alloys: Thermodynamic Stability and Electronic Band Alignment, Chemistry of Materials , acs.chemmater.2c01176 (2022). [9] D. A. Kitchaev, Z. Lun, W. D. Richards, H. Ji, R. J. Clément, M. Balasubramanian, D.-H. Kwon, K. Dai, J. K. Papp, T. Lei, B. D. McCloskey, W. Yang, J. Lee, and G. Ceder, Design prin-ciples for high transition metal capacity in disordered rock-salt Li-ion cathodes, Energy & Environmental Science 11 , 2159 (2018). [10] W. D. Richards, S. T. Dacek, D. A. Kitchaev, and G. Ceder, Flu-orination of Lithium-Excess Transition Metal Oxide Cathode Materials, Advanced Energy Materials 8, 1701533 (2018). [11] Z. Lun, B. Ouyang, D. A. Kitchaev, R. J. Clément, J. K. Papp, M. Balasubramanian, Y. Tian, T. Lei, T. Shi, B. D. McCloskey, J. Lee, and G. Ceder, Improved Cycling Performance of Li-Excess Cation-Disordered Cathode Materials upon Fluorine Substitution, Advanced Energy Materials 9, 1802959 (2019). [12] Z. Lun, B. Ouyang, D.-H. Kwon, Y. Ha, E. E. Foley, T.-Y. Huang, Z. Cai, H. Kim, M. Balasubramanian, Y. Sun, J. Huang, Y. Tian, H. Kim, B. D. McCloskey, W. Yang, R. J. Clément, H. Ji, and G. Ceder, Cation-disordered rocksalt-type high-entropy cath-odes for Li-ion batteries, Nature Materials 20 , 214 (2021). [13] D. K. Lee, Y. L. Müller, and A. R. Natarajan, Modeling the equi-librium vacancy concentration in multi-principal element al-loys from first-principles, Acta Materialia 304 , 121752 (2026). [14] A. A. Belak and A. Van der Ven, Effect of disorder on the dilute equilibrium vacancy concentrations of multicomponent crys-talline solids, Phys. Rev. B 91 , 224109 (2015). [15] B. Puchala and A. Van der Ven, Thermodynamics of the Zr-O system from first-principles calculations, Physical Review B 
+
+88 , 094108 (2013), publisher: American Physical Society. [16] C. A. Paetsch and A. R. Natarajan, First-Principles Thermody-namics of Hydrogen Absorption in Binary C15 Laves Phases, Chemistry of Materials , acs.chemmater.5c01925 (2026). [17] N. H. Gunda and A. Van der Ven, Understanding the interac-tions between interstitial and substitutional solutes in refrac-tory alloys: The case of ti-al-o, Acta Materialia 191 , 149 (2020). [18] C. Reynolds, T. M. Pollock, and A. Van der Ven, Solute-solute interactions in dilute nb-xo alloys from first principles, Acta Materialia 266 , 119621 (2024). [19] A. Van der Ven, G. Ceder, M. Asta, and P. D. Tepesch, First-principles theory of ionic diffusion with nondilute carriers, Physical Review B 64 , 184307 (2001). [20] A. Van Der Ven, H.-C. Yu, G. Ceder, and K. Thornton, Vacancy mediated substitutional diffusion in binary crystalline solids, Progress in Materials Science 55 , 61 (2010). [21] D. K. J. Lee and A. R. Natarajan, Diffusion coefficients of multi-principal element alloys from first principles (2026), arXiv:2603.24228 [cond-mat.mtrl-sci]. [22] A. R. Natarajan and A. Van der Ven, Linking electronic struc-ture calculations to generalized stacking fault energies in mul-ticomponent alloys, npj Computational Materials 6, 80 (2020). [23] E. Mak, B. Yin, and W. A. Curtin, A ductility criterion for bcc high entropy alloys, Journal of the Mechanics and Physics of Solids 152 , 104389 (2021). [24] J. C. Thomas and A. Van der Ven, Finite-temperature proper-ties of strongly anharmonic and mechanically unstable crys-tal phases from first principles, Physical Review B 88 , 214111 (2013). [25] J. C. Thomas and A. Van der Ven, Elastic properties and stress-temperature phase diagrams of high-temperature phases with low-temperature lattice instabilities, Physical Review B 90 ,224105 (2014). [26] A. van de Walle and G. Ceder, The effect of lattice vibrations on substitutional alloy thermodynamics, Rev. Mod. Phys. 74 ,35 (2002). [27] S. Kadkhodaei, Q.-J. Hong, and A. Van De Walle, Free energy calculation of mechanically unstable but dynamically stabi-lized bcc titanium, Physical Review B 95 , 064101 (2017). [28] D. A. Kitchaev and A. Van Der Ven, Tuning magnetic anti-skyrmion stability in tetragonal inverse Heusler alloys, Physi-cal Review Materials 5, 124408 (2021). [29] E. Decolvenaere, E. Levin, R. Seshadri, and A. Van Der Ven, Modeling magnetic evolution and exchange hardening in dis-ordered magnets: The example of Mn 1 - x Fe x Ru 2 Sn Heusler alloys, Physical Review Materials 3, 104411 (2019). [30] R. Drautz and M. Fähnle, Spin-cluster expansion: Parametriza-tion of the general adiabatic magnetic energy surface with ab initio accuracy, Physical Review B 69 , 104404 (2004). [31] N. Metropolis, A. W. Rosenbluth, M. N. Rosenbluth, A. H. Teller, and E. Teller, Equation of State Calculations by Fast Computing Machines, The Journal of Chemical Physics 21 ,1087 (1953). [32] W. K. Hastings, Monte carlo sampling methods us-ing markov chains and their applications, Biometrika 
+
+57 , 97 (1970), https://academic.oup.com/biomet/article-pdf/57/1/97/23940249/57-1-97.pdf. [33] A. R. Natarajan, J. C. Thomas, B. Puchala, and A. Van der Ven, Symmetry-adapted order parameters and free energies for solids undergoing order-disorder phase transitions, Physi-cal Review B 96 , 134204 (2017). [34] Y. L. Müller and A. R. Natarajan, Constructing multicompo-nent cluster expansions with machine-learning and chemical embedding, npj Computational Materials 11 , 60 (2025). [35] M. Ångqvist, W. A. Muñoz, J. M. Rahm, E. Fransson, C. Durniak, P. Rozyczko, T. H. Rod, and P. Erhart, Icet – a python library for constructing and sampling alloy cluster ex-pansions, Advanced Theory and Simulations 2, 1900015 (2019), https://advanced.onlinelibrary.wiley.com/doi/pdf/10.1002/adts.201900015. [36] B. Puchala, J. C. Thomas, A. R. Natarajan, J. G. Goiri, S. S. Behara, J. L. Kaufman, and A. Van der Ven, CASM — A soft-ware package for first-principles based study of multicompo-nent crystalline solids, Computational Materials Science 217 ,111897 (2023). [37] A. van de Walle, M. D. Asta, and G. Ceder, The Alloy Theoretic Automated Toolkit: A user guide, Calphad 26 , 539 (2002). [38] A. Van De Walle, Multicomponent multisublattice alloys, non-configurational entropy and other additions to the Alloy The-oretic Automated Toolkit, Calphad 33 , 266 (2009). [39] L. Barroso-Luque, P. Zhong, J. H. Yang, F. Xie, T. Chen, B. Ouyang, and G. Ceder, Cluster expansions of multicompo-nent ionic materials: Formalism and methodology, Physical Review B 106 , 144202 (2022). [40] S. P. Ong, W. D. Richards, A. Jain, G. Hautier, M. Kocher, S. Cho-lia, D. Gunter, V. L. Chevrier, K. A. Persson, and G. Ceder, Python Materials Genomics (pymatgen): A robust, open-source python library for materials analysis, Computational Materials Science 68 , 314 (2013). 14 
+
+[41] A. Paszke, S. Gross, F. Massa, A. Lerer, J. Bradbury, G. Chanan, T. Killeen, Z. Lin, N. Gimelshein, L. Antiga, A. Desmaison, A. Köpf, E. Yang, Z. DeVito, M. Raison, A. Tejani, S. Chil-amkurthy, B. Steiner, L. Fang, J. Bai, and S. Chintala, Pytorch: An imperative style, high-performance deep learning library (2019), arXiv:1912.01703 [cs.LG]. [42] A. R. Natarajan and A. Van der Ven, Machine-learning the con-figurational energy of multicomponent crystalline solids, npj Computational Materials 4, 1 (2018). [43] G. L. W. Hart and R. W. Forcade, Algorithm for generating derivative structures, Phys. Rev. B 77 , 224115 (2008). [44] J. C. Thomas, A. R. Natarajan, and A. Van der Ven, Compar-ing crystal structures with symmetry and geometry, npj Com-putational Materials 7, 1 (2021), number: 1 Publisher: Nature Publishing Group. [45] L. Babai, On Lovász’ lattice reduction and the nearest lattice point problem, Combinatorica 6, 1 (1986). [46] A. K. Lenstra, H. W. Lenstra, and L. Lovász, Factoring polyno-mials with rational coefficients, Mathematische Annalen 261 ,515 (1982). [47] F. Bigi, S. Chong, M. Ceriotti, and F. Grasselli, A prediction rigidity formalism for low-cost uncertainties in trained neu-ral networks, Machine Learning: Science and Technology 5,045018 (2024). [48] A. Walle and G. Ceder, Automating first-principles phase dia-gram calculations, Journal of Phase Equilibria 23 , 348 (2002). [49] J. D. Chodera, A simple method for automated equilibra-tion detection in molecular simulations, Journal of Chemical Theory and Computation 12 , 1799 (2016), pMID: 26771390, https://doi.org/10.1021/acs.jctc.5b00784. [50] N. Norman and B. E. Warren, X-Ray Measurement of Short Range Order in Ag-Au, Journal of Applied Physics 22 , 483 (1951). [51] J. M. Cowley, Short-range order and long-range order param-eters, Phys. Rev. 138 , A1384 (1965). [52] Y. Rao and W. A. Curtin, Analytical models of short-range or-der in FCC and BCC alloys, Acta Materialia 226 , 117621 (2022). [53] Y. Xie, D. M. Artymowicz, P. P. Lopes, A. Aiello, D. Wang, J. L. Hart, E. Anber, M. L. Taheri, H. Zhuang, R. C. Newman, and K. Sieradzki, A percolation theory for designing corrosion-resistant alloys, Nature Materials 20 , 789 (2021). [54] L. Schlapbach and A. Züttel, Hydrogen-storage materials for mobile applications, nature 414 , 353 (2001). [55] F. Marques, M. Balcerzak, F. Winkelmann, G. Zepon, and M. Felderhoff, Review and outlook on high-entropy alloys for hydrogen storage, Energy & Environmental Science 14 , 5191 (2021). [56] M. Sahlberg, D. Karlsson, C. Zlotea, and U. Jansson, Superior hydrogen storage in high entropy alloys, Scientific reports 6,36770 (2016). [57] N. Zhang, Z. Chen, C. Yin, Z. Gao, C. Xiong, Z. Liu, S. Mao, and M. Ye, Hydrogen isotope retention behavior in wtacrv multi-component alloy, International Journal of Hydrogen Energy 
+
+255 , 156254 (2026). [58] Y. Fukai, The metal-hydrogen system: basic bulk properties 
+
+(Springer, 2005). [59] G. Kresse and J. Hafner, Ab Initio molecular dynamics for liquid metals, Physical Review B 47 , 558 (1993). [60] G. Kresse and J. Furthmüller, Efficient iterative schemes for ab initio total-energy calculations using a plane-wave basis set, Physical Review B 54 , 11169 (1996).
