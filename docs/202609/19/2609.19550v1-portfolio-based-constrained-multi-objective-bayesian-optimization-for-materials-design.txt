@@ -1,0 +1,1180 @@
+Title: Portfolio-Based Constrained Multi-Objective Bayesian Optimization for Materials Design
+
+URL Source: https://arxiv.org/pdf/2609.19550v1
+
+Published Time: Fri, 18 Sep 2026 00:26:53 GMT
+
+Number of Pages: 25
+
+Markdown Content:
+# Portfolio-Based Constrained Multi-Objective Bayesian Optimization for Materials Design 
+
+Sushant Sinha 1∗, Christofer Hardcastle 1, Robert Robinson 1, Shakti Prasad Padhy 2,Brent Vela 1, Douglas Allaire 2, and Raymundo Arróyave 1,2,3
+
+> 1Department of Materials Science and Engineering, Texas A&M University, College Station, TX, USA
+> 2J. Mike Walker ’66 Department of Mechanical Engineering, Texas A&M University, College Station, TX, USA
+> 3Wm Michael Barnes ’64 Department of Industrial and Systems Engineering, Texas A&M University, College Station, TX, USA
+> ∗Corresponding author: sushant.sinha@tamu.edu
+
+## Abstract 
+
+Materials discovery and design campaigns can be formulated as constrained multi-objective Bayesian optimization (CMOBO) problems, within which each experimental decision negotiates between two cou-pled but competing goals: discovering feasible candi-dates and refining the underlying Pareto front. Here we recast acquisition-function choice as an adaptive policy-selection problem over a portfolio of conven-tional and feasibility-focused acquisition functions. This was done using two controllers: UCB-Bandit, a modified UCB multi-armed bandit, and Agentic-Switch, a multi-agent decision system driven by a large language model (LLM). Both were evaluated against fixed-policy baselines in silico across five syn-thetic benchmark functions and two materials de-sign case studies. The adaptive policies performed competitively in terms of both cumulative feasibility count and feasible hypervolume improvement, while each individual acquisition function performed well for only one metric, suggesting that adaptive policies are better suited for constrained materials science problems. 
+
+Keywords: Materials Design; AI4Materials; Con-straint Satisfaction; Bayesian Optimization; Adaptive Policy; LLM-Agents; Bandit Algorithms 
+
+## 1 Introduction 
+
+Sample efficiency is critical in materials discovery and design campaigns, as each iteration corresponds to a costly experiment or computational simula-tion. Because practical campaigns are typically multi-objective and constrained, the task becomes one of identifying candidates that are both feasible and non-dominated along a multidimensional Pareto fron-tier 1–5 . Traditionally, these problems have been framed as optimization problems aimed at identi-fying Pareto-optimal solutions. However, Pareto-optimality alone does not guarantee satisfaction of the strict feasibility constraints required for real-world problems 4–7 . Constraint satisfaction, a design frame-work that focuses on satisfying all predefined require-ments (regardless of conventional optimality), has been proposed as an alternative design strategy in materials science 7–12 . Yet, emphasizing feasibility alone can sacrifice Pareto quality or hypervolume growth, since constraint-satisfying candidates need not be non-dominated 7.Constrained multi-objective Bayesian optimization (CMOBO) provides a natural middle ground between these two formulations. Because the feasible region and the feasible Pareto frontier must both be learned under the same limited budget, each query negoti-ates between discovering feasible regions and improv-ing the hypervolume of the feasible non-dominated set 4–6,13 . These two goals do more than compete for evaluations, since progress on one conditions what the other can achieve. Hypervolume cannot grow until feasible points have been found. Conversely, if the feasible region of the underlying response sur-face has been sufficiently learned, then focusing on feasibility sacrifices hypervolume improvement. The consequences of this coupling are visible even in sim-ple combinations of acquisition functions. Maguire et al. 7 found that the product of expected hypervolume improvement (EHVI) 14 and probability of feasibil-ity (PoF) 15 performed intermediately with regards to both hypervolume improvement and cumulative feasibility query count, with pure EHVI resulting in greater hypervolume improvement and pure PoF 1arXiv:2609.19550v1 [cond-mat.mtrl-sci] 17 Sep 2026 Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 2
+
+finding more feasible queries. Neither strategy was fully exploited, even though the pairing was meant to serve both. Alternatively, Khatamsaz et al. 4,5 demonstrated that constrained materials design can be treated as a coupled Bayesian classification and multi-objective Bayesian optimization problem. Gaussian-process classifiers there actively learn the feasibility bound-aries, while Gaussian-process regressors and EHVI refine the feasible Pareto frontier. Such feasibility-first workflows still spend a substantial part of the campaign on constraint-boundary learning before Pareto refinement, which suits large in silico design spaces but is less attractive on a small experimental budget. COMBOO 16 resolves the tension differently, confining the search to an optimistic feasible region estimated from constraint upper confidence bounds. Random scalarization of the objective bounds inside that region then drives refinement, with cumulative bounds on hypervolume regret and on constraint violation. However, this approach commits to a sin-gle rule for the whole campaign, which leaves open whether the balance between feasible discovery and feasible-hypervolume improvement is stable enough for a fixed rule to serve. The broader BO literature has long recognized that acquisition-function choice is problem dependent 17–19 .Brochu et al., for example, proposed hedging ap-proaches that treat each acquisition function as an arm in a multi-armed bandit problem 17 . Their best model, GP-Hedge, outperformed the strongest in-dividual acquisition function on each test function. Shahriari et al. achieved similar results with their Entropy Search Portfolio (ESP), an information-theoretic portfolio criterion 18 . Sheikh and Marcus extended portfolio allocation to multi-objective prob-lems with HedgeMO, which normalizes rewards across acquisition functions so that a single hedging rule can operate on them 20 .These methods all select among acquisition functions, yet the selection does not respond to how the cam-paign is progressing. Ngo et al. address this with LMABO, an adaptive acquisition-function selection method in which an LLM agent with access to cam-paign information acts as the controller 19 . None of this work, however, addresses the decision faced here, where feasible discovery and feasible-hypervolume improvement compete for the same expensive evalua-tions. We extend this decision-theoretic approach with two controllers that switch between acquisition strate-gies drawn from a shared portfolio: Agentic-Switch, a multi-agent adaptive policy selector, and UCB-Bandit, a custom upper-confidence-bound multi-armed bandit. Both were evaluated against the in-dividual acquisition strategies on five constrained multi-objective benchmarks, namely Constrained Branin-Currin, CONSTR, two- and three-objective C2-DTLZ2, and Disc Brake. Two in silico materials design case studies follow, one on thermoelectric ma-terials and one on a high entropy alloy (HEA) system. Across these problems, the adaptive controllers gave the best balance between feasibility seeking and hy-pervolume improvement, while remaining competitive on each individually. Our results demonstrate that adaptive policy selection provides a robust, problem-agnostic strategy for CMOBO, attaining competitive performance on both feasibility and hypervolume met-rics across problems with widely varying feasibility regimes, i.e., from moderately constrained synthetic benchmarks to severely sparse real-world materials design pools. 
+
+## 2 Results 
+
+Benchmark problems 
+
+We evaluated the fixed-acquisition policies and the portfolio-based adaptive methods on five constrained multi-objective benchmark functions: constrained Branin–Currin, CONSTR, two- and three-objective C2-DTLZ2 variants, and Disc Brake. Figure 1 shows that qLogPoF produced the largest feasible counts on every benchmark, though these did not translate into the largest feasible hypervolume. CONSTR is the clearest case, where qLogPoF obtained the largest feasible count while remaining weakest in feasible hypervolume. Disc Brake followed the same pattern, with extra feasible points easy to accumulate but most of them leaving the feasible frontier where it was. In contrast, qLogNParEGO achieved the highest final feasible hypervolume on the two C2-DTLZ2 problems, at considerably lower feasible counts than 
+
+qLogPoF . That combination points to a geometry in which sustained Pareto refinement was worth more than continued harvesting of feasible points. These problems serve as useful boundary conditions, since the fixed acquisition policies expose the un-derlying conflict in constrained MOBO. The policy that finds feasible candidates efficiently need not be Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 3
+
+the policy that attains the best feasible Pareto hy-pervolume, and the reverse holds as well. Adaptive switching, however, performed better on both metrics. Agentic-Switch and UCB-Bandit were each competi-tive across the suite in mean feasible hypervolume, with Agentic-Switch highest on Branin–Currin, CON-STR, and Disc Brake. Both adaptive policies also stayed close to qLogPoF in mean feasible count, the axis on which the strongest hypervolume policies performed worst. We then turned to two materials design case stud-ies, one on thermoelectric (TE) materials and one on high entropy alloy (HEA) design. Both drew on finite candidate pools, which sharpened the feasibility bot-tleneck well beyond what the synthetic benchmarks impose and brought it closer to what a real campaign encounters. 
+
+Thermoelectric Materials Design 
+
+The TE study presented a more constrained feasible region than the benchmarks, though one that re-mained learnable, with a pool of 3,138 candidates of which 144 were feasible and 82 were both feasible and non-dominated. A fixed qLogPoF policy was a strong baseline here, since feasibility information stayed useful throughout the campaign. Agentic-Switch nonetheless reached a higher feasible count while end-ing with slightly higher feasible hypervolume (figure 2). It held to qLogPoF for most iterations ( ∼ 81%), turning to qUCB (∼ 14%) or qLogNParEGO (∼ 5%) when recent qLogPoF selections had stalled. Figure 3 shows one such exchange among the three agents, a pattern that amounts to feasibility-dominant con-trol with an escape route when feasibility progress stalls locally. UCB-Bandit recovered slightly fewer feasible candidates than fixed qLogPoF , yet finished with a feasible hypervolume improvement compara-ble to Agentic-Switch. It reached that result through a broader mixture: qLogPoF (∼ 47%), qUCB (∼ 23%), 
+
+qLogEHVI (∼ 15%), and qLogNParEGO (∼ 14%). Ev-ery remaining fixed acquisition strategy performed worse on both metrics. 
+
+High Entropy Alloy Design 
+
+The HEA study posed a far more severe feasibility bottleneck, with only 18 of 40,553 candidate alloys both feasible and Pareto optimal. We adopted it to test the approach in a more realistic setting, one car-rying hard constraints such as manufacturability that further restrict which candidates can be measured at all. The probability of forming a single BCC phase (pBCC ) stood in for such a constraint here. We used the same data and problem definition as Maguire et al. 7, weighting every arm in the portfo-lio by pBCC rather than adding pBCC as a separate arm, which would have required a methodological change. We also adopted their pEHVI and PoF for-mulations, which replaced qLogEHVI and qLogPoF 
+
+in the portfolio. Even so, the acquisition balance remained precarious. A hypervolume-focused policy could spend many measurements without satisfy-ing the constraints on the objectives, while a purely feasibility-driven one could settle into a narrow region and leave the feasible frontier where it was. The fixed policies showed exactly that failure mode (figure 2). PoF was the only fixed acquisition to re-cover a substantial number of feasible alloys from the pool. pEHVI and qUCB consumed many full measure-ments without returning a single alloy that satisfied the constraints on the objectives. Both adaptive poli-cies improved modestly on fixed PoF , though they arrived there by different routes. Agentic-Switch se-lected PoF in ∼ 76% of HEA decisions and pEHVI 
+
+in ∼ 18%, using qLogNParEGO only sparsely. UCB-Bandit spread its choices more evenly, selecting PoF 
+
+in ∼ 47% of decisions and qLogNParEGO , pEHVI , and 
+
+qUCB in roughly 18% each. That higher switching rate matched Agentic-Switch in feasible count but bought no advantage in feasible hypervolume. The adap-tive policies drew on the non-feasibility-seeking arms in different proportions, yet those arms performed substantially worse as fixed policies on both feasi-bility and hypervolume. Limited, state-dependent use of such arms therefore appears to complement a feasibility-dominant strategy, as it did in the TE problem. 
+
+Feasibility-Hypervolume State Space 
+
+Figure 4 maps every policy trajectory into a nor-malized feasibility-hypervolume state space, with feasible-count attainment on the horizontal axis and feasible-hypervolume attainment on the vertical. The question this view poses is whether a policy is only ac-cumulating feasible candidates or is converting those discoveries into Pareto-frontier improvement. The fixed-acquisition policies traced characteristic direc-tions through the space. Feasibility-driven policies moved rapidly to the right, which indicates efficient discovery, but their hypervolume progress stalled Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 4350 400 450  
+
+> Feasible HV
+> (a)
+
+Branin-Currin  
+
+> 80.0 82.5 85.0 87.5 90.0
+> (b)
+
+CONSTR  
+
+> 0.0 0.1 0.2 0.3
+> (c)
+
+C2-DTLZ2 (2 obj.)  
+
+> 0.0 0.1 0.2
+> (d)
+
+C2-DTLZ2 (3 obj.)  
+
+> 5678
+> (e)
+
+Disc Brake   
+
+> 050 100
+
+Iteration   
+
+> 25 50 75 100
+> Feasible count
+> (f)
+> 050 100
+
+Iteration   
+
+> 25 50 75 100
+> (g)
+> 050 100
+
+Iteration   
+
+> 025 50 75 100
+> (h)
+> 050 100
+
+Iteration   
+
+> 025 50 75 100
+> (i)
+> 050 100
+
+Iteration      
+
+> 025 50 75 100
+> (j)
+> Shaded bands show the interquartile range across seeds.
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+Figure 1. Performance trajectories on constrained multi-objective benchmark functions. Five synthetic benchmarks are shown with feasible hypervolume in the top row and cumulative feasible discoveries in the bottom row. Curves report the mean over 10 random seeds, and shaded bands indicate the interquartile range across seeds at each iteration. Adaptive policies are competitive across several benchmarks, while fixed policies reveal distinct specialization: qLogPoF often maximizes feasible discoveries, whereas qLogNParEGO is strongest for feasible hypervolume on the C2-DTLZ2 problems. Iteration 
+
+0.0 0.1 0.2 0.3 
+
+> Feasible HV
+
+(a) TE Materials Design 
+
+Iteration 
+
+010 20 30 
+
+> Feasible count
+
+(b) TE Materials Design 
+
+0 20 40 60 80 100 
+
+Iteration 
+
+0.0 0.5 1.0 1.5 
+
+> Feasible HV
+
+1e−5 
+
+(c) HEA design 
+
+0 20 40 60 80 100 
+
+Iteration 
+
+010 20 
+
+> Feasible count
+
+(d) HEA design       
+
+> Shaded bands show the interquartile range across seeds.
+> †pEHVI replaces qLogEHVI in HEA. ‡PoF replaces qLogPoF in HEA. *HEA acquisition score is weighted by predicted BCC probability, pBCC .
+
+qLogEHVI †, * qLogNParEGO * qUCB * qLogPoF ‡, * UCB-Bandit Agentic-Switch 
+
+Figure 2. Adaptive acquisition control on finite-pool materials design studies. Feasible hypervolume and cumulative feasible discoveries are shown for the thermoelectric material and HEA design tasks. Curves report the mean over 10 paired random seeds, with interquartile bands across seeds. Adaptive policies are especially competitive in the materials studies, where feasible candidates are sparse and feasible discovery must be balanced against Pareto-front improvement. In the HEA study, †pEHVI replaced qLogEHVI , ‡PoF replaced qLogPoF , and ∗HEA acquisition scores were weighted by predicted BCC probability, pBCC .Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 5
+
+Representative Agentic-Switch decision trace 
+
+Logged iteration. ESTM thermoelectric study, seed 5, iteration 81. Selected acquisition: qucb 
+
+Observed feasible: 1 Feasible-HV gain: 0.0048137939175743 
+
+Feasibility advocate 
+
+recommended_acq qlogpof 
+
+reason Protect feasible discovery 
+
+argument The recent history shows that ’qucb’ has been successful in finding feasible points, but its predicted feasibility is extremely low, indicating that its recent success might be due to chance rather than a reliable strategy. ’qlogpof’ has the highest predicted feasibility among the arms and has been consistently ranked highest for feasibility and hypervolume proxy, despite not achieving recent feasible gains. Given the primary goal of protecting feasible discovery, ’qlogpof’ is the best choice to ensure a more reliable path to feasible solutions. 
+
+confidence high 
+
+Hypervolume advocate 
+
+recommended_acq qucb 
+
+reason Maximize feasible hypervolume growth 
+
+argument Despite ’qlogpof’ having the highest predicted feasibility, it has not resulted in any feasible gains recently. ’qucb’, on the other hand, has achieved feasible gains in the last two iterations, contributing to hypervolume growth. The recent success of ’qucb’ suggests it is currently more effective at discovering feasible solutions that contribute to hypervolume, even if its predicted feasibility is low. Given the recent history and the need to maximize feasible hypervolume growth, ’qucb’ is the best choice. 
+
+confidence 0.6 
+
+Arbiter 
+
+acq qucb 
+
+reason Maximize feasible hypervolume growth 
+
+reflection Despite the low predicted feasibility of ’qucb’, its recent performance has led to feasible discoveries and hypervolume gains, indicating a potential for continued success in the current context. The primary goal of maximizing feasible hypervolume over the run aligns with the recent effective performance of ’qucb’. While ’qlogpof’ has a higher predicted feasibility, its lack of recent feasible gains suggests that ’qucb’ is currently the more effective choice for achieving the run-level objective. 
+
+confidence 0.65 
+
+Figure 3. Example of the three-agent decision structure. Exact logged feasibility-advocate, hypervolume-advocate, and arbiter fields are shown for one Agentic-Switch iteration in the thermoelectric materials design study. The example shows how the controller can move away from the arm with the highest predicted feasibility when recent outcomes indicate that another arm is producing feasible-hypervolume gains. Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 6
+
+when the additional feasible points were dominated or lay far from the feasible frontier. Pareto-oriented policies moved upward efficiently where feasible can-didates were already at hand, and stagnated where feasibility was sparse. The adaptive policies instead followed a diagonal path, converting feasible discov-ery into frontier improvement as the campaign went on. This geometric perspective crystallizes the central result of this work. 
+
+Behavioral analysis of adaptive policies 
+
+The two adaptive policies differed in how they used the acquisition portfolio, and we quantified that dif-ference with a post-hoc analysis of the completed runs. Figure 5 gives the average share of each arm for both controllers on every problem, averaged over seeds. Agentic-Switch was feasibility anchored almost everywhere, with the PoF arm taking between 65% and 92% of its decisions on six of the seven problems. CONSTR was the exception, where qUCB became the dominant choice. That reversal is consistent with the trajectories in figure 1(b) and 1(g), where a fixed feasibility-seeking policy accumulated feasible points without converting them into feasible-hypervolume progress. UCB-Bandit showed a different signature, spread-ing its selections more broadly on CONSTR and on the two materials studies. Its scalar reward was dominated by feasibility, and many selected actions returned no reward at all. Mean selected reward and its feasibility component both shifted across the early, middle, and late stages of a campaign, so the signal the controller learned from was non-stationary. On Branin-Currin, C2-DTLZ2, and Disc Brake, qLogPoF 
+
+drew a consistent reward and UCB-Bandit stayed PoF-dominant, with occasional sampling of other arms attributable to the UCB bonus. On CONSTR, qLogPoF , qUCB , and qLogEHVI drew comparable rewards, which accounts for the high switching rate in figure 6. Reward sparsity mattered most in the materials studies, where qUCB had only partial reward support in the thermoelectric problem and PoF was the sole arm with meaningful reward in the HEA problem. Non-feasibility selections there mostly reflected UCB-bonus sampling under sparse feedback, and further detail is given in section S4 of the supplementary material. Rolling entropy over a ten-iteration window supported the same reading, with UCB-Bandit maintaining higher acquisition-selection entropy than Agentic-Switch throughout. UCB-Bandit therefore reacted mainly to realized re-ward, which is what a non-contextual bandit con-troller does, whereas Agentic-Switch held to a selec-tion over longer stretches once the state warranted it. 
+
+## 3 Discussion 
+
+Across the synthetic benchmarks and the two materi-als design case studies, no fixed acquisition function performed well on both metrics. The direction of that trade-off was not consistent. On CONSTR, 
+
+qLogPoF accumulated the most feasible points while finishing weakest in feasible hypervolume, and Disc Brake followed the same pattern. On both C2-DTLZ2 problems the ordering reversed, with qLogNParEGO 
+
+reaching the highest feasible hypervolume from far fewer feasible points. The cost of choosing wrongly grew with the severity of the constraints. In the HEA study, where only 18 of 40,553 candidates were feasi-ble and Pareto optimal, pEHVI and qUCB exhausted their budgets without returning a single feasible al-loy. The behavior a problem requires is not known before a campaign begins, which makes a single up-front choice of acquisition function very risky. Both controllers instead made that choice repeatedly, con-ditioned on the state of the campaign. Across all seven problems they stayed close to the best fixed policy on both metrics, a consistency no single acqui-sition function achieved. We studied a modified UCB-Bandit because it ad-dresses the bandit problem in a mathematically inter-pretable way and offers a point of comparison with the less interpretable agentic controller. The comparison, however, is not perfectly symmetric. UCB-Bandit received a scalar reward combining feasible discovery and feasible-hypervolume gain under weights we set in advance, wfeas = 0 .7 and wHV = 0 .3. That reward was deliberately feasibility-heavy, which is defensible for a risk-averse meta-policy, though the right balance is no easier to fix beforehand than the acquisition function itself. Our post-hoc analysis also showed the effective reward distribution shifting across the early, middle, and late stages of a campaign. Portfolio methods can inherit sublinear regret from UCB only when a UCB arm is present in the portfolio 17,20 , and 
+
+qUCB is present here. The obstacle is the reward sig-nal itself, which is non-stationary and hand-weighted, so the classical finite-time guarantees 21 should not Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 70.0 0.2 0.4 0.6 0.8 1.0            
+
+> HV attainment
+> (a) Branin-Currin (b) CONSTR (c) C2-DTLZ2 (2 obj.) (d) C2-DTLZ2 (3 obj.)
+> 0.00 0.25 0.50 0.75 1.00
+
+Feasible-count attainment      
+
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> HV attainment
+> (e) Disc Brake
+> 0.00 0.25 0.50 0.75 1.00
+
+Feasible-count attainment      
+
+> (f) TE Materials Design
+> 0.00 0.25 0.50 0.75 1.00
+
+Feasible-count attainment  
+
+> (g) HEA design
+
+Policy mean trajectories; endpoints mark iteration 100. 
+
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+Figure 4. Policy trajectories in feasibility-HV state space. Each panel shows policy mean trajectories over 100 BO iterations, with the x-axis giving feasible-count attainment and the y-axis giving feasible-hypervolume attainment. Both axes were normalized within each problem by the best final value observed across policies. Endpoints mark iteration 100. The plot summarizes how policies convert budget into constrained search progress: fixed policies often specialize toward either feasible discovery or hypervolume improvement, whereas adaptive policies frequently trace more balanced paths through the feasible-count and feasible-HV state space. 0 20 40 60 80 100 
+
+> Acquisition-family selections (%) Branin-Currin CONSTR C2-DTLZ2 (2 obj.) C2-DTLZ2 (3 obj.) Disc Brake TE Materials Design HEA design
+
+(a) Agentic-Switch      
+
+> 85 65 78 92 81 76 31 18 12 25 52 10 14
+> 020 40 60 80 100
+> Acquisition-family selections (%)
+
+(b) UCB-Bandit    
+
+> 81 28 76 82 82 47 47 30 15 18 10 14 18 31 10 23 18
+> PoF EHVI/pEHVI NParEGO UCB
+
+Figure 5. Adaptive acquisition-family usage across problems. Stacked bars show the fraction of optimization iterations assigned to each acquisition family by Agentic-Switch and UCB-Bandit. Percentages are computed across 10 seeds and 100 iterations per problem for each adaptive policy. Fixed policies were omitted because their acquisition choice is deterministic. Agentic-Switch is generally more feasibility-anchored, with high PoF-family usage on most problems, whereas UCB-Bandit mixed acquisition families more broadly, especially on CONSTR, TE Materials Design, and HEA design. In the HEA study, pEHVI was grouped with the EHVI family and PoF replaced qLogPoF .Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 80.0 0.2 0.4 0.6 0.8 1.0                
+
+> Branin-Currin CONSTR C2-DTLZ2 (2 obj.) C2-DTLZ2 (3 obj.) Disc Brake TE Materials Design HEA design
+> (a) Switch rate
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> (b) Dominant-arm share
+> 0.0 0.2 0.4 0.6 0.8 1.0 1.2
+> (c) Mean rolling entropy
+> Points are seed means across 10 campaigns; horizontal bars show ±1 standard deviation.
+> UCB-Bandit Agentic-Switch
+
+Figure 6. Acquisition-switching diversity and persistence. Adaptive-controller behavior is summarized by switch rate, dominant-arm share, and mean rolling entropy over 10-iteration windows. Points show seed means over 10 campaigns, and horizontal bars show ±1 standard deviation. UCB-Bandit generally showed a higher switch rate and higher selection entropy, whereas Agentic-Switch was more persistent and more concentrated on selected acquisition families. 
+
+be assumed to characterize these experiments. LLMs are trained on next-token prediction, yet strong performance on that objective appears to require internal structure that generalizes beyond it 22,23 .Agentic-Switch produced distinct state-space trajec-tories across the seven problems, which is at least consistent with state-conditioned selection, although our experiments cannot establish what representa-tion supports it. The three-agent design offers one reading of how a selection is reached. The feasibility advocate and the hypervolume advocate open two separate paths through the decision space, each read-ing the same optimization state through a different semantic lens. The arbiter then resolves the two recommendations against that state. Distinctions the agents draw in language, such as stalled progress against recent luck, are available to the arbiter at once. A bandit controller can shift only after re-alized reward has accumulated enough to move its estimates. Several directions extend from this work. The acqui-sition portfolio can be treated as a design variable in its own right. We used qUCB at a fixed β = 0 .2, and raising that value would give the portfolio a more explicitly exploratory arm. Hybrid arms such as 
+
+EHVI ×PoF or qUCB ×PoF could be added as well, each balancing feasibility against Pareto improvement or exploration within a single arm. We left those out here to keep the tension between feasibility seeking and feasible-hypervolume improvement visible in in-terpretable acquisition functions. The approach also extends to batch constrained MOBO, and contextual policies remain open, particularly under the low-data conditions typical of autonomous materials design campaigns. 
+
+## 4 Methods 
+
+4.1 Constrained-MOBO Formulation 
+
+We considered constrained multi-objective optimiza-tion problems in which each candidate x ∈ X carries an objective vector f (x) = [ f1(x), . . . , f M (x)] ⊤ ∈
+
+RM and a vector of constraint functions c(x) = [c1(x), . . . , c K (x)] ⊤ ∈ RK . All objectives were ex-pressed under a common maximization convention, and all constraints were written as inequalities of the form ck(x) ≤ 0. The optimization problem is then max  
+
+> x∈X
+
+f (x)subject to ck(x) ≤ 0, k = 1 , . . . , K 
+
+(1) Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 9
+
+The feasible set is 
+
+F = {x ∈ X : ck(x) ≤ 0 ∀k} (2) A candidate x⋆ ∈ F is feasible non-dominated if no other x ∈ F satisfies fm(x) ≥ fm(x⋆) for all m with strict inequality for at least one objective. At each iteration t, the feasible non-dominated set Pt ⊆ F 
+
+was used to compute feasible hypervolume relative to a fixed reference point r. This was one of the two primary measures of optimization progress. 
+
+4.2 Surrogate Models 
+
+Following standard protocols for MOBO with un-known constraints, each objective fm and each ex-plicit constraint ck was modeled with an independent single-output GP 24,25 . Input features were normal-ized before model fitting, and outputs were stan-dardized unless their variance was negligible. For objective m and constraint k, the posterior predic-tive marginals given data Dt are 
+
+fm(x) | D t ∼ N 
+
+> (
+
+μm,t (x), σ 2
+
+> m,t
+
+(x)
+
+> )
+
+,ck(x) | D t ∼ N 
+
+> (
+
+μck ,t (x), σ 2 
+
+> ck,t
+
+(x)
+
+> )
+
+.
+
+(3) The predictive probability that a candidate x satisfied explicit constraint k is 
+
+pk,t (x) = Pr[ ck(x) ≤ 0 | D t] = Φ  
+
+> (
+
+−μck ,t (x)
+
+σck ,t (x)
+
+> )
+
+, (4) where Φ is the standard normal cumulative distribu-tion function. The joint probability of satisfying all explicit constraints was approximated under condi-tional independence across constraint models: 
+
+pfeas ,t (x) ≈
+
+> K∏
+> k=1
+
+pk,t (x). (5) Although the constraints are unlikely to be indepen-dent, this approximation has proven effective in prac-tice 7. This probability-of-feasibility (PoF) quantity was used directly in the synthetic and thermoelectric finite-pool studies. The custom PoF used for the HEA case study is described in section 4.8. 
+
+4.3 Acquisition portfolio 
+
+Throughout this work, we used a common acquisition-function portfolio, with problem-specific modifica-tions for the HEA case study. The portfolio was 
+
+A = {qLogEHVI , qLogNParEGO , qUCB , qLogPoF } .
+
+(6) The portfolio was chosen to span comple-mentary search behaviors: feasible-frontier im-provement ( qLogEHVI ), scalarized trade-off explo-ration (qLogNParEGO ), uncertainty-driven explo-ration ( qUCB ), and feasibility seeking ( qLogPoF )26 .The exploration parameter β for qUCB was fixed to 0.2. For the HEA case study we used custom ac-quisition functions adapted from Maguire et al. 7,substituting pEHVI for qLogEHVI and a custom PoF 
+
+for qLogPoF .At iteration t, each acquisition arm a ∈ A proposes a candidate ˆ xa,t . A policy πt then selects which proposal is evaluated: 
+
+at = πt(st), (7) where st summarizes the current optimization state, including metadata, feasible-count history, hypervol-ume history, per-arm statistics, and recent outcomes. 
+
+4.4 UCB-Bandit 
+
+UCB-Bandit treated the acquisition functions in the portfolio as arms and maintained an empirical re-ward estimate for each, following classical UCB allo-cation 21 . Every arm was tried once during a warm start. Thereafter, the selected arm maximized UCB j,t = ˆ μj,t + c
+
+> √
+
+log( t + 1) max {1, n j,t } , (8) where ˆ μj,t is the empirical mean reward of arm j, nj,t 
+
+is the number of previous selections of that arm, and 
+
+c = 1 .0 is the exploration constant. The bandit reward combined feasible discovery and feasible-hypervolume gain: 
+
+rt = wfeas 1[∆ Nfeas ,t > 0] + wHV min  
+
+> (
+
+max(∆HV t, 0) 
+
+γt
+
+, 1
+
+> )
+
+. (9) with wfeas = 0 .7, wHV = 0 .3, and γt equal to the run-ning median of strictly positive hypervolume gains, defaulting to 1 when no positive gain had yet been observed. Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 10 
+
+4.5 Agentic-Switch 
+
+We used an LLM-based three-agent framework for adaptive switching among the acquisition functions in the portfolio. A feasibility advocate agent rec-ommended the best arm for feasible discovery and feasibility protection, while a hypervolume advocate recommended the best arm for Pareto-front improve-ment. An arbiter agent then resolved the two recom-mendations against the current state. Agentic-Switch factorized the policy πt in Eq. (7) as ˜a(feas)  
+
+> t
+
+= ψ(feas)  
+
+> t
+
+(st),
+
+˜a(HV)  
+
+> t
+
+= ψ(HV)  
+
+> t
+
+(st),at = ψ(arb) 
+
+> t
+> (
+
+st, ˜a(feas)  
+
+> t
+
+, ˜a(HV) 
+
+> t
+> )
+
+.
+
+(10) where ˜ a(feas)  
+
+> t
+
+and ˜ a(HV)  
+
+> t
+
+are the advocate recommen-dations and at ∈ A is the final selected arm. Agentic-Switch used the same action space A as UCB-Bandit. At any iteration t, the transmitted state packet was 
+
+st = ( mt, g t, {da,t }a∈A , h t) , (11) where mt denotes metadata, gt the global optimiza-tion statistics, da,t the current statistics for arm a,and ht a memory window of recent iterations. The metadata and calculated statistics are detailed in Supplementary Section S1. Each advocate agent returned a strict JSON object containing an acqui-sition recommendation ˜ at ∈ A , a short snake-case reason code, a natural-language argument, and a con-fidence score. The arbiter returned a strict JSON object containing the final acquisition label at ∈ A ,a short snake-case reason code, a reflection resolving the two advocate recommendations, and a confidence score. Only at was passed to the optimizer. The accompanying text was logged for audit and human interpretation. 
+
+4.6 Synthetic Benchmarks 
+
+We evaluated our methodology on general-purpose constrained MOBO through five synthetic benchmark problems: constrained Branin–Currin ( d = 2, m = 2, 
+
+c = 1), CONSTR ( d = 2, m = 2, c = 2), two- and three-objective C2-DTLZ2 variants ( d = 11, m = 2, 
+
+c = 1; d = 12, m = 3, c = 1), and Disc Brake (d = 4, m = 2, c = 4). Each problem was run for 100 iterations across 10 seeds, each initialized with a scrambled Sobol design. 
+
+4.7 Thermoelectric Materials Design 
+
+The thermoelectric case study was formulated as a finite-pool constrained MOBO using data from Na et al. 27 . The dataset was preprocessed to obtain a pool of 3,138 candidates in the mid-temperature region (300 ≤ T ≤ 600 K) with 856 unique formulas, 144 feasible candidates, and 82 feasible Pareto candidates. Each candidate was represented by a 13-dimensional feature vector containing chemical descriptors and normalized temperature. We maximized the absolute Seebeck coefficient ( |S|) and the electrical conductiv-ity (log 10 σ), and minimized the thermal conductivity (κ). The constraints were set on the thermoelectric figure of merit ( ZT ≥ 0.8) and the power factor (PF ≥ 1.2 × 10 −3 W m −1 K−2), where PF = S2σ, ZT = S2σT κ = PF Tκ . (12) Both constrained properties are deterministic func-tions of the three objectives and the measurement temperature. We fit a separate GP to each of them, so that the constraint surrogates stayed calibrated against the tabulated values instead of inheriting error propagated through Eq. (12). Each run drew 
+
+ninit = 8 initial candidates uniformly at random from the pool, followed by 100 optimization iterations over 10 paired seeds. 
+
+4.8 High Entropy Alloy Design 
+
+The high-entropy alloy (HEA) case study was for-mulated as a finite-pool constrained MOBO with an additional hidden staged feasibility constraint. The data and problem formulation were taken di-rectly from Maguire et al. 7. The design space was the Nb-Mo-Ta-V-W-Cr system, with 40,553 al-loys in the pool. Of these, 12,591 (31 .05%) were Pareto-optimal, 22 (0 .054%) met the constraints, and only 18 (0 .044%) were both Pareto-optimal and feasible. We maximized solidus temperature ( ST ), Pugh ratio ( P ), and yield strength ( Y S ), and min-imized density ( ρ). The constraints were of two kinds: objective-based constraints ( ST > 2473 K, 
+
+ρ < 9.0 g cm −3, Y S > 700 MPa, and P > 2.5), and a manufacturing-feasibility constraint based on phase stability ( xBCC ≥ 99% at 600 ◦C). Every queried alloy produced a phase observation, but the objectives were observed only if the alloy Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 11 
+
+State packet 
+
+> global progress arm statistics recent history
+
+Feasibility Advocate 
+
+> protect feasible discovery
+
+HV Advocate 
+
+> promote feasible-frontier growth
+
+Arbiter 
+
+> resolve recommendations
+
+Final arm 
+
+> selection
+> Parallel LLM specialist review
+
+Figure 7. Schematic representing the agentic framework used in this work for adaptive acquisition policy switching. A structured Bayesian optimization state is provided to two parallel specialist agents, one focused on feasible discovery and one focused on feasible-frontier growth. Their recommendations are then resolved by an arbiter to select the acquisition arm used at iteration t.
+
+passed the BCC phase-stability constraint. GPs for the objectives and their constraints were fit only to the fully measured alloys, whereas the BCC-screening surrogate was fit to all phase-observed alloys. Let pBCC ,t (x) denote the predicted probability that candidate x passes the BCC screen, obtained by map-ping the posterior mean of the binary BCC indicator through a logistic sigmoid. Downstream property-pass probabilities were computed from the posterior distributions of ST , ρ, Y S , and P , and their product defined pobj ,t (x). The total predicted feasibility was 
+
+ptotal ,t (x) = pBCC ,t (x)pobj ,t (x). (13) The acquisition scores used the same action space 
+
+A but were weighted by the probability of passing the BCC screen. If abase  
+
+> j,t
+
+(x) is the downstream score from arm j, the HEA score was 
+
+aHEA  
+
+> j,t
+
+(x) = abase  
+
+> j,t
+
+(x)pBCC ,t (x). (14) Each run drew a single initial alloy uniformly at random from the pool ( ninit = 1) and observed it under the same staged protocol as every later query, followed by 100 optimization iterations over 10 paired seeds. 
+
+4.9 Evaluation Metrics 
+
+We used feasible hypervolume and cumulative feasi-ble count as the two primary performance metrics. Feasible hypervolume was computed from the fea-sible non-dominated candidates under the common maximization convention adopted above. Given a feasible non-dominated set P and a reference point 
+
+r, feasible hypervolume was defined as HV( P; r) = λ
+
+( ⋃
+
+> x∈P
+
+[r1, f 1(x)] 
+
+× · · · × [rM , f M (x)]) .
+
+(15) where λ is the Lebesgue measure on RM . For the adaptive controllers we also evaluated the switch rate, defined as the fraction of iterations at which the selected arm differed from the arm selected at the previous iteration. Rolling entropy was calculated over a moving 10-iteration window: 
+
+Ht = − ∑
+
+> a
+
+pt(a) log pt(a), (16) where pt(a) is the fraction of iterations in the window at which arm a was selected. We used Ht to com-pare switching behavior between the two adaptive controllers. 
+
+4.10 Implementation details 
+
+Gaussian process surrogate models and acquisition functions were implemented with BoTorch 26 , which uses GPyTorch 28 for scalable GP inference. All ex-periments were run sequentially with one selected can-didate per iteration ( q = 1). The agentic framework was built on a LangGraph-backed JSON client 29 .The two advocates and the arbiter all used gpt-4o 30 
+
+through the OpenAI provider, with temperature 0 .1, a timeout of 90 s, and a memory window of 10 recent iterations. Each agent received the same structured Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 12 
+
+optimization state under a role-specific prompt and was required to return strict JSON. All computations were performed on an NVIDIA DGX Spark system. 
+
+## Data availability 
+
+The data supporting the results of this study are available at https://github.com/sushant-k-sinha/PCMOBO. 
+
+## Code availability 
+
+The code supporting the results of this study are available at https://github.com/sushant-k-sinha/PCMOBO 
+
+## Acknowledgments 
+
+The research was sponsored by the Army Research Laboratory and was accomplished under Cooperative Agreement Number W911NF-22-2-0106. The views and conclusions contained in this document are those of the authors. They should not be interpreted as representing the official policies, either expressed or implied, of the Army Research Laboratory or the US Government. The US Government is authorized to re-produce and distribute reprints for Government Pur-poses, notwithstanding any copyright notation herein. Original data were generated within the BIRDSHOT Center (https://birdshot.tamu.edu), supported by the Army Research Laboratory under Cooperative Agreement (CA) Number W911NF-22-2-0106 (All Authors acknowledge support from this CA). 
+
+## Author contributions 
+
+S.S. developed the algorithms, performed the experi-ments, and analyzed results. C.H. wrote the BO code for HEA problem. S.S., R.R. and S.P.P. ideated the study. R.A., D.A., S.P.P. and B.V. supervised the research. R.A. secured funding for the work. All the authors contributed in preparing the manuscript. 
+
+## Competing interests 
+
+The authors declare no competing interests. 
+
+## References 
+
+[1] Benjamin P MacLeod, Fraser GL Parlane, Con-nor C Rupnow, Kevan E Dettelbach, Michael S Elliott, Thomas D Morrissey, Ted H Haley, Olek-sii Proskurin, Michael B Rooney, Nina Taheri-makhsousi, et al. A self-driving laboratory ad-vances the pareto front for material properties. 
+
+Nature communications , 13(1):995, 2022. [2] Andre Low, Yee-Fun Lim, Kedar Hippalgaonkar, and Eleonore Vissol-Gaudin. Mapping pareto fronts for efficient multi-objective materials dis-covery. Authorea Preprints , 2022. [3] Shinya Suzuki, Shion Takeno, Tomoyuki Tamura, Kazuki Shitara, and Masayuki Kara-suyama. Multi-objective bayesian optimization using pareto-frontier entropy. In International conference on machine learning , pages 9279– 9288. PMLR, 2020. [4] Danial Khatamsaz, Brent Vela, Prashant Singh, Duane D Johnson, Douglas Allaire, and Ray-mundo Arróyave. Multi-objective materials bayesian optimization with active learning of design constraints: Design of ductile refractory multi-principal-element alloys. Acta Materialia ,236:118133, 2022. [5] Danial Khatamsaz, Brent Vela, Prashant Singh, Duane D Johnson, Douglas Allaire, and Ray-mundo Arróyave. Bayesian optimization with active learning of design constraints using an entropy-based approach. npj Computational Ma-terials , 9(1):49, 2023. [6] Paul Feliot, Julien Bect, and Emmanuel Vazquez. A bayesian approach to constrained single-and multi-objective optimization. Journal of Global Optimization , 67(1):97–133, 2017. [7] Cayden Maguire, Christofer Hardcastle, Trevor Hastings, Raymundo Arróyave, and Brent Vela. Good enough is better: feasibility vs. Pareto-optimality in alloy design. Digital Discov-ery , 5(7):3010–3020, 2026. doi: 10.1039/ D5DD00517E. [8] R. Arroyave, S. Gibbons, E. Galvan, and R. Malak. The inverse phase stability problem as a constraint satisfaction problem: Applica-tion to materials design. JOM , 68:1385–1395, 2016. [9] E. Galvan, R. J. Malak, S. Gibbons, and R. Ar-royave. A constraint satisfaction algorithm for the generalized inverse phase stability problem. Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 13 
+
+Journal of Mechanical Design , 139(1):011401, 2017. [10] A. Abu-Odeh, E. Galvan, T. Kirk, H. Mao, Q. Chen, P. Mason, R. Malak, and R. Arroyave. Efficient exploration of the high entropy alloy composition-phase space. Acta Materialia , 152: 41–57, 2018. [11] B. Vela, C. Acemi, P. Singh, T. Kirk, W. Tre-hern, E. Norris, D. D. Johnson, I. Karaman, and R. Arroyave. High-throughput exploration of the wmovtanbal refractory multi-principal-element alloys under multiple-property constraints. Acta Materialia , 248:118784, 2023. [12] M. Sohst, F. Afonso, and A. Suleman. Surrogate-based optimization based on the probability of feasibility. Structural and Multidisciplinary Op-timization , 65(1):10, 2022. [13] Eduardo C Garrido-Merchán and Daniel Hernández-Lobato. Predictive entropy search for multi-objective bayesian optimization with constraints. Neurocomputing , 361:50–68, 2019. [14] Samuel Daulton, Maximilian Balandat, and Ey-tan Bakshy. Differentiable expected hypervol-ume improvement for parallel multi-objective bayesian optimization. Advances in neural infor-mation processing systems , 33:9851–9864, 2020. [15] Jacob R Gardner, Matt J Kusner, Zhixiang Ed-die Xu, Kilian Q Weinberger, and John P Cun-ningham. Bayesian optimization with inequality constraints. In ICML , volume 2014, pages 937– 945, 2014. [16] D. Li, F. Zhang, C. Liu, and Y. Chen. Con-strained multi-objective bayesian optimization through optimistic constraints estimation. In 
+
+Proceedings of the 28th International Conference on Artificial Intelligence and Statistics (AIS-TATS) , volume 258 of Proceedings of Machine Learning Research , pages 370–378. PMLR, 2025. URL https://proceedings.mlr.press/v258/ li25a.html .[17] Eric Brochu, Matthew W. Hoffman, and Nando de Freitas. Portfolio allocation for bayesian opti-mization, 2011. URL https://arxiv.org/abs/ 1009.5419 .[18] Bobak Shahriari, Ziyu Wang, Matthew W. Hoff-man, Alexandre Bouchard-Côté, and Nando de Freitas. An entropy search portfolio for bayesian optimization, 2015. URL https:// arxiv.org/abs/1406.4625 .[19] Giang Ngo, Dat Phan Trong, Dang Nguyen, Sunil Gupta, and Svetha Venkatesh. Adaptive acquisition selection for bayesian optimization with large language models, 2026. URL https: //arxiv.org/abs/2602.07904 .[20] H. M. Sheikh and P. S. Marcus. Bayesian op-timization for mixed-variable, multi-objective problems. Structural and Multidisciplinary Op-timization , 65(11):331, 2022. doi: 10.1007/ s00158-022-03382-y. [21] Peter Auer, Nicolo Cesa-Bianchi, and Paul Fis-cher. Finite-time analysis of the multiarmed bandit problem. Machine learning , 47(2):235– 256, 2002. [22] Tom Brown, Benjamin Mann, Nick Ryder, Melanie Subbiah, Jared D Kaplan, Prafulla Dhariwal, Arvind Neelakantan, Pranav Shyam, Girish Sastry, Amanda Askell, et al. Language models are few-shot learners. Advances in neural information processing systems , 33:1877–1901, 2020. [23] Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, and Yuan Cao. React: Synergizing reasoning and acting in language models. arXiv preprint arXiv:2210.03629 , 2022. [24] Christopher KI Williams and Carl Edward Ras-mussen. Gaussian processes for machine learn-ing , volume 2. MIT press Cambridge, MA, 2006. [25] Michael A Gelbart, Jasper Snoek, and Ryan P Adams. Bayesian optimization with unknown constraints. arXiv preprint arXiv:1403.5607 ,2014. [26] Maximilian Balandat, Brian Karrer, Daniel R. Jiang, Samuel Daulton, Benjamin Letham, Andrew Gordon Wilson, and Eytan Bakshy. BoTorch: A Framework for Efficient Monte-Carlo Bayesian Optimization. In Advances in Neural Information Processing Systems 33 , 2020. URL http://arxiv.org/abs/1910.06403 .[27] Gyoung S Na and Hyunju Chang. A public database of thermoelectric materials and system-identified material representation for data-driven Portfolio-based Constrained-Multi-Objective Bayesian Optimization for Materials Design 14 
+
+discovery. npj Computational Materials , 8(1): 214, 2022. [28] Jacob Gardner, Geoff Pleiss, Kilian Q Wein-berger, David Bindel, and Andrew G Wilson. Gpytorch: Blackbox matrix-matrix gaussian pro-cess inference with gpu acceleration. Advances in neural information processing systems , 31, 2018. [29] LangChain AI. Langgraph. https://github. com/langchain-ai/langgraph , 2026. Open-source framework for building stateful, multi-agent applications with LLMs. Accessed 2026-06-02. [30] OpenAI. Gpt-4o system card. https://openai. com/index/gpt-4o-system-card/ , 2024. Ac-cessed 2026-06-02. Supplementary Information Portfolio-Based Constrained Multi-Objective Bayesian Optimization for Materials Design 
+
+Sushant Sinha, Christofer Hardcastle, Robert Robinson, Shakti Prasad Padhy, Brent Vela, Douglas Allaire, and Raymundo Arróyave 
+
+## S1 Agentic-Switch state packet and proposal diagnostics 
+
+Agentic-Switch receives a structured Bayesian-optimization state after each acquisition arm has generated one candidate proposal ˆ xa,t . This section defines the state packet used for those decisions. The equations specify the global campaign state, arm-level proposal statistics, and short memory window. At any iteration t, the transmitted state packet was 
+
+st = ( mt, g t, {da,t }a∈A , h t) , (S1) where mt denotes metadata, gt the global optimization statistics, da,t the current statistics for arm a, and 
+
+ht a memory window of recent iterations. Metadata mt contains the set of allowed acquisition arms, current iteration t, and total budget T . The global optimization statistics progress through the optimization as 
+
+gt = (ρt, HV t, ∆HV init  
+
+> t
+
+, N feas ,t , ϕ t,rfeas  
+
+> t
+
+, ¯∆HV t, s ∆HV 
+
+> t
+
+). (S2) with 
+
+ρt = tT ,
+
+∆HV init  
+
+> t
+
+= HV t − HV 0,ϕt = Nfeas ,t 
+
+max {1, N obs ,t } .
+
+(S3) where Nfeas ,t is the cumulative feasible count and Nobs ,t is the cumulative number of observed candidates. Over the recent memory window (last 10 iterations) 
+
+Wt = {τ : max(1 , t − W ) ≤ τ ≤ t − 1} (S4) the recent feasible-discovery rate and recent hypervolume-gain statistics were 
+
+rfeas  
+
+> t
+
+= 1
+
+|W t|
+
+∑ 
+
+> τ∈W t
+
+1[∆ Nfeas ,τ > 0] (S5) 1Supplementary information 2
+
+¯∆HV t = 1
+
+|W t|
+
+∑ 
+
+> τ∈W t
+
+∆HV τ (S6) 
+
+s∆HV  
+
+> t
+
+=
+
+ 1
+
+|W t|
+
+∑ 
+
+> τ∈W t
+
+(
+
+∆HV τ − ¯∆HV t
+
+)2
+
+
+
+> 1/2
+
+(S7) The global block also indicated the last selected arm, the current same-arm streak, the current streak without HV gain for that arm, and the number of iterations since the last switch. For each arm a ∈ A , the arm-level statistics provided were 
+
+da,t =
+
+(
+
+ˆpfeas  
+
+> a,t
+
+, ˆsobj  
+
+> a,t
+
+, ˜αa,t , ˆha,t , u a,t , n a,t 
+
+)
+
+, (S8) where ˆ xa,t is the current proposal of arm a, αa,t is its raw acquisition value, M is the number of objectives, and K is the number of explicit constraints. Let μm,t (·) and σm,t (·) denote the posterior mean and standard deviation of objective m. For constraints written as ck(x) ≤ 0, let μ(c)
+
+> k,t
+
+(·) and σ(c) 
+
+> k,t
+
+(·) denote the posterior mean and standard deviation of constraint k, and let Φ be the standard normal cumulative distribution function. The predicted feasibility probability was computed under independent Gaussian constraint posteriors as 
+
+pfeas ,t (x) = 
+
+> K
+
+∏
+
+> k=1
+
+Φ
+
+ −μ(c)
+
+> k,t
+
+(x)
+
+σ(c) 
+
+> k,t
+
+(x)
+
+ .
+
+The six proposal statistics used in the arm-level state packet were ˆpfeas  
+
+> a,t
+
+= pfeas ,t (ˆ xa,t ). (S9) ˆsobj  
+
+> a,t
+
+= 1
+
+M
+
+> M
+
+∑
+
+> m=1
+
+μm,t (ˆ xa,t ). (S10) ˜αa,t = αa,t − min j∈A αj,t 
+
+max j∈A αj,t − min j∈A αj,t 
+
+. (S11) 
+
+ua,t = 1
+
+M
+
+> M
+
+∑
+
+> m=1
+
+σm,t (ˆ xa,t ). (S12) 
+
+na,t = min  
+
+> x′∈X obs
+> t
+
+∥∥∥∥
+
+ˆxa,t − ℓ
+
+u − ℓ − x′ − ℓ
+
+u − ℓ
+
+∥∥∥∥2
+
+. (S13) ˆha,t = max {0, HV( Pt ∪ { μt(ˆ xa,t )}; r) − HV( Pt; r)} × ˆpfeas  
+
+> a,t
+
+. (S14) Here X obs  
+
+> t
+
+is the set of observed design points, [ ℓ, u] are the lower and upper bounds of the design space, 
+
+Pt is the current feasible non-dominated set, and μt(ˆ xa,t ) = [ μ1,t (ˆ xa,t ), . . . , μ M,t (ˆ xa,t )] ⊤. Equations S9–S14 are, respectively: predicted feasibility of the proposed candidate; posterior-mean objective score; min–max normalized acquisition score across the available arms; mean objective-posterior uncertainty; normalized nearest-neighbor novelty relative to previously observed designs; and a feasibility-weighted posterior-mean hypervolume-gain proxy. The quantity ˆha,t is a compact proxy for whether the posterior mean of the proposed candidate could enhance the current feasible non-dominated set after weighting by predicted Supplementary information 3
+
+feasibility. If all raw acquisition values were equal, the denominator in ˜ αa,t vanished and the normalized acquisition score was set to 0 .5. The arm-level block additionally included recent arm-specific summaries over Wt: recent selection count, recent feasible-gain rate, recent mean hypervolume gain, iterations since last selected, and descending ranks induced by ˆ pfeas  
+
+> a,t
+
+, ˆha,t , and ua,t .Finally, the history block stored the last W compact decision snapshots, 
+
+ht = {eτ }τ ∈W t , (S15) where each eτ recorded the chosen arm, observed feasibility outcome, feasible-count gain, hypervolume gain, cumulative feasible count, the chosen proposal statistics, and comparisons with the strongest alternatives that were available at decision time. For the HEA study, the same state-packet structure was retained, but feasibility was stage-gated. Let 
+
+pBCC ,t (x) denote the predicted probability that alloy x passes the BCC phase-stability screen and pobj ,t (x)the predicted probability that its downstream property constraints are satisfied. Total predicted feasibility was 
+
+ptotal ,t (x) = pBCC ,t (x)pobj ,t (x). (S16) The HEA portfolio used pEHVI in place of qLogEHVI and PoF in place of qLogPoF. Each downstream acquisition score was weighted by predicted BCC probability, 
+
+aHEA  
+
+> j,t
+
+(x) = abase  
+
+> j,t
+
+(x)pBCC ,t (x), (S17) where abase  
+
+> j,t
+
+(x) is the unweighted score for acquisition family j.
+
+## S2 Agentic-Switch prompts 
+
+At each adaptive decision, the feasibility and feasible-HV advocates received the same state packet defined in Section S1. Each advocate returned one acquisition recommendation and a concise justification; the arbiter then received the raw state and both recommendations and selected the arm evaluated by the optimizer. Figures S1–S3 summarize the implemented prompt instructions and output schemas. The boxes reproduce the shared synthetic prompt template in structured form. The TE implementation retained the same arm vocabulary, while the HEA implementation used {pof, pehvi, qlognparego, qucb} with BCC-aware scores. Supplementary information 4
+
+Feasibility Advocate Prompt 
+
+Role. You are the Feasibility Advocate in a BO portfolio-switch pipeline for constrained multi-objective optimization. 
+
+Decision. Choose exactly one acquisition from qlogehvi , qlognparego , qucb , and qlogpof .
+
+Arm semantics. 
+
+• qlogehvi : Pareto improvement; • qlognparego : scalarized tradeoff; • qucb : uncertainty exploration; • qlogpof : feasibility seeking. 
+
+Objective. Argue for the arm most justified by feasible discovery and feasibility protection given the current run state. 
+
+Evidence restriction. Use only the evidence in metadata , global_state , per_arm , and recent_history .The recent_history field contains compact past decision snapshots with chosen outcomes and the model diagnostics that were visible at those decision times. Make the strongest feasibility-grounded recommendation you can, but do not invent data and do not use any action outside metadata.allowed_arms .
+
+Output format. Return strict JSON only with keys: recommended_acq , reason , argument , and confidence .
+
+Figure S1. Feasibility-advocate prompt. The advocate selects one arm from the allowed acquisition set using only the structured campaign state and recent decision history. It returns recommended_acq , reason , argument , and 
+
+confidence ; the recommendation is advisory and is passed to the arbiter. 
+
+Feasible-HV Advocate Prompt 
+
+Role. You are the HV Advocate in a BO portfolio-switch pipeline for constrained multi-objective optimization. 
+
+Decision. Choose exactly one acquisition from qlogehvi , qlognparego , qucb , and qlogpof .
+
+Arm semantics. 
+
+• qlogehvi : Pareto improvement; • qlognparego : scalarized tradeoff; • qucb : uncertainty exploration; • qlogpof : feasibility seeking. 
+
+Objective. Argue for the arm most justified by feasible hypervolume growth over time. 
+
+Evidence restriction. Use only the evidence in metadata , global_state , per_arm , and recent_history .The recent_history field contains compact past decision snapshots with chosen outcomes and the model diagnostics that were visible at those decision times. Make the strongest frontier-growth recommendation you can, but keep the focus on feasible hypervolume , not raw objective improvement in infeasible regions. 
+
+Output format. Return strict JSON only with keys: recommended_acq , reason , argument , and confidence .
+
+Figure S2. Feasible-HV-advocate prompt. The advocate uses the same state packet but prioritizes evidence for growth of the feasible Pareto frontier. It returns the same four-field JSON schema and is instructed not to treat objective improvement in infeasible regions as feasible-hypervolume progress. Supplementary information 5
+
+Arbiter Prompt 
+
+Role. You are the Arbiter in a BO portfolio-switch pipeline for constrained multi-objective optimization. 
+
+Decision. Choose exactly one acquisition from qlogehvi , qlognparego , qucb , and qlogpof .
+
+Arm semantics. 
+
+• qlogehvi : Pareto improvement; • qlognparego : scalarized tradeoff; • qucb : uncertainty exploration; • qlogpof : feasibility seeking. 
+
+Objective. Choose the single arm that best serves feasible hypervolume over the run while protecting feasible discovery when needed. You will receive the raw state together with: 1. a feasibility-grounded advocate recommendation; and 2. a feasible-HV-grounded advocate recommendation. Treat the advocate outputs as evidence, not commands . You may agree with either advocate or disagree with both if the raw state supports a different choice. Use the full context and reason through the tradeoff. The reflection should briefly cite the main evidence behind the final choice. 
+
+Output format. Return strict JSON only with keys: acq , reason , reflection , and confidence .
+
+Figure S3. Arbiter prompt. The arbiter receives the raw state together with both advocate recommendations, treats those recommendations as evidence rather than commands, and returns the final acquisition label in acq . The accompanying reason , reflection , and confidence fields are logged for audit; only acq controls the optimizer. 
+
+## S3 Final performance summaries 
+
+Tables S1 and S2 report final feasible hypervolume and feasible count after 100 optimization iterations. The two endpoints are shown separately because feasible discovery and feasible Pareto improvement are not interchangeable: a policy can find many feasible candidates without producing the largest feasible hypervolume. 
+
+Table S1. Materials-study final performance. Final feasible hypervolume and feasible count after 100 iterations (mean ± standard deviation, 10 seeds). Bold denotes the best mean in each study. HEA uses pEHVI and PoF with BCC-weighted acquisition scores. 
+
+Study Method Feasible hypervolume Feasible count TE Materials Design 
+
+qLogEHVI 0.221 ± 0.087 4.1 ± 2.9
+
+qLogNParEGO 0.201 ± 0.047 4.4 ± 2.3
+
+qUCB 0.219 ± 0.083 12 .9 ± 7.0
+
+qLogPoF 0.255 ± 0.046 27 .6 ± 8.7UCB-Bandit 0.265 ± 0.105 25 .3 ± 11 .5Agentic-Switch 0.269 ± 0.054 32 .9 ± 8.8
+
+HEA design pEHVI 0.0 ± 0.0 0.0 ± 0.0
+
+qLogNParEGO 1.22 ×10 −6 ± 2.63 ×10 −6 0.4 ± 0.7
+
+qUCB 0.0 ± 0.0 0.0 ± 0.0PoF 1.09 ×10 −5 ± 7.87 ×10 −6 14 .4 ± 10 .5UCB-Bandit 1.33 ×10 −5 ± 6.85 ×10 −6 16 .3 ± 8.7Agentic-Switch 1.39 ×10 −5 ± 5.62 ×10 −6 16 .5 ± 8.1Supplementary information 6   
+
+> Table S2. Final performance after 100 iterations on constrained multi-objective benchmark functions. Values are reported as mean ±standard deviation over 10 random seeds. For each benchmark, the best mean hypervolume and best mean feasible count are highlighted in bold.
+
+Benchmark Method Feasible hypervolume Feasible count Constrained Branin-Currin 
+
+qLogEHVI 343 .99 ± 57 .17 7.0 ± 0.9
+
+qLogNParEGO 350 .41 ± 54 .61 7.3 ± 0.8
+
+qUCB 381 .84 ± 76 .80 28 .7 ± 41 .1
+
+qLogPoF 364 .97 ± 46 .89 106 .6 ± 0.7
+
+UCB-Bandit 391 .04 ± 64 .88 89 .7 ± 2.2Agentic-Switch 407 .90 ± 61 .72 96 .0 ± 8.2CONSTR 
+
+qLogEHVI 89 .36 ± 0.64 60 .1 ± 11 .9
+
+qLogNParEGO 88 .98 ± 0.88 37 .7 ± 11 .6
+
+qUCB 87 .58 ± 1.31 107 .2 ± 1.5
+
+qLogPoF 80 .31 ± 3.15 109 .7 ± 0.5
+
+UCB-Bandit 90 .01 ± 0.62 101 .2 ± 1.3Agentic-Switch 90 .32 ± 0.38 103 .2 ± 3.5C2-DTLZ2 (2 obj.) 
+
+qLogEHVI 0.2156 ± 0.0233 7.7 ± 1.8
+
+qLogNParEGO 0.3087 ± 0.0290 35 .4 ± 8.2
+
+qUCB 0.0740 ± 0.0686 11 .5 ± 13 .7
+
+qLogPoF 0.1107 ± 0.0562 93 .7 ± 5.2
+
+UCB-Bandit 0.2159 ± 0.0279 80 .9 ± 3.8Agentic-Switch 0.2664 ± 0.0473 75 .6 ± 9.7C2-DTLZ2 (3 obj.) 
+
+qLogEHVI 0.1029 ± 0.0788 2.3 ± 2.0
+
+qLogNParEGO 0.2381 ± 0.0513 16 .2 ± 9.1
+
+qUCB 0.0600 ± 0.0587 21 .4 ± 29 .7
+
+qLogPoF 0.0925 ± 0.0568 91 .3 ± 7.7
+
+UCB-Bandit 0.2039 ± 0.0400 79 .3 ± 6.7Agentic-Switch 0.1874 ± 0.0586 79 .4 ± 13 .3Disc Brake 
+
+qLogEHVI 5.665 ± 0.941 6.4 ± 1.3
+
+qLogNParEGO 5.698 ± 0.994 6.5 ± 1.4
+
+qUCB 5.665 ± 0.941 6.4 ± 1.3
+
+qLogPoF 6.073 ± 0.995 106 .4 ± 1.3
+
+UCB-Bandit 7.561 ± 0.498 88 .4 ± 1.3Agentic-Switch 7.727 ± 1.111 98 .2 ± 1.9
+
+## S4 Seed-level robustness 
+
+> Figure S4 shows how much final feasible hypervolume varies across seeds.
+
+Supplementary information 7qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch 0.00 0.25 0.50 0.75 1.00 
+
+> Within-problem final HV
+
+(a) Branin-Currin 
+
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+(b) CONSTR 
+
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+(c) C2-DTLZ2 (2 obj.) 
+
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+(d) C2-DTLZ2 (3 obj.) 
+
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+0.00 0.25 0.50 0.75 1.00 
+
+> Within-problem final HV
+
+(e) Disc Brake 
+
+> qLogEHVI qLogNParEGO qUCB qLogPoF UCB-Bandit Agentic-Switch
+
+(f) TE Materials Design 
+
+> qLogEHVI †, *
+> qLogNParEGO *
+> qUCB *
+> qLogPoF ‡, *
+> UCB-Bandit Agentic-Switch
+
+(g) HEA design       
+
+> †pEHVI replaces qLogEHVI in HEA. ‡PoF replaces qLogPoF in HEA. *HEA acquisition score is weighted by predicted BCC probability, pBCC .
+
+Figure S4. Seed-level robustness of final feasible hypervolume. Box-and-strip plots show final feasible hypervolume at iteration 100, normalized within each problem, over 10 random seeds. The distributions reveal both robustness and problem-specific failure modes. Adaptive policies are broadly competitive, especially on CONSTR, Disc Brake, TE Materials Design, and HEA, while qLogNParEGO remains the strongest fixed policy for the C2-DTLZ2 hypervolume endpoint. 
+
+## S5 Adaptive-policy behavior analysis 
+
+These analyses summarize controller behavior after the policies have made their acquisition selections. Figure S5 audits Agentic-Switch motifs, Figures S6–S7 and Table S3 summarize UCB-Bandit reward sparsity and reward drift, and the remaining figures report event timing, reward composition, and rolling acquisition-selection entropy. Feasibility recovery HV improvement Exploration/uncertainty Stagnation response Exploitation/refinement Failure recovery Branin-Currin CONSTR C2-DTLZ2 (2 obj.) C2-DTLZ2 (3 obj.) Disc Brake TE Materials Design HEA design                                     
+
+> 0.04 1.00 0.37 0.89 1.00 1.00 0.01 1.00 0.93 0.00 1.00 1.00 0.17 0.94 0.24 0.09 0.68 1.00 0.21 0.92 0.38 0.49 0.56 1.00 0.04 1.00 0.24 1.00 1.00 1.00 0.36 0.91 0.42 0.00 0.00 1.00 0.63 0.67 0.52 0.00 0.00 1.00
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+> Motif-state consistency
+
+Figure S5. Agentic-Switch decision audit. Logged reasoning fields are mapped to decision motifs and compared with measurable campaign states. This rule-based audit is used only to check motif–state consistency. Supplementary information 8PoF EHVI/pEHVI NParEGO UCB 
+
+Branin-Currin CONSTR C2-DTLZ2 (2 obj.) C2-DTLZ2 (3 obj.) Disc Brake TE Materials Design HEA design 
+
+0% 93% 96% 80% 0% 8% 48% 4% 3% 90% 78% 49% 4% 100% 87% 100% 0% 100% 100% 100% 60% 97% 97% 78% 66% 100% 99% 100% 
+
+(a) Selected zero-reward rate 
+
+PoF EHVI/pEHVI NParEGO UCB 
+
+0.74 0.06 0.04 0.16 0.70 0.72 0.44 0.72 0.75 0.10 0.19 0.41 0.74 0.00 0.11 0.00 0.71 0.00 0.00 0.00 0.32 0.03 0.02 0.18 0.29 0.00 0.00 0.00 
+
+(b) Selected mean reward 
+
+0.0 0.2 0.4 0.6 0.8 1.0 
+
+0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 
+
+Figure S6. UCB-Bandit selected-reward sparsity and arm-level reward separation. Heatmaps summarize only the acquisition arms actually selected by UCB-Bandit. The zero-reward rate is the fraction of selected decisions with scalar reward ≤ 10 −12 ; selected mean reward is averaged over the same selected decisions. PoF-dominant problems show clear reward separation, CONSTR shows reward-supported broad mixing, and HEA shows sparse rewards for non-PoF arms. Early Middle Late               
+
+> Branin-Currin CONSTR C2-DTLZ2 (2 obj.) C2-DTLZ2 (3 obj.) Disc Brake TE Materials Design HEA design
+> 0.50 0.65 0.67 0.68 0.69 0.68 0.47 0.65 0.72 0.40 0.67 0.70 0.45 0.61 0.64 0.21 0.23 0.16 0.04 0.15 0.19
+
+(a) Mean reward by phase                 
+
+> Early Middle Late
+> 0.77 0.74 0.73 0.70 0.70 0.70 0.72 0.74 0.77 0.67 0.77 0.75 0.71 0.71 0.70 0.40 0.36 0.26 0.11 0.33 0.32
+
+(b) PoF reward by phase                 
+
+> Early Middle Late
+> 35% 13% 10% 13% 8% 6% 40% 15% 10% 48% 15% 8% 36% 15% 10% 73% 71% 80% 96% 82% 78%
+
+(c) Zero-reward rate by phase 
+
+> 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7
+> 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8
+> 0.0 0.2 0.4 0.6 0.8 1.0
+
+Figure S7. UCB-Bandit reward sparsity and phase drift. Phase summaries divide each 100-iteration campaign into early, middle, and late stages. Mean reward and PoF reward change across phase for several problems, indicating that the online reward process faced by UCB-Bandit changes as the BO state evolves. The zero-reward panel shows where sparse feedback persists. Supplementary information 9Branin CONSTR C2-2 C2-3 Brake ESTM HEA 0.0 0.2 0.4 0.6 0.8 1.0  
+
+> (a)
+
+First feasible        
+
+> Branin CONSTR C2-2 C2-3 Brake ESTM HEA
+> (b)
+
+First nonzero HV        
+
+> Branin CONSTR C2-2 C2-3 Brake ESTM HEA 0.0 0.2 0.4 0.6 0.8 1.0
+> (c)
+
+Large HV jump        
+
+> Branin CONSTR C2-2 C2-3 Brake ESTM HEA
+> (d)
+
+Stagnation recovery            
+
+> Arm share in 3-iteration window
+> †pEHVI replaces qLogEHVI in HEA. ‡PoF replaces qLogPoF in HEA. *HEA acquisition score is weighted by predicted BCC probability, pBCC .
+> qLogEHVI †, * qLogNParEGO *qUCB *qLogPoF ‡, * UCB-Bandit Agentic-Switch
+
+Figure S8. Acquisition arms selected before breakthrough events. Bars show the acquisition-family composition immediately before first feasible discoveries, first nonzero feasible hypervolume, large hypervolume jumps, and recovery after stagnation. 
+
+Table S3. UCB-Bandit selected-reward diagnostics. Zero reward is the fraction of selected UCB-Bandit actions with scalar reward ≤ 10 −12 ; zero HV reward is the fraction with feasible-hypervolume reward term ≤ 10 −12 .HV reward share is the fraction of cumulative scalar reward attributable to feasible hypervolume. Phase reward range is the range of mean selected reward across early, middle, and late campaign phases. These selected-action diagnostics do not estimate rewards for unselected arms. 
+
+Problem Zero reward (%) Zero HV reward (%) HV reward share (%) PoF mean reward Best non-PoF mean reward Phase reward range Branin-Currin 16.9 69.0 5.8 0.743 0.163 0.160 CONSTR 8.5 55.8 6.2 0.700 0.717 0.012 C2-DTLZ2 (2 obj.) 19.1 51.9 10.5 0.751 0.408 0.247 C2-DTLZ2 (3 obj.) 20.7 38.9 9.7 0.742 0.113 0.294 Disc Brake 18.0 96.6 1.0 0.707 0.000 0.183 TE Materials Design 74.9 78.1 12.8 0.322 0.175 0.068 HEA design 83.7 86.0 15.8 0.287 0.004 0.151 Supplementary information 10 050 
+
+> Cumulative score
+> Branin-Currin
+
+(a) Feasibility reward 
+
+05
+
+(b) HV reward 
+
+050 
+
+> Cumulative score
+> CONSTR
+
+(c) 
+
+05
+
+(d) 
+
+050 
+
+> Cumulative score
+> C2-DTLZ2 (2 obj.)
+
+(e) 
+
+05
+
+(f) 
+
+050 
+
+> Cumulative score
+> C2-DTLZ2 (3 obj.)
+
+(g) 
+
+05
+
+(h) 
+
+050 
+
+> Cumulative score
+> Disc Brake
+
+(i) 
+
+0.0 0.5 
+
+(j) 
+
+020 
+
+> Cumulative score
+> TE Materials Design
+
+(k) 
+
+0.0 2.5 
+
+(l) 
+
+20 40 60 80 100 
+
+Iteration 
+
+010 
+
+> Cumulative score
+> HEA design
+
+(m) 
+
+20 40 60 80 100 
+
+Iteration 
+
+02
+
+(n) 
+
+UCB-Bandit only. Curves show seed means; shaded regions show interquartile ranges. 
+
+Figure S9. UCB-Bandit reward decomposition. The scalar online reward is separated into feasibility and feasible-hypervolume components over the campaign. Supplementary information 11 01 
+
+> Entropy
+> (a)
+
+Branin-Currin  
+
+> UCB-Bandit Agentic-Switch 01
+> Entropy
+> (b)
+
+CONSTR  
+
+> 01
+> Entropy
+> (c)
+
+C2-DTLZ2 (2 obj.)  
+
+> 01
+> Entropy
+> (d)
+
+C2-DTLZ2 (3 obj.)  
+
+> 01
+> Entropy
+> (e)
+
+Disc Brake  
+
+> 01
+> Entropy
+> (f)
+
+TE Materials Design      
+
+> 020 40 60 80 100
+
+Iteration  
+
+> 01
+> Entropy
+> (g)
+
+HEA design 
+
+Figure S10. Rolling acquisition-selection entropy. Entropy is computed over a trailing 10-iteration window from the empirical distribution of selected acquisition families. Higher entropy indicates more diverse arm selection within the recent window.

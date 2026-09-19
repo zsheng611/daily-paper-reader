@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-18</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-19</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 17 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 19 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>5</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>7</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>12</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-18 17:52:27 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-19 17:41:19 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>9月18日日报扫完17篇，精读5篇、速读12篇，高分亮点集中在AI for Science与科学智能体。</p>
-<p>最值得看：神经网络求解实空间电荷密度与泛化（8.0），以及遗传算法驱动多智能体LLM发现科学假设（8.0）。</p>
-<p>普通读者可先精读这两篇，再按兴趣速览Avatar、RS-CIDER、LabAgent等7分工作。</p>
+<p>今日从19篇中精读7篇、速读12篇，主线落在LLM智能体与量子化学、DFT的交叉。</p>
+<p>最值得看：自主LLM代理能否执行多参考量子化学计算（8.0），以及预测密度/哈密顿量/密度矩阵作为周期性SCF初始化（8.0）；速读中Agentic AI用于r2SCAN开发也值得关注。</p>
+<p>普通读者可先读这两篇精读摘要，再沿“智能体+电子结构”方向扫速读，判断AI能否真正接手计算流程。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -80,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">5 篇</strong>
+    <strong class="dpr-home-dashboard-count">7 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Neural-Network Solutions to Real-Space Charge Density and Generalization">Neural-Network Solutions to Real-Space Charge Density and Generalization</span></li><li><span class="dpr-home-dashboard-paper-title" title="HypoEvolve: Genetic Algorithms Enable Multi-Agent LLMs to Discover Scientific Hypotheses">HypoEvolve: Genetic Algorithms Enable Multi-Agent LLMs to Discover Scientific Hypotheses</span></li><li><span class="dpr-home-dashboard-paper-title" title="Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction">Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Can Autonomous LLM Agents Execute Multireference Quantum Chemistry Calculations?">Can Autonomous LLM Agents Execute Multireference Quantum Chemistry Calculations?</span></li><li><span class="dpr-home-dashboard-paper-title" title="Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers">Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers</span></li><li><span class="dpr-home-dashboard-paper-title" title="An Open-Source Hardware and Software Toolkit to Enable Agentic RHEED-Guided Thin-Film Synthesis">An Open-Source Hardware and Software Toolkit to Enable Agentic RHEED-Guided Thin-Film Synthesis</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>4</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -96,7 +96,7 @@
     <strong class="dpr-home-dashboard-count">12 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Avatar: Toward Autonomous End-to-End Orchestration of Scientific Workflows using LLMs">Avatar: Toward Autonomous End-to-End Orchestration of Scientific Workflows using LLMs</span></li><li><span class="dpr-home-dashboard-paper-title" title="RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals">RS-CIDER: A non-local machine learning model for approximating screened hybrid functionals</span></li><li><span class="dpr-home-dashboard-paper-title" title="LabAgent: Customize Any Research Hubs for Scientific Discoveries Using AI Agents">LabAgent: Customize Any Research Hubs for Scientific Discoveries Using AI Agents</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Agentic AI for Density-Functional Development: Revisiting r2SCAN">Agentic AI for Density-Functional Development: Revisiting r2SCAN</span></li><li><span class="dpr-home-dashboard-paper-title" title="Multi-View Molecular Representation Learning with Hierarchical Graphs and Contextualized Fingerprints">Multi-View Molecular Representation Learning with Hierarchical Graphs and Contextualized Fingerprints</span></li><li><span class="dpr-home-dashboard-paper-title" title="Atria Dawn: The Dawn of Agentic Superintelligence">Atria Dawn: The Dawn of Agentic Superintelligence</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>7</strong></span><span class="dpr-home-dashboard-tag">ar <strong>5</strong></span></div>
 </section>

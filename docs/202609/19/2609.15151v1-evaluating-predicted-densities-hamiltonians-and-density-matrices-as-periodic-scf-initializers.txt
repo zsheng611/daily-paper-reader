@@ -1,0 +1,465 @@
+Title: Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers
+
+URL Source: https://arxiv.org/pdf/2609.15151v1
+
+Published Time: Tue, 15 Sep 2026 02:02:31 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers 
+
+## Pin Chen, Jiang Li, Yutong Lu School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou, China 
+
+Abstract. Learned electronic states are usually evaluated by prediction error, even though their intended use is to accelerate the self-consistent-field (SCF) loop of density functional theory (DFT). We ask whether lower offline error actually yields a better SCF initializer. We construct ρHD -43K , a 43,851-crystal DFT corpus with aligned charge-density, Hamiltonian, and density-matrix labels, and extend the solver workflow to inject all three predicted states. The closed-loop benchmark compares direct converged-state prediction against residual prediction from solver-native references on a frozen test set of non-magnetic crystals, using paired convergence, iteration, and SCF-loop timing measurements. Injecting the exact converged density matrix or Hamiltonian as an oracle upper bound cuts the median SCF count from 16 to one, revealing substantial acceleration headroom. Among learned inputs, direct charge-density prediction (Charge3Net-E3) accelerates about 91% of paired crystals, saves a median of three SCF iterations, and yields a 1.18 × SCF-loop speedup. In contrast, the tested residual-density and matrix initializers do not consistently improve over the standard superposition-of-atomic-densities baseline. These results establish that target-space accuracy alone is insufficient: a learned initializer must also be compatible with the nonlinear solver trajectory, and its utility must be measured in the loop. 
+
+# 1 Introduction 
+
+Density functional theory (DFT) underpins computational ma-terials discovery, yet each calculation must solve a nonlinear self-consistent-field (SCF) problem. Modern neural models can predict charge densities, Hamiltonians, and density matrices directly from atomic structures. This suggests an appealing acceleration strategy: initialize SCF from a learned electronic state instead of the standard superposition-of-atomic-densities (SAD) guess. Most electronic-state models, however, are se-lected by target-space error—a criterion that does not measure the intended outcome. Small errors in solver-sensitive modes can alter mixing stability, occupations, or the basin reached by the iterative map, whereas even large errors in insensitive components may barely affect convergence. Closed-loop evidence is emerging but remains fragmented across representations. In molecules, all three states have sep-arately shortened SCF: learned Hamiltonians re-injected by QHFlow on QH9 [Yu et al., 2023, Kim et al., 2025], learned densities on QM9 [Li et al., 2025a], and learned one-particle density matrices [Hazra et al., 2024]. In crystals, by contrast, only density-based initialization has been demonstrated [Koker et al., 2024, Chen et al., 2025]. Yet no study compares all three states—charge density ρ, Hamiltonian H, and density matrix 
+
+D—under a single periodic solver. This gap is consequential. Periodic Hamiltonian models are usually assessed by matrix error, bands, or non-self-consistent properties, so whether a predicted H usefully initializes crystal SCF, how it differs from ρ, and where D lies between them re-main unknown. A fair test requires co-generating all three states with identical functional, pseudopotentials, basis, k points, and convergence settings, then re-injecting them into the same ex-ecutable. This requirement motivates both ρHD -43K and our solver extensions. We therefore study a direct question: which learned elec-tronic states accelerate the DFT loop when used as initial conditions? The relevant object is the SCF trajectory 
+
+sSAD → F (sSAD ) → · · · → s∗,
+
+where s ∈ { ρ, D, H }. We treat the solver as part of the evalua-tion environment and compare all representations through the same downstream observables: convergence, SCF iterations, and SCF-loop time. This common currency separates two ques-tions that offline benchmarks conflate: whether a state is close to the converged target, and whether it is a useful starting point for the numerical solver. We evaluate two formulations. Direct models predict the converged state s∗ from a structure x. Residual models predict the correction from a solver-native reference: ρ∗ −ρ0, D∗ −D0,or H∗ − H0, where ρ0 is the charge density after one SAD-started solver update. Residual learning is a plausible inductive bias because the reference already encodes atomic, basis, and pseudopotential information. Whether that bias improves SCF convergence is an empirical question, not an assumption of our benchmark. Our benchmark uses periodic calculations with ABACUS, an open-source DFT package [Zhou et al., 2025], and a local-ized numerical atomic-orbital basis. We construct ρHD -43K 
+
+by selecting inorganic crystals from Alexandria [Schmidt et al., 2021] and recomputing aligned ρ, H, D, and overlap labels under one electronic-structure protocol. A frozen test subset of about 2,000 structures supports the closed-loop study. It covers 1arXiv:2609.15151v1 [cond-mat.mtrl-sci] 14 Sep 2026 neural initial guess ρ0D0H0ρ*converged build H[ρ] diagonalize → D ρ = Σ D φφ 123SCF loop one ground state · three views iterate until self-consistent Charge density ρ Real-space field · image-like ∫ρ = N e, ρ ≥ 0 Density matrix D Occupied orbital pairs sparse AO · Tr(DS)=N eHamiltonian H Effective 1-electron operator sparse · spectrum → bands Figure 1: One electronic ground state in three non-interchangeable representations: the image-like real-space charge density ρ, and the orbital-based sparse matrices D and 
+
+H. The SCF loop cycles ρ → H → D → ρ (Eq. 1), and a learned model can initialize any representation ( ρ0, D0, H0). The dis-tinct information and constraints each carries are detailed in the Preliminaries. nine learned initializers spanning ELECTRAFI [Elsborg et al., 2025, 2026], Charge3Net-E3 [Koker et al., 2024], EdenGNN [Li et al., 2025b], HamGNN [Zhong et al., 2023], DeepH-E3 [Gong et al., 2023], and NextHAM [Shi et al., 2025]. For each representation, we also re-inject the converged state as an ora-cle control. These controls distinguish a weak prediction from an initialization interface that cannot influence SCF. Figure 2 summarizes the benchmark pipeline. Our contributions are: • ρHD -43K , a self-built corpus of 43,851 Alexandria-derived crystals recomputed under one ABACUS proto-col with aligned ρ, H, D, and overlap data; • AI-oriented ABACUS initialization interfaces and a paired closed-loop protocol that evaluate nine learned ini-tializers across all three representations through shared SCF outcomes, using converged-state oracle controls while retaining representation-specific native errors; • evidence that model selection by native error alone is insufficient: direct charge prediction yields a modest but consistent speedup, whereas the tested residual and matrix models fail to realize their oracle headroom. 
+
+# 2 Preliminaries: Three Representations of the Electronic State 
+
+Kohn–Sham DFT obtains the ground-state density by solving a nonlinear fixed-point problem [Hohenberg and Kohn, 1964, Kohn and Sham, 1965]. In a non-orthogonal localized atomic-orbital (LCAO) basis, one SCF step links the three targets studied here (Fig. 1): 
+
+H[ρ]C = SCε, D = Cf C †,ρ(r) = X
+
+> μν R
+
+DR 
+
+> μν
+
+ϕμ(r)ϕν (r − R).
+
+(1) Here S is the overlap matrix, f contains occupations, and R
+
+indexes periodic image blocks. The solver constructs H from 
+
+ρ, solves a generalized eigenproblem, forms D, reconstructs a new ρ, and mixes successive iterates until the input and output densities agree. Initialization and mixing therefore affect both stability and cost; Pulay and Broyden mixing methods accelerate the trajectory from its history [Pulay, 1980, Broyden, 1965], whereas learned initialization changes only its starting point. The three targets carry the same electronic solution in dif-ferent, non-interchangeable coordinates. A real-space density is a scalar field and is comparatively agnostic to the basis used to obtain it, although its grid grows with cell volume. It must integrate to the electron number and, in the physical convention used here, remain non-negative. The density matrix is compact and block sparse in an LCAO basis, but it is tied to element-specific orbitals and must satisfy Hermiticity, Tr( DS ) = Ne,and approximate non-orthogonal idempotency DSD ≈ D for an insulating zero-temperature state. The Hamiltonian is like-wise a sparse covariant block matrix; its errors are amplified through the generalized eigensystem and occupations. Thus D
+
+and H are not merely “small floating-point arrays.” Elemen-twise errors can be small while violating a global subspace, trace, spectrum, or overlap-conditioned constraint that matters to SCF. 
+
+# 3 Related Work 
+
+Closed-loop evidence in molecules. QH9 contains Hamilto-nians for 130,831 stable QM9 geometries and 2,399 molecular-dynamics trajectories, but evaluates prediction rather than SCF initialization [Yu et al., 2023]. QHFlow later initialized PySCF from predicted H on 300 QH9 molecules, reporting 30% fewer iterations and 13–15% lower total runtime than QHNet after accounting for inference overhead [Kim et al., 2025]. A QM9-trained density ResNet saved, on average, 5.5 iterations relative to SAD initialization [Li et al., 2025a], and learned one-particle density matrices also shortened molecular SCF [Hazra et al., 2024]. These separate studies establish molecule-level feasibil-ity, not a controlled cross-state ranking. 21BUILD ρHD-43K Corpus Alexandria Structures 43,851 ABACUS ρ/D/H records ρ(r) DHSplit 39,851 train | 2,000 val 2,000 frozen test 2LEARN Electronic-state Initializers Three Target Quantities ρCharge density 4 initializers Direct + Residual DDensity matrix 2 initializers Direct + Residual HHamiltonian 3 initializers Direct + Residual Total: 3 targets | 9 init. 3INJECT ABACUS SCF (Fixed) ABACUS SCF Loop SAD AI State SCF t ← t+1 to converge Fixed Solver Settings • ks_solver = GENELPA • scf_thr = 1e-7 • scf_nmax = 100 • Broyden β=0.4/0.2 • kspac = 0.04 Å −1 • Gaussian; nspin=1/2 … 4MEASURE Outcomes & Metrics Paired Outcomes AI-Init Run SAD Baseline Metrics (per crystal) Convergence % of attempts reaching SCF threshold Iteration reduction ΔI ΔI = I SAD − I init (median, IQR over strict pairs) SCF-loop speedup S τSτ= T SAD / T init (T: summed per-iteration SCF-loop time) SCF utility ≠ native error alone Figure 2: Overview of the closed-loop benchmark. Alexandria structures are recomputed with ABACUS to build ρHD -43K ,an aligned ρ/H/D corpus. Nine learned initializers are injected through representation-specific ABACUS interfaces. Every initialized run is paired with SAD for the same crystal under fixed solver settings, and converged-state oracle inputs quantify interface headroom. Prediction error measures state reconstruction; convergence, paired iteration reduction, and SCF-loop speedup determine whether a prediction accelerates DFT. 
+
+Periodic density evidence. ELECTRA/ELECTRAFI [Els-borg et al., 2025, 2026] and ChargE3Net [Koker et al., 2024] learn transferable densities with equivariant representations. ChargE3Net reduced the median SCF count from 15 to 11 on unseen Materials Project crystals. ECD contains 140,646 PBE and 7,147 HSE structures; its VASP test on 19 common crystals achieved iteration ratios (initialized over default SCF iterations, lower is better) of 0.757 and 0.681 for the PBE-trained and HSE-tuned models [Chen et al., 2025]. Periodic density accel-eration is therefore established, although ECD’s loop sample is small. EdenGNN instead reports difference-density reconstruc-tion and non-self-consistent properties, without SCF reinjection [Li et al., 2025b]. 
+
+Periodic Hamiltonian evidence. DeepH predicts periodic DFT Hamiltonians [Li et al., 2022], and DeepH-E3 makes the mapping explicitly E(3)-equivariant [Gong et al., 2023]. HamGNN covers molecules and solids [Zhong et al., 2023]; NextHAM learns H∗ − H0 across materials [Shi et al., 2025]. Their main evaluations use matrix MAE, bands, or direct in-ference that bypasses SCF, and their outputs remain tied to training-time orbitals. To our knowledge, learned periodic H,
+
+D, and ρ have not been compared as initializers on paired crystals. To test whether the direct-Hamiltonian result is architecture-specific, we retrain DeepH-E3 on ρHD -43K with the same ABACUS orbital basis and include it alongside HamGNN-Matrix-H and residual NextHAM. The adaptation retains the published equivariant architecture but adds an auditable ABA-CUS data path, streaming inference, Hermitian block projec-tion, and CSR export. This removes an implementation-only exclusion while preserving an important scope boundary: all three Hamiltonian models remain tied to the orbital convention used to generate their training labels. 
+
+Why a unified solver boundary is needed. PySCF accepts an initial AO density matrix [Sun et al., 2020], SIESTA can reuse one [García et al., 2020], and plane-wave codes com-monly restart from densities or wavefunctions. Our claim is therefore comparative, not that matrix restart is unprecedented. Mixing codes, bases, pseudopotentials, or k points would con-found state choice with protocol. We instead add checked 
+
+D/H initialization to an ABACUS 3.11.0-beta.4 LCAO work-flow and place ρ, D, and H behind one periodic, MPI-capable boundary. To our knowledge, this is the first paired closed-loop comparison of all three learned states on inorganic crystals. 
+
+# 4 Closed-Loop Formulation 
+
+Let x be a crystal structure and F the SCF update implemented by the DFT solver. Starting from s0, the solver generates 
+
+st+1 = F (st; x) until it satisfies a fixed convergence threshold. We intervene only at initialization and leave the subsequent solver unchanged. The injected state is s ∈ { ρ, D, H }.
+
+## 4.1 Direct and Residual Initialization 
+
+A direct model predicts the converged state, 
+
+ˆsdir = fθ (x) ≈ s∗. (2) 3A residual model instead starts from a reference state sref and predicts 
+
+c∆s = gθ (x, s ref ), ˆsres = sref + c∆s. (3) For ρ, sref = ρ0 = Fρ(ρSAD ; x), the charge after one SAD-started solver update. For D, the reference is the one-step matrix D0 generated from the same SAD-started update. For NextHAM, it is the zeroth-step Hamiltonian H0. The com-parison tests whether learning a nominally smaller correction produces a state that is more useful to SCF than predicting the converged state directly. 
+
+## 4.2 Native and Closed-Loop Metrics 
+
+Native accuracy. For charge density, we report normalized full-grid L1 error, 
+
+ϵρ =
+
+P 
+
+> g∈G
+
+|ρ(g) − ˆρ(g)|
+
+P 
+
+> g∈G
+
+|ρ(g)| , (4) where G is the real-space grid. For A ∈ { D, H }, we report an elementwise MAE on a fixed, target-specific set of scalar LCAO entries EA,
+
+ϵA = 1
+
+NA
+
+X
+
+> e∈E A
+
+Ae − ˆAe , A ∈ { D, H }, (5) where NA = |E A|. For D, ED contains the entries of the com-mon symmetry-completed graph blocks. For H, EH is the nonzero support of the converged Hamiltonian after all pre-dictions have been symmetry-projected and reconstructed in the CSR form read by ABACUS; a missing predicted entry is therefore evaluated as zero. The same support is used for all rows of a target. The scales and units of ϵρ, ϵD , and ϵH differ; only models for the same target can be compared by native error. 
+
+Closed-loop common currency. For each initializer, con-vergence rate is computed over all test-set attempts. Iteration and timing comparisons use strict pairs for which both the initialized and SAD runs converge. For a paired structure x,we define ∆I(x) = ISAD (x) − Iinit (x),ST (x) = TSAD (x)
+
+Tinit (x) . (6) Thus, ∆I > 0 and ST > 1 indicate acceleration. The strict-pair set P contains only structures for which both runs con-verge and have valid iteration counts. We report convergence over all attempts and the median SCF iteration count of con-verged initialized runs. On strict pairs, we report median ∆I,its interquartile range (IQR), the number and percentage of faster pairs, and median ST . This combination exposes fail-ures excluded by pairing while separating absolute iteration cost, paired improvement, and wall-time acceleration. T sums per-iteration SCF-loop times parsed from ABACUS logs; it excludes neural inference, state export, process startup, and final-output I/O. Consequently, ST measures solver-loop accel-eration rather than end-to-end deployment speedup. 
+
+# 5 Experimental Setup 
+
+## 5.1 Dataset and Solver 
+
+ρHD -43K construction. ρHD -43K is our aligned electronic-state corpus, not a relabeling of an existing database. We select non-magnetic inorganic structures from Alexandria [Schmidt et al., 2021], retain spin-unpolarized systems ( nspin=1 ), and recompute every label with the same periodic ABACUS LCAO workflow [Zhou et al., 2025]. 1 Each successful record couples the crystal and numerical settings to the converged real-space charge grid, Hamiltonian blocks, density-matrix blocks, and overlap matrix. Because all three target labels come from the same calculation, Eq. 1 is numerically aligned rather than assembled across codes or basis sets. The successfully processed ρHD -43K pool contains 43,851 calculations, split into 39,851 training, 2,000 validation, and a frozen test set of 2,000 crystals (hereafter “the test set”). One test crystal is excluded because its reference calculation did not converge within our compute budget, so all closed-loop results are reported over the remaining 1,999 evaluated crystals. Model selection uses only the training and validation partitions; all learned-model native errors and closed-loop claims use the same frozen test IDs. The SAD-derived matrix references cover all but two evaluated crystals, namely those with available 
+
+ρ0/D 0/H 0 artifacts. Figure 3 reports composition and cell-size coverage for both the full pool and the frozen test set, guarding against the concern that our acceleration results reflect only a chemically narrow subset. The source calculations use the PBE exchange–correlation functional [Perdew et al., 1996], SG15 optimized norm-conserving pseudopotentials [Schlipf and Gygi, 2015], and a double-zeta-plus-polarization numerical atomic-orbital basis. Closed-loop reruns preserve each structure’s pseudopotentials, orbital files, k-point mesh, and parallel resources. All methods use 10 −7
+
+as the SCF threshold, at most 100 iterations, Broyden mixing with β = 0 .2, and one OpenMP thread per MPI process. The only changed input is the initialization mode and its associated state file. The complete solver input and reproducible workflow are provided in Appendix A.1. 
+
+AI-oriented ABACUS interfaces. The benchmark uses an ABACUS 3.11.0-beta.4-based build in which the LCAO initial-ization path accepts three state types under one input contract. 
+
+init_chg file reads a periodic charge grid; init_chg dm reads real-space density-matrix blocks and reconstructs the initial charge; init_chg hr reads Hamiltonian blocks, solves the initial generalized eigenproblem, and then resumes the standard SCF map. The matrix readers validate orbital di-mensions and lattice-translation block layout before entering SCF. After initialization, diagonalization, occupation, mixing, convergence threshold, and output are identical to SAD. This design turns model evaluation into a controlled intervention rather than a separate surrogate calculation. 
+
+> 1The dataset, training and inference code, trained checkpoints, and the cus-tomized ABACUS build that exports and re-reads learned states are provided as the Code and Data Supplement.
+
+41-4 5-8 9-16 17-32 33-64 65-96 97-160 >160 
+
+> 010 20 30 40
+> Structures (%)
+
+a      
+
+> Full Test
+> 1234567
+> 020 40 60
+> Structures (%)
+
+b                                                           
+
+> Full Test
+> HHe Li Be BCNOFNe
+> Na Mg Al Si PSCl Ar KCa Sc Ti VCr Mn Fe Co Ni Cu Zn Ga Ge As Se Br Kr Rb Sr YZr Nb Mo Tc Ru Rh Pd Ag Cd In Sn Sb Te IXe Cs Ba Hf Ta WRe Os Ir Pt Au Hg Tl Pb Bi Po At Rn La-Lu
+
+c       
+
+> 110 100 1k 10k 100k
+> Atomic occurrences in ρHD-43K Atoms per cell (interval) Elements per crystal
+
+Figure 3: Coverage of the full ρHD -43K corpus and its frozen closed-loop test set. (a) Distribution over explicit atom-count intervals per input cell; bars show the full corpus and the line shows the frozen test set. (b) Number of chemical species per crystal. (c) Element abundance in periodic-table layout; color encodes the total number of atomic occurrences in all ρHD -43K structures. Table 1: Learned initializers in the closed-loop benchmark.                               
+
+> Target Model Type init_chg
+> ρELECTRAFI-ρdirect file
+> ρCharge3Net-E3-ρdirect file
+> ρCharge3Net-E3-∆ρresidual file
+> ρEdenGNN-∆ρresidual file
+> DHamGNN-Matrix-Ddirect dm
+> DHamGNN-Matrix-∆Dresidual dm
+> HHamGNN-Matrix-Hdirect hr
+> HDeepH-E3-Hdirect hr
+> HNextHAM-∆Hresidual hr
+
+## 5.2 Models and Initialization Interfaces 
+
+The model set spans field and block-matrix representations while keeping the solver protocol fixed (Table 1). For ρ, ELEC-TRAFI and Charge3Net-E3 are direct predictors; a second Charge3Net-E3 model and EdenGNN predict difference densi-ties. For localized matrices, HamGNN-Matrix predicts direct 
+
+D∗ and H∗, and a separate head predicts ∆D = D∗ − D0.DeepH-E3 supplies an independent direct H∗ predictor, while NextHAM predicts ∆H = H∗ − H0. Predicted fields are ex-ported through init_chg file ; sparse matrices use the 
+
+init_chg dm and init_chg hr interfaces. The selected architectures are representative rather than exhaustive, with model families and citations given in the In-troduction and Related Work. Each prediction is reconstructed into a complete solver input before either native or closed-loop evaluation, so residual rows never compare only the correc-tion tensor. The design tests target and initialization choices under a common executable protocol; it is not an architecture leaderboard. 
+
+## 5.3 Baselines and Controls 
+
+The default comparator is init_chg auto , which constructs SAD without learned inference or export cost. For same-target native comparisons, ρ0 is the charge after one SAD-started up-date, H0 is the zeroth-step Hamiltonian assembled from SAD, and D0 is formed by its first diagonalization. The reference-generation cost is not included in the reported residual-model SCF-loop timing. These are solver-derived references: element, pseudopotential, basis, and electrostatic information has al-ready been supplied analytically before the learned correction is applied. We additionally re-inject each converged test target through the same file used by its learned counterpart. These oracle runs jointly validate serialization and quantify interface headroom; they are diagnostic upper bounds, not deployable baselines. Every initialized run is paired with the SAD run for the same structure. Table 3 reports convergence over all attempts and iter-ation/time statistics only over strict converged pairs. The native SAD matrix artifacts are available for all but two test crystals, explaining the reference-set exception noted in Table 2. 
+
+# 6 Results 
+
+We separate prediction quality from solver utility. Table 2 eval-uates each reconstructed state against s∗, Table 3 evaluates the corresponding model family inside SCF, and Figure 4(b) relates the two. Residual rows always refer to the reconstructed initializer, not the residual tensor alone. 
+
+## 6.1 Native Accuracy Is Target-Specific 
+
+As reported in Table 2, all four learned charge densities improve over the SAD-derived one-step reference ρ0 in native error, by factors from 2.7× (EdenGNN) to 10 .4× (direct Charge3Net-E3). The matrix ordering is more nuanced. Direct D is 9.2×
+
+worse than D0, while residual D narrows the gap to 2.8×. Di-rect HamGNN-H and DeepH-E3-H are respectively 11 .5×
+
+and 12 .4× worse than H0. In contrast, reconstructed NextHAM-
+
+∆H reaches 0.71 × the H0 error, improving the solver-native reference offline. Its closed-loop result below nevertheless has no median acceleration, providing a particularly direct coun-terexample to selection by native MAE alone. 50 5 10 15         
+
+> Median Δ I=ISAD −Iinit (higher is better)
+> Charge density ρ
+> Density matrix D
+> Hamiltonian H
+> +13
+> Charge3Net +3
+> +15
+> HamGNN-ΔD
+> 0
+> +15
+> NextHAM-ΔH
+> -1
+> faster slower
+
+a       
+
+> oracle best learned
+> 0.1 0.3 1310
+> Relative native error εmodel /εreference
+> −6 −5 −3 −1 013
+> Median paired Δ I (higher is better)
+> ELECTRAFI Charge3Net Charge3Net-Δ ρ
+> HamGNN-D
+> HamGNN-Δ D
+> HamGNN-H
+> DeepH-E3-H
+> NextHAM-Δ H
+> native error lower native error higher
+
+b 
+
+> direct residual
+
+Figure 4: Offline accuracy versus SCF utility. (a) Oracle and best-learned median ∆I for each interface; positive values are faster than SAD. (b) Native error relative to the corresponding SAD-derived reference versus median paired ∆I, including both direct-H
+
+architectures, HamGNN-Matrix-H and DeepH-E3-H. Colors denote ρ, D, H; circles and triangles denote direct and residual formulations. EdenGNN-∆ρ overlaps Charge3Net-E3-∆ρ and is omitted for clarity. Table 2: Native error against the converged state s∗ on the frozen test set (lower is better). Errors are comparable within, but not across, targets. Density rows use 1,999 crystals; all matrix rows use the common 1,997-crystal subset with D0/H 0. Hamiltonian rows use the converged-state support after CSR reconstruction. 
+
+Target Model / reference Initializer form Native metric Test error 
+
+ρ SAD-derived reference ρ0 full-grid ϵρ 4.508 × 10 −2
+
+ρ ELECTRAFI-ρ ˆρ∗ full-grid ϵρ 9.510 × 10 −3
+
+ρ Charge3Net-E3-ρ ˆρ∗ full-grid ϵρ 4.354 × 10 −3
+
+ρ Charge3Net-E3-∆ρ ρ0 + c∆ρ full-grid ϵρ 1.546 × 10 −2
+
+ρ EdenGNN-∆ρ ρ0 + c∆ρ full-grid ϵρ 1.671 × 10 −2
+
+D SAD-derived reference D0 block MAE 5.832 × 10 −5
+
+D HamGNN-Matrix-D ˆD∗ block MAE 5.389 × 10 −4
+
+D HamGNN-Matrix-∆D D0 + d∆D block MAE 1.629 × 10 −4
+
+H SAD-derived reference H0 support MAE 2.133 × 10 −4
+
+H HamGNN-Matrix-H ˆH∗ support MAE 2.446 × 10 −3
+
+H DeepH-E3-H ˆH∗ support MAE 2.652 × 10 −3
+
+H NextHAM-∆H H0 + d∆H support MAE 1.524 × 10 −4
+
+## 6.2 Oracle Headroom and Learned Accelera-tion 
+
+Table 3 reports one formal result per test crystal for every initial-izer. Missing final SCF logs, runtime crashes after executable launch, and runs reaching scf_nmax=100 are counted as failures and remain in the convergence denominator. Scheduler or interconnect failures before ABACUS starts may be retried and are recorded separately. The 28 existing final directories without SCF logs comprise 26 segmentation faults and two MPI/GLEX failures. The six oracle failures are shared with SAD and reach 100 iterations, so the appropriate oracle result is 1,993 converged calculations plus six closed-loop failures rather than an artificially forced perfect score. The oracle controls show that all three interfaces can mate-rially change convergence. Exact ρ reduces the median from 16 to three iterations and gives a 5.30 × loop speedup. Exact 
+
+D and H reach one-iteration medians and speedups of 14 .56 ×
+
+and 15 .19 ×, respectively. All 1,993 converged oracle pairs are faster than SAD, validating the three initialization interfaces while retaining the six shared failures. Among learned initializers, direct Charge3Net-E3 gives the clearest gain: 1,806 of 1,987 pairs (90.9%) use fewer itera-tions, with median ∆I = +3 , IQR [+2 , +3] , and 1.18 × loop speedup. ELECTRAFI gives a smaller improvement (median 
+
+∆I = +1 , 1.06 ×). In contrast, both residual-density models have median ∆I = −1 and speedups below one. Figure 4(a) places the best learned initializer for each interface against its oracle ceiling. Learned matrices do not realize their much larger oracle ceiling. Direct D matches SAD’s 99.70% convergence but has median ∆I = −2, with 1,639 of 1,993 strict pairs slower. The two direct H architectures agree qualitatively: HamGNN-H
+
+accelerates no strict pair and has median ∆I = −5, while DeepH-E3-H accelerates one of 1,992 pairs (0.05%), has me-dian ∆I = −6, and yields a 0.73 × loop speedup. Six of its seven non-converged cases are shared with SAD; one is model-only. Residual D is effectively neutral (median ∆I = 0 ,
+
+1.00 ×), whereas NextHAM has median ∆I = −1 and 0.97 ×
+
+speedup despite beating H0 in native error. 6Table 3: Closed-loop SCF performance on the frozen test set (one formal result per crystal and initializer; pre-execution infrastruc-ture retries are excluded). Oracle rows inject the exact converged state as an upper-bound control, not a deployable method. Conv. is over all results; Med. I, Med. ∆I (IQR), faster-pair counts, and SCF-loop speedup use strict pairs.                                                                                                                     
+
+> Target Model / initializer Type Conv. Med. IMed. ∆I[IQR] Faster, n(%) SCF spd.
+> ρ, D, H ABACUS SAD default baseline 99.70% 16 0 [0 ,0] –1.00 ×
+> ρTrue charge density oracle 99.70% 3+13 [+12 ,+15] 1993 (100.0) 5.30 ×
+> ρELECTRAFI-ρdirect 99.25% 15 +1 [0 ,+2] 1162 (58.6) 1.06 ×
+> ρCharge3Net-E3-ρdirect 99.40% 14 +3 [+2 ,+3] 1806 (90.9) 1.18 ×
+> ρCharge3Net-E3-∆ρresidual 99.20% 18 −1 [ −3,0] 367 (18.5) 0.93 ×
+> ρEdenGNN-∆ρresidual 99.30% 18 −1 [ −3,0] 367 (18.5) 0.93 ×
+> DTrue density matrix oracle 99.70% 1+15 [+13 ,+17] 1993 (100.0) 14 .56 ×
+> DHamGNN-Matrix-Ddirect 99.70% 18 −2 [ −3,−1] 90 (4.5) 0.90 ×
+> DHamGNN-Matrix-∆Dresidual 99.65% 16 0 [ −1,+1] 845 (42.4) 1.00 ×
+> HTrue Hamiltonian oracle 99.70% 1+15 [+13 ,+17] 1993 (100.0) 15 .19 ×
+> HHamGNN-Matrix-Hdirect 99.60% 22 −5 [ −8,−3] 0 (0.0) 0.75 ×
+> HDeepH-E3-Hdirect 99.65% 23 −6 [ −10 ,−4] 1 (0.05) 0.73 ×
+> HNextHAM-∆Hresidual 99.55% 17 −1 [ −3,+1] 710 (35.7) 0.97 ×
+
+## 6.3 Offline Error Does Not Determine SCF Out-come 
+
+The native-error orderings of Table 2 do not carry over to the loop. Figure 4(b) normalizes each model’s native error by its corresponding solver-native reference and plots it against median paired ∆I. The direct density models lie on the acceler-ating side of ∆I = 0 , whereas both residual-density models lie on the slowing side despite improving over ρ0 offline. Direct 
+
+D/H models remain above their same-target references and yield no median gain; NextHAM crosses below the offline refer-ence but still slows the median loop. EdenGNN-∆ρ is omitted from the panel because it overlaps Charge3Net-E3-∆ρ; both remain reported in Table 3. Across the nine initializers, native error neither ranks objectives at the model level nor predicts individual SCF outcomes. 
+
+# 7 Discussion 
+
+The baselines are not equally informed. The field refer-ence ρ0 starts from the simple SAD superposition plus one solver update, whereas H0 is assembled directly from the struc-ture, pseudopotentials, basis, and SAD potential, and D0 from solving its generalized eigenproblem. These material-specific references expose different amounts of solver structure to the learned correction, so a learned density competes with a com-paratively crude field reference while a learned matrix must compete with a highly structured orbital prior. This explains why both direct H architectures are much worse than H0. Nex-tHAM is the informative exception: its residual correction beats 
+
+H0 in support MAE but still fails to accelerate the median loop, showing that a stronger prior explains the offline ordering with-out making offline proximity sufficient. 
+
+Matrices carry structure that elementwise error obscures. 
+
+Beyond the cross-representation scale mismatch noted in Re-sults, matrix initialization imposes global constraints that el-ementwise MAE cannot capture: D must respect the non-orthogonal overlap, electron count, occupied subspace, and approximate idempotency, and H must yield a consistent spec-trum and density after diagonalization. Because the oracle D
+
+and H interfaces are highly effective when these relationships are correct, the closed-loop shortfall reflects solver-compatible prediction rather than lack of interface leverage. 
+
+Residual learning is not automatically solver-aligned. Asmaller target magnitude does not guarantee an easier down-stream problem: residual fields can contain chemically specific, high-frequency corrections, and an inaccurate correction can move the SAD-derived ρ0 state away from the solver basin. This explains why the residual models improve on ρ0 in density error yet still slow SCF. 
+
+# 8 Limitations 
+
+Our conclusions are scoped to one in-distribution, non-magnetic Alexandria corpus and one ABACUS LCAO workflow; the ranking may shift with a different basis, functional, mixing scheme, magnetism, or metallic smearing, and we do not test out-of-distribution transfer to surfaces, defects, or strongly correlated systems. Finally, our reported speedups measure SCF-loop time and exclude model inference, state export, and residual-reference generation. For the direct charge-density winner the excluded cost is essentially inference (a few minutes per structure), small against the far longer wall-clock time of a periodic ABACUS SCF run—commonly at the hour scale—so the 1.18 × loop speedup should largely persist end to end. A fully audited end-to-end benchmark is left to future work. 
+
+# 9 Conclusion 
+
+We reframed learned electronic states as SCF initial condi-tions rather than regression targets, and built ρHD -43K with interfaces that inject predicted ρ, D, and H into one periodic ABACUS workflow, pairing every run with SAD under fixed 7settings so each model becomes a controlled intervention read directly from the loop. The closed-loop view overturns the offline ranking: inject-ing the exact converged D or H collapses the median SCF count to a single iteration, yet among learned inputs only direct charge-density prediction accelerates SCF consistently, while residual-density and learned-matrix initializers do not reliably beat SAD despite comparable or lower native error. Offline accuracy is thus neither necessary nor sufficient for SCF utility: models should be trained and reported by their SCF effect, and claims should rest on paired convergence, iteration, and loop-timing statistics. We release ρHD -43K and the closed-loop interfaces to make solver-in-the-loop evaluation standard; closing the D/H oracle gap and showing out-of-distribution acceleration are natural next steps. 
+
+# References 
+
+C. G. Broyden. A class of methods for solving nonlinear simultaneous equations. Mathematics of Computation , 19(92):577–593, 1965. Pin Chen, Zexin Xu, Qing Mo, Hongjin Zhong, Fengyang Xu, and Yutong Lu. ECD: A machine learning benchmark for predict-ing enhanced-precision electronic charge density in crystalline inorganic materials. In International Conference on Learning Representations , 2025. URL https://openreview.net/forum?id= SBCMNc3Mq3. Jonas Elsborg, Luca Thiede, Alán Aspuru-Guzik, Tejs Vegge, and Arghya Bhowmik. Electra: A cartesian network for 3d charge density prediction with floating orbitals. In Advances in Neural Information Processing Systems , 2025. Jonas Elsborg, Felix Ærtebjerg, Luca Thiede, Alán Aspuru-Guzik, Tejs Vegge, and Arghya Bhowmik. Global plane waves from local gaussians: Periodic charge densities in a blink. arXiv preprint arXiv:2601.19966 , 2026. Alberto García, Nick Papior, Arsalan Akhtar, et al. SIESTA: Recent developments and applications. The Journal of Chemical Physics ,152(20):204108, 2020. doi: 10.1063/5.0005077. Xiaoxun Gong, He Li, Nianlong Zou, Runzhang Xu, Wenhui Duan, and Yong Xu. General framework for E(3)-equivariant neural network representation of density functional theory hamiltonian. 
+
+Nature Communications , 14(1):2848, 2023. doi: 10.1038/s41467-023-38468-8. S. Hazra, U. Patil, and S. Sanvito. Predicting the one-particle den-sity matrix with machine learning. Journal of Chemical Theory and Computation , 20(11):4569–4578, 2024. doi: 10.1021/acs.jctc. 4c00042. P. Hohenberg and W. Kohn. Inhomogeneous electron gas. Physical Review , 136(3B):B864–B871, 1964. Seongsu Kim, Nayoung Kim, Dongwoo Kim, and Sungsoo Ahn. High-order equivariant flow matching for density functional theory hamiltonian prediction. arXiv preprint arXiv:2505.18817 , 2025. W. Kohn and L. J. Sham. Self-consistent equations including exchange and correlation effects. Physical Review , 140(4A):A1133–A1138, 1965. Teddy Koker, Keegan Quigley, Eric Taw, Kevin Tibbetts, and Lin Li. Higher-order equivariant neural networks for charge density prediction in materials. npj Computational Materials , 10(1):161, 2024. Chenghan Li, Or Sharir, Shunyue Yuan, and Garnet Kin-Lic Chan. Image super-resolution inspired electron density prediction. Na-ture Communications , 16:4811, 2025a. doi: 10.1038/s41467-025-60095-8. He Li, Zun Wang, Nianlong Zou, Meng Ye, Runzhang Xu, Xiaoxun Gong, Wenhui Duan, and Yong Xu. Deep-learning density func-tional theory hamiltonian for efficient ab initio electronic-structure calculation. Nature Computational Science , 2(6):367–377, 2022. doi: 10.1038/s43588-022-00265-6. Xiwen Li, Zaizhou Xin, Hongyu Yu, Yang Zhong, Xingao Gong, and Hongjun Xiang. Efficient E(3)-equivariant framework for univer-sal charge density prediction. arXiv preprint arXiv:2510.00788 ,2025b. John P. Perdew, Kieron Burke, and Matthias Ernzerhof. Generalized gradient approximation made simple. Physical Review Letters , 77 (18):3865–3868, 1996. doi: 10.1103/PhysRevLett.77.3865. Peter Pulay. Convergence acceleration of iterative sequences. the case of scf iteration. Chemical Physics Letters , 73(2):393–398, 1980. Martin Schlipf and François Gygi. Optimization algorithm for the generation of ONCV pseudopotentials. Computer Physics Commu-nications , 196:36–44, 2015. doi: 10.1016/j.cpc.2015.05.011. Jonathan Schmidt, Love Pettersson, Claudio Verdozzi, Silvana Botti, and Miguel A. L. Marques. Crystal graph attention networks for the prediction of stable materials. Science Advances , 7(49):eabi7948, 2021. doi: 10.1126/sciadv.abi7948. Yin Shi, Zujian Dai, Xinyang Pan, and Lixin He. Advancing universal deep learning for electronic-structure hamiltonian prediction of materials. arXiv preprint arXiv:2509.19877 , 2025. Qiming Sun, Xing Zhang, Samragni Banerjee, et al. Recent develop-ments in the PySCF program package. The Journal of Chemical Physics , 153(2):024109, 2020. doi: 10.1063/5.0006074. Haiyang Yu, Meng Liu, Youzhi Luo, Alex Strasser, Xiaofeng Qian, Xiaoning Qian, and Shuiwang Ji. QH9: A quantum hamiltonian prediction benchmark for QM9 molecules. In Advances in Neural Information Processing Systems , volume 36, 2023. Yang Zhong, Hongyu Yu, Mao Su, Xingao Gong, and Hongjun Xiang. Transferable equivariant graph neural networks for the hamiltonians of molecules and solids. npj Computational Materials , 9(1):182, 2023. Weiqing Zhou, Daye Zheng, Qianrui Liu, et al. ABACUS: An elec-tronic structure analysis package for the AI era. The Journal of Chemical Physics , 163(19):192501, 2025. doi: 10.1063/5.0297563. 
+
+8A Reproducibility and Implementation Details 
+
+This appendix records the dataset checks, model hyperparameters, selected training states, implementation changes, native-error audits, and solver-export rules used for the reported benchmark. Parameter counts denote trainable scalar parameters and exclude optimizer states and non-trainable buffers. 
+
+## A.1 Solver Configuration and Reproducible Work-flow 
+
+Every SAD, learned, and oracle run shares one ABACUS LCAO input contract; only the initialization mode and its state file change between runs. Listing 1 gives the complete INPUT used for the closed-loop reruns (directory paths are anonymized). All artifacts—the ABACUS-flow workflow driver that reproduces label generation and the closed-loop reruns, the customized ABACUS build that exports and re-reads learned ρ, D, and H states, and the ρHD -43K dataset together with the model training code and inference scripts—are provided as the Code and Data Supplement.                                  
+
+> INPUT_PARAMETERS suffix Scf-Spinoff-H out_chg 1pseudo_dir <pp_dir> ks_solver genelpa orbital_dir <orb_dir> basis_type lcao calculation scf out_hsr_npz 1ntype 3out_dm_npz 1nspin 1out_mul 1symmetry 0smearing_method gaussian kspacing 0.04 smearing_sigma 0.001 ecutwfc 120 mixing_type broyden scf_thr 1e-07 mixing_beta 0.2 scf_nmax 100 gamma_only 0
+
+Listing 1: Complete ABACUS INPUT for the closed-loop calculations. Pseudopotential and orbital directories are anonymized; only the init_chg /state-file settings vary across initializers. 
+
+## A.2 Dataset Audit and Preprocessing 
+
+The successful ρHD -43K pool contains 43,851 spin-unpolarized cal-culations, split into 39,851 training, 2,000 validation, and 2,000 test structures. Split membership is fixed before model training. One test crystal is excluded because its reference calculation did not converge within the compute budget, leaving 1,999 evaluated crystals. The den-sity, Hamiltonian, density-matrix, and overlap labels for an individual structure come from the same converged ABACUS calculation. For matrix learning, each periodic atom-pair block M R 
+
+> ij
+
+, M ∈{H, D, S }, is accompanied by its inverse block 
+
+M −R 
+
+> ji
+
+=
+
+
+
+M R
+
+> ij
+
+T
+
+. (A1) Missing inverse entries in the raw sparse graph are symmetry-completed before training, and fixed graph caches are accepted only when the inverse-missing count is zero. The same element-specific orbital def-inition and a maximum of 40 numerical atomic orbitals per atom are used when converting labels and predictions. Two evaluated crys-tals lack the complete one-step matrix artifacts required for D0/H 0,so matrix-reference native errors use 1,997 structures; closed-loop convergence uses all 1,999 attempted directories. 
+
+## A.3 Architectures and Parameter Counts 
+
+Table A1 gives the instantiated architectures rather than only the model-family names. Direct and residual versions of Charge3Net-E3 share the same network size, as do the three HamGNN-Matrix predictors; their objectives and reconstruction rules differ. DeepH-E3 is trained independently and contributes a second direct-Hamiltonian architecture. EdenGNN uses the following hidden representation: 
+
+64 ×0e + 64 ×0o + 20 ×1o + 20 ×1e + 16 ×2o + 16 ×2e
+
++ 8 ×3o + 8 ×3e + 6 ×4o + 6 ×4e + 5 ×5e + 5 ×5o + 4 ×6e + 4 ×6o. 
+
+(A2) 
+
+## A.4 Optimization and Selected Training States 
+
+Table A2 lists the effective settings of the runs used for closed-loop inference. Batch size is per GPU. “Probes” denotes randomly sam-pled real-space query points per structure for density training; matrix models use one structure per GPU step. Charge3Net-E3 uses 1,000 validation probes per structure for the direct run and 8,192 for the residual run. EdenGNN uses 4,096 validation probes. HamGNN-Matrix uses a plateau scheduler with gradient clipping at 1.0; direct H allows up to 300 epochs, while the two D runs allow 70. DeepH-E3 uses Adam betas (0 .9, 0.999) , a revert-and-decay scheduler with patience 15 and factor 0.8, and seed 42. EdenGNN uses a plateau scheduler with factor 0.5, patience 5, and minimum learning rate 10 −6. All Charge3Net-E3 and EdenGNN runs use seed 42; NextHAM uses seed 7. 
+
+## A.5 Changes Relative to the Released Model Implementations 
+
+We separate changes to the scientific model from changes required to place its output behind the common solver boundary. Our modified code for every model is released with the benchmark (Appendix A.1); below we also link each upstream implementation we adapted, where an official one is available. 
+
+ELECTRAFI. The EScAIP density architecture is retained. We add a ρHD -43K valence-electron adapter, periodic neighbor capping for large cells, robust tiling when the number of Gaussian modes exceeds the feature width, finite-value checks, synchronized invalid-batch skipping under distributed training, and deterministic checkpoint export. These are dataset, scale, and training-stability changes rather than a new density architecture. 
+
+Charge3Net-E3. The direct model retains the released three-interaction E(3)-equivariant architecture. 2 The residual variant keeps that architecture but changes the target to ρ∗ − ρ0, increases the number of sampled probes, and replaces pointwise L1 by an electron-normalized residual loss. Both variants use an ABACUS restart-data loader and exporter. 
+
+EdenGNN. This is a substantive implementation adaptation. No official code is released, so we reimplement the method from its origi-nal publication [Li et al., 2025b]. We implement the paper-described   
+
+> 2Upstream implementation: https://github.com/AIforGreatGood/ charge3net.
+
+9Table A1: Architecture settings and trainable parameter counts for the nine learned initializers. Cutoffs are in Å. 
+
+Target Model Form Parameters Main instantiated settings 
+
+ρ ELECTRAFI direct 40.166M EScAIP backbone; 2 interaction layers, width 256, 32 attention heads; 30-Å cutoff, at most 250 neighbors, 120 Gaussian density primitives per electron. 
+
+ρ Charge3Net-E3 direct 1.909M E(3)-equivariant density model; 3 interactions, multiplicity 500, lmax = 4 , 4-Å cutoff, 20 neighbors, and 20 Gaussian radial functions. 
+
+ρ Charge3Net-E3 residual 1.909M Same architecture as the direct model; predicts ∆ρ = ρ∗ − ρ0.
+
+ρ EdenGNN residual 0.825M 3 interactions, 4-Å cutoff, 20 neighbors, lmax = 6 , 8 radial functions, element embedding 8, 4 density channels, and radial hidden width 64. 
+
+D HamGNN-Matrix direct 2.903M 3 equivariant layers; 26-Å cutoff; 64 radial functions; node irreps 64 ×0e + 64 ×0o + 32 ×
+
+1o + 16 ×1e + 8 ×2o + 16 ×2e + 8 ×3o + 8 ×3e.
+
+D HamGNN-Matrix residual 2.903M Same backbone; predicts ∆D = D∗ − D0 with the one-step matrix supplied as a sidecar. 
+
+H HamGNN-Matrix direct 2.903M Same backbone and block decoder as the density-matrix models; direct converged-Hamiltonian target. 
+
+H DeepH-E3 direct 4.544M E(3)-equivariant Hamiltonian network; 3 interaction blocks, 26-Å cutoff, spherical harmonics through l = 4 , 64 scalar embedding channels, and one global vocabulary with element-specific orbital definitions for all 67 ρHD -43K elements. 
+
+H NextHAM residual 0.842M Conditional graph-attention transformer; 4 layers, 4 attention heads, hidden/equivariant features through l = 6 , spherical harmonics through l = 5 , 8-Å radius, 64 radial functions, and zero dropout. 
+
+Table A2: Training settings and model states used for closed-loop inference. The selected step is read from checkpoint metadata rather than inferred from a directory name. 
+
+Model Optimizer Initial LR GPUs Batch / probes Closed-loop state Objective and regularization ELECTRAFI-ρ Muon+AdamW 10 −4 8 1 / – epoch 28 Electron-normalized integrated L1; final restart segment used 10 −5 LR and gradi-ent clipping at 0.1. Charge3Net-E3-ρ Adam 10 −3 4 6 / 500 step 99,935 Pointwise L1; power-decay schedule 
+
+(α = 0 .96 , β = 3000) .Charge3Net-E3-∆ρ Adam 5×10 −4 4 4 / 2,048 step 200,000 Electron-normalized residual-density L1;same power-decay schedule. EdenGNN-∆ρ AdamW 10 −3 4 1 / 2,048 step 297,900 Solver-aligned residual loss: density weight 1 and neutrality weight 0.1; weight decay 10 −6.HamGNN-Matrix-D AdamW 10 −4 2 1 / – step 405,000 Matrix MAE plus Hermiticity 0.1, idempo-tency 0.01, trace 50, onsite 1, and onsite-diagonal 10. HamGNN-Matrix-∆D AdamW 10 −4 4 1 / – step 443,000 Residual MAE plus Hermiticity 0.1, idem-potency 0.01, trace 0.1, onsite 1, and onsite-diagonal 10. HamGNN-Matrix-H AdamW 10 −4 4 1 / – step 365,000 Matrix MAE with onsite weight 2, onsite-diagonal weight 10, and large-entry weight 3 capped at 10. DeepH-E3-H Adam 10 −4 4 1 / – epoch 27 Equivariant direct-Hamiltonian block ob-jective over all supported orbital-block types; lowest completed validation loss at the inference snapshot. NextHAM-∆H Adam 10 −4 4 1 / – epoch 70; step 688,810 Residual-Hamiltonian MAE; 39,357 size-filtered training structures and at most 100 validation structures per validation pass. 
+
+difference-density branch in the local periodic density interface, re-strict it to the pseudo-density channel appropriate to the present norm-conserving LCAO calculations, and add a neutrality penalty. No PAW augmentation density is used. The trained output is reconstructed with the one-step reference before solver injection. 
+
+HamGNN-Matrix. The equivariant HamGNN backbone 3 is shared across H, D, and ∆D. The main changes are an ABACUS orbital-block definition, symmetry-completed periodic graphs, a generalized real-space CSR writer, matrix-specific losses, and physical penalties for D. The residual D model additionally reads D0 as a sidecar and exports D0 + d∆D. Thus the backbone is not redesigned, but the target, constraints, and solver-facing output are materially different from a standard Hamiltonian-only run. 
+
+> 3
+
+Upstream implementation: https://github.com/QuantumLab-ZY/HamGNN. 
+
+DeepH-E3. The released implementation 4 is configurable for a selected chemistry, but its original preprocessing assumes a fixed element vocabulary and atomic-orbital layout: the element map is in-ferred from the first graph and the orbital table from the first structure. This assumption is appropriate for element-specific datasets, but it cannot safely represent ρHD -43K , in which different crystals contain different subsets and combinations drawn from 67 elements. In partic-ular, an element absent from the first structure can otherwise receive an invalid index, and Hamiltonian labels with composition-dependent orbital dimensions cannot be collated consistently. We retain the E(3)-equivariant message-passing and Hamiltonian-decoding core, while extending its chemistry and data interfaces as follows. First, all fixed-split structures are scanned to construct a de-terministic, dataset-wide map from physical atomic numbers to model indices. Second, the per-atom ABACUS orbital metadata are reduced to one canonical orbital definition per element; preprocessing stops 
+
+> 4
+
+Upstream implementation: https://github.com/Xiaoxun-Gong/DeepH-E3. 
+
+10 if the same atomic number is associated with inconsistent numerical orbitals. Third, each structure’s Hamiltonian tensor is padded to the largest orbital dimension in the global basis, while a structure-specific mask restricts the loss to element pairs and orbital blocks that are actu-ally present. Fourth, the original ordered element-pair one-hot vector, whose width scales as S2 for S species, is replaced by the concate-nated identities of the two edge endpoints, whose width is 2S. This preserves edge direction and removes the quadratic chemistry bottle-neck without changing the equivariant interaction mechanism. Fifth, the global atomic-number map and orbital table are stored with the checkpoint. Evaluation structures are remapped into that vocabulary, and inference fails explicitly for an unseen element or an incompat-ible orbital definition rather than silently constructing a malformed Hamiltonian. To make full-corpus training practical, we additionally use the frozen train/validation/test lists, lazy per-structure graph and Hamilto-nian loading, distributed data-parallel training, and masks that skip target blocks absent from a minibatch. Here “general-element” there-fore means that a single checkpoint can be trained on heterogeneous crystals containing arbitrary subsets of the 67 supported ρHD -43K 
+
+elements. It does not claim zero-shot transfer to an element, pseudopo-tential, or numerical-orbital basis absent from training. The solver-facing adaptation then streams one structure at a time during infer-ence, supplies ABACUS structures and orbital metadata, averages forward/reverse periodic blocks, projects the reconstructed matrix to Hermiticity, and exports real-space CSR blocks. These implementa-tion changes are included in the released third-party patch. 
+
+NextHAM. This is the largest model-side adaptation. The released graph-attention network 5 is used as a conditional residual corrector: 
+
+H0 is mapped into a global 66-element orbital basis, passed through the weak-Hamiltonian input branch, and the network predicts H∗−H0.Inference reconstructs H0 + d∆H, projects inverse periodic block pairs, enforces Hermiticity, and writes the ABACUS CSR representation. Consequently, this row should be interpreted as a NextHAM-derived conditional ABACUS initializer rather than an unchanged off-the-shelf checkpoint. 
+
+## A.6 Reconstruction and Solver Export 
+
+All native errors for residual models are evaluated after reconstructing the full initializer: 
+
+ˆρ = ρ0 + c∆ρ, ˆD = D0 + d∆D, ˆH = H0 + d∆H. (A3) For the Charge3Net-E3 and EdenGNN density paths, the reconstructed real-space field is clipped at zero and rescaled to the reference electron count before export. The binary charge restart stores the real-space grid in double precision and its reciprocal representation in complex double precision. Matrix outputs are symmetry-completed, checked against the structure-specific orbital dimensions and translation-block layout, and serialized as real-space CSR blocks. The H interface solves the initial generalized eigenproblem after reading the predicted blocks; the D interface reconstructs the initial charge from the read density matrix. The one-step references ρ0 and D0, and the zeroth-step H0, are precomputed from the solver-native SAD path. Their generation, neu-ral inference, conversion, and file I/O are excluded from T . Therefore Table 3 is deliberately a solver-loop comparison. In particular, the residual-density methods are already slower than SAD even before 
+
+> 5Upstream implementation: https://github.com/DavidYin94/NextHAM.
+
+Table A3: Checkpoint-matched DeepH-E3-H closed-loop au-dit. Achieved ratio is Iinit /I SAD ; speedup is TSAD /T init .            
+
+> Metric Value Converged 1,992 / 1,999 (99.65%) Strict converged pairs 1,992 Median initialized iterations 23 Median ∆I[IQR] −6 [ −10 ,−4]
+> Faster / same / slower pairs 1 / 5 / 1,986 Faster-pair fraction 0.05% Median / aggregate achieved ratio 1.375 / 1.475 Median / aggregate SCF-loop speedup 0.727 / 0.650
+
+charging the extra one-step reference cost; they cannot yield a positive end-to-end speedup under the present implementation. 
+
+## A.7 Closed-Loop Failure and Pairing Rules 
+
+Each initializer has 1,999 formal material results. A run is counted as failed if its final SCF log is absent, the executable crashes after launch, or the solver reaches scf_nmax=100 . Such cases remain in the convergence-rate denominator. Pre-execution scheduler or inter-connect failures may be retried and are logged separately. DeepH-E3 had two GLEX endpoint failures before ABACUS started; both re-tries completed, so neither is counted as an SCF failure. Iteration differences, faster-pair counts, and loop-time speedups use only strict pairs for which both the initialized and SAD runs converge and expose valid iteration/timing records. This pairing prevents changes in the evaluated material subset from masquerading as acceleration. For archival reproducibility, the released benchmark package (Appendix A.1) provides the frozen split IDs, malformed-file blacklist, graph-cache schema and inverse-pair audit, the trained checkpoints and their hashes, per-structure native errors, per-run convergence records, and the exact ABACUS executable hash. 
+
+## A.8 DeepH-E3 Native and Closed-Loop Audit 
+
+Native error is measured at two boundaries because the model ten-sor and the actual solver input are not identical. On DeepH-E3’s 6,129,854 predicted HDF5 blocks (2,179,620,603 scalar entries), the checkpoint-matched block-weighted MAE against the converged la-bels is 4.409 × 10 −3. These blocks cover 60.37% of the blocks stored in the target HDF5 files; blocks outside the prediction graph are absent. After forward/reverse averaging, Hermitian projection, thresholding, and complete CSR reconstruction, we evaluate all Hamiltonian initial-izers on the same nonzero support and common 1,997-crystal subset available for H0. DeepH-E3 then has support MAE 2.652 × 10 −3.The corresponding values are 2.446 × 10 −3 for HamGNN-Matrix-H,
+
+1.524 × 10 −4 for reconstructed NextHAM-∆H, and 2.133 × 10 −4
+
+for H0. This common exported-input metric is the value reported in Table 2. For audit completeness, the zero-padded dense CSR MAEs on this subset are 4.681 × 10 −4, 4.317 × 10 −4, and 2.690 × 10 −5 for DeepH-E3, HamGNN, and NextHAM, respectively. Dense MAE is smaller because the denominator includes many zero entries and is therefore not used for model selection or the main-paper comparison. The distinction also explains why the raw HDF5 block MAE, the reconstructed support MAE, and the dense MAE must not be placed in one column without qualification. Six of the seven non-converged DeepH-E3 structures also fail from SAD; only agm003251875 is model-only. Over the 1,992 
+
+11 strict pairs, DeepH-E3 uses 49,224 SCF iterations versus 33,373 for SAD. Its per-structure support MAE has Spearman correlation 0.188 with achieved ratio (0.251 for dense MAE): statistically associated with worse behavior, but too weak to serve as a standalone acceleration criterion. 
+
+## A.9 Checkpoint Provenance and Audit Artifacts 
+
+Checkpoint metadata, not directory labels, gives step 99,935 for di-rect Charge3Net-E3, step 200,000 for residual Charge3Net-E3, step 297,900 for EdenGNN, and epoch 28 for ELECTRAFI. All of these checkpoints are provided in the released package (Appendix A.1). The direct-Hamiltonian closed loops use the symmetry-fixed, focus-loss HamGNN-Matrix checkpoint at step 365,000 and the DeepH-E3 checkpoint at epoch 27. The latter contains 4,543,772 trainable scalars, has snapshot validation loss 2.111 × 10 −4, and has SHA256 prefix cb2fc10c70a1afb0 . The frozen 1,999-ID list has SHA256 prefix b2c5793a977232d9 . Full hashes are stored in the released SHA256SUMS and run metadata. The native and closed-loop numbers reported here are checkpoint-matched. Per-structure HDF5 and CSR errors, convergence records, exceptional IDs, and aggregation summaries are included in the released audit artifacts. 
+
+12

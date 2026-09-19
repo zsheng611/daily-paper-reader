@@ -1,0 +1,313 @@
+{
+  "date": "20260919",
+  "date_label": "",
+  "generated_at": "2026-09-19 17:41:19 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.13357v1",
+      "route": "202609/19/2609.13357v1-can-autonomous-llm-agents-execute-multireference-quantum-chemistry-calculations",
+      "title": "Can Autonomous LLM Agents Execute Multireference Quantum Chemistry Calculations?",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "自主LLM智能体执行量子化学计算",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15151v1",
+      "route": "202609/19/2609.15151v1-evaluating-predicted-densities-hamiltonians-and-density-matrices-as-periodic-scf-initializers",
+      "title": "Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "机器学习预测电子态注入以加速DFT自洽场循环",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15922v1",
+      "route": "202609/19/2609.15922v1-an-open-source-hardware-and-software-toolkit-to-enable-agentic-rheed-guided-thin-film-synthesis",
+      "title": "An Open-Source Hardware and Software Toolkit to Enable Agentic RHEED-Guided Thin-Film Synthesis",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "支持智能体自主薄膜合成的RHEED工具包",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.16466v1",
+      "route": "202609/19/2609.16466v1-scaling-llm-agents-for-materials-design-through-hierarchical-collective-reasoning",
+      "title": "Scaling LLM Agents for Materials Design through Hierarchical Collective Reasoning",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "基于分层集体推理的材料设计LLM智能体框架",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.16527v1",
+      "route": "202609/19/2609.16527v1-qalpa-property-guided-diffusion-modeling-for-efficient-exploration-of-chemical-spaces-of-flexible-molecules",
+      "title": "QALPA: Property-guided diffusion modeling for efficient exploration of chemical spaces of flexible molecules",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向分子的E(3)等变扩散生成模型",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.17523v1",
+      "route": "202609/19/2609.17523v1-sciencebuddy-recursive-in-recursive-self-improvement-for-interactive-scientific-agents",
+      "title": "ScienceBuddy: Recursive-in-Recursive Self-Improvement for Interactive Scientific Agents",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "可自我改进的交互式科研智能体",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.17646v1",
+      "route": "202609/19/2609.17646v1-robust-and-efficient-ai-frameworks-for-scalable-material-design-and-property-prediction",
+      "title": "Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "用图学习与生成建模加速晶体材料设计的人工智能框架",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.19419v1",
+      "route": "202609/19/2609.19419v1-agentic-ai-for-density-functional-development-revisiting-r2scan",
+      "title": "Agentic AI for Density-Functional Development: Revisiting r2SCAN",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "大语言模型智能体驱动密度泛函开发",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15611v1",
+      "route": "202609/19/2609.15611v1-multi-view-molecular-representation-learning-with-hierarchical-graphs-and-contextualized-fingerprints",
+      "title": "Multi-View Molecular Representation Learning with Hierarchical Graphs and Contextualized Fingerprints",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "融合分层图编码器与指纹的多视角分子表示学习",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15818v2",
+      "route": "202609/19/2609.15818v2-atria-dawn-the-dawn-of-agentic-superintelligence",
+      "title": "Atria Dawn: The Dawn of Agentic Superintelligence",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向科研工作流的基础智能体语言模型",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.17063v1",
+      "route": "202609/19/2609.17063v1-development-of-a-physics-informed-neural-framework-meown-for-rapid-prediction-of-muon-stopping-sites-in-crystalline-materials-for-understanding-quantum-magnet-employing-muon-spectroscopy",
+      "title": "Development of a Physics-Informed Neural Framework, MEOWN, for Rapid Prediction of Muon Stopping Sites in Crystalline Materials, for understanding Quantum Magnet employing Muon Spectroscopy",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "以机器学习物理信息框架替代DFT结构弛豫预测晶体中μ子停位",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.18604v1",
+      "route": "202609/19/2609.18604v1-load-balancing-for-adaptive-precision-interatomic-potentials-in-materials-science",
+      "title": "Load balancing for adaptive-precision interatomic potentials in materials science",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "MD中机器学习原子团簇展开与EAM混合势的负载均衡",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.19134v1",
+      "route": "202609/19/2609.19134v1-scienceide-turning-worlds-scientific-codebase-into-agent-learnable-environments",
+      "title": "ScienceIDE: Turning World's Scientific Codebase into Agent Learnable Environments",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "将科学代码转化为智能体可学习可执行环境的基础设施",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.19550v1",
+      "route": "202609/19/2609.19550v1-portfolio-based-constrained-multi-objective-bayesian-optimization-for-materials-design",
+      "title": "Portfolio-Based Constrained Multi-Objective Bayesian Optimization for Materials Design",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向材料发现的贝叶斯优化",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.19837v1",
+      "route": "202609/19/2609.19837v1-machine-learning-for-high-entropy-catalysts-methods-and-applications",
+      "title": "Machine Learning for High-Entropy Catalysts: Methods and Applications",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "数据驱动机器学习与代理模型用于高熵催化剂发现",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15246v1",
+      "route": "202609/19/2609.15246v1-a-cylindrical-sintering-method-for-more-realistic-grain-boundaries-in-nanocrystalline-thin-films",
+      "title": "A cylindrical sintering method for more realistic grain boundaries in nanocrystalline thin films",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "使用tabGAP机器学习势进行纳米晶金属分子动力学模拟",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15364v1",
+      "route": "202609/19/2609.15364v1-rsiagent-autonomous-exploration-for-recursive-self-improvement-in-new-environments",
+      "title": "RSIAgent: Autonomous Exploration for Recursive Self-improvement in New Environments",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "多智能体自主探索与自我改进框架",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.15820v1",
+      "route": "202609/19/2609.15820v1-algoevo-self-evolving-agentic-search-for-automated-algorithm-discovery",
+      "title": "AlgoEvo: Self-Evolving Agentic Search for Automated Algorithm Discovery",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "依据运行时反馈编辑代码的自演化智能体搜索",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    },
+    {
+      "paper_id": "2609.16245v1",
+      "route": "202609/19/2609.16245v1-metacognitive-steering-learning-the-structure-of-scientific-judgment",
+      "title": "Metacognitive Steering: Learning the Structure of Scientific Judgment",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "为长周期发现智能体学习科学判断结构",
+      "first_seen_at": "2026-09-19 17:41:19 UTC",
+      "updated_at": "2026-09-19 17:41:19 UTC"
+    }
+  ]
+}

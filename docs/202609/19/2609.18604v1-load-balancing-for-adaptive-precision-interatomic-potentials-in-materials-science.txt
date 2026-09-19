@@ -1,0 +1,768 @@
+Load balancing for adaptive-precision interatomic
+potentials in materials science
+David Immel1[0000-0001-5143-8043] and Godehard
+Sutmann1,2[0000-0002-9004-604X]
+1 Jülich Supercomputing Centre (JSC), Forschungszentrum Jülich, Jülich, Germany
+2 Interdisciplinary Centre for Advanced Materials Simulations (ICAMS), Ruhr Universität
+Bochum, Bochum, Germany
+d.immel@fz-juelich.de
+Abstract. For atomistic molecular dynamics simulations, we consider a recently
+developed hybrid coupling between the highly accurate machine learning (ML)-
+based atomic cluster expansion (ACE) interaction model and a less precise (but
+about 1-2 orders faster) EAM potential, in order to leverage the performance bot-
+tleneck of pure ML potentials in a parallel computing environment. This spatial-
+temporal adaptivity has the potential for a speedup of more than an order of
+magnitude, that would be lost without a dynamic load-balancing strategy that
+becomes critical due to fluctuating potential contributions. We compare the load-
+balancing strategies of LAMMPS with load-balancing methods provided by the
+library ALL in adaptive-precision EAM-ACE simulations of a copper nanoin-
+dentation. For a regular-grid domain decomposition, the modified tensor method
+of the ALL library, which conserves the simplicity and transferability of the ten-
+sor method, significantly reduces the imbalance factor of the force calculation
+from 3.0 to 1.7 compared to the native load-balancing method of LAMMPS. A
+nearly perfectly balanced system with an imbalance factor close to 1.0 can be
+reached by load balancing an irregular grid of domains with the recursive bisec-
+tioning method of LAMMPS and with ALL’s histogram method for a staggered
+grid of domains. Load balancing a staggered grid with ALL is found to be signifi-
+cantly faster than load balancing an irregular grid with the bisectioning method of
+LAMMPS, but the communication costs during a regular timestep are lower for
+the irregular grid of domains, as a lower surface-by-volume ratio of the domains
+is reached. Furthermore, we suggest a strategy to find the ideal load-balancing
+frequency for adaptive-precision simulations.
+Keywords: load balancing · adaptive-precision interatomic potentials · spatial
+domain decomposition · molecular dynamics · parallel computing
+1
+Introduction
+Modern machine-learning potentials remain orders of magnitudes slower than tradi-
+tional empirical potentials but offer the highest accuracy available [23,27,31]. Thus, the
+coupling of a fast surrogate model with an accurate but computationally less efficient
+interatomic potential can save computational time [16,19,17,4]. Another motivation for
+arXiv:2609.18604v1  [physics.comp-ph]  16 Sep 2026
+
+
+2
+D. Immel and G. Sutmann
+the coupling of two potentials is the simulation of two different states (ground and ex-
+cited) which cannot be described by one potential [36]. Therefore, the development of
+coupling approaches is currently an active field of research [16,19,17,4,36].
+All these approaches use a switching parameter λi that interpolates between the fast
+and the accurate model per atom i, i.e.,
+γi = λiγfast
+i
++(1−λi)γaccurate
+i
+,
+(1)
+where the interpolated property γi can be the potential energy [16,17] or atomic force [36,4].
+When λi = 1 applies for the majority of the atoms, the computation of the accurate and
+computationally expensive γaccurate
+i
+is only required for a subset of atoms. Therefore,
+one can achieve – dependent on the coupled models and atomistic system – a speedup
+of 1-2 orders of magnitude compared to a purely accurate calculation [16,19,17,4].
+As one can save wall-time and calculate larger systems with parallel computation,
+atomistic simulations account for a relevant share of applications on today’s super-
+computers and high-performance computing clusters [13,30,1]. Therefore, one needs
+to analyze the requirements of the novel adaptive-precision models in terms of parallel
+computing. In parallel simulations, the simulation box is divided into disjoint domains
+which cover the whole simulation box according to a spatial domain-decomposition
+approach[26,14,24]. Each MPI task, in the following denoted as processor, is assigned
+to one domain and administers all particles located within this domain. Such a domain
+decomposition is a natural and beneficial approach for molecular dynamics (MD) as
+(most) interactions are local and depend only on neighboring particles within a short
+cutoff-radius. Thus, each processor sends the position of particles located near its do-
+main boundary to neighboring processors prior to the force-computation and receives
+the forces on these particles back after the force-computation [6,5]. The communication
+of positions and forces prior and after the force calculation synchronizes all processors.
+Therefore, the computational time required for the force calculation – the most time-
+consuming part of a MD simulation [24] – should be equal for all processors to prevent
+idle times. Therefore, we define the imbalance I as [34, p. 1391]
+I = maxp(τF
+p)
+⟨τFp⟩p
+,
+(2)
+where τF
+p denotes the force-calculation time measured on processor p and I = 1 corre-
+sponds to a perfectly balanced system.
+There are two typical causes for load imbalances in static systems calculated with
+constant-precision potentials. Firstly, the particles may be unevenly distributed among
+the processors. Secondly, the interaction density may be inhomogeneous, caused by
+an inhomogeneous particle distribution or surfaces at box boundaries (cf. Ref. [16]).
+For dynamic systems, particles moving between domains can cause load imbalance,
+in particular for domains with few particles. Therefore, particle simulations may use
+initial static load balancing or dynamic load balancing during a simulation to prevent
+these load-imbalances by adjusting the spatial volume administered by each processor.
+Adaptive-precision simulations introduce with the choice of the used model per
+particle and timestep another load-imbalance source: Either the fast model (λi = 1),
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+3
+Fig. 1. Spatial domain decomposition using a a) regular, b) staggered, c) irregular grid.
+the accurate model (λi = 0) or both models are required (λi ∈(0,1)). Thus, while dy-
+namic load-balancing may be considered optional for constant-precision simulations, it
+is essential for parallel adaptive-precision simulations.
+There are different domain decompositions. The simplest domains are rectangular
+cuboids [29,35], but there are also more complex forms [2,9,14]. Rectangular cuboids
+are widely used as domains [35,11,22,15,25] and can be arranged in a regular grid [35,11,22],
+a staggered grid [15,14,28] or in an irregular grid [35,25]. Examples of these three grid
+types are visualized in Fig. 1 with OVITO [32]. Regular grids are the easiest to imple-
+ment, allow the optimization of communication as there are only 26 neighbors per do-
+main [37], but may fail to balance the load due to constrained domain boundaries [15].
+Staggered grids are less constrained and, thus, allow to efficiently adapt to load dis-
+tributions [15]. Furthermore, a staggered grid can be dynamically balanced with local
+information [12]. Irregular grids can also efficiently adapt to load distributions and be
+created by recursive bisections under consideration of the surface-to-volume ratio at
+every bisection [10]. The surface of the domains should be minimal to minimize the
+communication required prior and after the force calculation. Therefore, irregular grids
+can minimize the number of communicated atoms although the communication patterns
+become more complex and expensive compared to a regular grid [37].
+The Large-scale Atomic/Molecular Massively Parallel Simulator (LAMMPS) [35]
+is a modularly designed open-source MD code, that allows the usage of adaptive-
+precision potentials [16,4,19,17,36]. LAMMPS provides dynamic load-balancing via
+recursive coordinate bisectioning[3] for irregular grids and domain-boundary shifts for
+a regular grid. The staggered-grid decomposition for LAMMPS is introduced with the
+present work. Furthermore, we compare multiple load-balancing strategies for regu-
+lar and staggered grids provided by the ALL-library [12] with existing load-balancing
+routines of LAMMPS.
+2
+Methods
+2.1
+Spatial domain decompositions
+A domain decomposition using a regular grid (cf. Fig. 1a) consists of P = PxPyPz do-
+mains with Px+1 domain boundaries xi in the x-dimension and Py+1 and Pz+1 domain
+boundaries yi and zi in the y- and z-dimension. The boundaries at the simulation box
+are usually fixed [12,35], thus a such a regular grid has Px + Py + Pz −3 degrees of
+
+
+4
+D. Immel and G. Sutmann
+freedom. There are different methods to achieve a better balanced regular grid. The bal-
+ancing of load between two domain boundaries is implemented in LAMMPS [33]. As
+that the load between two domain boundaries is distributed about multiple processors
+according to the boundaries in the other two spatial dimensions, e.g., PyPz processors
+when the boundaries {xi} are balanced, a perfect balance between all domains cannot
+be expected for all systems. Alternatively, one can try to minimize the maximal load of
+a processor between domain boundaries as implemented in ALL [12].
+A staggered grid (cf. Fig. 1b) is created by recursively cutting the simulation box
+into different layers, each layer into different rows, and each row into the domains. As
+all these cuts are independent of each other, there are Pz −1 layer-cuts, Pz(Py −1) row
+cuts and PzPy(Px −1) cell cuts; in total P−1 cuts. Thus, a staggered grid can in theory
+– in contrast to a regular grid – perfectly adapt to the load distribution. In practice, this
+might not be possible for load distributions that are not continuous enough like a regular
+grid of particles at 0K.
+An irregular grid is usually generated by recursive coordinate bisections (RCB) [3],
+that recursively divide the simulation box into subvolumes with equal load until there is
+one subvolume per processor. In contrast to the shifted domains of a staggered or regu-
+lar grid, the cuts that generate the irregular domains are not shifted by a load balancer
+but done completely new always starting from the first cut [29]. Therefore, global com-
+munication during load-balancing of a RCB is unavoidable. A staggered grid can be
+created by RCB when all cuts between two subdomains in the first iterations of the re-
+cursion are in one dimension, then all cuts in the next iterations of the recursion are in a
+second dimension and all remaining iterations cut subdomains only in the third dimen-
+sion. Therefore, an RCB-domain decomposition has the same number of independently
+adjustable domain boundaries like a staggered grid, i.e., P−1.
+2.2
+Load-balancing methods
+There are two different load-balancing methods implemented in LAMMPS [34, p.
+1389].
+– LMP shift aims at balancing the load between cuts of a regular grid based on an
+atomic load. The new cuts are searched using an iterative method. The maximum
+number of iteration is adjustable. We used 10. [34, p. 1393].
+– LMP bisection aims at balancing the load of the processors through recursively
+applied bisections based on an atomic load.
+– LMP report does not apply load-balancing but reports the imbalance and is ideal as
+reference simulation.
+The load-balancing library ALL [12] provides several load-balancing methods for
+regular grids and staggered grids. ALL uses the current domain decomposition and
+the total load or a load histogram per domain as input. A new domain decomposition
+is calculated assuming that the load is distributed homogeneously in every domain.
+This assumption of homogeneity is obviously incorrect for adaptive-precision simula-
+tions. Nevertheless, the comparison with the native LAMMPS load-balancing methods
+is promising as ALL offers load-balancing methods that are not used by LAMMPS.
+We’ve implemented several of ALL’s load balancing methods for LAMMPS:
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+5
+10−4
+10−3
+10−2
+computational load / s
+101
+103
+105
+No. of atoms
+b)
+Fig. 2. a) Nanoindentation system after 1000 simulated timesteps. The atoms are color-coded
+dependent on their atomic load. Atoms with a load smaller than 0.4ms are drawn smaller than
+the remaining atoms with larger loads. b) Histogram of the atomic load of the system shown in
+a).
+– ALL tensor classic aims at balancing the load between cuts of a regular grid based
+on the total load.
+– ALL tensor max aims at decreasing the maximum load between cuts of a regular
+grid based on the total load.
+– ALL histogram shifts the domain boundaries of a staggered grid based on a one-
+dimensional histogram of the load per domain. The bin width of this histograms
+can be chosen by the user, 0.001Å in this case as 0.01Å turned out to be too large.
+Therefore, lb = 0.001Å is used as bin width in Section 3.
+– ALL staggered shifts the domain boundaries of a staggered grid based on the total
+load. This method avoids the usage of expensive global communication.
+– ALL staggered+histogram uses the expensive ALL histogram method for imbal-
+ances larger than a given imbalance threshold. The faster ALL staggered method is
+used for imbalances smaller than the given imbalance threshold.
+2.3
+Nanoindentation
+We use a snapshot of the adaptive-precision copper (Cu) nanoindentation from Ref. [19]
+as starting point for our load-balancing study. The snapshot was taken after 60ps of the
+100ps simulation and contains dislocations.
+The adaptive-precision potential couples the potential energies of an atomic clus-
+ter expansion (ACE) [8] potential and an embedded atom model (EAM) [7] potential
+according to Eq. (1), where the fast EAM Cu potential was adjusted to the precise
+ACE potential as described in Ref. [16]. We use the same potential and indenter as in
+Ref. [19]. Therefore, our load-balancing study uses a realistic test system.
+We continue the simulation for 500 or 1000 timesteps (0.5ps or 1ps) to analyze the
+behavior of ALL’s and LAMMPS’ load-balancing methods.
+The adaptive-precision potential uses a time average of 110 timesteps of the centro-
+symmetry parameter (CSP) [21] to calculate the switching parameter λi. The time-
+average was introduced to avoid the usage of the precise ACE potential for thermally
+
+
+6
+D. Immel and G. Sutmann
+fluctuating atoms [16]. The time-averaged CSP was not available to restart the simu-
+lation. Hence, our test simulation is quite dynamic at the start as the average contains
+only few timesteps and fails in avoiding unintended ACE calculations but becomes bet-
+ter over time.
+The load is approximated per atom based on time measurements during the compu-
+tation of EAM, ACE and the switching-parameter calculation as described in Ref. [16].
+The histogram of the atomic load after 1000 timesteps of our test simulation (cf. Fig. 2b)
+shows that 98.2% of the system have a small computational load (< 0.33ms). The small
+computational load is on average 0.26ms, while the computations of the remaining
+1.8% of the atoms takes on average 18 times longer per atom. The 3D-visualization in
+Fig. 2a shows that these atoms are distributed over about 40 clusters of varying sizes that
+are distributed over the whole system. Therefore, load balancing of adaptive-precision
+simulations is more challenging than load balancing of constant precision simulations.
+The load balancer is called every 10 steps to ensure enough calls during the simula-
+tion to allow a meaningful comparison between different methods. Every 10 timesteps
+is a high call frequency compared to the intuition gained from constant precision sim-
+ulations. However, a load-balancing test performed in Ref. [16] has shown that load-
+balancing every 25 timesteps results in a better balanced system and decreases the re-
+quired computational resources compared to load-balancing every 100 timesteps. In this
+context, load-balancing every 10 timesteps seems a reasonable frequency. However, we
+analyze the cost and gain of load-balancing dependent on the load-balancing frequency
+for our simulations to get a better understanding of the ideal load-balancing frequency.
+3
+Results
+3.1
+Regular grid of domains
+We compare three load balancing methods for regular grids in 0.5ps-long simulations
+of the previously introduced nanoindentation system: the “tensor max” and the “tensor
+classic” methods of ALL and the native “shift” method of LAMMPS. Plots regarding
+the analysis of the adaptive-precision simulations are shown in Fig. 3.
+Figure 3a shows the fraction of wall time spent for the whole simulation, communi-
+cation, force calculation and the load balancing. On average 45% of the total simulation
+time (setup time excluded) is spent for communication, but the amount strongly differs
+between the processors: The minimum and maximum time vary by a factor between 6
+(“tensor max”) and 360 (“shift”), indicating that the measured communication time
+includes waiting times arising from load imbalances. The average force-calculation
+time is similar for all balancing methods but not equal as there are double calcula-
+tions to enable load balancing [16]. Hence, the total force-calculation time depends on
+the spatial domain decomposition. The maximum force-calculation time of a processor
+strongly depends on the load balancing method: The maximum force-calculation time
+(that causes neighboring processors to wait) is minimal for “tensor max” and 1.38 to
+1.97 times larger for the other load-balancing methods.
+Measuring the spent time dependent on the timestep (cf. Fig. 3b) shows that the
+required time is maximal at the beginning of the simulation and decays during the sim-
+ulation. The decaying wall time per timestep is partially caused by the decreasing total
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+7
+load
+balancing
+force
+calculation
+communication
+simulation
+10−1
+100
+101
+102
+103
+wall time /s
+a)
+ALL tensor max
+LMP shift
+ALL tensor classic
+no load balancing
+4
+6
+wall-s / timestep
+b)
+0
+200
+400
+timestep
+2
+4
+6
+imbalance I
+c)
+20
+40
+computational load
+0
+32
+64
+96
+128
+cumulated No. of processors
+d)
+25000
+50000
+75000
+No. of atoms
+e)
+0.10
+0.15
+surface/volume / ˚A−1
+f)
+Fig. 3. Analysis of the load-balancing methods for regular grids including a) the total time spent
+in some parts of a simulation; b) the wall-time and c) imbalance dependent on the timestep;
+cumulated histograms measured at the end of the simulations of the distribution of the d) compu-
+tational load, e) number of atoms and f) surface-by-volume ratio among the processors; and g-j)
+visualizations of the domain decomposition after the final timestep of the simulations.
+
+
+8
+D. Immel and G. Sutmann
+load as false positives (λ = 0) are avoided increasingly better by the time average (cf.
+Section 2.3).
+Another wall-time reducing factor is load-balancing: The imbalance I (cf. Eq. (2))
+is decreased from initially about 2.8, becomes worse due to the suppression of precise
+calculations by the time averaging after about 120 timesteps and is decreased by the
+load balancer again as shown in Fig. 3c. The final imbalance of “tensor classic” and
+“shift” is about the same (3.03) as both methods aim at balancing the load between
+cuts of the regular grid. However, the “shift” method converges faster than the “tensor
+classic” method, as the actual load of a particle is unknown to the ALL library that
+provides the new domain boundaries of “tensor classic”, but known to and used by the
+“shift” method to improve the convergence. Although the atomic load is also unknown
+to the “tensor max” method, it reaches with 1.7 a far lower imbalance at the end of the
+simulation that the other methods. An imbalance of 1 cannot be reached as the regular
+grid that defines the domain boundaries has less degrees of freedom than processors as
+discussed in Section 2.1. This example shows that decreasing the maximum load of a
+processor between cuts of the regular grid is beneficial compared to balancing the total
+load between cuts ignoring the load that processors actually have.
+The cumulated histogram of the load per processor after the final timestep of the
+simulations is shown in Fig. 3d and verifies that “tensor max” decreases the maximum
+load of a processor compared to “tensor classic” and “shift”. Thereby, the total load
+between cuts may be different and the total number of particles is more imbalanced
+as well (cf. Fig. 3e,g-j). Furthermore, the surface-by-volume ratio becomes worse and
+causes more communication between processors (cf. Fig. 3f). Nevertheless, the total
+communication cost of the “tensor max” domain system is lower than for the other
+load-balancing methods (cf. Fig. 3a) as the idle time is reduced by a larger amount.
+3.2
+Staggered or irregular grid of domains
+We compare the load-balancing methods for a staggered grid offered by the library ALL
+(cf. Section 2.2) with the irregular-grid load balancing of LAMMPS (cf. Section 2.2)
+in 1ps-long simulations of the in Section 2.3 introduced system. Plots regarding the
+analysis are shown in Fig. 4.
+Figure 4a shows the fraction of wall time spent for the whole simulation, commu-
+nication, force calculation and load balancing. On average 47% of the time is spent
+for the force-calculation and 24% for communication for the load-balancing methods
+(15% and 49% for the reference simulation without load balancing). Thus, the fraction
+of wall-time spent for communication is far lower compared to the 45% for regular
+grids (cf. Fig. 3a). Minimum and maximum communication duration vary by a factor
+between 1.4 (“histogram”) and 2.6 (“staggered”). Some variation is expected as the sur-
+faces of domains vary and there are no periodic boundary conditions in z. Thus, the
+varying communication-times do not indicate significant idle times during communi-
+cation. The wall time spent for communication is minimal for the “bisection” method.
+The force-calculation time is minimal for the “bisection” method and between 1.06 and
+1.32 times larger for the other load-balancing methods and 4.15 times larger for the
+reference simulation without load balancing.
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+9
+load
+balancing
+force
+calculation
+communication
+simulation
+100
+102
+wall time /s
+a)
+LMP bisection
+ALL staggered
++histogram
+ALL histogram
+ALL staggered
+no load balancing
+2
+4
+6
+wall-s / timestep
+b)
+0
+500
+1000
+timestep
+1
+2
+imbalance I
+c)
+9
+10
+computational load
+0
+32
+64
+96
+128
+cumulated No. of processors
+d)
+20000
+40000
+No. of atoms
+e)
+0.1
+0.2
+surface/volume / ˚A−1
+f)
+Fig. 4. Analysis of the load-balancing methods for staggered and irregular grids including a) the
+total time spent in some parts of a simulation; b) the wall-time and c) imbalance dependent on the
+timestep; cumulated histograms measured at the end of the simulations of the distribution of the
+d) computational load, e) number of atoms and f) surface-by-volume ratio among the processors;
+and g-j) visualizations of the domain decomposition after the final timestep of the simulations.
+
+
+10
+D. Immel and G. Sutmann
+Measuring the time spent dependent on the timestep (cf. Fig. 4b) shows that the re-
+quired wall time is similar for all but the method “staggered”. The imbalance measured
+dependent on the timestep (cf. Fig. 4c) reveals that the method “staggered” cannot adapt
+to the load distribution instantly but requires some iterations to reach an imbalance near
+1. This behavior is expected due to the local nature of this load-balancing method (cf.
+Section 2.2). The other load-balancing methods reach a imbalance near 1 directly. The
+average imbalance in the last 500 steps of the simulation is 1.056(16) for “histogram”,
+1.062(17) for “bisection”, 1.111(27) for “histogram+staggered”, 1.148(40) for stag-
+gered and 6.054(27) for the reference simulation.
+The cumulated histograms of the load per processor that were measured at the end of
+the simulation (cf. Fig. 4d) show visually that the methods “bisection” and “histogram”
+provide a balanced system. The computational load of the “histogram” and “bisection”
+method differ for two reasons: There are double computations to enable load balanc-
+ing and the computation of the switching parameter strongly depend on the domain
+decomposition [16]. The distribution of the number of atoms per domain is quite sim-
+ilar (cf. Fig. 4e), but the distribution of the surface-by-volume ratio shows significant
+differences (cf. Fig. 4f): The largest and the average surface-by-volume ratio is smaller
+for the “bisection” method than for the three staggered-grid methods. The surface-by-
+volume ratio is an indicator for the number of atoms near domain boundaries that need
+to be communicated at every step. Thus, the surface-by-volume ratio explains why the
+total wall time required for communication is smaller for the “bisection” method than
+for the staggered-grid methods. The domain boundaries at the end of the simulations
+are shown in Fig. 4g-j and help to understand the surface-by-volume histogram: The
+cuts y through the top z layer of the staggered grid produce quite narrow rows near the
+indentation point. Thus, there are domains with large surface-by-volume ratios next to
+the indentation point in ±x direction. In contrast, the domains of the “bisection” method
+look more like cubes that would have the ideal surface-by-volume ratio and would min-
+imize communication.
+3.3
+Ideal load-balancing frequency
+The duration of one load-balancer call τLB is given by the duration τDS of shifting the
+domains. LAMMPS rebuilds the neighbor list after every load-balancing [34, p. 1392].
+Therefore, the cost of of a load-balancer call is increased by the duration τNL of a
+neighbor list build, i.e.,
+τLB = τDS +τNL .
+(3)
+Both contributions τDS and τNL can be measured within LAMMPS.
+The load-balancer decreases the imbalance I (cf. Eq. (2)), ideally to 1. Thereby, all
+processors p should spent the same time τF for the force calculation in the next timestep.
+However, as the simulation progresses some switching parameters λ (cf. Eq. (1)) will
+change or atoms will migrate between domains. Therefore, the imbalance increases with
+the number of timesteps n since the last load-balancing step. Under the assumption of
+slowly changing switching parameters, the total force calculation time (∑p τF
+p) is inde-
+pendent of n, but changes due to migrating atoms. This assumption is valid for our test
+system after 500 timesteps as the imbalance fluctuates only slightly (cf. Fig. 4c). We’ve
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+11
+timesteps n since load balancing
+1.0
+1.2
+imbalance I
+a)
+ﬁt
+ideal
+data
+0
+50
+100
+timesteps n since load balancing
+0
+5
+10
+wall time τ/s
+b)
+τimb
+τDS
+τNL
+τLB
+100
+200
+timesteps n between
+load-balancing steps
+1600
+1700
+1800
+1900
+τLB+imb(n;104)/s
+c)
+τimb dominates
+τLB dominates
+Fig. 5. a) Average imbalance after timestep 500 measured in four simulations with different load-
+balancing frequencies. The error bars denote the minimum and maximum measured imbalance.
+b) Comparison of the cost of load balancing (cf. Eq. (3)) and a load imbalance (cf. Eq. (4))
+dependent on the number of timesteps between load balancing. c) Total cost of load balancing
+and imbalance (cf. Eq. (5)) dependent on the load-balancing frequency.
+measured the imbalance I dependent on the number of timesteps since the last load-
+balancing by performing three additional simulations with less frequent RCB-load bal-
+ancing. Average and standard deviation of the imbalance after timestep 500 are shown
+in Fig. 5a. The imbalance is found to be given by I(n) = 1+c√n, where c = 0.022 ap-
+plies in this case, but the constant c is expected to be strongly dependent on the system
+and the number of used processors P. The approximation of I(n) allows the calculation
+of the additional wall-time caused by load imbalance, i.e.,
+τimb(n) = τF
+n
+∑
+n′=0
+(I(n)−1) ,
+(4)
+where τF = 0.82±0.13s was measured on average in the four simulations with different
+load-balancing frequencies. Equation (4) is compared with the average cost τLB (cf.
+Eq. (3)) of a load-balancing step in Fig. 5b. The combined cost of imbalance τimb and
+load-balancing τLB expected in a longer simulation of N timesteps is given by
+τLB+imb(n;N) = N
+n
+ τLB +τimb(n)
+
+(5)
+dependent on the number of timesteps n between load balancing. Figure 5c shows that
+ideally n = 71 applies, which is significantly larger than the used n = 25 in Ref. [16].
+Thus, one should dynamically balance a short simulation with the preferred load-balancing
+style and observe I(n) in a second short simulation with LMP report as load-balancing
+style. Thereby, one can minimize the total cost of imbalance and load-balancing accord-
+ing to Eq. (5).
+
+
+12
+D. Immel and G. Sutmann
+4
+Conclusion
+In the present work, we compared load-balancing methods for regular and staggered
+grids provided by the library ALL with the load balancing methods for regular and irreg-
+ular grids already implemented in LAMMPS. We applied these load-balancing methods
+for simulations that use an adaptive-precision EAM-ACE potential. These simulations
+require load-balancing as the precise ACE potential is used only for a subset of atoms
+while the remaining system is simulated using the two orders of magnitude faster EAM
+potential.
+Our results show that the “tensor max“ method of ALL outperforms the “shift”
+method of LAMMPS: it reaches an imbalance that is 1.3 smaller (cf. Fig. 3). The advan-
+tage of the “tensor max” method is that it minimizes the maximum load of a processor
+between cuts of a regular grid. Thereby, the load imbalance of the force computation is
+minimized. The drawback of this method is that the communication volume is increased
+as this approach generates high surface-by-volume ratios. Nevertheless, the increased
+communication volume is negligible compared to the minimized imbalance of the force
+computation. In contrast, the “shift” method of LAMMPS balances the total load be-
+tween two cuts of the regular grid domain decomposition. Thereby, it generates better
+surface-by-volume ratios but a worse imbalance. Therefore, LAMMPS benefits from
+the “tensor max” implementation that was developed for the present work.
+The library ALL suggest a new domain decomposition for a regular grid based
+on the total work per domain. Thus, ALL implicitly assumes a homogeneous load-
+distributions that is obviously not given for the given AP potential. Therefore, the usage
+of the atomistic load by LAMMPS’ “shift” method outperforms ALL’s “tensor clas-
+sic” method. Note that the “tensor max” method outperforms the “shift” method of
+LAMMPS despite this wrong assumption. Thus, LAMMPS would benefit even more
+from an implementation of the “tensor max” method that considers the atomic load
+instead of the load of a domain.
+The comparison between load-balancing methods for staggered and irregular grids
+shows that both LAMMPS’ “bisection” method and ALL’s “histogram” method can
+provide a balanced system (cf. Fig. 4). Calculating new domain boundaries and com-
+municating all atoms to their new processor is significantly faster for a staggered grid
+than for an irregular grid. The domain boundaries of a staggered grid can be shifted by
+ALL, while the domain boundaries of the irregular grid cannot be shifted. Instead, the
+irregular domains need to be recomputed starting from the first bisection, which may
+result in two processors swapping their domains and causes the expensive migration
+of many atoms to new domains [35]. Therefore, dynamic load balancing is faster for a
+staggered grid than for an irregular grid created by recursive bisections. However, every
+new domain decomposition requires building a new neighbor list (cf. Eq. (3)) and the
+cost of the load-balancing itself is negligible in comparison to the neighbor list build
+(cf. Fig. 5).
+The advantage of the irregular grid of domains compared to the staggered grid is
+the significantly lower surface-by-volume ratio that is achieved through recursive bisec-
+tions compared to the staggered grid of PxPyPz domains. Therefore, the communication
+required for the time integration of the equations of motion is more expensive for a stag-
+gered grid than for the irregular grid (cf. Fig. 4a). This communication cost difference is
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+13
+relevant at every timestep and makes the decreased load-balancing time of a staggered
+grid negligible for the system under study. However, one should note that the communi-
+cation cost for an adaptive-precision potential is larger than for constant-precision po-
+tentials that usually have a smaller force-cutoff. Furthermore, the communication costs
+increase with the number of used processors. Therefore, the current implementation of a
+staggered-gird domain decomposition is not beneficial for our adaptive-precision simu-
+lations with LAMMPS, but might be for simulations with constant precision potentials
+or fewer processors. However, an updated implementation of a staggered grid that is
+more flexible and allows for an adjustable number of domains per row, an adjustable
+number of rows per layer and an adjustable number of layers could be promising. Such
+a more dynamic staggered grid could improve the surface-by-volume ratio of domains
+and thus decrease the communication cost at every timestep. Furthermore, one could
+improve the implementation of the communication routine of the staggered grid. Cur-
+rently it is implemented similarly to the communication of the irregular grid. A future
+version could use the structure of the staggered grid to accelerate the communication
+like it is done by LAMMPS for the regular grid domain decomposition.
+The analysis of the ideal load-balancing frequency (cf. Section 3.3) has shown that
+load balancing every 71 timesteps would be ideal for the method “histogram” in our
+simulations. In contrast, load balancing every 25 timesteps has decreased the over-
+all computational cost compared to load balancing every 100 timesteps in a previous
+study [16]. Therefore, our analysis suggests that the ideal load-balancing frequency
+strongly depends on the system under study. Hence, one should run a short test simu-
+lation prior to a long production simulation as described in Section 3.3: starting from
+a balanced system, one can measure the increase of the imbalance I (cf. Eq. (2)) in the
+absence of load-balancing to calculate the ideal load-balancing frequency. The change
+of the imbalance will depend on the dynamics of the system, in particular of the migra-
+tion of precisely calculated atoms. Thus, the ideal load-balancing frequency will change
+when the dynamic of the system changes.
+Acknowledgments. The authors gratefully acknowledge the computing time on the supercom-
+puter JURECA-DC [20] at Forschungszentrum Jülich under the project ‘slchem’.
+Disclosure of Interests. G. Sutmann is part of the program committee of the “11th Workshop
+on Language-Based Parallel Programming Models” at the PPAM 2026. D. Immel declares no
+competing interests.
+Code availability The LAMMPS code used for the load-balancing study is available at Ref.
+[18].
+References
+1. Bauer, C., Kenter, T., Lass, M., Mazur, L., Meyer, M., et al.: Noctua 2 Supercomputer. J.
+Large-Scale Res. Facil. 9(1), A187 (2024). https://doi.org/10.17815/jlsrf-8-187
+2. Begau, C., Sutmann, G.: Adaptive dynamic load-balancing with irregular domain decompo-
+sition for particle simulations. Comput. Phys. Commun. 190, 51–61 (2015). https://doi.org/
+10.1016/j.cpc.2015.01.009
+
+
+14
+D. Immel and G. Sutmann
+3. Berger, Bokhari: A Partitioning Strategy for Nonuniform Problems on Multiprocessors.
+IEEE Trans. Comput. C-36(5), 570–580 (1987). https://doi.org/10.1109/TC.1987.1676942
+4. Birks, F., Nutter, M., Swinburne, T.D., Kermode, J.R.: Efficient and accurate spatial mixing
+of machine learned interatomic potentials for materials science. npj Comput. Mater. 12, 110
+(2026). https://doi.org/10.1038/s41524-026-01982-6
+5. Bowers, K.J., Dror, R.O., Shaw, D.E.: The midpoint method for parallelization of particle
+simulations. J. Chem. Phys. 124(18), 184109 (05 2006). https://doi.org/10.1063/1.2191489
+6. Bowers, K.J., Dror, R.O., Shaw, D.E.: Zonal methods for the parallel execution of range-
+limited N-body simulations. J. Comput. Phys. 221(1), 303–329 (2007). https://doi.org/10.
+1016/j.jcp.2006.06.014
+7. Daw, M.S., Foiles, S.M., Baskes, M.I.: The embedded-atom method: a review of theory and
+applications. Mater. Sci. Rep. 9(7), 251–310 (1993). https://doi.org/10.1016/0920-2307(93)
+90001-U
+8. Drautz, R.: Atomic cluster expansion for accurate and transferable interatomic potentials.
+Phys. Rev. B 99, 014104 (01 2019). https://doi.org/10.1103/PhysRevB.99.014104
+9. Fattebert, J.L., Richards, D., Glosli, J.: Dynamic load balancing algorithm for molecular
+dynamics based on voronoi cells domain decompositions. Comput. Phys. Commun. 183(12),
+2608–2615 (2012). https://doi.org/10.1016/j.cpc.2012.07.013
+10. Fleissner, F., Eberhard, P.: Parallel load-balanced simulation for short-range interaction par-
+ticle methods with hierarchical particle grouping based on orthogonal recursive bisection.
+Int. J. Numer. Methods Eng. 74(4), 531–553 (2008). https://doi.org/10.1002/nme.2184
+11. Glaser, J., Nguyen, T.D., Anderson, J.A., Lui, P., Spiga, F., et al.: Strong scaling of general-
+purpose molecular dynamics simulations on GPUs. Comput. Phys. Commun. 192, 97–107
+(2015). https://doi.org/10.1016/j.cpc.2015.02.028
+12. Halver, R., Schulz, S., Sutmann, G.: ALL - A loadbalancing library, C++ / Fortran library
+(2024), available at https://gitlab.jsc.fz-juelich.de/SLMS/loadbalancing/
+13. Herten, A., Achilles, S., Alvarez, D., Badwaik, J., Behle, E., et al.: Application-driven exas-
+cale: The jupiter benchmark suite. In: SC24: International Conference for High Performance
+Computing, Networking, Storage and Analysis. pp. 1–45 (2024). https://doi.org/10.1109/
+SC41406.2024.00038
+14. Hess, B., Kutzner, C., van der Spoel, D., Lindahl, E.: GROMACS 4: Algorithms for Highly
+Efficient, Load-Balanced, and Scalable Molecular Simulation. J. Chem. Theory Comput.
+4(3), 435–447 (2008). https://doi.org/10.1021/ct700301q
+15. Iliev, H., Hermanns, M.A., Göbbert, J.H., Halver, R., Terboven, C., et al.: Performance
+Optimization of Parallel Applications in Diverse On-Demand Development Teams. In:
+Di Napoli, E., Hermanns, M.A., Iliev, H., Lintermann, A., Peyser, A. (eds.) High-
+Performance Scientific Computing. JHPCS 2016. Lecture Notes in Computer Science, vol.
+10164, pp. 187–199. Springer International Publishing, Cham (2017). https://doi.org/10.
+1007/978-3-319-53862-4_16
+16. Immel, D., Drautz, R., Sutmann, G.: Adaptive-precision potentials for large-scale atomistic
+simulations. J. Chem. Phys. 162(11), 114119 (03 2025). https://doi.org/10.1063/5.0245877
+17. Immel, D., Drautz, R., Sutmann, G.: Conservative adaptive-precision interatomic potentials
+(2025), arXiv:2512.07693
+18. Immel, D., Kitten, Y., Sutmann, G.: LAMMPS fork by d-immel (2026), Version 1c2a24b
+(2026-03-24T11:44:42UTC+01:00)
+19. Immel, D., Mrovec, M., Drautz, R., Sutmann, G.: Nanoindentation simulations for copper
+and tungsten with adaptive-precision potentials. Phys. Rev. Mater. 9, 093805 (09 2025).
+https://doi.org/10.1103/2lkd-l6gt
+20. Jülich Supercomputing Centre: JURECA: Data Centric and Booster Modules implementing
+the Modular Supercomputing Architecture at Jülich Supercomputing Centre. J. Large-Scale
+Res. Facil. 7, A182 (2021). https://doi.org/10.17815/jlsrf-7-182
+
+
+Load balancing for adaptive-precision interatomic potentials in materials science
+15
+21. Kelchner, C.L., Plimpton, S.J., Hamilton, J.C.: Dislocation nucleation and defect structure
+during surface indentation. Phys. Rev. B 58, 11085–11088 (11 1998). https://doi.org/10.
+1103/PhysRevB.58.11085
+22. Körner, Jacky: Enabling Massive Parallelism for the AutoPas Demonstrator MD-Flexible
+using Adaptive Domain Decomposition. Master’s thesis, Technical University of Munich
+(Oct 2021)
+23. Lysogorskiy, Y., Oord, C.v.d., Bochkarev, A., Menon, S., Rinaldi, M., et al.: Performant im-
+plementation of the atomic cluster expansion (PACE) and application to copper and silicon.
+npj Comput. Mater. 7(1), 97 (2021). https://doi.org/10.1038/s41524-021-00559-9
+24. Needham, P.J., Bhuiyan, A., Walker, R.C.: Extension of the AMBER molecular dynamics
+software to Intel’s Many Integrated Core (MIC) architecture. Comput. Phys. Commun. 201,
+95–105 (2016). https://doi.org/10.1016/j.cpc.2015.12.025
+25. Niethammer, C., Becker, S., Bernreuther, M., Buchholz, M., Eckhardt, W., et al.: ls1 mar-
+dyn: The Massively Parallel Molecular Dynamics Code for Large Systems. J. Chem. Theory
+Comput. 10(10), 4455–4464 (2014). https://doi.org/10.1021/ct500169q
+26. Plimpton, S.: Fast Parallel Algorithms for Short-Range Molecular Dynamics. J. Comput.
+Phys. 117(1), 1–19 (1995). https://doi.org/10.1006/jcph.1995.1039
+27. Qamar, M., Mrovec, M., Lysogorskiy, Y., Bochkarev, A., Drautz, R.: Atomic Cluster Expan-
+sion for Quantum-Accurate Large-Scale Simulations of Carbon. J. Chem. Theory Comput.
+19(15), 5151–5167 (2023). https://doi.org/10.1021/acs.jctc.2c01149
+28. Seckler, S.: Algorithm and Performance Engineering for HPC Particle Simulations. Ph.D.
+thesis, Technische Universität München (2021)
+29. Seckler, S., Tchipev, N., Bungartz, H.J., Neumann, P.: Load balancing for molecular dynam-
+ics simulations on heterogeneous architectures. In: 2016 IEEE 23rd International Confer-
+ence on High Performance Computing (HiPC). pp. 101–110 (2016). https://doi.org/10.1109/
+HiPC.2016.021
+30. Shaw, D.E., Adams, P.J., Azaria, A., Bank, J.A., Batson, B., et al.: Anton 3: twenty mi-
+croseconds of molecular dynamics simulation before lunch. In: Proceedings of the Inter-
+national Conference for High Performance Computing, Networking, Storage and Analy-
+sis. SC ’21, Association for Computing Machinery, New York, NY, USA (2021). https:
+//doi.org/10.1145/3458817.3487397
+31. Stark, W.G., van der Oord, C., Batatia, I., Zhang, Y., Jiang, B., et al.: Benchmarking of
+machine learning interatomic potentials for reactive hydrogen dynamics at metal surfaces.
+Mach. Learn.: Sci. Technol. 5(3), 030501 (07 2024). https://doi.org/10.1088/2632-2153/
+ad5f11
+32. Stukowski, A.: Visualization and analysis of atomistic simulation data with OVITO–the
+Open Visualization Tool. Model. Simul. Mater. Sci. Eng. 18(1), 015012 (12 2009). https:
+//doi.org/10.1088/0965-0393/18/1/015012
+33. The LAMMPS Developers: balance command of LAMMPS (2026)
+34. The LAMMPS Developers: LAMMPS Documentation, Release 30 Mar 2026 edn.
+(03
+2026),
+available
+at
+https://github.com/lammps/lammps/releases/download/patch_
+30Mar2026/Manual_30Mar2026.pdf
+35. Thompson, A.P., Aktulga, H.M., Berger, R., Bolintineanu, D.S., Brown, W.M., et al.:
+LAMMPS - a flexible simulation tool for particle-based materials modeling at the atomic,
+meso, and continuum scales. Comput. Phys. Commun. 271, 108171 (2022). https://doi.org/
+10.1016/j.cpc.2021.108171
+36. Wood, M., Koknat, G., Thompson, A.: Beyond Classical Molecular Dynamics with Layered
+Interatomic Potentials (2026), Preprint available on Research Square.
+37. Zhao, L., Wang, S., Liu, Y.: Parallel algorithm for particle-grid dual discretization. Comput.
+Mech. 71, 257–276 (2023). https://doi.org/10.1007/s00466-022-02237-z

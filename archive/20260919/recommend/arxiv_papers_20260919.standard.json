@@ -1,0 +1,961 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-19T17:36:01.785607+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 8,
+    "deep_cap": 7,
+    "deep_selected": 7,
+    "quick_candidates": 19,
+    "quick_skim_target": 12,
+    "quick_selected": 12
+  },
+  "deep_dive": [
+    {
+      "id": "2609.15151v1",
+      "source": "arxiv",
+      "title": "Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers",
+      "abstract": "Learned electronic states are usually evaluated by prediction error, even though their intended use is to accelerate the self-consistent-field (SCF) loop of density functional theory (DFT). We ask whether lower offline error actually yields a better SCF initializer. We construct $ρ$HD-43K, a 43,851-crystal DFT corpus with aligned charge-density, Hamiltonian, and density-matrix labels, and extend the solver workflow to inject all three predicted states. The closed-loop benchmark compares direct converged-state prediction against residual prediction from solver-native references on a frozen test set of non-magnetic crystals, using paired convergence, iteration, and SCF-loop timing measurements. Injecting the exact converged density matrix or Hamiltonian as an oracle upper bound cuts the median SCF count from 16 to one, revealing substantial acceleration headroom. Among learned inputs, direct charge-density prediction (Charge3Net-E3) accelerates about 91% of paired crystals, saves a median of three SCF iterations, and yields a $1.18\\times$ SCF-loop speedup. In contrast, the tested residual-density and matrix initializers do not consistently improve over the standard superposition-of-atomic-densities baseline. These results establish that target-space accuracy alone is insufficient: a learned initializer must also be compatible with the nonlinear solver trajectory, and its utility must be measured in the loop.",
+      "authors": [
+        "Pin Chen",
+        "Jiang Li",
+        "Yutong Lu"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-14T07:25:22+00:00",
+      "link": "https://arxiv.org/pdf/2609.15151v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "machine-learned electronic states injected to accelerate the DFT SCF loop",
+      "llm_evidence_cn": "机器学习预测电子态注入以加速DFT自洽场循环",
+      "llm_evidence": "机器学习预测电子态注入以加速DFT自洽场循环",
+      "canonical_evidence": "机器学习预测电子态注入以加速DFT自洽场循环",
+      "llm_tldr_en": "The paper asks whether lower offline error gives a better SCF initializer, builds a 43851-crystal DFT corpus and injects predicted densities, Hamiltonians and density matrices into the solver in a closed-loop benchmark.",
+      "llm_tldr_cn": "机器学习预测电子态通常以离线误差评估，但其真正用途是加速密度泛函理论的自洽场循环，二者是否一致尚不明确。作者构建含43851个晶体的ρHD-43K语料，将预测的电荷密度、哈密顿量与密度矩阵注入求解器工作流。闭环基准在冻结测试集上比较直接收敛态预测与基于求解器原生参考的残差预测，并用成对收敛、迭代数与SCF耗时测量。结果显示更低的离线误差并不必然带来更好的SCF初始值。该工作为学习型电子态加速DFT提供了闭环评估范式。",
+      "llm_tldr": "机器学习预测电子态通常以离线误差评估，但其真正用途是加速密度泛函理论的自洽场循环，二者是否一致尚不明确。作者构建含43851个晶体的ρHD-43K语料，将预测的电荷密度、哈密顿量与密度矩阵注入求解器工作流。闭环基准在冻结测试集上比较直接收敛态预测与基于求解器原生参考的残差预测，并用成对收敛、迭代数与SCF耗时测量。结果显示更低的离线误差并不必然带来更好的SCF初始值。该工作为学习型电子态加速DFT提供了闭环评估范式。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.13357v1",
+      "source": "arxiv",
+      "title": "Can Autonomous LLM Agents Execute Multireference Quantum Chemistry Calculations?",
+      "abstract": "Multireference electronic-structure calculations remain difficult to automate because critical workflow decisions, including active-space selection, state averaging, convergence recovery, and state identification, traditionally rely on expert judgment. Here, we investigate whether an autonomous large language model (LLM) agent can perform these tasks without human intervention. The agent selects active spaces using literature-grounded analogies or explicitly documented chemical reasoning, generates and submits ORCA calculations, analyzes outputs, and records all decisions in an auditable reasoning log. Benchmarking against 558 vertical transition energies (VTEs) from QUESTDB shows that an unguided baseline agent achieves 24.9% coverage with a mean absolute error (MAE) of 0.373 eV. Introducing a structured decision ladder increases coverage to 44.1% while reducing the MAE to 0.339 eV. The largest gains are observed for double and Rydberg excitations, demonstrating that expert-informed procedural guidance substantially improves active-space construction and state identification. When provided with complete workflow information, the agent successfully reproduces published QUEST calculations with an MAE of only 23 meV, resolving 75% of target configurations within seven attempts. These results demonstrate that contemporary LLM agents can autonomously execute and reproduce complex multireference quantum-chemical workflows, while highlighting the importance of structured reasoning frameworks for achieving reliable high-throughput and high-fidelity electronic-structure calculations.",
+      "authors": [
+        "Victor Chang Lee",
+        "James M. Rondinelli"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "cond-mat.mtrl-sci",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-11T17:32:05+00:00",
+      "link": "https://arxiv.org/pdf/2609.13357v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "autonomous LLM agent running quantum chemistry calculations",
+      "llm_evidence_cn": "自主LLM智能体执行量子化学计算",
+      "llm_evidence": "自主LLM智能体执行量子化学计算",
+      "canonical_evidence": "自主LLM智能体执行量子化学计算",
+      "llm_tldr_en": "An autonomous LLM agent selects active spaces via chemical reasoning, runs ORCA calculations and logs decisions, achieving 24.9 percent coverage on 558 QUESTDB vertical transition energies without human intervention.",
+      "llm_tldr_cn": "针对多参考电子结构计算中活性空间选择、态平均与收敛恢复等环节依赖专家判断、难以自动化的问题，论文考察自主大语言模型智能体能否无人干预地完成这些任务。智能体依据文献类比或化学推理选择活性空间，生成并提交ORCA计算并记录可审计推理日志。在QUESTDB的558个垂直跃迁能基准上，无引导基线智能体覆盖率达24.9%，显示LLM智能体可部分自动化复杂量子化学工作流。",
+      "llm_tldr": "针对多参考电子结构计算中活性空间选择、态平均与收敛恢复等环节依赖专家判断、难以自动化的问题，论文考察自主大语言模型智能体能否无人干预地完成这些任务。智能体依据文献类比或化学推理选择活性空间，生成并提交ORCA计算并记录可审计推理日志。在QUESTDB的558个垂直跃迁能基准上，无引导基线智能体覆盖率达24.9%，显示LLM智能体可部分自动化复杂量子化学工作流。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "LLM agents that autonomously perform scientific research from literature review and hypothesis generation to experimentation and result analysis",
+      "matched_requirement_id": "req-19",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.16466v1",
+      "source": "arxiv",
+      "title": "Scaling LLM Agents for Materials Design through Hierarchical Collective Reasoning",
+      "abstract": "Materials design must reconcile competing functional requirements with stability and synthesis constraints. Generative models can produce stable, novel crystals, but accommodating detailed natural-language design instructions remains challenging. Here we introduce HiMatGen, a framework for scaling large language model agents through hierarchical collective reasoning. Built from GPT-5.6 Terra, HiMatGen connects 100 investigators in discussion pods across ten scientific domains with tool-enabled domain representatives. Representatives investigate proposals, exchange evidence across domains and return findings and unresolved questions to their pods. This bidirectional exchange turns specialist disagreements into structural revisions and alternative designs. Across six chemical systems, HiMatGen produces 1.9 times as many final crystal candidates and 1.7 times as many stable, unique and novel (SUN) structures as a tool-enabled GPT-6 Astra single-agent baseline. In property-directed tasks, the complete HiMatGen workflow outperforms same-model single-agent and independent-generation controls. Comparisons with MatterGen and Chemeleon2 demonstrate its ability to develop diverse crystals satisfying joint functional and chemical requirements. In a paired comparison initialized from the same proposals, hierarchical discussion reduces debate-stage token usage by a factor of 22 relative to full debate. HiMatGen provides an approach to materials design that sustains the exchange of scientific knowledge and computational evidence throughout iterative exploration as the agent population grows.",
+      "authors": [
+        "Jaehwan Choi",
+        "Yousung Jung"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-15T00:35:58+00:00",
+      "link": "https://arxiv.org/pdf/2609.16466v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM agent framework for materials design with hierarchical collective reasoning",
+      "llm_evidence_cn": "基于分层集体推理的材料设计LLM智能体框架",
+      "llm_evidence": "基于分层集体推理的材料设计LLM智能体框架",
+      "canonical_evidence": "基于分层集体推理的材料设计LLM智能体框架",
+      "llm_tldr_en": "Generative models can propose stable novel crystals but struggle to follow detailed natural-language design instructions. HiMatGen scales LLM agents via hierarchical collective reasoning, connecting 100 investigators in discussion pods with tool-enabled domain representatives.",
+      "llm_tldr_cn": "材料设计需在相互竞争的功能需求与稳定性、可合成性约束之间取得平衡，生成模型虽能产出稳定新晶体，却难以满足详细的自然语言设计指令。本文提出HiMatGen，通过分层集体推理扩展大语言模型智能体：以GPT-5.6 Terra为基座，组织100名研究者分布于跨十个科学领域的讨论小组，并由具备工具能力的领域代表调查提案、跨领域交换证据。这种双向交流把专家分歧转化为结构修订与候选方案，展示了多智能体协作在复杂材料设计中的规模化潜力。",
+      "llm_tldr": "材料设计需在相互竞争的功能需求与稳定性、可合成性约束之间取得平衡，生成模型虽能产出稳定新晶体，却难以满足详细的自然语言设计指令。本文提出HiMatGen，通过分层集体推理扩展大语言模型智能体：以GPT-5.6 Terra为基座，组织100名研究者分布于跨十个科学领域的讨论小组，并由具备工具能力的领域代表调查提案、跨领域交换证据。这种双向交流把专家分歧转化为结构修订与候选方案，展示了多智能体协作在复杂材料设计中的规模化潜力。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.15922v1",
+      "source": "arxiv",
+      "title": "An Open-Source Hardware and Software Toolkit to Enable Agentic RHEED-Guided Thin-Film Synthesis",
+      "abstract": "Reflection high-energy electron diffraction (RHEED) provides rich information about evolving surfaces during thin-film growth, but non-automated, operator-dependent alignment and fragmented analysis workflows limit its potential in fully autonomous synthesis. Here, we present an open-source hardware and software toolkit that makes RHEED control and quantitative analysis accessible to operators and artificial intelligence (AI) agents. Demonstrated on a pulsed laser deposition system, the toolkit provides programmable electron-optics control, automated beam alignment and rocking-curve acquisition, and a training-free method for crystallographic azimuthal alignment. The auto RHEED application extracts structural and growth-related observables through shared graphical and programmatic interfaces, including a Model Context Protocol (MCP) server. An agent-driven demonstration shows how natural-language requests can guide the selection, configuration, and execution of quantitative analyses. An extensible adapter interface streamlines the incorporation of community-developed methods for AI analysis and RHEED simulation as they emerge, supported by Markdown implementation guides designed for AI coding agents. These capabilities support complementary descriptions of surface evolution through physical measurements and learned image representations while providing a practical route for incorporating new computational methods. Together, these tools reduce barriers to automated and agentic RHEED measurements and establish a foundation for future agentic control of thin-film synthesis guided by the evolving surface.",
+      "authors": [
+        "Asraful Haque",
+        "Christopher M. Rouleau",
+        "Rama K. Vasudevan",
+        "Sumner B. Harris"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-14T17:32:57+00:00",
+      "link": "https://arxiv.org/pdf/2609.15922v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "toolkit enabling agentic RHEED-guided autonomous thin-film synthesis",
+      "llm_evidence_cn": "支持智能体自主薄膜合成的RHEED工具包",
+      "llm_evidence": "支持智能体自主薄膜合成的RHEED工具包",
+      "canonical_evidence": "支持智能体自主薄膜合成的RHEED工具包",
+      "llm_tldr_en": "An open-source hardware and software toolkit makes RHEED control and analysis accessible to operators and AI agents, with programmable electron optics, automated alignment and a training-free azimuthal method, demonstrated on pulsed laser deposition.",
+      "llm_tldr_cn": "反射高能电子衍射在薄膜生长中信息丰富，但人工对准与碎片化分析流程限制了全自主合成。本文提出开源软硬件工具包，使操作者与AI智能体可控制RHEED并做定量分析，包含可编程电子光学控制、自动束流对准与免训练晶向对准。在脉冲激光沉积系统上验证，为自主实验与自驱动实验室提供关键基础设施。",
+      "llm_tldr": "反射高能电子衍射在薄膜生长中信息丰富，但人工对准与碎片化分析流程限制了全自主合成。本文提出开源软硬件工具包，使操作者与AI智能体可控制RHEED并做定量分析，包含可编程电子光学控制、自动束流对准与免训练晶向对准。在脉冲激光沉积系统上验证，为自主实验与自驱动实验室提供关键基础设施。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "self driving laboratories and autonomous experimentation for materials science, chemistry, and scientific discovery",
+      "matched_requirement_id": "req-16",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.16527v1",
+      "source": "arxiv",
+      "title": "QALPA: Property-guided diffusion modeling for efficient exploration of chemical spaces of flexible molecules",
+      "abstract": "Exploring the chemical space of flexible molecules remains challenging because the vast number of possible compounds and conformations, together with the increasing cost and limited generalization of 3D generative models for larger and more complex molecules, restrict access to unexplored chemistry. Here, we introduce QALPA (\"Quantum-Aware Learning for Property-space Augmentation\"), a property-guided generative framework that combines an E(3)-equivariant diffusion model with active learning and efficient quantum-mechanical (QM) methods to iteratively explore targeted QM property manifolds. By coupling generation with physics-based evaluation, QALPA improves molecular sampling and model reliability in sparsely populated regions of chemical space. Our results show that training on complementary QM datasets spanning both small (QM7-X) and large (Aquamarine) drug-like compounds enables accurate molecular generation across a broad size range, improving transferability beyond the training distribution for complex property manifolds involving both extensive and intensive properties. As a proof of concept, QALPA coupled with the machine learning-augmented tight-binding method EquiDTB efficiently augments alloQM, a QM dataset introduced in this work, comprising 6,253 conformers of allosteric drug molecules, by populating sparse regions of the property landscape defined by the many-body dispersion energy and HOMO-LUMO energy gap. These results demonstrate that the integration of generative AI with efficient ML/QM methods offers a practical pathway toward augmenting sparse QM datasets and sustainably expanding the exploration of chemical space for molecular discovery.",
+      "authors": [
+        "Michael Hanna",
+        "Julian Cremer",
+        "Zekiye Erarslan",
+        "Leonardo Medrano Sandonas"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "cs.AI"
+      ],
+      "published": "2026-09-15T02:19:20+00:00",
+      "link": "https://arxiv.org/pdf/2609.16527v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "E(3)-equivariant diffusion model for molecular property-guided generation",
+      "llm_evidence_cn": "面向分子的E(3)等变扩散生成模型",
+      "llm_evidence": "面向分子的E(3)等变扩散生成模型",
+      "canonical_evidence": "面向分子的E(3)等变扩散生成模型",
+      "llm_tldr_en": "QALPA couples an E(3)-equivariant diffusion model with active learning and efficient QM evaluation to iteratively explore targeted molecular property manifolds, improving sampling and reliability in sparse regions.",
+      "llm_tldr_cn": "柔性分子化学空间探索面临组合爆炸与3D生成模型泛化受限的双重困难。本文提出QALPA框架，将E(3)等变扩散模型与主动学习、高效量子力学计算结合，通过生成与物理评估耦合迭代探索目标QM性质流形。实验表明该方法在稀疏采样区域提升了分子采样质量与模型可靠性，为性质导向的分子发现提供了可扩展方案。",
+      "llm_tldr": "柔性分子化学空间探索面临组合爆炸与3D生成模型泛化受限的双重困难。本文提出QALPA框架，将E(3)等变扩散模型与主动学习、高效量子力学计算结合，通过生成与物理评估耦合迭代探索目标QM性质流形。实验表明该方法在稀疏采样区域提升了分子采样质量与模型可靠性，为性质导向的分子发现提供了可扩展方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "geometric deep learning for molecules and materials",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.17523v1",
+      "source": "arxiv",
+      "title": "ScienceBuddy: Recursive-in-Recursive Self-Improvement for Interactive Scientific Agents",
+      "abstract": "We introduce and release ScienceBuddy, an interactive scientific research workspace that brings continually improving scientific agents into researchers' everyday workflows. ScienceBuddy supports researchers in carrying out scientific tasks while transforming their requests, feedback, and execution evidence into tasks and evaluation rubrics for continual learning. At its core is recursive-in-recursive self-improvement, a paradigm that couples harness evolution with model reinforcement learning: the inner recursion improves the harness with the model fixed, while the outer recursion trains the model under the improved harness. Harness evolution shapes training experience, and model learning creates new opportunities for harness adaptation. We present case studies of researcher interaction, harness refinement, and model learning, with the benchmark cases spanning four scientific task families. By releasing ScienceBuddy as a research product, we make this paradigm available to the scientific community and take a step toward discovery intelligence: scientific AI that advances through sustained collaboration with researchers and evolves alongside the research it supports. Website: http://science-buddy.io",
+      "authors": [
+        "Shuhan Xue",
+        "Jianyuan Zhong",
+        "Ziyuan Nan",
+        "Wenbin Li",
+        "Zhaochen Yu",
+        "Jinchao Ding",
+        "Qiang Gao",
+        "Pengyu Zhan",
+        "Yuntong Zhang",
+        "Tian Cheng",
+        "Zhenfei Yin",
+        "Yingcheng Wu",
+        "Ling Yang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.CL"
+      ],
+      "published": "2026-09-15T17:55:28+00:00",
+      "link": "https://arxiv.org/pdf/2609.17523v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "interactive scientific research agents with self-improvement",
+      "llm_evidence_cn": "可自我改进的交互式科研智能体",
+      "llm_evidence": "可自我改进的交互式科研智能体",
+      "canonical_evidence": "可自我改进的交互式科研智能体",
+      "llm_tldr_en": "ScienceBuddy is an interactive scientific workspace with recursive-in-recursive self-improvement that couples harness evolution and model reinforcement learning to continually improve research agents in real workflows.",
+      "llm_tldr_cn": "针对科研智能体难以在真实工作流中持续自我改进的问题，论文提出ScienceBuddy交互式科研工作空间及递归嵌套自我改进范式，内层在固定模型下进化智能体框架，外层在改进框架下训练模型。系统将研究者的请求、反馈与执行证据转化为训练任务和评估准则，实现框架与模型的协同持续学习，推动AI科学家融入日常科研。",
+      "llm_tldr": "针对科研智能体难以在真实工作流中持续自我改进的问题，论文提出ScienceBuddy交互式科研工作空间及递归嵌套自我改进范式，内层在固定模型下进化智能体框架，外层在改进框架下训练模型。系统将研究者的请求、反馈与执行证据转化为训练任务和评估准则，实现框架与模型的协同持续学习，推动AI科学家融入日常科研。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist",
+      "matched_requirement_id": "req-14",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.17646v1",
+      "source": "arxiv",
+      "title": "Robust and Efficient AI Frameworks for Scalable Material Design and Property Prediction",
+      "abstract": "This thesis develops robust and efficient AI frameworks for accelerating crystalline materials discovery by addressing both major stages of the materials-design pipeline: crystal property prediction and crystal structure generation. Motivated by the high computational cost of Density Functional Theory (DFT) and the limited availability of labeled materials data, the thesis explores graph representation learning, pretraining, multimodal learning, and generative modeling for scalable materials design.   For property prediction, the thesis first introduces CrysXPP, which learns transferable crystal representations through unsupervised graph autoencoding, reducing dependence on large property-labeled datasets. It then proposes CrysGNN, a large-scale self-supervised graph pretraining framework that captures atomic connectivity, chemical attributes, and global structural information and transfers this knowledge to downstream property predictors through knowledge distillation. CrysMMNet further enriches crystal representations by jointly modeling graph structure and textual descriptions, thereby incorporating both local chemical and global structural knowledge.   For crystal generation, the thesis introduces TGDMat, a text-guided joint diffusion framework that jointly models lattice parameters, atomic types, and atomic coordinates while incorporating textual structural knowledge during denoising. This enables the generation of more valid and stable periodic materials while also supporting conditional generation from natural-language descriptions.   Overall, the thesis establishes a unified AI-based framework for data-efficient property prediction and controllable crystal generation, demonstrating how graph learning, multimodal representations, and generative models can reduce computational cost and improve the scalability of materials",
+      "authors": [
+        "Kishalay Das"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.LG"
+      ],
+      "published": "2026-09-15T15:15:21+00:00",
+      "link": "https://arxiv.org/pdf/2609.17646v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "AI frameworks using graph learning and generative modeling for scalable crystalline materials design",
+      "llm_evidence_cn": "用图学习与生成建模加速晶体材料设计的人工智能框架",
+      "llm_evidence": "用图学习与生成建模加速晶体材料设计的人工智能框架",
+      "canonical_evidence": "用图学习与生成建模加速晶体材料设计的人工智能框架",
+      "llm_tldr_en": "This thesis develops robust AI frameworks for crystalline materials discovery, covering crystal property prediction and structure generation with graph representation learning, pretraining, and generative modeling.",
+      "llm_tldr_cn": "密度泛函计算成本高且标注材料数据稀缺，制约晶体材料发现。本文构建面向材料设计全流程的高效人工智能框架，涵盖晶体性质预测与结构生成，综合运用图表示学习、预训练、多模态学习与生成建模。工作提出CrysXPP通过无监督图自编码学习可迁移晶体表示，并提出CrysGNN等方法降低对大规模标注数据的依赖。该框架为可扩展的材料性质预测与结构设计提供支撑。",
+      "llm_tldr": "密度泛函计算成本高且标注材料数据稀缺，制约晶体材料发现。本文构建面向材料设计全流程的高效人工智能框架，涵盖晶体性质预测与结构生成，综合运用图表示学习、预训练、多模态学习与生成建模。工作提出CrysXPP通过无监督图自编码学习可迁移晶体表示，并提出CrysGNN等方法降低对大规模标注数据的依赖。该框架为可扩展的材料性质预测与结构设计提供支撑。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.19419v1",
+      "source": "arxiv",
+      "title": "Agentic AI for Density-Functional Development: Revisiting r2SCAN",
+      "abstract": "We demonstrate physics-constrained agentic development of a meta-generalized gradient approximation (meta-GGA) functional using a large language model (LLM) to assist the search and optimization of a band-gap-oriented revision of r2SCAN. No real bonded systems were fitted, preserving r2SCAN's nonempirical philosophy. Across the finalist set, band gaps and several molecular subsets improve relative to r2SCAN; the top finalist, r2SCAN+, reduces the band-gap MAE on a benchmark comprising 24 solids from 1.26 to 0.96 eV and the aggregate MAE on 329 molecular properties from 4.79 to 4.42 kcal/mol. We first curated 78 exchange and 90 correlation candidate correction terms from r2SCAN's dimensionless ingredients, spanning polynomial terms through third degree, exponentials, exponentially damped products, and ratios. Allowing each candidate to combine one to three correction terms from the exchange catalog, the correlation catalog, or both yields about 8 x 10^5 distinct forms, making exhaustive high-throughput screening impractical. We defined the search criteria for the LLM agent using r2SCAN's exact constraints, physical norms, and the targeted iso-orbital derivative response. The agent then combined these criteria with its pretrained knowledge and accumulated search feedback to propose and refine sparse forms, prioritizing terms tied to the iso-orbital response; a second LLM critic screened proposals before deterministic verification. Compared with uniform random search, the workflow learned from prior evaluations, incurred far fewer downstream rejections (0.6% versus 24.6%), and located stronger high-response candidates: 51 agentic candidates exceeded the best random-search response of 1.263, with the overall best reaching 1.331. These results show that agentic search can support density-functional development when flexible hypothesis generation is coupled to automated physical verification.",
+      "authors": [
+        "Santosh Adhikari",
+        "Kelsey A. Parker",
+        "Etinosa Osaro",
+        "Swagata Roy",
+        "Dario Rocca"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-16T20:54:42+00:00",
+      "link": "https://arxiv.org/pdf/2609.19419v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "LLM-driven agentic development of a DFT exchange-correlation functional",
+      "llm_evidence_cn": "大语言模型智能体驱动密度泛函开发",
+      "llm_evidence": "大语言模型智能体驱动密度泛函开发",
+      "canonical_evidence": "大语言模型智能体驱动密度泛函开发",
+      "llm_tldr_en": "An LLM-driven, physics-constrained agentic framework searches and optimizes r2SCAN corrections, with the top finalist r2SCAN+ cutting solid band-gap MAE from 1.26 to 0.96 eV.",
+      "llm_tldr_cn": "针对传统密度泛函开发依赖人工经验、难以系统搜索修正项的问题，作者提出由大语言模型驱动的物理约束智能体框架，用于搜索并优化r2SCAN的带隙导向修正项。该方法从r2SCAN无量纲成分中筛选出大量候选交换与关联项，并在不拟合真实成键体系的前提下保持非经验哲学。结果显示最佳候选r2SCAN+将24种固体的带隙MAE由1.26降至0.96 eV，329项分子性质MAE亦有改善。该工作展示了LLM智能体辅助第一性原理方法开发的潜力。",
+      "llm_tldr": "针对传统密度泛函开发依赖人工经验、难以系统搜索修正项的问题，作者提出由大语言模型驱动的物理约束智能体框架，用于搜索并优化r2SCAN的带隙导向修正项。该方法从r2SCAN无量纲成分中筛选出大量候选交换与关联项，并在不拟合真实成键体系的前提下保持非经验哲学。结果显示最佳候选r2SCAN+将24种固体的带隙MAE由1.26降至0.96 eV，329项分子性质MAE亦有改善。该工作展示了LLM智能体辅助第一性原理方法开发的潜力。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "8plus"
+    },
+    {
+      "id": "2609.15611v1",
+      "source": "arxiv",
+      "title": "Multi-View Molecular Representation Learning with Hierarchical Graphs and Contextualized Fingerprints",
+      "abstract": "Molecular property prediction requires representations that generalize from limited labeled data to structurally novel compounds. Existing molecular pretraining methods often rely on a single view: graph-based approaches model atom-bond topology but provide limited fragment-level supervision, whereas fingerprint descriptors encode chemical patterns but are typically used as fixed auxiliary features. We propose HiFi-Mol, a multi-view framework that separately pretrains a hierarchical graph encoder and a contextualized fingerprint encoder before downstream integration. The graph branch uses fragment-aware masking with multi-resolution supervision to capture substructure-aware representations, while the fingerprint branch tokenizes active entries from seven fingerprint families and applies masked language modeling to learn contextualized embeddings. During fine-tuning, HiFi-Mol combines projected multi-resolution graph features with fingerprint embeddings for downstream prediction. Evaluated on MoleculeNet benchmarks under the scaffold split, HiFi-Mol achieves a 2.77% improvement in average ROC-AUC over the best baseline across eight classification tasks while maintaining competitive performance on three regression tasks. Further analyses reveal that fragment-aware masking improves graph representation quality, and classification results demonstrate dataset-dependent strengths of the individual graph and fingerprint variants, confirming that the two views provide complementary predictive signals.",
+      "authors": [
+        "Gwang-Hyeon Yun",
+        "Jong-Hoon Park",
+        "Bing Hu",
+        "Helen Chen",
+        "Anita Layton",
+        "Young-Rae Cho"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-09-14T14:07:19+00:00",
+      "link": "https://arxiv.org/pdf/2609.15611v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "multi-view molecular representation learning with hierarchical graph encoder and fingerprints",
+      "llm_evidence_cn": "融合分层图编码器与指纹的多视角分子表示学习",
+      "llm_evidence": "融合分层图编码器与指纹的多视角分子表示学习",
+      "canonical_evidence": "融合分层图编码器与指纹的多视角分子表示学习",
+      "llm_tldr_en": "HiFi-Mol is a multi-view framework that pretrains a hierarchical graph encoder and a contextualized fingerprint encoder separately then integrates them, improving molecular property prediction on structurally novel compounds.",
+      "llm_tldr_cn": "分子性质预测需要能从有限标注数据泛化到结构新颖化合物的表示，但现有预训练方法多依赖单一视角：图方法建模原子-键拓扑却缺乏片段级监督，指纹描述子则常仅作固定辅助特征。作者提出HiFi-Mol多视角框架，分别预训练分层图编码器与上下文化指纹编码器再进行下游融合，图分支采用片段感知掩码与多分辨率监督。该框架提升了分子表示的泛化能力，为分子与材料建模提供了更强的几何-化学表征。",
+      "llm_tldr": "分子性质预测需要能从有限标注数据泛化到结构新颖化合物的表示，但现有预训练方法多依赖单一视角：图方法建模原子-键拓扑却缺乏片段级监督，指纹描述子则常仅作固定辅助特征。作者提出HiFi-Mol多视角框架，分别预训练分层图编码器与上下文化指纹编码器再进行下游融合，图分支采用片段感知掩码与多分辨率监督。该框架提升了分子表示的泛化能力，为分子与材料建模提供了更强的几何-化学表征。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "geometric deep learning for molecules and materials",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.15246v1",
+      "source": "arxiv",
+      "title": "A cylindrical sintering method for more realistic grain boundaries in nanocrystalline thin films",
+      "abstract": "Discrepancies between simulated and experimental mechanical properties in molecular dynamics simulations of nanocrystalline metals typically arise from the sample-construction method and the interatomic potential choice. We introduce a cylindrical sintering method to generate nanocrystalline aluminum thin-film samples with wider, more disordered grain boundaries than the usual Voronoi tessellation method, while maintaining deterministic control over grain size, shape, and orientation. Cylindrical sintered samples are benchmarked against hexagonal Voronoi references under identical conditions using both the classical Pascuet15 MEAM and tabGAP machine-learning potentials. Cylindrical sintered samples consistently show lower mechanical properties than hexagonal Voronoi samples due to their wider, more disordered grain boundaries - an effect independent of the choice of potential. Notably, changing the sample geometry and changing the interatomic potential produce comparable, additive, and independent shifts in predicted properties, highlighting that future molecular dynamics studies must hold both variables fixed for meaningful comparisons. Common neighbor and dislocation extraction analyses confirm that deformation is dominated by grain-boundary-mediated plasticity. Uniaxial tensile tests reveal an inverse Hall-Petch relationship for both sample types and both potentials, with mechanical properties decreasing monotonically as grain size reduces from 40.34 to 4.84 nm. The cylindrical sintering method offers a physically realistic, geometrically controlled alternative that bridges idealized Voronoi models and disordered experimental grain-boundary structures.",
+      "authors": [
+        "Ankit Yadav",
+        "Lucia Bajtošová",
+        "Miroslav Cieslar",
+        "Jan Fikar"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-14T09:05:37+00:00",
+      "link": "https://arxiv.org/pdf/2609.15246v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "molecular dynamics simulations of nanocrystalline metals using tabGAP machine-learning potentials",
+      "llm_evidence_cn": "使用tabGAP机器学习势进行纳米晶金属分子动力学模拟",
+      "llm_evidence": "使用tabGAP机器学习势进行纳米晶金属分子动力学模拟",
+      "canonical_evidence": "使用tabGAP机器学习势进行纳米晶金属分子动力学模拟",
+      "llm_tldr_en": "This work introduces a cylindrical sintering method to build nanocrystalline aluminum thin films with wider disordered grain boundaries, benchmarking them against Voronoi references using MEAM and tabGAP machine-learning potentials.",
+      "llm_tldr_cn": "论文针对纳米晶金属分子动力学模拟与实验力学性能存在偏差的问题，提出圆柱烧结法构建具有更宽更无序晶界的纳米晶铝薄膜样本。作者在相同条件下用经典MEAM势与tabGAP机器学习势，将圆柱烧结样本与六方Voronoi参考结构进行对比。结果显示圆柱烧结样本力学响应更接近实验，说明样本构建方式与原子间势选择共同影响模拟可信度，为纳米晶模拟提供更真实的建模流程。",
+      "llm_tldr": "论文针对纳米晶金属分子动力学模拟与实验力学性能存在偏差的问题，提出圆柱烧结法构建具有更宽更无序晶界的纳米晶铝薄膜样本。作者在相同条件下用经典MEAM势与tabGAP机器学习势，将圆柱烧结样本与六方Voronoi参考结构进行对比。结果显示圆柱烧结样本力学响应更接近实验，说明样本构建方式与原子间势选择共同影响模拟可信度，为纳米晶模拟提供更真实的建模流程。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.15818v2",
+      "source": "arxiv",
+      "title": "Atria Dawn: The Dawn of Agentic Superintelligence",
+      "abstract": "As AI agents become participants in the development of their successors, they reshape both the production of intelligence and the role of human researchers. We introduce Atria Dawn Preview, a foundation agentic language model designed for scientific research and engineering workflows, with the goal of expanding the frontier of agent productivity in the real world. This model is trained via a Verifiable Experience Pipeline that connects tool-mediated interactions to executable environments and externally verified outcomes. Across 16 benchmarks spanning real-world research, engineering, and digital work, Atria Dawn Preview is competitive with frontier agents and achieves the highest reported score on five of them. Beyond standalone performance, we examine the real research-and-development process behind this model as a case study of human--AI collaboration, analyzing 769 task records from 56 participants together with agent logs. When asked to evaluate completed tasks under comparable conditions, participants rated about one-third of completed AI-assisted tasks as infeasible without AI. More strikingly, agents frequently propose methods and implement revisions, while humans retain most final decisions and guide exploration through judgment and feedback. These observations indicate a shift from task-level execution to project-level partnership, with human effort concentrating on what is worth pursuing and how evidence should guide research. Progress toward more autonomous AI research must therefore advance both the capacity for discovery and the capacity for meaningful human oversight, preserving accountable human authority over the risks and direction of continued development.",
+      "authors": [
+        "Honglin Guo",
+        "Tao Gui",
+        "Kun Cai",
+        "Haodong Chen",
+        "Yicheng Chen",
+        "Guanting Dong",
+        "Qiming Ge",
+        "Yuyang Hu",
+        "Zixian Huang",
+        "Jiajie Jin",
+        "Alexander Lam",
+        "Yining Li",
+        "Jiahang Lin",
+        "Yanjiang Liu",
+        "Xinyu Lu",
+        "Haijun Lv",
+        "Zerun Ma",
+        "Junlin Shang",
+        "Qisheng Su",
+        "Guoqiang Wang",
+        "Rui Wang",
+        "Zhecan Wang",
+        "Hao Xiang",
+        "Xinchen Xie",
+        "Shuhao Xing",
+        "Xiaoyu Xing",
+        "Wanghan Xu",
+        "Xinyu Yang",
+        "Yajie Yang",
+        "Chengfeng Zhao",
+        "Haoran Zhao",
+        "Penghao Zhao",
+        "Ruojun Zhou",
+        "Yunhua Zhou",
+        "Dongsheng Zhu",
+        "Yicheng Zou",
+        "Qiye Cai",
+        "Xinmeng Che",
+        "Jiabei Chen",
+        "Jiahao Chen",
+        "Jiayi Chen",
+        "Yujia Chen",
+        "Lizhi Cui",
+        "Youheng Dai",
+        "Xin Deng",
+        "Yi Dong",
+        "Shihan Dou",
+        "Chenya Gu",
+        "Xu Guo",
+        "Ding Han",
+        "Feiyang Hao",
+        "Haotan He",
+        "Jie Hou",
+        "Binze Hu",
+        "Zijian Hu",
+        "Junhao Huang",
+        "Huicheng Jiang",
+        "Jiazhen Jiang",
+        "Shufan Jiang",
+        "Jiahao Kuang",
+        "Bowen Lai",
+        "Bo Li",
+        "Jiaqiang Li",
+        "Peng Li",
+        "Qilong Li",
+        "Zhuoqun Li",
+        "Jiaxiang Liu",
+        "Shuainan Liu",
+        "Tong Liu",
+        "Yi Liu",
+        "Zhonghang Lu",
+        "Jianwen Luo",
+        "Yanyi Luo",
+        "Huijie Lv",
+        "Ningsheng Ma",
+        "Houcheng Min",
+        "Chengjun Pan",
+        "Qiyuan Peng",
+        "Xiaoxuan Peng",
+        "Jianmin Qian",
+        "Jiantao Qiu",
+        "Wanying Ren",
+        "Huayu Sha",
+        "Jifei Shan",
+        "Zixin Shang",
+        "Bing Shao",
+        "Zhuohui Sheng",
+        "Jiayang Shi",
+        "Yang Shu",
+        "Aierpanjiang Simayi",
+        "Sirui Song",
+        "Yuxiao Song",
+        "Zhe Sun",
+        "Zhichao Sun",
+        "Wenzhe Tan",
+        "Wenhui Tian",
+        "Zhongbo Tian",
+        "Hanchen Wang",
+        "Pengbo Wang",
+        "Rui Wang",
+        "Yiding Wang",
+        "Yuhui Wang",
+        "Zhiheng Xi",
+        "Caijun Xu",
+        "Chao Xu",
+        "Yongfeng Xu",
+        "Xiaolei Yang",
+        "Zhixiong Yang",
+        "Qian Yao",
+        "Shihong Yi",
+        "Yuankai Ying",
+        "Jia Yu",
+        "Dingbo Yuan",
+        "Hao Yuan",
+        "Junjie Yuan",
+        "Bo Zhang",
+        "Caixian Zhang",
+        "Qiuyinzhe Zhang",
+        "Jiyuan Zhao",
+        "Ying Zhao",
+        "Pujun Zheng",
+        "Xiaoxue Zhong",
+        "Xiaohao Zhou",
+        "Xinyu Zhou",
+        "Guanru Zhu",
+        "Yulun Zhu",
+        "Yaojie Lu",
+        "Tao Ji",
+        "Hongyu Lin",
+        "Yutao Zhu",
+        "Pengfei Cao",
+        "Guoxiu He",
+        "Xianpei Han",
+        "Ben He",
+        "Zhicheng Dou",
+        "Kang Liu",
+        "Qi Zhang",
+        "Le Sun",
+        "Jun Zhao",
+        "Ji-Rong Wen",
+        "Xuanjing Huang",
+        "Yu-Gang Jiang",
+        "Bowen Zhou"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-14T16:22:30+00:00",
+      "link": "https://arxiv.org/pdf/2609.15818v2",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "foundation agentic language model for scientific research workflows",
+      "llm_evidence_cn": "面向科研工作流的基础智能体语言模型",
+      "llm_evidence": "面向科研工作流的基础智能体语言模型",
+      "canonical_evidence": "面向科研工作流的基础智能体语言模型",
+      "llm_tldr_en": "The paper introduces Atria Dawn Preview, a foundation agentic language model trained via a Verifiable Experience Pipeline that links tool-mediated interactions to executable environments and externally verified outcomes, targeting real-world scientific research and engineering workflows.",
+      "llm_tldr_cn": "随着AI智能体开始参与自身后继系统的开发，科研与工程工作流中的智能体生产力亟待扩展。本文提出Atria Dawn Preview，一个面向科学研究和工程流程的基础智能体语言模型，通过可验证经验管线将工具中介交互与可执行环境及外部验证结果相连接进行训练。模型在覆盖真实科研、工程和数字工作的16项基准上表现可与前沿智能体竞争，并在其中5项取得最高报告分数。作者进一步考察真实研究场景中的表现，探讨智能体参与科研对智能生产与人类研究者角色的影响。",
+      "llm_tldr": "随着AI智能体开始参与自身后继系统的开发，科研与工程工作流中的智能体生产力亟待扩展。本文提出Atria Dawn Preview，一个面向科学研究和工程流程的基础智能体语言模型，通过可验证经验管线将工具中介交互与可执行环境及外部验证结果相连接进行训练。模型在覆盖真实科研、工程和数字工作的16项基准上表现可与前沿智能体竞争，并在其中5项取得最高报告分数。作者进一步考察真实研究场景中的表现，探讨智能体参与科研对智能生产与人类研究者角色的影响。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist",
+      "matched_requirement_id": "req-14",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.15364v1",
+      "source": "arxiv",
+      "title": "RSIAgent: Autonomous Exploration for Recursive Self-improvement in New Environments",
+      "abstract": "Digital agents must often adapt to new environments whose interfaces, tools, and failure modes are not fully captured by pretrained models. We introduce \\textbf{RSIAgent}, a training-free multi-agent framework for recursive self-improvement through autonomous memory construction. RSIAgent coordinates curriculum, actor, and verifier agents to continually explore the environment, validate outcomes, and retain environment-specific knowledge, including reusable causal relationships between actions, conditions, and consequences. It further adopts a \\textbf{broad-then-deep} exploration strategy, combining parallel broad recursive self-exploration for discovering diverse environment structures with focused deep self-exploration for uncovering hard cases, hidden constraints, boundary conditions, and previously unknown causal dependencies. The resulting memory is frozen and can be directly reused for downstream tasks without updating model parameters. Experiments on OSWorld-v2 and Agent's Last Exam show that RSIAgent substantially improves strong open-source models, enabling Kimi-K3 and GLM-5.3 to outperform frontier closed-source models including GPT-6.",
+      "authors": [
+        "Sibo Zhu",
+        "Shicheng Fan",
+        "Xinyue Wang",
+        "Wenyi Wu",
+        "Kun Zhou",
+        "Biwei Huang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.CL",
+        "cs.CV"
+      ],
+      "published": "2026-09-14T10:46:40+00:00",
+      "link": "https://arxiv.org/pdf/2609.15364v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent framework for autonomous exploration and self-improvement",
+      "llm_evidence_cn": "多智能体自主探索与自我改进框架",
+      "llm_evidence": "多智能体自主探索与自我改进框架",
+      "canonical_evidence": "多智能体自主探索与自我改进框架",
+      "llm_tldr_en": "RSIAgent is a training-free multi-agent framework that coordinates curriculum, actor, and verifier agents to build environment-specific memory and recursively self-improve through broad-then-deep exploration.",
+      "llm_tldr_cn": "数字智能体进入新环境时常受限于预训练模型未覆盖的接口、工具与失败模式。作者提出免训练的多智能体框架RSIAgent，通过课程、执行与验证智能体协同自主构建记忆，采用先广后深策略探索环境结构。该框架实现了在新环境中的递归自我改进与环境特定知识的复用，为自主探索型智能体提供新方案。",
+      "llm_tldr": "数字智能体进入新环境时常受限于预训练模型未覆盖的接口、工具与失败模式。作者提出免训练的多智能体框架RSIAgent，通过课程、执行与验证智能体协同自主构建记忆，采用先广后深策略探索环境结构。该框架实现了在新环境中的递归自我改进与环境特定知识的复用，为自主探索型智能体提供新方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.17063v1",
+      "source": "arxiv",
+      "title": "Development of a Physics-Informed Neural Framework, MEOWN, for Rapid Prediction of Muon Stopping Sites in Crystalline Materials, for understanding Quantum Magnet employing Muon Spectroscopy",
+      "abstract": "Muon-spin rotation/relaxation is one of the most powerful microscopic probes for understanding magnetic order, spin dynamics, superconductivity, and complex magnetic phases in emerging quantum materials. Quantitative interpretation depends critically on the accurate identification of the muon stopping site, a problem traditionally addressed using density functional theory-based structural relaxation. However, conventional DFT approaches are computationally demanding, time-consuming, and require extensive calculations. Here, we develop MEOWN (Muon Engine for Optimized Weighted Networks), a machine-learning-based, physics-informed computational framework that combines a Polarizable Unperturbed Electrostatic Potential (P-UEP) model with machine-learning-guided optimization and symmetry-driven relaxation to predict energetically favorable muon stopping sites in crystalline solids. MEOWN explicitly incorporates electrostatic interactions, electronic screening, polarization effects, and zero-point motion into the learning workflow, providing physically interpretable predictions with substantially reduced computational cost while maintaining physical consistency and scientific rigor. To validate the framework, we investigated several well-established benchmark materials, including MnSi, CoF2, CaF2, LiF, and NaF. The predicted muon stopping sites and dipolar fields are in close agreement with previously reported DFT+mu results, demonstrating the reliability and transferability of the approach across chemically diverse systems. Notably, MEOWN predicts the equilibrium muon stopping site within a few minutes, offering a significant speedup over conventional DFT-based calculations. This manuscript presents the theoretical foundations, computational methodology, and validation of MEOWN as a general-purpose software for rapid and reliable muon stopping-site prediction in crystalline materials.",
+      "authors": [
+        "A. Pandey",
+        "K. Sharma",
+        "S. Ghosh",
+        "G. Roy",
+        "T. Basu"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cond-mat.str-el",
+        "math-ph",
+        "physics.data-an",
+        "quant-ph"
+      ],
+      "published": "2026-09-15T12:08:11+00:00",
+      "link": "https://arxiv.org/pdf/2609.17063v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "machine-learning physics-informed framework replacing DFT structural relaxation for muon stopping sites in crystalline materials",
+      "llm_evidence_cn": "以机器学习物理信息框架替代DFT结构弛豫预测晶体中μ子停位",
+      "llm_evidence": "以机器学习物理信息框架替代DFT结构弛豫预测晶体中μ子停位",
+      "canonical_evidence": "以机器学习物理信息框架替代DFT结构弛豫预测晶体中μ子停位",
+      "llm_tldr_en": "MEOWN is a physics-informed neural framework that rapidly predicts muon stopping sites in crystalline materials, replacing costly DFT structural relaxation used for muon spectroscopy interpretation.",
+      "llm_tldr_cn": "论文针对μ子自旋弛豫谱定量解释中μ子停位识别严重依赖耗时DFT结构弛豫的问题，提出物理信息神经网络框架MEOWN。该方法以机器学习建模原子环境与停位关系，快速预测晶体材料中的μ子停位，替代传统第一性原理弛豫流程。结果显示该框架显著降低计算成本并加速分析，为量子磁体等材料的μ子谱学研究提供高效可扩展的工具。",
+      "llm_tldr": "论文针对μ子自旋弛豫谱定量解释中μ子停位识别严重依赖耗时DFT结构弛豫的问题，提出物理信息神经网络框架MEOWN。该方法以机器学习建模原子环境与停位关系，快速预测晶体材料中的μ子停位，替代传统第一性原理弛豫流程。结果显示该框架显著降低计算成本并加速分析，为量子磁体等材料的μ子谱学研究提供高效可扩展的工具。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.15820v1",
+      "source": "arxiv",
+      "title": "AlgoEvo: Self-Evolving Agentic Search for Automated Algorithm Discovery",
+      "abstract": "Large language models have advanced automated algorithm discovery by synthesizing executable code, but existing frameworks trap them in rigid search pipelines with pre-defined control flows. This limitation restricts adaptive reasoning, blocks cross-paradigm transfer, and discards valuable execution feedback. We propose AlgoEvo, a unified agentic framework that transforms automated algorithm discovery into an interactive, knowledge-accumulating process. An autonomous agent dynamically inspects, diagnoses, and edits code based on runtime feedback. A design skill hub decouples paradigm-specific knowledge from the core discovery engine, allowing a single workflow to seamlessly handle single-objective, multi-objective, and multi-component design. Meanwhile, a hierarchical experience mechanism organizes search trajectories into a task-level tree to guide exploration and consolidates cross-task patterns into reusable skills. Across six representative benchmark tasks, AlgoEvo matches or surpasses specialized methods with substantially fewer evaluations and reduced token consumption, demonstrating strong intra-task accumulation, cross-task transfer, and the ability to reproduce or exceed existing state-of-the-art performance through flexible skill activation.",
+      "authors": [
+        "Junhao Qiu",
+        "Qinglong Hu",
+        "Xialiang Tong",
+        "Mingxuan Yuan",
+        "Liyong Lin",
+        "Qingfu Zhang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-14T16:24:27+00:00",
+      "link": "https://arxiv.org/pdf/2609.15820v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "self-evolving agentic search that edits code from runtime feedback for automated discovery",
+      "llm_evidence_cn": "依据运行时反馈编辑代码的自演化智能体搜索",
+      "llm_evidence": "依据运行时反馈编辑代码的自演化智能体搜索",
+      "canonical_evidence": "依据运行时反馈编辑代码的自演化智能体搜索",
+      "llm_tldr_en": "AlgoEvo turns automated algorithm discovery into an interactive, knowledge-accumulating agentic process that inspects and edits code using runtime feedback.",
+      "llm_tldr_cn": "针对现有LLM算法发现框架受限于预定义控制流、难以自适应推理且丢弃执行反馈的问题，作者提出AlgoEvo统一智能体框架。该框架让自主智能体依据运行时反馈动态检查、诊断并编辑代码，并通过设计技能库将范式相关知识从核心发现引擎中解耦。这样单一工作流即可无缝处理单目标、多目标与多组件设计，实现交互式、知识累积的算法发现。该工作提升了跨范式迁移与执行反馈利用能力。",
+      "llm_tldr": "针对现有LLM算法发现框架受限于预定义控制流、难以自适应推理且丢弃执行反馈的问题，作者提出AlgoEvo统一智能体框架。该框架让自主智能体依据运行时反馈动态检查、诊断并编辑代码，并通过设计技能库将范式相关知识从核心发现引擎中解耦。这样单一工作流即可无缝处理单目标、多目标与多组件设计，实现交互式、知识累积的算法发现。该工作提升了跨范式迁移与执行反馈利用能力。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.18604v1",
+      "source": "arxiv",
+      "title": "Load balancing for adaptive-precision interatomic potentials in materials science",
+      "abstract": "For atomistic molecular dynamics simulations, we consider a recently developed hybrid coupling between the highly accurate machine learning (ML)-based atomic cluster expansion (ACE) interaction model and a less precise (but about 1-2 orders faster) EAM potential, in order to leverage the performance bottleneck of pure ML potentials in a parallel computing environment. This spatial-temporal adaptivity has the potential for a speedup of more than an order of magnitude, that would be lost without a dynamic load-balancing strategy that becomes critical due to fluctuating potential contributions. We compare the load-balancing strategies of LAMMPS with load-balancing methods provided by the library ALL in adaptive-precision EAM-ACE simulations of a copper nanoindentation. For a regular-grid domain decomposition, the modified tensor method of the ALL library, which conserves the simplicity and transferability of the tensor method, significantly reduces the imbalance factor of the force calculation from 3.0 to 1.7 compared to the native load-balancing method of LAMMPS. A nearly perfectly balanced system with an imbalance factor close to 1.0 can be reached by load balancing an irregular grid of domains with the recursive bisectioning method of LAMMPS and with ALL's histogram method for a staggered grid of domains. Load balancing a staggered grid with ALL is found to be significantly faster than load balancing an irregular grid with the bisectioning method of LAMMPS, but the communication costs during a regular timestep are lower for the irregular grid of domains, as a lower surface-by-volume ratio of the domains is reached. Furthermore, we suggest a strategy to find the ideal load-balancing frequency for adaptive-precision simulations.",
+      "authors": [
+        "David Immel",
+        "Godehard Sutmann"
+      ],
+      "primary_category": "physics.comp-ph",
+      "categories": [
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-16T12:56:49+00:00",
+      "link": "https://arxiv.org/pdf/2609.18604v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "load balancing for hybrid ML atomic cluster expansion and EAM interatomic potentials in MD",
+      "llm_evidence_cn": "MD中机器学习原子团簇展开与EAM混合势的负载均衡",
+      "llm_evidence": "MD中机器学习原子团簇展开与EAM混合势的负载均衡",
+      "canonical_evidence": "MD中机器学习原子团簇展开与EAM混合势的负载均衡",
+      "llm_tldr_en": "Pure machine-learning interatomic potentials are accurate but slow in parallel MD. This work studies load balancing for adaptive-precision coupling of an ML atomic cluster expansion model with a faster EAM potential, comparing LAMMPS strategies against the ALL library.",
+      "llm_tldr_cn": "纯机器学习原子间势虽精确，但在并行计算环境中成为原子尺度分子动力学模拟的性能瓶颈。本文考虑将高精度机器学习原子团簇展开模型与精度较低但快约一至两个数量级的EAM势进行时空自适应混合耦合，以获取一个数量级以上的加速。由于势贡献波动，动态负载均衡变得关键，作者比较LAMMPS的负载均衡策略与ALL库方法在自适应精度EAM-ACE模拟中的表现。该工作为大规模高效ML势驱动的原子模拟提供并行工程方案。",
+      "llm_tldr": "纯机器学习原子间势虽精确，但在并行计算环境中成为原子尺度分子动力学模拟的性能瓶颈。本文考虑将高精度机器学习原子团簇展开模型与精度较低但快约一至两个数量级的EAM势进行时空自适应混合耦合，以获取一个数量级以上的加速。由于势贡献波动，动态负载均衡变得关键，作者比较LAMMPS的负载均衡策略与ALL库方法在自适应精度EAM-ACE模拟中的表现。该工作为大规模高效ML势驱动的原子模拟提供并行工程方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.16245v1",
+      "source": "arxiv",
+      "title": "Metacognitive Steering: Learning the Structure of Scientific Judgment",
+      "abstract": "Long-horizon scientific discovery requires agents to alternate between exploration, disciplined execution, and critical reassessment as evidence changes. Current language models are trained primarily on the products of science and optimized using outcome-level signals, providing limited supervision for these process-level shifts in scientific judgment. We investigate whether such judgment can be recovered from scientist interaction traces and used to control the internal computation of a frozen frontier model. Using contrastive interventions collected during real scientific research, we identify a coordinated, low-dimensional control structure within Kimi 2.6, a trillion-parameter mixture-of-experts model. Residual analysis, attention-weight subspace alignment, and cross-layer singular value decomposition converge on a mid-depth control surface spanning key layers. We introduce Metacognitive Steering, an inference-time controller that reads the model's cognitive regime and dynamically composes layer-specific interventions for exploration, procedural convergence, or critical reassessment without modifying model parameters. Behavioral analyses show that this control produces more sustained exploration, explicit pruning, and evidence-responsive synthesis. We operationalize the method in Columbus-1, an autonomous research system that identified eight independently reproduced, attacker-reachable vulnerabilities in BlueZ and directed the design, simulation, and fabrication of a ten-foot rocket intended to land propulsively using non-throttleable solid motors. Together, these results show that process-level scientific judgment can provide supervision for interpretable, dynamic control over a model's reasoning strategy.",
+      "authors": [
+        "Vincent Karpf",
+        "Joseph Reth",
+        "Eike Gerhardt",
+        "Audrey Wang",
+        "Anna Butz",
+        "Jiehao Xing",
+        "Jialing Song",
+        "Larry Callahan"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-14T19:10:03+00:00",
+      "link": "https://arxiv.org/pdf/2609.16245v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "learning structure of scientific judgment for long-horizon discovery agents",
+      "llm_evidence_cn": "为长周期发现智能体学习科学判断结构",
+      "llm_evidence": "为长周期发现智能体学习科学判断结构",
+      "canonical_evidence": "为长周期发现智能体学习科学判断结构",
+      "llm_tldr_en": "Long-horizon discovery requires agents to shift between exploration, execution, and reassessment, yet LLMs get limited process-level supervision. The authors recover a low-dimensional control structure of scientific judgment from scientist interaction traces and steer a frozen frontier model.",
+      "llm_tldr_cn": "长周期科学发现要求智能体在探索、严格执行与批判性重估之间不断切换，但现有语言模型多基于科学产物训练，缺乏对这类过程级科学判断的监督。作者从真实科研中采集对比干预，分析冻结前沿模型的残差与注意力子空间，识别出科学判断的低维控制结构。结果显示可在 Kimi 2.6 中定位并操控该结构，为智能体的科学判断提供可解释、可调控的内部表征。",
+      "llm_tldr": "长周期科学发现要求智能体在探索、严格执行与批判性重估之间不断切换，但现有语言模型多基于科学产物训练，缺乏对这类过程级科学判断的监督。作者从真实科研中采集对比干预，分析冻结前沿模型的残差与注意力子空间，识别出科学判断的低维控制结构。结果显示可在 Kimi 2.6 中定位并操控该结构，为智能体的科学判断提供可解释、可调控的内部表征。",
+      "llm_tags": [
+        "query:ar:composite"
+      ],
+      "matched_query_tag": "query:ar:composite",
+      "matched_query_text": "Papers central to 自动科研与 AI Scientist：追踪 Research Agent、自动假设生成、实验设计、代码执行、自主迭代和科学发现闭环。, especially work that connects or combines: self-driving laboratory; autonomous experimentation; automated hypothesis generation; research agent; AI scientist; autonomous scientific discovery; self driving laboratories and autonomous experimentation for materials science, chemistry, and scientific discovery; autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning; AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments; LLM agents that autonomously perform scientific research from literature review and hypothesis generation to experimentation and result analysis.",
+      "matched_requirement_id": "req-composite-ar",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.19134v1",
+      "source": "arxiv",
+      "title": "ScienceIDE: Turning World's Scientific Codebase into Agent Learnable Environments",
+      "abstract": "Scientific code repositories encode decades of human knowledge in executable models, methods, and tools. Yet fragmented toolchains, implicit domain conventions, and specialized correctness criteria make this knowledge difficult to convert into reliable learning experience-a challenge we call the scientific experience bottleneck. We introduce ScienceIDE, infrastructure for turning the world's scientific code into programmable environments for scientific agents. Guided by expert-defined scientific cases and acceptance criteria, agents transform repositories into executable environments that support task generation, execution, and scientific verification. These environments provide a shared foundation for supervised fine-tuning, reinforcement learning, and evaluation. Using verified interaction trajectories, we train PhAI-IDE-72B, PhAI-IDE-9B, and PhAI-IDE-4B. The model family shows gains in held-out scientific-code repair and across selected general-purpose benchmarks in code, reasoning, and knowledge, providing evidence of positive transfer from scientific experience to broader capabilities. ScienceIDE lays the foundation for an integrated workspace for agent learning and scientific practice, making humanity's scientific software a shared substrate for developing scientific intelligence. Code: https://github.com/aitofound/ScienceIDE",
+      "authors": [
+        "Hejia Geng",
+        "Zesen Huang",
+        "Haoyang Li",
+        "Wenbin Li",
+        "Koutian Wu",
+        "Zihan Zhou",
+        "Yuanbo Pang",
+        "Weihao Liu",
+        "Zigong Xu",
+        "Zhiping Li",
+        "Zongzheng Zhang",
+        "Chuanfei Dong",
+        "Jiankai Sun",
+        "Tianzhe Zheng",
+        "Fengyu Xie",
+        "Yue Ma",
+        "Yueheng Shi",
+        "Tong Xie",
+        "Zonglin Di",
+        "Xianrong Liu",
+        "Qucheng Gao",
+        "Yimin Liu",
+        "Jiaming Pan",
+        "Sheng Huang",
+        "Xiao-Han Ma",
+        "Lanqing Yuan",
+        "Zhenlin Zhu",
+        "Ziang Liu",
+        "Ziyang Xu",
+        "Junkai Wang",
+        "Kangkai Liang",
+        "Jiayi Xian",
+        "Zehong Zhao",
+        "Liuwei Xu",
+        "Jingxu Xie",
+        "Peijin Zhang",
+        "Qiang Gao",
+        "Chengyi Xing",
+        "Zhe Zhao",
+        "Xi Wang",
+        "Yaopeng Xing",
+        "Xing Meng",
+        "Zhenfei Yin",
+        "Yingcheng Wu",
+        "Ling Yang"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.CY"
+      ],
+      "published": "2026-09-16T17:55:47+00:00",
+      "link": "https://arxiv.org/pdf/2609.19134v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "infrastructure turning scientific code into agent-learnable executable environments",
+      "llm_evidence_cn": "将科学代码转化为智能体可学习可执行环境的基础设施",
+      "llm_evidence": "将科学代码转化为智能体可学习可执行环境的基础设施",
+      "canonical_evidence": "将科学代码转化为智能体可学习可执行环境的基础设施",
+      "llm_tldr_en": "Scientific code repositories are hard to convert into reliable learning experience, a problem the authors call the scientific experience bottleneck. ScienceIDE turns repositories into executable environments for scientific agents supporting task generation, execution, and scientific verification.",
+      "llm_tldr_cn": "科学代码仓库凝结了数十年的可执行模型、方法与工具知识，但碎片化的工具链、隐含的领域约定与专门的正确性标准使其难以转化为可靠的学习经验，作者称之为科学经验瓶颈。本文提出ScienceIDE，一套将全球科学代码转化为科学智能体可编程环境的基础设施，由专家定义科学案例与验收标准，智能体据此把仓库改造成支持任务生成、执行与科学验证的可执行环境。这些环境为监督微调与强化学习提供共享基础，推动可执行、可验证的自主科研智能体发展。",
+      "llm_tldr": "科学代码仓库凝结了数十年的可执行模型、方法与工具知识，但碎片化的工具链、隐含的领域约定与专门的正确性标准使其难以转化为可靠的学习经验，作者称之为科学经验瓶颈。本文提出ScienceIDE，一套将全球科学代码转化为科学智能体可编程环境的基础设施，由专家定义科学案例与验收标准，智能体据此把仓库改造成支持任务生成、执行与科学验证的可执行环境。这些环境为监督微调与强化学习提供共享基础，推动可执行、可验证的自主科研智能体发展。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.19550v1",
+      "source": "arxiv",
+      "title": "Portfolio-Based Constrained Multi-Objective Bayesian Optimization for Materials Design",
+      "abstract": "Materials discovery and design campaigns can be formulated as constrained multi-objective Bayesian optimization (CMOBO) problems, within which each experimental decision negotiates between two coupled but competing goals: discovering feasible candidates and refining the underlying Pareto front. Here we recast acquisition-function choice as an adaptive policy-selection problem over a portfolio of conventional and feasibility-focused acquisition functions. This was done using two controllers: UCB-Bandit, a modified UCB multi-armed bandit, and Agentic-Switch, a multi-agent decision system driven by a large language model (LLM). Both were evaluated against fixed-policy baselines in silico across five synthetic benchmark functions and two materials design case studies. The adaptive policies performed competitively in terms of both cumulative feasibility count and feasible hypervolume improvement, while each individual acquisition function performed well for only one metric, suggesting that adaptive policies are better suited for constrained materials science problems.",
+      "authors": [
+        "Sushant Sinha",
+        "Christofer Hardcastle",
+        "Robert Robinson",
+        "Shakti Prasad Padhy",
+        "Brent Vela",
+        "Douglas Allaire",
+        "Raymundo Arroyave"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "stat.ML"
+      ],
+      "published": "2026-09-17T01:19:32+00:00",
+      "link": "https://arxiv.org/pdf/2609.19550v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Bayesian optimization for materials discovery and design",
+      "llm_evidence_cn": "面向材料发现的贝叶斯优化",
+      "llm_evidence": "面向材料发现的贝叶斯优化",
+      "canonical_evidence": "面向材料发现的贝叶斯优化",
+      "llm_tldr_en": "Materials design is cast as constrained multi-objective Bayesian optimization. The authors recast acquisition choice as adaptive policy selection over a portfolio of acquisition functions, using a bandit controller and an LLM-driven multi-agent switch, evaluated on benchmarks and materials tasks.",
+      "llm_tldr_cn": "材料发现可建模为约束多目标贝叶斯优化，每次实验决策都要在发现可行候选与精修 Pareto 前沿之间权衡。作者把采集函数选择重构为策略选择问题，采用 UCB-Bandit 多臂老虎机与 LLM 驱动的多智能体 Agentic-Switch 两种控制器。在五个合成基准函数与两个材料任务上的评估显示，自适应策略优于固定策略基线，为材料设计的实验决策提供新方案。",
+      "llm_tldr": "材料发现可建模为约束多目标贝叶斯优化，每次实验决策都要在发现可行候选与精修 Pareto 前沿之间权衡。作者把采集函数选择重构为策略选择问题，采用 UCB-Bandit 多臂老虎机与 LLM 驱动的多智能体 Agentic-Switch 两种控制器。在五个合成基准函数与两个材料任务上的评估显示，自适应策略优于固定策略基线，为材料设计的实验决策提供新方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.19837v1",
+      "source": "arxiv",
+      "title": "Machine Learning for High-Entropy Catalysts: Methods and Applications",
+      "abstract": "High-entropy alloys (HEAs) exhibit exceptional catalytic performance in various reactions due to their high configurational entropy, synergistic elemental effects, tunable electronic structures, and excellent structural stability. However, the vast compositional space of HEA catalysts makes traditional experimental and theoretical design costly and inefficient. In recent years, data-driven machine learning (ML) methods have emerged as powerful tools for studying HEAs in catalysis. Through predictive models and ML surrogates, researchers can decipher the intricate composition-structure-performance relationships of these materials. In addition, by leveraging large language models (LLMs) for knowledge extraction, hypothesis generation and validation, and as a foundation to build integrated design workflows, ML approaches can significantly accelerate the design of novel HEA catalysts. This review systematically summarizes the latest methodological advances and applications of ML methods for HEAs in catalysis, discusses the challenges, and offers insights into future research directions to support the rational design and efficient development of catalysts.",
+      "authors": [
+        "Hao Chen",
+        "Zongrui Pei",
+        "Xianglin Liu"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-17T07:42:33+00:00",
+      "link": "https://arxiv.org/pdf/2609.19837v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "data-driven machine learning and ML surrogates for high-entropy catalyst discovery",
+      "llm_evidence_cn": "数据驱动机器学习与代理模型用于高熵催化剂发现",
+      "llm_evidence": "数据驱动机器学习与代理模型用于高熵催化剂发现",
+      "canonical_evidence": "数据驱动机器学习与代理模型用于高熵催化剂发现",
+      "llm_tldr_en": "A review of data-driven machine learning for high-entropy alloy catalysts, using predictive models and ML surrogates plus LLMs for knowledge extraction and hypothesis generation to speed catalyst design.",
+      "llm_tldr_cn": "高熵合金催化剂具有优异催化性能，但其巨大组分空间使传统实验与理论设计成本高、效率低。本文综述数据驱动机器学习方法，利用预测模型与ML代理模型解析组分-结构-性能关系，并结合大语言模型进行知识抽取、假设生成与验证。研究表明机器学习可有效加速高熵催化剂的筛选与理性设计。该综述为高熵催化剂的智能化研发提供了方法框架与路线图。",
+      "llm_tldr": "高熵合金催化剂具有优异催化性能，但其巨大组分空间使传统实验与理论设计成本高、效率低。本文综述数据驱动机器学习方法，利用预测模型与ML代理模型解析组分-结构-性能关系，并结合大语言模型进行知识抽取、假设生成与验证。研究表明机器学习可有效加速高熵催化剂的筛选与理性设计。该综述为高熵催化剂的智能化研发提供了方法框架与路线图。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

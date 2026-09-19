@@ -1,0 +1,1177 @@
+A cylindrical sintering method for more realistic grain boundaries in nanocrystalline thin
+films
+Ankit Yadava,b,∗, Lucia Bajtošovác, Miroslav Cieslarc, Jan Fikara
+aInstitute of Physics of Materials, The Czech Academy of Sciences, Žižkova 22, 616 00, Brno, Czech Republic
+bCentral European Institute of Technology, Brno University of Technology, Purkyˇnova 123, 612 00, Brno, Czech Republic
+cCharles University, Faculty of Mathematics and Physics, Ke Karlovu 3, 121 16, Prague, Czech Republic
+Abstract
+Discrepancies between simulated and experimental mechanical properties in molecular dynamics simulations of nanocrystalline
+metals typically arise from the sample-construction method and the interatomic potential choice. We introduce a cylindrical sintering
+method to generate nanocrystalline aluminum thin-film samples with wider, more disordered grain boundaries than the usual Voronoi
+tessellation method, while maintaining deterministic control over grain size, shape, and orientation. Cylindrical sintered samples
+are benchmarked against hexagonal Voronoi references under identical conditions using both the classical Pascuet15 MEAM and
+tabGAP machine-learning potentials. Cylindrical sintered samples consistently show lower mechanical properties than hexagonal
+Voronoi samples due to their wider, more disordered grain boundaries — an effect independent of the choice of potential. Notably,
+changing the sample geometry and changing the interatomic potential produce comparable, additive, and independent shifts in
+predicted properties, highlighting that future molecular dynamics studies must hold both variables fixed for meaningful comparisons.
+Common neighbor and dislocation extraction analyses confirm that deformation is dominated by grain-boundary-mediated plasticity.
+Uniaxial tensile tests reveal an inverse Hall–Petch relationship for both sample types and both potentials, with mechanical properties
+decreasing monotonically as grain size reduces from 40.34 to 4.84 nm. The cylindrical sintering method offers a physically realistic,
+geometrically controlled alternative that bridges idealized Voronoi models and disordered experimental grain-boundary structures.
+Keywords: nanocrystalline aluminum, molecular dynamics, grain-boundary, inverse Hall–Petch
+1. Introduction
+Nanocrystalline (NC) metals, with mean grain sizes below
+approximately 100 nm, exhibit a combination of high strength-
+to-weight ratio, enhanced hardness, and unusual deformation
+behavior that has motivated three decades of fundamental and
+applied research [1–3]. In conventional polycrystalline metals,
+strength increases with decreasing grain size according to the
+Hall–Petch relation, σyield ∝d−1/2, as grain boundaries act as
+barriers to dislocation motion [4, 5] As the grain size is reduced
+into the deep-NC regime (d ≲20 nm), conventional dislocation-
+mediated plasticity is progressively replaced by grain-boundary-
+mediated processes such as boundary sliding, grain rotation,
+and the nucleation and absorption of partial dislocations at the
+boundaries themselves [6–8]. The macroscopic manifestation
+of this crossover is the inverse Hall–Petch effect, in which the
+flow stress decreases rather than increases with decreasing grain
+size below a characteristic length scale of order 10 nm. This
+crossover has been reproduced in MD simulations of nanocrys-
+talline metals under ultra-high strain rates [9], and a comple-
+mentary two-phase description has been proposed for nanocrys-
+talline Al thin films in which the grain-boundary region and
+grain interior are treated as mechanically distinct phases whose
+∗Corresponding author:
+Email address: ankityadav0811@gmail.com (Ankit Yadav)
+relative volume fractions set the overall grain-size dependence
+of strength [10].
+Classical molecular dynamics (MD) has been the workhorse
+method for atomistic studies of NC plasticity, yet the absolute
+mechanical properties predicted by MD systematically differ
+from those measured experimentally on NC thin films [11–13].
+Two related contributions to this gap have been identified. The
+first is that grain boundaries produced by the most widely used
+sample-creation method—Voronoi tessellation [14]—are always
+very dense and almost ideal: planar, atomically sharp, and al-
+most defect-free, in contrast to the wider, more disordered, and
+free-volume-rich boundaries observed by transmission electron
+microscopy in experimental NC films [13, 15]. Several routes
+address this limitation: introducing controlled porosity at grain
+boundaries to reintroduce natural free volume [10], using the
+melt–cool method to generate curved and atomically realistic
+boundaries directly from solidification [16–20]. A complemen-
+tary strategy, analogous to powder metallurgy sintering, is to
+build the polycrystal by sintering together individual crystalline
+particles — perfect single-crystal grains of a chosen shape and
+orientation, placed in contact and allowed to consolidate under
+controlled temperature and pressure, with grain boundaries form-
+ing dynamically as atoms diffuse across the particle interfaces
+rather than being imposed as a geometric cut. Early MD work
+along these lines sintered two or three spherical Al nanoparticles
+of 3.2–4.4 nm diameter to study the basic mechanics of neck
+arXiv:2609.15246v1  [cond-mat.mtrl-sci]  14 Sep 2026
+
+
+formation and grain rotation [21]. Later studies investigated
+pairs of spherical Al nanoparticles of 4–10 nm diameter to ex-
+amine densification kinetics and grain-boundary formation [22],
+and extended the approach to graphene-nanoplatelet-reinforced
+Al matrix composites using particles of 3.24–6.48 nm diameter,
+with sintering followed directly by tensile loading to evaluate the
+resulting mechanical properties [23]. In all these cases, sintering
+was used to study either the sintering process itself or specific
+composite systems, rather than as a general-purpose route to
+constructing well-defined polycrystalline samples for deforma-
+tion testing. The cylindrical sintering (CS) method introduced
+here takes this concept in a different direction.
+We introduce the cylindrical sintering (CS) method, in which
+cylindrical grains are cut from a hexagonal Voronoi structure and
+sintered together to produce nanocrystalline thin-film samples
+with grain boundaries that are wider and more disordered than
+those of conventional Voronoi tessellation, while retaining full
+deterministic control over grain size, shape, and orientation. The
+use of cylindrical rather than spherical grains is motivated by the
+thin-film geometry: cylindrical grains naturally reproduce the
+columnar microstructure of physical vapour-deposited thin films
+and allow free surfaces to be introduced along the film normal
+direction, which is not possible with compact spherical-particle
+assemblies. The method is demonstrated here for nanocrystalline
+aluminum across grain sizes from 4.84 to 40.34 nm. To verify
+that the observed grain-boundary characteristics and mechanical
+properties are intrinsic to the CS method rather than an artifact
+of any particular interatomic description, all simulations are
+performed with two potentials of qualitatively different character:
+the classical Pascuet15 MEAM potential [24], chosen for its
+established accuracy for Al elastic and defect properties, and the
+tabGAP machine-learning potential [25], chosen for its broad
+DFT training database covering bulk, defect, surface, liquid, and
+cascade configurations of Al.
+2. Methods
+2.1. Potential validation: single-crystal elastic constants
+The independent elastic constants C11, C12, and C44 of fcc Al
+were computed in LAMMPS by applying small homogeneous
+strains to a single-crystal cell at 0 K and 300 K, and the polycrys-
+talline elastic modulus Esc, directional Young’s moduli, Pois-
+son’s ratio ν, and Zener anisotropy index A = 2C44/(C11 −C12)
+were derived following Holec et al. [26]. Results for the Pas-
+cuet15 and tabGAP potentials are compared against the exper-
+imental values of Vallin et al. [27] in Table 1. Both potentials
+correctly reproduce the decreasing trend of elastic constants
+with increasing temperature and yield polycrystalline moduli
+at 300 K within 12–14% of experiment. The Zener anisotropy
+index approaches the experimental value of A ≈1.22 at 300 K
+for both potentials, confirming a reasonable description of the
+elastic anisotropy at the relevant simulation temperature.
+The pretrained universal CHGNet v0.3.0 potential [28] was
+also evaluated as a third candidate. It yields C44 ≈0 GPa at
+0 K, at the boundary of the Born stability criterion [29], together
+with dramatic underestimation of the directional Young’s moduli
+and a Poisson’s ratio approaching 0.5, consistent with recent
+benchmarks reporting poor elastic-property predictions from
+pretrained CHGNet [30]. CHGNet was therefore excluded from
+the subsequent nanocrystalline simulations.
+2.2. Sintering of cylindrical grains
+The cylindrical sintering (CS) method introduced here is
+inspired by Kadau et al. [31], who sintered 32 spherical Al
+nanoparticles with three different diameters in a ratio of 2:3:4
+and random orientations under 1–2 GPa at 600 K for 157.5 ps,
+followed by relaxation at 300 K. In the present work, cylindrical
+rather than spherical grains are used, motivated by the thin-film
+geometry: cylindrical grains naturally reproduce the columnar
+microstructure of physical vapour-deposited Al thin films and
+allow free surfaces to be introduced along the film normal di-
+rection. Grains were cut from hexagonal Voronoi structures
+with grain sizes ranging from 5 to 40 nm, as illustrated in Fig. 1,
+and populated with fcc Al crystals whose orientations were ran-
+domly assigned along all three crystallographic directions using
+Atomsk’s polycrystal tool with the random keyword [14].
+Ten independent configurations with different random orienta-
+tions were generated per grain size, and the mechanical proper-
+ties were subsequently averaged over these configurations.
+The sintering step must strike a balance: sufficiently aggres-
+sive to close the inter-grain voids introduced by the cylinder-
+cutting procedure, but not so aggressive as to introduce bulk
+defects and dislocations that would compromise the subsequent
+deformation simulations. After systematic trials of pressure-
+controlled NPT and volume-controlled NVT approaches across a
+range of pressures, temperatures, and holding times, the optimal
+protocol was identified as NVT deformation to 0.93 Veq at 600 K
+for 200 ps, which consistently produced void-free samples across
+all grain sizes from 10 to 40 nm without significant bulk damage.
+The resulting internal pressures are 5.3, 5.1, 5.0, and 4.9 GPa
+for 10, 20, 30, and 40 nm, respectively. The complete protocol
+consisted of three stages: NPT equilibration at 600 K for 10 ps,
+deformation to 0.93 Veq with NPT relaxation at 600 K for 200 ps,
+and cooling to 300 K over 50 ps. To satisfy periodic boundary
+conditions under fully random three-dimensional orientations,
+all samples were initially generated with a z-direction thickness
+of 20 nm, from which a central 10 nm slab was extracted after
+sintering for the tensile deformation simulations. The protocol
+was applied independently with both the Pascuet15 [24] and
+tabGAP [25] potentials.
+To isolate the effect of the cylindrical grain geometry on the
+sintered grain-boundary microstructure, the CS samples were
+compared against hexagonal Voronoi (HV) reference samples.
+The HV samples were generated from the same initial hexagonal
+Voronoi structure used to cut the cylinders, but without per-
+forming the cylinder-cutting step, and subjected to the identical
+three-stage sintering protocol in order to be directly compara-
+ble to the CS samples. The HV sample was constructed at the
+reduced box dimensions of the sintered CS sample, yielding a
+final grain size of 9.7 nm, close to the 9.6 nm of the CS sample.
+The CS sample exhibits rounded, curvilinear grain morphology
+reflecting the initial circular cross-sections, whereas the HV sam-
+ple retains a more faceted, polygonal grain structure. Average
+2
+
+
+Table 1: Single-crystal elastic constants Cij, polycrystalline elastic modulus Esc (self-consistent method), directional Young’s moduli E⟨100⟩, E⟨110⟩, E⟨111⟩, Poisson’s
+ratio ν, and Zener anisotropy index A of fcc Al computed with the Pascuet15, tabGAP, and pretrained universal CHGNet v0.3.0 [28] potentials, compared against
+experimental values at 4 K and 300 K [27]. CHGNet was evaluated only at 0 K.
+Parameter
+Pascuet15
+tabGAP
+CHGNet
+Experimental
+0 K
+300 K
+0 K
+300 K
+0 K
+4 K
+300 K
+C11 (GPa)
+112.64
+74.46
+100.79
+84.62
+60.64
+116.3
+107.3
+C12 (GPa)
+61.18
+37.54
+69.24
+48.75
+47.39
+64.8
+60.8
+C44 (GPa)
+44.96
+28.43
+36.85
+26.32
+−1.3 × 10−3
+30.9
+28.3
+Esc (GPa)
+93.78
+61.93
+71.54
+60.34
+2.2 × 10−2
+77.19
+70.46
+E⟨100⟩(GPa)
+69.57
+49.30
+44.40
+48.98
+19.06
+69.93
+63.32
+E⟨110⟩(GPa)
+97.87
+64.36
+74.30
+62.60
+−5.2 × 10−3
+78.85
+72.08
+E⟨111⟩(GPa)
+113.22
+71.67
+95.80
+68.99
+−3.9 × 10−3
+82.35
+75.56
+ν
+0.300
+0.293
+0.350
+0.334
+0.500
+0.343
+0.346
+A
+1.747
+1.54
+2.336
+1.467
+−2.0 × 10−4
+1.20
+1.217
+(c)
+(b)
+(a)
+Figure 1: Illustration of the cylindrical sintering construction procedure using the Pascuet15 [24] MEAM potential. Top left: initial hexagonal Voronoi tessellation
+with a grain size of 10 nm. Top right: cylindrical grains cut from the Voronoi structure, showing the inter-grain voids prior to sintering. Bottom: final sintered sample
+after densification and cooling, with a reduced grain size of 9.6 nm and grain-boundary widths of 8.3 Å and 9.1 Å measured at two representative grain boundaries.
+grain-boundary thicknesses measured across both sample types
+and both potentials are summarized in Table 2; the values are
+broadly comparable, suggesting that the initial grain geometry
+has a limited influence on the resulting grain-boundary thickness
+once sintering is complete.
+Table 2: Average grain-boundary thicknesses (Å) measured on the same grain
+boundaries for the CS and HV samples, all constructed with fully random
+crystallographic orientations along all three axes, using the Pascuet15 [24] and
+tabGAP [25] potentials.
+Sample
+Grain
+Pascuet15
+tabGAP
+size (nm)
+GB1 (Å)
+GB2 (Å)
+GB1 (Å)
+GB2 (Å)
+CS
+9.6
+8.3
+9.1
+7.3
+9.8
+HV
+9.7
+8.4
+7.9
+7.0
+9.7
+2.3. MD simulation setup and mechanical straining
+Molecular dynamics simulations were carried out using the
+LAMMPS software package [32] with a time step of 1 fs. Prior
+to molecular dynamics, all polycrystalline samples were relaxed
+using the conjugate-gradient (CG) method with a relative en-
+ergy tolerance of 10−1 to remove high atomic forces in the as-
+constructed configurations.
+A preliminary strain-rate sensitivity study was performed on
+a sample containing four regular hexagonal grains with a grain
+size of 10 nm (200 × 173.2 × 100 Å
+3), constructed in the same
+way as the HV reference samples, using both the Pascuet15 [24]
+and tabGAP [25] potentials at strain rates of 2 × 107, 2 × 108,
+2 × 109, and 2 × 1010 s−1. A strain rate of 2 × 109 s−1 was
+selected as the best compromise between computational cost
+and convergence toward the rate-independent regime and was
+used for all subsequent CS and HV simulations.
+Prior to tensile loading, all samples underwent energy mini-
+3
+
+
+mization with a relative tolerance of 10−8. Uniaxial tensile defor-
+mation was applied along the x-axis to 50% strain at 2 × 109 s−1,
+with zero stress maintained in the y and z directions, at 300 K
+and zero pressure using a Nosé–Hoover thermostat and baro-
+stat [33, 34]. The longitudinal and transverse engineering strains
+are defined as
+εx = ∆Lx
+Lx0
+,
+εy = ∆Ly
+Ly0
+.
+(1)
+The elastic modulus, ultimate tensile strength, and engineer-
+ing yield stress were extracted from the stress–strain curves.
+Microstructural analysis was performed in OVITO [35] using
+Common Neighbor Analysis (CNA) and the Dislocation Ex-
+traction Algorithm (DXA). DXA signals within grain-boundary
+regions should not be interpreted as a measure of plastic activity,
+since the intrinsic disorder at grain boundaries produces appar-
+ent dislocation segments in the absence of plasticity-carrying
+dislocations; DXA is used here primarily to confirm that grain
+interiors remain free of dislocation segments throughout defor-
+mation.
+3. Results and discussion
+3.1. Strain-rate sensitivity
+The mechanical response of nanocrystalline metals is sensi-
+tive to the applied strain rate [36]. In bulk metallic materials this
+dependence is often expressed through the power-law relation
+σyield = K ˙ε n,
+(2)
+where n is the strain-rate sensitivity exponent, typically 0.02–
+0.2 for metals [37–39]. Several MD studies of fcc nanocrys-
+talline metals have reported positive strain-rate sensitivity to-
+gether with transitions between qualitatively distinct deforma-
+tion regimes [40–42], motivating a systematic test across strain
+rates from 2 × 107 to 2 × 1010 s−1 on a sample with a mean grain
+size of 7.8 nm, performed independently with both the Pascuet15
+and tabGAP potentials.
+Fitting Eq. 2 to the ultimate tensile stresses across all four
+strain rates gives n = 0.08 for both Pascuet15 and tabGAP,
+consistent with the range reported for nanocrystalline Al in
+the literature [40, 41]. It should be noted that n is known to
+depend on grain size in nanocrystalline metals [40, 41], the
+value reported here is specific to the 10 nm grain size used in
+this study.
+3.2. Mechanical behavior of CS and HV samples
+The two-phase model developed in our previous work [10] is
+applied here to fit the simulated mechanical-property data for the
+CS and HV samples across the full grain-size range investigated,
+from 5 to 40 nm. The model is used here in parallel with two
+distinct potentials, the Pascuet15 [24] MEAM potential and the
+tabGAP [25] machine-learning potential, in order to isolate any
+potential-induced offset in the extracted grain-interior and grain-
+boundary parameters. The resulting fit parameters Eg, Eb, t, σg,
+σb, σ0.2g, and σ0.2b are summarized in Table 3 for both potentials
+and both sample-construction methods.
+Table 3: Fitted parameters of the two-phase model for the CS and HV samples,
+simulated using both the Pascuet15 [24] MEAM potential and the tabGAP [25]
+machine-learning potential. Eg and Eb denote the elastic moduli of the grain
+interior and grain-boundary respectively; σg, σb, σ0.2g, and σ0.2b represent the
+ultimate tensile strength and engineering yield stress contributions from the
+grain interior and grain-boundary respectively; t is the grain-boundary thickness.
+Parameter
+Pascuet15
+tabGAP
+CS
+HV
+CS
+HV
+Eg (GPa)
+57.9
+63.9
+52.2
+60.3
+Eb (GPa)
+29.6
+34.1
+17.6
+32.2
+t (nm)
+1.03
+1.94
+0.44
+2.25
+σg (GPa)
+2.46
+2.77
+1.90
+2.42
+σb (GPa)
+7.2×10−5
+0.11
+8.39×10−3
+4.9×10−2
+σ0.2g (GPa)
+2.28
+2.60
+1.85
+2.38
+σ0.2b (GPa)
+4.74×10−6
+3.42×10−5
+2.38×10−9
+5.88×10−5
+The mechanical properties of the CS and HV samples are
+presented as a function of grain size d in Figs. 2a, 2b, and 2c.
+The dual-potential design allows two distinct comparisons to
+be made: the influence of the sample-construction method (CS
+vs HV) for each potential separately, and the influence of the
+interatomic potential (Pascuet15 vs tabGAP) for each sample
+type separately. In all three figures, squares indicate CS samples
+and circles indicate HV samples (sample comparison by symbol
+shape), while red indicates the Pascuet15 potential and blue
+indicates the tabGAP potential (potential comparison by color).
+The solid and dashed lines represent the corresponding two-
+phase model fits.
+For both potentials, the CS samples consistently yield lower
+mechanical properties than the HV samples across the full grain-
+size range. For the Pascuet15 potential, the elastic modulus of
+the CS samples ranges from 46 to 56 GPa, while the HV samples
+reach 47 to 60 GPa across grain sizes from 5 to 40 nm. The
+ultimate tensile strength and engineering yield stress show the
+same offset: the CS samples reach σUTS of 2.02–2.41 GPa and
+σ0.2 of 1.87–2.23 GPa, compared to 2.00–2.67 GPa and 1.89–
+2.50 GPa, respectively, for the HV samples. A similar offset
+is observed for the tabGAP potential, where the CS samples
+yield 42–51 GPa compared to 43–56 GPa for the HV samples in
+elastic modulus, 1.63–1.88 GPa vs 1.63–2.22 GPa in σUTS, and
+1.57–1.82 GPa vs 1.58–2.19 GPa in σ0.2. The two-phase model
+parameters in Table 3 confirm this trend: for the Pascuet15 po-
+tential, Eg = 57.9 GPa for CS compared to Eg = 63.9 GPa for
+HV, with the grain-boundary elastic modulus Eb also lower at
+29.6 GPa for CS compared to 34.1 GPa for HV. The tabGAP
+potential shows the same pattern, with Eg = 52.2 GPa for CS
+versus Eg = 60.3 GPa for HV, and a markedly larger difference
+in the grain-boundary elastic modulus, Eb = 17.6 GPa for CS
+compared to Eb = 32.2 GPa for HV. The grain-boundary thick-
+ness t is also smaller for CS than for HV with both potentials: for
+Pascuet15, t = 1.03 nm for CS compared to t = 1.94 nm for HV,
+and for tabGAP, t = 0.44 nm for CS compared to t = 2.25 nm
+for HV. This combination of a thinner but considerably softer
+grain boundary in the CS samples reflects the more disordered
+grain boundaries produced by the sintering of cylindrical grains,
+as discussed in Section 2.2.
+4
+
+
+5
+10
+15
+20
+25
+30
+35
+40
+d (nm)
+42.5
+45.0
+47.5
+50.0
+52.5
+55.0
+57.5
+60.0
+E (GPa)
+Pascuet  Cylindrical sintered
+Pascuet  Hexagonal Voronoi
+tabGAP  Cylindrical sintered
+tabGAP  Hexagonal Voronoi
+(a)
+5
+10
+15
+20
+25
+30
+35
+40
+d (nm)
+1.6
+1.8
+2.0
+2.2
+2.4
+2.6
+UTS (GPa)
+Pascuet  Cylindrical sintered
+Pascuet  Hexagonal Voronoi
+tabGAP  Cylindrical sintered
+tabGAP  Hexagonal Voronoi
+(b)
+5
+10
+15
+20
+25
+30
+35
+40
+d (nm)
+1.6
+1.8
+2.0
+2.2
+2.4
+0.2 (GPa)
+Pascuet  Cylindrical sintered
+Pascuet  Hexagonal Voronoi
+tabGAP  Cylindrical sintered
+tabGAP  Hexagonal Voronoi
+(c)
+Figure 2: Size dependence of mechanical properties of nanocrystalline Al samples constructed with fully random crystallographic orientations along all three axes.
+Sample geometries: cylindrical sintered (CS, squares) and hexagonal Voronoi (HV, circles). Interatomic potentials: Pascuet15 [24] (red) and tabGAP [25] (blue): (a)
+elastic modulus E, (b) ultimate tensile strength σUTS, (c) engineering yield stress σ0.2. Solid lines indicate the two-phase model fit for CS samples and dashed lines
+for HV samples. The error bars are standard deviations over 10 differently oriented configurations.
+A closer look at the two-phase model parameters in Table 3
+reveals that the lower mechanical properties of the CS samples
+cannot be explained by the grain-boundary thickness t alone. For
+both potentials, the CS samples have a thinner grain boundary
+than the HV samples, yet they consistently exhibit lower me-
+chanical properties. The explanation lies in the combined effect
+of the grain-boundary stiffness and the grain-interior modulus:
+the CS samples have both a softer grain boundary (Eb lower
+than for HV) and a softer grain interior (Eg lower than for HV),
+and these reductions are not compensated by the thinner grain-
+boundary layer. The grain-boundary strength contributions σb
+and σ0.2b are very small for all four cases (σb ≲10−1 GPa and
+σ0.2b ≲10−4 GPa), indicating that the grain boundaries carry es-
+sentially no tensile load, so the macroscopic strength is governed
+by the grain interior while the macroscopic stiffness reflects the
+combined contributions of both phases.
+Taken together, these observations demonstrate that the two-
+phase model parameters Eg, Eb, and t together provide a more
+complete picture of the grain-boundary contribution to the me-
+chanical properties than any single parameter alone. The inter-
+play between grain-boundary thickness and stiffness gives the
+apparently unexpected result that thinner grain boundaries do
+not necessarily yield stiffer overall mechanical properties; rather,
+what matters is the combined effect of how thick the boundary
+is, how soft it is, and how stiff the surrounding grain interior
+remains.
+Comparing the two interatomic potentials for each sample
+type, the Pascuet15 potential consistently predicts higher me-
+chanical properties than the tabGAP potential across all sample
+geometries and grain sizes. For the CS samples, the elastic mod-
+ulus from Pascuet15 (46–56 GPa) is systematically higher than
+that from tabGAP (42–51 GPa). A similar offset is observed for
+the HV samples, where Pascuet15 yields 47–60 GPa compared
+to 43–56 GPa for tabGAP. This systematic offset is consistent
+with the higher elastic constants predicted by Pascuet15 at 300 K
+(Table 1). Since the same trend is reproduced independently
+for both CS and HV geometries, the potential-induced offset is
+unlikely to be an artifact of any particular sample-construction
+method; rather, it reflects intrinsic differences in how each po-
+tential describes the elastic response of the Al grain interior and
+grain boundary.
+5
+
+
+3.3. Flow stress
+While the elastic modulus, ultimate tensile strength, and en-
+gineering yield stress are extracted from the well-defined elastic
+and yield regions of the stress–strain curve, the flow stress is
+of particular interest because some studies report a Hall–Petch
+transition in flow stress at grain sizes where other mechanical
+properties still follow inverse Hall–Petch behavior [43]. Ex-
+tracting a reliable flow stress from the present simulations is,
+however, complicated by geometric instabilities that develop at
+larger grain sizes, as described below.
+To account for the inherent variability introduced by crystal-
+lographic orientation, all stress–strain curves presented in this
+subsection were obtained by averaging over ten independent sim-
+ulations performed with fully random grain orientations along
+all three axes for each grain size, for the cylindrical sintered (CS)
+samples simulated using the Pascuet15 [24] MEAM potential.
+The individual orientation-dependent responses are shown as
+gray curves in Fig. 3, while the blue curve represents the mean
+stress–strain response. The plastic region of the individual orien-
+tation configurations is inherently noisy and exhibits significant
+stress fluctuations, making it difficult to extract a reliable flow
+stress from any single curve. Averaging over ten configurations
+smooths these fluctuations and produces a mean response with
+a sufficiently stable plastic plateau from which a representative
+flow stress can be meaningfully extracted.
+For all grain sizes investigated, the stress–strain curves ex-
+hibit a well-defined yield peak. This is most likely a consequence
+of the absence of pre-existing free dislocations in the sintered
+samples: before plastic flow can begin, dislocations must first
+be nucleated from the grain boundaries under the applied stress,
+which requires a significant stress concentration and produces a
+pronounced load drop once the first dislocation sources become
+active.
+In the smaller grain-size samples (d ≤9.63 nm), the post-
+yield plastic region stabilizes into a relatively flat plateau across
+all ten orientation configurations. The flow stress for these
+samples was extracted as the statistical mean stress over the
+strain range 0.3 ≤ε ≤0.5. For the 4.84 nm sample this is
+indicated in Fig. 3a as a horizontal dashed red line at 1.90 GPa.
+The same procedure applied to the 6.76 and 9.63 nm samples,
+not shown here as their stress–strain response closely resembles
+the 4.84 nm case, yields flow stresses of 1.95 GPa and 1.87 GPa,
+respectively.
+For the larger grain sizes (d = 19.06 and 28.57 nm), progres-
+sive necking prevents the formation of a stable plateau, and the
+flow stress was instead taken as the last point on the averaged
+stress–strain curve prior to complete failure. For the 28.57 nm
+sample this is indicated in Fig. 3b as a red dot at 1.15 GPa.
+The same procedure applied to the 19.06 nm sample, not shown
+here as its response closely esembles the 28.57 nm case, yields
+a flow stress of 1.19 GPa. These values should be treated as
+lower-bound estimates of the true plastic resistance due to the
+geometric softening introduced by necking.
+For these larger grain-size samples, a qualitatively distinct
+behavior emerges in the plastic regime, as shown in Fig. 3b.
+Following the yield peak, a subset of orientation configurations
+exhibits a sharp and progressive decline in stress, in some cases
+reaching values close to zero, rather than stabilizing at a finite
+flow stress. This does not reflect a change in the intrinsic plas-
+tic resistance of the material, but instead arises from geometric
+instability: strain localizes preferentially at grain boundaries,
+leading to pronounced necking, a severe reduction in the effec-
+tive load-bearing cross-sectional area, and ultimately complete
+fracture in the most extreme cases.
+This is clearly evidenced in Fig. 4, which presents CNA vi-
+sualizations of the 28.57 nm sample at engineering strains of 0%,
+20%, 30%, and 40%. Pronounced necking is already apparent
+at 20% strain and intensifies progressively, with complete struc-
+tural failure occurring by 40% strain in several orientation con-
+figurations. The smaller grain sizes (9.63 and 19.06 nm) show
+qualitatively similar but progressively less severe localization,
+with the 9.63 nm sample deforming relatively homogeneously
+up to 50% strain.
+Including post-necking and post-fracture data in the sta-
+tistical average would artificially deflate the mean flow stress,
+as the near-zero stress values recorded after fracture carry no
+physically meaningful information about the material’s plastic
+resistance. To avoid this, stress–strain data recorded after the
+onset of severe necking or fracture were excluded from the av-
+eraging procedure for the affected orientation configurations.
+For these larger grain-size cases, the averaging window was
+restricted to the stable region immediately following the yield
+peak and prior to the onset of geometric failure, rather than the
+standard 0.3 ≤ε ≤0.5 range. Consequently, the flow stress
+values reported for d = 19.06 and 28.57 nm should be treated
+as lower-bound estimates of the true steady-state flow stress, or
+as indicators of the onset of plastic instability, rather than fully
+converged steady-state values.
+This size-dependent transition from stable homogeneous
+plastic flow to localized necking and fracture is physically consis-
+tent with the grain-size dependence of deformation mechanisms
+in nanocrystalline metals. At smaller grain sizes, the high grain-
+boundary volume fraction promotes distributed GB-mediated
+plasticity, suppressing strain localization and stabilizing plastic
+flow. As grain size increases, intragranular dislocation activity
+becomes more prominent, deformation becomes less uniformly
+distributed, and the sample becomes increasingly susceptible to
+macroscopic strain localization and geometric instability under
+tensile loading.
+To correct for the geometric change in cross-sectional area
+due to lateral contraction during tensile loading, the constant-
+volume hypothesis was applied [44, 45]. In the present simu-
+lations the z-direction is a free surface with vacuum above and
+below the slab; as deformation proceeds the free surface be-
+comes increasingly wavy, particularly at larger grain sizes where
+necking develops, so the z box dimension cannot be used to
+estimate the true load-bearing cross-sectional area. Only the x
+and y box dimensions are therefore used. Under uniaxial tensile
+loading along the x-axis, the box expands in the x-direction and
+contracts in the y-direction. The geometric correction factor at
+6
+
+
+0.0
+0.1
+0.2
+0.3
+0.4
+0.5
+ε
+0.5
+1.0
+1.5
+2.0
+σ (GPa)
+10 different orientations
+Average
+Flow Stress: 1.90 GPa
+(a) 4.84 nm
+0.00
+0.05
+0.10
+0.15
+0.20
+ε
+0.0
+0.5
+1.0
+1.5
+2.0
+2.5
+σ (GPa)
+10 different orientations
+Average
+Flow Stress: 1.15 GPa
+(b) 28.57 nm
+Figure 3: Stress–strain response of cylindrical sintered (CS) samples computed using the Pascuet15 [24] MEAM potential, with fully random crystallographic
+orientations along all three axes. Simulations were performed for average grain sizes of 4.84, 6.76, 9.63, 19.06, and 28.57 nm, each averaged over 10 random
+orientation configurations. Individual orientation-dependent curves are shown in gray, while the blue curve represents the mean stress–strain response. The 6.76 and
+9.63 nm cases closely resemble the 4.84 nm response shown in panel (a) and are therefore not shown separately; likewise, the 19.06 nm case closely resembles the
+28.57 nm response shown in panel (b) and is omitted for brevity.
+ 
+0% 
+20% 
+30% 
+40% 
+z
+10 nm
+y
+x = tensile direction  
+Figure 4: Microstructural evolution of the cylindrical sintered (CS) sample with an average grain size of 28.57 nm at tensile strains of 0%, 20%, 30%, and 40%,
+simulated using the Pascuet15 [24] MEAM potential and visualized via Common Neighbor Analysis (CNA) as implemented in OVITO [35]. Green and white atoms
+represent crystalline and disordered grain-boundary atoms, respectively. The sample has free surfaces in the z-direction (film normal) with a slab thickness of 10 nm;
+tensile loading is applied along the x-axis and the y-direction is unconstrained. Pronounced necking and strain localization are visible from 20% strain onward,
+illustrating the geometric instability that complicates flow stress extraction at this grain size.
+strain ε is computed as
+f(ε) = x(ε) y(ε)
+x0 y0
+,
+(3)
+where x0, y0 are the box dimensions at zero strain and x(ε), y(ε)
+are the box dimensions at the strain at which the flow stress is
+extracted. The corrected flow stress is then
+σcorrected = σeng(ε)f(ε),
+(4)
+This approach accounts directly for the actual lateral contrac-
+tion of the simulation box at the point of flow stress extraction,
+without assuming a uniform strain distribution across the slab
+thickness, making it more physically appropriate for samples
+undergoing localized necking.
+The corrected and uncorrected flow stress values as a func-
+tion of grain size are presented in Fig. 5. For the smaller grain
+sizes (d ≤9.63 nm), where plastic flow is stable and necking is
+absent, the correction is moderate, with corrected values of 1.46–
+1.52 GPa compared to uncorrected values of 1.87–1.95 GPa. For
+the larger grain sizes (d = 19.06 and 28.57 nm), the correction
+has a more significant effect: the uncorrected flow stress drops
+sharply to approximately 1.19 and 1.15 GPa, respectively, due
+to geometric softening caused by necking, while the corrected
+values of 1.31 and 1.32 GPa are higher and more representative
+of the true plastic resistance of the material.
+Wang et al. [43] reported a transition from inverse Hall–
+Petch to Hall–Petch behavior in nanocrystalline Al at a critical
+grain size of 10–12 nm for a two-dimensional equiaxial grain
+structure. In the present study, no such transition is observed
+within the grain-size range investigated (4.84–40.34 nm). The
+corrected flow stress continues to decrease monotonically with
+increasing grain size, and the magnitude of this decrease is
+consistent with inverse Hall–Petch behavior throughout. The
+apparent flattening of the corrected flow stress curve at larger
+grain sizes does not constitute evidence of a Hall–Petch transi-
+tion, as the decrease remains gradual and the values do not show
+the increasing trend with grain size that would be characteristic
+of conventional dislocation-mediated strengthening. It should
+furthermore be noted that for the larger grain sizes (d = 19.06
+7
+
+
+5
+10
+15
+20
+25
+Grain Size (d)
+1.2
+1.3
+1.4
+1.5
+1.6
+1.7
+1.8
+1.9
+Flow Stress ( )
+Corrected Flow Stress
+Uncorrected Flow Stress
+Figure 5: Comparison of corrected and uncorrected flow stress as a function
+of mean grain size d for cylindrical sintered (CS) samples simulated using
+the Pascuet15 [24] MEAM potential. The correction accounts for the lateral
+contraction of the simulation box using the constant-volume hypothesis, applied
+at the strain at which the flow stress is extracted. The difference between the two
+curves is most pronounced for the larger grain sizes, where necking introduces
+geometric softening.
+and 28.57 nm), the extraction of a reliable flow stress is compro-
+mised by the onset of necking and geometric instability, making
+it difficult to draw definitive conclusions about the flow stress
+behavior in this regime. A reliable determination of whether a
+Hall–Petch transition occurs at larger grain sizes would require
+either larger simulation boxes that suppress geometric instability
+or alternative loading protocols that avoid the onset of necking.
+3.4. Deformation mechanisms
+Fig. 6 presents the microstructural evolution of the cylin-
+drical sintered (CS) sample with a grain size of 9.63 nm at 0%
+and 16% tensile strain, constructed with fully random crystal-
+lographic orientations along all three axes and simulated using
+the Pascuet15 [24] MEAM potential. The microstructural evolu-
+tion is visualized using Common Neighbor Analysis (CNA), as
+implemented in OVITO [35].
+A general observation concerns the interpretation of the Dis-
+location Extraction Algorithm (DXA) at grain boundaries. DXA
+identifies dislocation segments from the deviation of atomic
+neighborhoods from the ideal fcc structure. At grain boundaries,
+however, the atomic arrangement is intrinsically disordered, and
+this disorder produces signals that DXA attributes to disloca-
+tion segments even when no plasticity-carrying dislocations are
+present. The dislocation densities and dislocation types reported
+by DXA within the grain-boundary regions should therefore not
+be interpreted as a quantitative measure of plastic activity. In
+both CS and HV samples investigated in this work, essentially
+no dislocation segments are detected inside the grain interi-
+ors throughout the deformation, confirming that plasticity in
+these nanocrystalline samples is mediated by grain-boundary
+processes rather than by intragranular dislocation glide.
+At 0% strain, the grain boundaries are relatively narrow
+and well-defined, with only isolated defects at triple junctions
+and no dislocations present within the grain interiors. By 16%
+strain, the grain boundaries have broadened considerably and
+the grain morphology has evolved noticeably under the imposed
+uniaxial tension. Since the CS samples are cut as cylindrical
+grains from an underlying hexagonal Voronoi tessellation, each
+grain begins with an approximately hexagonal cross-section.
+During straining, two of the six grain boundaries of each grain
+progressively shrink, while the remaining four extend, so that the
+initially hexagonal cross-section evolves into a roughly square
+shape at large strains. This grain-shape evolution is a direct
+geometric consequence of the imposed uniaxial loading and is
+observed consistently across the CS samples for both interatomic
+potentials investigated.
+(a) 0% CNA
+(b) 16% CNA
+Figure 6: Microstructural evolution of the cylindrical sintered (CS) sample with
+an average grain size of 9.63 nm and fully random crystallographic orientations
+along all three axes, at 0% and 16% tensile strain, simulated using the Pas-
+cuet15 [24] MEAM potential and analyzed using OVITO [35] via Common
+Neighbor Analysis (CNA).
+Unlike the 9.63 nm sample, dislocations are present within
+the grain interiors already at 0% strain. This is a consequence
+of the sintering protocol: the sintered sample was subjected to
+a compaction step at 93% of its equilibrium volume under an
+NVT ensemble to eliminate residual voids prior to tensile load-
+ing. In the smaller 9.63 nm sample, the higher grain-boundary
+area-to-volume ratio provides sufficient sink density for these
+compaction-induced dislocations to be absorbed by the surround-
+ing grain boundaries during the NVT relaxation. In the larger
+19.06 nm sample, the greater distance between grain boundaries
+and the lower sink density means that not all intragranular dis-
+locations escape within the relaxation time, leaving a residual
+intragranular dislocation content at the start of the tensile simu-
+lation.
+Despite this difference in the initial state, the overall deforma-
+tion morphology follows the same trend as for the smaller sam-
+ple: the hexagonal grain cross-sections evolve toward roughly
+square shapes, and the residual intragranular dislocations pro-
+gressively diminish during straining, having essentially vanished
+by 16% strain through migration to the grain boundaries or free
+surfaces. Their disappearance during the early stages of deforma-
+tion suggests that their presence does not significantly influence
+the macroscopic mechanical response, and the dominant defor-
+mation mechanism remains grain-boundary-mediated plasticity,
+consistent with the smaller sample.
+4. Conclusions
+This work has introduced the cylindrical sintering (CS)
+method for constructing nanocrystalline aluminum thin-film sam-
+ples with fully random three-dimensional grain orientations, and
+8
+
+
+benchmarked it against a sintered hexagonal Voronoi (HV) refer-
+ence under identical sintering and equilibration conditions using
+two qualitatively different interatomic potentials, the classical
+Pascuet15 MEAM potential and the tabGAP machine-learning
+potential. The principal findings are as follows.
+• Cylindrical sintering produces wider and softer grain
+boundaries than sintered Voronoi tessellation. The two-
+phase model parameters show that the CS samples have a
+softer grain interior and a markedly softer grain boundary
+than the HV samples for both potentials, even though the
+fitted grain-boundary thickness is smaller for CS than for
+HV. This effect is reproduced consistently with both po-
+tentials, confirming that it is a genuine consequence of the
+sintering method rather than an artifact of any particular
+interatomic description.
+• Inverse Hall–Petch behavior across the full grain-size
+range. The elastic modulus, ultimate tensile strength, and
+engineering yield stress all decrease monotonically with
+decreasing grain size from 40.34 down to 4.84 nm for
+both CS and HV samples and for both potentials, with
+no transition to conventional Hall–Petch strengthening
+observed within this range.
+• The sample-construction method and the interatomic
+potential contribute additive, largely independent off-
+sets. Switching from HV to CS shifts the predicted me-
+chanical properties by a comparable margin across both
+potentials, and switching from Pascuet15 to tabGAP shifts
+them by a similar fraction across both sample geometries.
+Disentangling the two effects requires the kind of fully
+crossed potential-by-method study performed here.
+The cylindrical sintering method provides a route to physi-
+cally realistic, geometrically controlled nanocrystalline samples
+that bridges the gap between idealized Voronoi geometries and
+the more disordered boundaries produced by melt–cool methods,
+and is particularly suited to MD studies of columnar thin-film mi-
+crostructures in which deterministic grain geometry is required
+alongside realistic grain-boundary structure.
+Declaration of Competing Interest
+The authors declare that they have no known competing
+financial interests or personal relationships that could have ap-
+peared to influence the work reported in this paper.
+Acknowledgments
+This work was supported by the Ministry of Education,
+Youth and Sports of the Czech Republic under the Operational
+Programme Johannes Amos Comenius (OP JAK), project No.
+CZ.02.01.01/00/23_020/0008549 (PSSITE). The authors also
+acknowledge financial support from the INTER-COST project
+(grant no. LUC24093). Computational resources were provided
+by the e-INFRA CZ project (ID: 90254). The INTER-COST
+and e-INFRA CZ projects are supported by the Ministry of
+Education, Youth and Sports of the Czech Republic.
+Data availability
+Data will be made available on request.
+References
+[1] H. Gleiter, Nanocrystalline materials, Progress in Materials
+Science 33 (1989) 223–315. doi:https://doi.org/10.
+1016/0079-6425(89)90001-7.
+[2] M. Meyers, A. Mishra, D. Benson, Mechanical properties
+of nanocrystalline materials, Progress in Materials Science
+51 (2006) 427–556. doi:https://doi.org/10.1016/j.
+pmatsci.2005.08.003.
+[3] K. Kumar, H. Van Swygenhoven, S. Suresh, Mechanical
+behavior of nanocrystalline metals and alloys11the golden
+jubilee issue—selected topics in materials science and engi-
+neering: Past, present and future, edited by s. suresh, Acta
+Materialia 51 (2003) 5743–5774. doi:https://doi.org/
+10.1016/j.actamat.2003.08.032, the Golden Jubilee
+Issue. Selected topics in Materials Science and Engineer-
+ing: Past, Present and Future.
+[4] E. O. Hall, The deformation and ageing of mild steel: III
+Discussion of results, Proceedings of the Physical Society.
+Section B 64 (1951) 747. doi:10.1088/0370-1301/64/
+9/303.
+[5] N. J. Petch, The cleavage strength of polycrystals, Journal
+of the Iron and Steel Institute 174 (1953) 25–28.
+[6] J. Schiøtz, F. D. D. Tolla, K. W. Jacobsen, Softening of
+nanocrystalline metals at very small grain sizes, Nature
+391 (1998) 561–563. doi:10.1038/35328.
+[7] H. Van Swygenhoven, A. Caro,
+Plastic behavior of
+nanophase metals studied by molecular dynamics, Physi-
+cal Review B - Condensed Matter and Materials Physics
+58 (1998) 11246 – 11251. doi:10.1103/PhysRevB.58.
+11246, cited by: 179.
+[8] V. Yamakov, D. Wolf, S. Phillpot, A. Mukherjee, H. Gleiter,
+Deformation-mechanism map for nanocrystalline metals
+by molecular-dynamics simulation, Nature materials 3
+(2004) 43–47. doi:10.1038/nmat1035.
+[9] X. Liu, K. Gao, L. Huang, P. Chen, J. Yang,
+Effects
+of grain size on mechanical properties of nanopolycrys-
+talline fe-al alloy, Processes 13 (2025) 2462. doi:10.3390/
+pr13082462.
+[10] A. Yadav, L. Bajtošová, M. Cieslar, J. Fikar, Two-phase
+model for inverse hall–petch effect in nanocrystalline
+thin film: Atomistic simulation study, Acta Materialia
+276 (2024) 120084. doi:https://doi.org/10.1016/j.
+actamat.2024.120084.
+[11] M. Haque, M. Saif, Strain gradient effect in nanoscale thin
+films, Acta Materialia 51 (2003) 3053–3061. doi:https:
+//doi.org/10.1016/S1359-6454(03)00116-2.
+9
+
+
+[12] J. Rajagopalan, M. Saif, Effect of microstructural het-
+erogeneity on the mechanical behavior of nanocrystalline
+metal films, Journal of Materials Research 26 (2011) 2826–
+2832. doi:10.1557/jmr.2011.316.
+[13] L. Bajtošová, B. Kˇrivská, R. Králík, J. Veselý, J. Hanuš,
+P. Harcuba, J. Fikar, A. Yadav, M. Cieslar, Deformation
+mechanisms of Al thin films: In-situ TEM and molecular
+dynamics study, Scripta Materialia 215 (2022) 114688.
+doi:10.1016/j.scriptamat.2022.114688.
+[14] P. Hirel, Atomsk: A tool for manipulating and converting
+atomic data files, Computer Physics Communications 197
+(2015) 212–219. doi:10.1016/j.cpc.2015.07.012.
+[15] T. A. Sharp, S. L. Thomas, E. D. Cubuk, S. S. Schoenholz,
+D. J. Srolovitz, A. J. Liu, Machine learning determination
+of atomic dynamics at grain boundaries, Proceedings of the
+National Academy of Sciences 115 (2018) 10943–10947.
+doi:10.1073/pnas.1807176115.
+[16] A. Yadav, L. Bajtošová, M. Cieslar, J. Fikar, Realistic
+grain boundaries in nanocrystalline thin films, Modelling
+and Simulation in Materials Science and Engineering 33
+(2025) 055018. doi:10.1088/1361-651X/ade551.
+[17] A. Mahata, M. Asle Zaeem,
+Evolution of solidifi-
+cation defects in deformation of nano-polycrystalline
+aluminum,
+Computational Materials Science 163
+(2019)
+176–185.
+doi:https://doi.org/10.1016/j.
+commatsci.2019.03.034.
+[18] Z. Hou, Z. Tian, R. Liu, K. Dong, A. Yu, Formation mech-
+anism of bulk nanocrystalline aluminium with multiply
+twinned grains by liquid quenching: A molecular dynam-
+ics simulation study, Computational Materials Science
+99 (2015) 256–261. doi:https://doi.org/10.1016/j.
+commatsci.2014.12.037.
+[19] Y. Shibuta, S. Sakane, E. Miyoshi, S. Okita, T. Takaki,
+M. Ohno, Heterogeneity in homogeneous nucleation from
+billion-atom molecular dynamics simulation of solidifica-
+tion of pure metal, Nature Communications 8 (2017) 10.
+doi:10.1038/s41467-017-00017-5.
+[20] Z. Hou, Z. Tian, Y. Mo, R. Liu, J. Wang, X. Shuai,
+K. Dong,
+Atomic dynamics of grain boundaries in
+bulk nanocrystalline aluminium: A molecular dynam-
+ics simulation study, Computational Materials Science
+108 (2015) 177–182. doi:https://doi.org/10.1016/
+j.commatsci.2015.06.039.
+[21] J. S. Raut, R. B. Bhagat, K. A. Fichthorn,
+Sinter-
+ing of aluminum nanoparticles: A molecular dynamics
+study,
+Nanostructured Materials 10 (1998) 837–851.
+doi:10.1016/S0965-9773(98)00120-2.
+[22] J. Jiang, P. Chen, W. Sun, Monitoring micro-structural
+evolution during aluminum sintering and understanding
+the sintering mechanism of aluminum nanoparticles: A
+molecular dynamics study, Journal of Materials Science
+& Technology 57 (2020) 92–100. doi:10.1016/j.jmst.
+2020.03.068.
+[23] H. He, Y. Rong, L. Zhang,
+Molecular dynamics stud-
+ies on the sintering and mechanical behaviors of graphene
+nanoplatelet reinforced aluminum matrix composites, Mod-
+elling and Simulation in Materials Science and Engineering
+27 (2019). doi:10.1088/1361-651X/ab2095.
+[24] M. Pascuet, J. Fernández,
+Atomic interaction of the
+MEAM type for the study of intermetallics in the Al–U
+alloy, Journal of Nuclear Materials 467 (2015) 229–239.
+doi:10.1016/j.jnucmat.2015.09.030.
+[25] A. Fellman, J. Byggmästar, F. Granberg, K. Nordlund,
+F. Djurabekova, Fast and accurate machine-learned in-
+teratomic potentials for large-scale simulations of cu, al,
+and ni, Phys. Rev. Mater. 9 (2025) 053807. doi:10.1103/
+PhysRevMaterials.9.053807.
+[26] D. Holec, M. Friák, J. Neugebauer, P. Mayrhofer, Trends
+in the elastic response of binary early transition metal ni-
+trides, Physical Review B 0641018520 (2012). doi:10.
+1103/PhysRevB.85.064101.
+[27] J. Vallin, M. Mongy, K. Salama, O. Beckman, Elastic
+constants of aluminum, Journal of Applied Physics 35
+(1964) 1825–1826. doi:10.1063/1.1713749.
+[28] B. Deng, P. Zhong, K. Jun, J. Riebesell, K. Han, C. J.
+Bartel, G. Ceder, CHGNet as a pretrained universal neural
+network potential for charge-informed atomistic modelling,
+Nature Machine Intelligence 5 (2023) 1031–1041. doi:10.
+1038/s42256-023-00716-3.
+[29] M. Born, K. Huang, Dynamical Theory of Crystal Lattices,
+Oxford University Press, Oxford, 1954.
+[30] P. Gao, H. Wang,
+Benchmarking universal machine
+learning interatomic potentials for elastic property predic-
+tion, arXiv preprint (2025). doi:10.48550/arXiv.2510.
+22999. arXiv:2510.22999.
+[31] K. Kadau, P. S. Lomdahl, B. L. Holian, T. C. Germann,
+D. Kadau, P. Entel, D. E. Wolf, M. Kreth, F. Westerhoff,
+Molecular-dynamics study of mechanical deformation in
+nano-crystalline aluminum,
+Metallurgical and Materi-
+als Transactions A 35 (2004) 2719–2723. doi:10.1007/
+s11661-004-0217-2.
+[32] S. Plimpton, Fast parallel algorithms for short-range molec-
+ular dynamics,
+Journal of Computational Physics 117
+(1995) 1–19. doi:10.1006/jcph.1995.1039.
+[33] S. Nosé, A molecular dynamics method for simulations
+in the canonical ensemble, Molecular Physics 52 (1984)
+255–268. doi:10.1080/00268978400101201.
+[34] W. G. Hoover, Canonical dynamics: Equilibrium phase-
+space distributions, Phys. Rev. A 31 (1985) 1695–1697.
+doi:10.1103/PhysRevA.31.1695.
+10
+
+
+[35] A. Stukowski, Structure identification methods for atom-
+istic simulations of crystalline materials, Modelling and
+Simulation in Materials Science and Engineering 20 (2012)
+045021. doi:10.1088/0965-0393/20/4/045021.
+[36] M. A. Meyers, K. K. Chawla, Mechanical Behavior of
+Materials, 2 ed., Cambridge University Press, 2008.
+[37] M. Kassner, M.-T. Pérez-Prado, Five-power-law creep in
+single phase metals and alloys, Progress in Materials Sci-
+ence 45 (2000) 1–102. doi:https://doi.org/10.1016/
+S0079-6425(99)00006-7.
+[38] R. S. Rosen, S. P. Paddon, M. E. Kassner, The variation of
+the yield stress of ti alloys with strain rate at high tempera-
+tures, Journal of Materials Engineering and Performance 8
+(1999) 361–367. doi:10.1361/105994999770346927.
+[39] L. Gambirasio, E. Rizzi,
+An enhanced johnson–cook
+strength model for splitting strain rate and temperature
+effects on lower yield stress and plastic flow, Computa-
+tional Materials Science 113 (2016) 231–265. doi:https:
+//doi.org/10.1016/j.commatsci.2015.11.034.
+[40] D. Cabral, I. Borges, R. R. d. Avillez, J. Nichele, Molecular
+dynamics investigation of strain rate effects on yield stress
+in cubic nanocrystalline aluminum (2025). doi:10.2139/
+ssrn.5475980, available at SSRN.
+[41] L. Pastor-Abia, M. J. Caturla, E. SanFabián, G. Chiappe,
+E. Louis, Abnormal stress drop at the yield point of alu-
+minum nanowires: A molecular dynamics study, Phys.
+Rev. B 83 (2011) 165441. doi:10.1103/PhysRevB.83.
+165441.
+[42] D. Ouyang, R. Mao, L. Zhang, S. Liang, J. Song,
+Study on the tensile properties of al-zn-mg alloy based
+on molecular dynamics,
+Engineering Failure Analysis
+155 (2024) 107752. doi:https://doi.org/10.1016/j.
+engfailanal.2023.107752.
+[43] F. Wang, L. Li, X. Jiang, X. Wang, Y. Hu, Grain size de-
+pendence of dissipation mechanisms in nanocrystalline alu-
+minum using molecular dynamics simulations, Nano Ma-
+terials Science (2025). doi:https://doi.org/10.1016/
+j.nanoms.2025.01.001.
+[44] G. Dieter, D. Bacon, D. Bacon, Mechanical Metal-
+lurgy, Materials Science and Engineering Series, McGraw-
+Hill, 1988. URL: https://books.google.cz/books?
+id=hlabmB3e8XwC.
+[45] J. M. Choung, S. R. Cho,
+Study on true stress cor-
+rection from tensile tests,
+Journal of Mechanical Sci-
+ence and Technology 22 (2008) 1039–1051. doi:10.1007/
+s12206-008-0302-3.
+11
