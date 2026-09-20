@@ -1,0 +1,221 @@
+Title: AI for Science with GPT-6 Astra: Thermal Design and Electrothermal Analysis of 2D CFET
+
+URL Source: https://arxiv.org/pdf/2609.17123v1
+
+Published Time: Wed, 16 Sep 2026 01:12:50 GMT
+
+Number of Pages: 4
+
+Markdown Content:
+# AI for Science with GPT-6 Astra: Thermal Design and Electrothermal Analysis of 2D CFET 
+
+Min-Hui Kim 1, Khushi Sharma 2, Sarah Zhang 3, Ye Wang 4* 
+
+> 1
+
+Graduate School of Semiconductor Materials and Devices, Ulsan National Institute of Science and Technology (UNIST), Ulsan 44919, Republic of Korea 
+
+> 2
+
+Materials Science and Engineering, National University of Singapore, Singapore 
+
+> 3
+
+Materials Science and Engineering, Cornell University, Ithaca, NY, USA 
+
+> 4
+
+Department of Applied Physics and Science Education, Technische Universiteit Eindhoven, Eindhoven, The Netherlands 
+
+> *
+
+Corresponding author: y.wang19@tue.nl The first three authors are listed alphabetically by surname. 
+
+This work has been submitted to the IEEE for possible publication. Copyright may be transferred without notice, after which this version may no longer be accessible. 
+
+Abstract —Thermal optimization of 2D CFET inverters requires testing structural proposals against their electrical costs. We examine these research tasks using an AI agent workflow within a supplied electrothermal model. At 12 nm, Astra selects aredistributed source-interconnect geometry, while a coordinating agent proposes a substrate-directed heat-removal path. The combined design reduces peak temperature rise by 1.67 K at fixed metal volume and 20 μW. A subsequent metal-resistance sensitivity gives about 0.6-K inverter cooling alongside a 2% nFET on-current loss. Effective contact-length scaling further shows that lower temperature can accompany higher thermal resistance when current falls. Reproduction identifies agreeing implementations and retains a 104.95-K failure for diagnosis. These results show that an AI scientist workflow can propose thermal structures, test them under common constraints, and quantify their electrical cost. 
+
+Index Terms —GPT-6, AI for science, two-dimensional materials, 2D CFET, electrothermal modeling, thermal management. 
+
+I. I NTRODUCTION 
+
+Two-dimensional channels support strong electrostatic con-trol and dense complementary field-effect transistor (CFET) integration [1]. Stacking n- and p-channel devices concen-trates heat within one footprint, where dielectrics and thermal boundary resistances hinder its removal [2]–[4]. In an inverter, temperature also changes transistor currents and redistributes power. Thermal designs must therefore be evaluated under circuit operation as well as a prescribed heat load. Finding that design requires deciding which geometry to test, how to compare candidates fairly, and what to investi-gate next. Researchers ordinarily make these decisions when using TCAD solvers [5]. AI-scientist frameworks that connect hypothesis generation to code execution [6] motivate testing whether agents can undertake such tasks in CMOS logic research. Within a supplied Python model and fixed metal budget, As-tra searches interconnect geometries and a coordinating agent proposes a via extension. We evaluate the resulting inverter, Human input: goal, model, constraints  
+
+> GPT-6 Astra
+> Propose hypothesis Plan simulations
+> Coordinating agent
+> Propose next design Interpret results Thermal solver Inverter solver
+> Tool calls Results
+> Separate agent reruns: code reproduction
+
+Fig. 1. Agent workflow within a supplied model. Astra plans the interconnect search; the coordinating agent interprets the trend and proposes the via extension. Tool calls execute the tests; separate reruns check code consistency. 
+
+distinguish the agents’ contributions through search records, and check implementation consistency through reproduction. II. M ETHODOLOGY AND DEVICE MODEL 
+
+A. Thermal Model and Electrical Loading 
+
+The search uses four MoS 2 sheets above four WSe 2 sheets (Lg = 12 nm, width 40 nm, heated length 16 nm; Table III). Source local interconnects join each tier’s sheet contacts; their widths vary while contact length stays fixed. Channel cross-plane, metal and dielectric conductivities are 2, 25 and 1.2 W m −1K−1.We solve anisotropic steady-state heat conduction by finite volumes, including thermal boundary resistance. The bottom is fixed at 300 K; the top exchanges heat with a 300-K bath (Table III). Fixed-power tests use 20 μW, 30% contact dissipation and Rcm = 5 m2K/GW, with constant conduc-tivities and no interconnect Joule heating. Energy balance, source normalization and reciprocity are checked. Refining the original fixed-power comparison changes its improvement by 0.004 K; monolayers remain one cell thick. To test circuit operation, we instead determine power from the inverter currents at VDD = 0 .7 V. Gate lengths are 8, 12 and 32 nm; follow-up width/contact scans cover all three. Both arXiv:2609.17123v1 [cond-mat.mtrl-sci] 15 Sep 2026 316210 85497              
+
+> 46810 12
+> Upper interconnect width (nm)
+> −0.4
+> −0.2 0.0 0.2 0.4
+> Change from baseline (%)  Rth , fixed volume
+> Ion ,n, fixed volume
+> Rth , fixed wp
+> 812 20 30
+> Eff ective contact length (nm)
+> −15
+> −10
+> −505
+> Change from baseline (%)
+> Rth ,peak
+> Ion ,n
+> 300 350 400 440
+> Temperature (K)
+> xyz
+
+(a) Selected device temperature                   
+
+> 1n channel (MoS 2)2p channel (WSe 2)3Source contact 4Drain contact 5Gate metal
+> 6Gate dielectric 7Inter-tier dielectric 8Source interconnect 9Source via 10 Substrate
+
+(b) Width at fi xed position (c) Contact-length sensitivity           
+
+> Lg= 12 nm; Lc= 20 nm
+> Lg= 12 nm; wn=wp= 8 nm Assumed LT= 20 nm
+
+Fig. 2. Thermal design and electrical cost. (a) Selected device at 20 μW, Pn/P p = 2 , Rcm = 5 m2K/GW. At Lg = 12 nm, (b) upper width varies at fixed metal volume or fixed lower width; (c) effective contact length varies. Changes are relative to wn = wp = 8 nm, Lc = 20 nm. Rth,peak uses fixed 20 μW; self-heated Ion,n includes metal resistance at VGS = VDS = 0 .7 V. 
+
+gates share an input, and their interconnected drains form the output. We solve 
+
+In(Vin , V out , T n) = Ip(VDD − Vin , V DD − Vout , T p) (1) together with T = 300 K + Hp , where H maps chan-nel/contact powers to channel-average temperatures. The charge-sheet current model accounts for finite oxide thick-ness [10], [11], mobility proportional to T −1.35 and saturation velocity proportional to T −0.5. The n/p width-normalized con-tact resistances are 500/800 Ω μm per contact. Their voltage drops determine contact heating, replacing the prescribed 30% fraction; current balance gives total power PDC = VDD I.A follow-up sensitivity adds finite-volume metal conduc-tion, voltage drops and Joule heating, assuming ρm =2.93 × 10 −7 Ωm. Effective contact-length scaling uses 
+
+Rc(Lc)/R c(L0) = tanh( L0/L T )/ tanh( Lc/L T ) [17], with 
+
+L0 = LT = 20 nm and the above reference resistances. Injection beneath a top contact is not resolved. Width scans compare fixed metal volume with fixed lower width; contact-length scans change footprint and metal volume. 
+
+B. Agent Roles and Structural Search 
+
+Astra tests whether widening the hotter upper source in-terconnect and moving it inward improves cooling, using the requested Ultra setting (Fig. 1). The objective J(d) = max r∈{ 0.5,1,2} ∆Tmax (d, r ) minimizes the worst peak rise above 300 K over power ratios r = Pn/P p. All candidates preserve the same metal volume, top metal area, heat sources and thermal boundaries. The coordinating agent identifies the reversed width trend and proposes substrate-directed vias. No equivalent Astra acknowledgement is documented, so its sweep is distinguished from this interpretation. Design families were specified before evaluation and candidate results retained; the search was adaptive, not blind. 
+
+TABLE I THERMAL PERFORMANCE OF DESIGN STAGES ON A COMMON MESH 
+
+Structure ∆Tmax (K) Reduction (K) Baseline 141.63 0.00 Redistributed interconnect 140.75 0.88 Substrate-directed path 140.83 0.80 Combined 139.96 1.67 
+
+n-on-p; P = 20 μW, Rcm = 5 m2K/GW; 43,493 cells. Metal volume, top area, heat sources and boundary conditions are fixed. All four peak at r = 2 
+
+over r = 0 .5, 1, 2.
+
+III. R ESULTS AND DISCUSSION 
+
+A. Source Interconnects and Heat Flow 
+
+The selected design narrows and repositions the upper source interconnect while reallocating the saved metal to the lower tier. Peak rise falls by 0.88 K (Table I), contradicting the initial widening hypothesis. Width and position change together, while semiconductor contacts remain fixed. To improve downward heat flow, the coordinating agent adds a narrow via directed toward the substrate [Fig. 2(a)]. With the interconnect change and the same metal budget, peak rise falls from 141.63 to 139.96 K. The 1.67-K (1.18%) reduction exceeds either separate change and persists under refinement. The fixed-position control distinguishes narrowing from redistribution [Fig. 2(b)]. Changing an 8/8-nm upper/lower pair to 4/12 nm reduces thermal resistance by 0.26%, but narrowing only the upper interconnect raises it by 0.33%. The benefit therefore depends on metal allocation. Contact scaling further separates temperature from performance [Fig. 2(c)]: shortening Lc from 20 to 8 nm raises thermal resistance by 4.2%, yet lowers inverter peak temperature by 6.2 K as nFET on-current falls by 17%. Lower temperature alone is not evidence of better heat removal. 0.29 0.31 0.33 0.35 
+
+Vin (V) 
+
+> 0.0 0.2 0.4 0.6
+> Vout  (V)
+
+(a) Voltage transfer characteristic    
+
+> Lg
+> 8 nm 12 nm 32 nm 0.0 0.2 0.4 0.6
+
+Vin (V) 
+
+> 0123
+> PDC  (μW)
+
+(b) DC dissipation    
+
+> 0.25 0.30 0.35 0.40
+
+Vin (V) 
+
+> 300 310 320 330 340
+> Tmax  (K)
+
+(c) Peak lattice temperature             
+
+> −40 040
+> x(nm)
+> 040 80 120
+> z (nm)
+> n channel p channel
+> Substrate
+> SD
+> Vin = 0.3158 V
+> Vout = 0.568 V
+> −40 040
+> x(nm)
+> n channel p channel
+> Substrate
+> SD
+> Vin = 0.3263 V
+> Vout = 0.101 V
+> 300 310 320 330
+> Temperature (K)
+
+VDD = 0.7 V Solid: electrothermal Dashed: 300 K 
+
+(d) Bias-dependent hotspot, 12 nm 
+
+> S / D: source / drain contacts
+
+Fig. 3. DC inverter response without metal resistance at VDD = 0 .7 V. (a) Voltage transfer characteristics, (b) DC power and (c) peak lattice temperature for baseline interconnects. Colors denote gate length; solid curves include self-heating, dashed curves are isothermal at 300 K. (d) Selected 12-nm device sections at y = 0 under two static biases, with a common temperature scale and emphasized channels. 
+
+B. CFET Inverter Electrothermal Operation 
+
+The fixed-power result establishes improved heat removal. To test whether it persists in an inverter, we let the transistor currents and temperatures determine the heat load together. At Lg = 8 nm and Vgs = Vds = 0 .7 V, self-heating lowers nFET on-current from 245.5 to 208.6 μA/ μm (15.0%); the pFET loses 11.5% under corresponding bias. Currents use the summed sheet width of 4 × 40 nm. These unequal responses shift the inverter switching voltage ( Vin = Vout ) from 0.3211 to 0.3190 V and reduce the voltage-gain magnitude there from 83.4 to 52.1 [Fig. 3(a)]. Near the transition, however, thermal broadening of carrier occupation competes with mobility loss, raising peak DC power from 3.62 to 3.73 μW at 8 nm [Fig. 3(b)]. Temperature peaks at a different input voltage: Vin = 0 .3102 V, versus 0.3163 V for power. There, Vout = 0 .561 V places most of the voltage drop across the upper nFET, whose mean temperature reaches 340.7 K while the pFET remains at 309.1 K. Thus total power alone does not determine the hotspot. Maximum temperature decreases from 341.4 to 312.1 K between 8 and 32 nm [Fig. 3(c)]. At 12 nm, the combined design lowers maximum inverter temperature from 330.75 to 330.41 K. This smaller 0.335-K re-duction reflects the baseline’s 2.97-μW load at its temperature maximum. Rescaling the fixed-power source distribution gives 0.248-K cooling; using the inverter’s channel/contact fractions gives 0.329 K. Self-consistent feedback and the shift in peak bias bring this to 0.335 K. Relative to temperature rise, the 
+
+TABLE II CROSS -AGENT REPRODUCTION OF THE FIXED THERMAL REFERENCE CASES 
+
+Model / effort label eT (K) eC (pp) Status GPT-6 / Light a 0 (ref.) 0 (ref.) Reference GPT-6 Astra / Ultra b 1.34e-12 3.20e-13 Pass Claude Fable 5.1 / high 4.26e-13 2.42e-13 Pass Claude Opus 5 / high (A) 4.98e-10 2.88e-10 Pass Claude Opus 5 (B) 4.26e-13 2.42e-13 Pass GPT-5.6 Sol / max 4.98e-10 2.88e-10 Pass GPT-5.6 Terra / max † 1.39e-12 4.12e-13 Pass GPT-5 / Codex 1.08e-12 8.74e-13 Pass Claude Haiku 4.5 104.95 15.16 Fail 
+
+Claude Opus 4.8 / middle ∗ 4.26e-13 2.42e-13 Pass Claude Sonnet 5 / middle ∗ 1.08e-12 8.74e-13 Pass GPT-5.6 Terra / max ∗ 1.08e-12 8.74e-13 Pass GPT-5.6 Luna / max ∗ 7.96e-13 4.12e-13 Pass Kimi / basic high ∗ 7.96e-13 4.12e-13 Pass Perplexity [Grok 4.6] ∗ 1.08e-12 8.74e-13 Pass Grok-labelled table ‡ 4.59e-04 1.09e-04 Table only 
+
+eT : maximum peak-rise error (four cases); eC : maximum reduction error (two resistances). Pass requires eT ≤ 0.01 K, eC ≤ 0.01 pp, residual/energy error < 10 −7 and rerun agreement. aReported setting. 
+
+> b
+
+Requested setting; reference hidden before freezing. ∗Unverified archive label. †Prior Sol summary visible. ‡No code evidence. A/B: separate submissions. Values include rounding; model/effort comparisons are uncontrolled. 
+
+benefit is 1.09%, close to the fixed-power 1.18%. The hotspot moves between tiers with bias [Fig. 3(d)]. Including metal resistance gives 0.6-K cooling and 2.2% lower nFET on-current for the combined 12-nm design. The accompanying width/contact scans show the same trade-off at 8 and 32 nm. Assumed LT values of 5–50 nm give short-contact current penalties of 2–23%. Separate 1–5 nm Green-function calculations [12]–[16], discussed alongside sub-nanometre gate demonstrations [7]– [9] in the additional analysis, are not coupled to this inverter model. 
+
+C. Code Reproduction and Alternative Designs 
+
+Four fixed thermal cases test code consistency (Table II). Passing submissions agree within 5 × 10 −10 K; fresh Ultra code agrees within 1.34 × 10 −12 K. Haiku-labelled code fails by 104.95 K and 15.16 percentage points owing to indexing and resistance-unit errors. Corrections restore agreement; we retain the original failure. Supplied model/effort labels do not establish a controlled effort comparison. The separate Fable 5.1 C4 design uses one sheet per tier, doubles interface conductances, introduces AlN, length-ens contacts and adds gate metal (Table III). Corrected, refined mean thermal resistance falls by 45.19%/40.37% in the top/bottom tiers with 26.12% more metal. These ma-terial/interface changes extend beyond our search; different loads and metrics prevent ranking the agents. Cross-implementation checks recover the 1.67255-K reduc-tion with the other study’s matrix assembly, despite shared discretization and backend. Neither search has been indepen-dently repeated or experimentally validated. IV. C ONCLUSION 
+
+We used an Astra-based AI scientist workflow to design and evaluate 2D CFET thermal structures. At fixed metal volume (Lg = 12 nm, Lc = 20 nm), the best tested design redistributes source-interconnect metal between the tiers and introduces a substrate-directed heat-removal path. It lowers peak temperature by 1.67 K at 20 μW. Including metal resistance gives 0.6-K inverter cooling with 2.2% lower nFET on-current, revealing the electrical cost of improved heat removal. The workflow therefore produced a testable structural hypothesis and evaluated its circuit-level trade-off; experimental validation remains necessary. ACKNOWLEDGMENT 
+
+We acknowledge Vina Faramarzi (ASML Netherlands B.V.), who conceived the research idea together with Ye Wang. Part of this project originated in the Eindhoven Semiconductor Summer School 2026, with participation by Min-Hui Kim, Prasanna Prasad Mahajan, Aleksander Ogonowski, Michael Scholl, Khushi Sharma, Viren Sharma, Sarah Zhang and Yichen Zou. We thank Prof. Shihab Al-Daffaie of TU/e for co-ordinating the summer school and project work. This work was supported by the Technische Universiteit Eindhoven startup grant RF204648 and the Dutch Research Council (NWO), grant no. EINF-19934. REFERENCES [1] M. M. Islam et al., “Challenges and prospects of 2D electronics for fu-ture monolithic complementary field-effect transistors,” Nat. Commun. ,vol. 17, Art. no. 3586, 2026. doi:10.1038/s41467-026-71986-9. TABLE III DEVICE PARAMETERS FOR THE TWO DESIGN STUDIES 
+
+Parameter GPT study Claude baseline → C4 Sheets per tier (total) 4 (8) 1 (2) 
+
+Lg , L h, W (nm) 12, 16, 40 20, 30, 50 
+
+tn, t p (nm) 0.65, 0.70 0.65, 0.65 Gate dielectric (nm) 1 3 (HfO 2)Within-tier gap (nm) 6 Not applicable Inter-tier gap (nm) 20 26 Contact length (nm) 20 20 → 30 
+
+Substrate (nm) 40 (effective) 1000 (Si) Domain (nm 3) 96 ×80 ×125 .4 300 ×200 ×1291 .3
+
+Sheet kn 
+
+> ∥
+
+, k p 
+
+> ∥
+
+35, 25 35, 10 Substrate k∥, k ⊥ 35, 30 120, 120 
+
+Rncm , R pcm 5, 5 (40 , 50) → (20 , 25) 
+
+Channel–oxide TBR n,p 71, 71 (50 , 55 .56) → (25 , 27 .78) 
+
+Top h (MW m −2K−1) 2 0 (adiabatic) Arrows: baseline to candidate. Entries without arrows stay fixed within each study. Lh: channel plus access/spacer length. Gaps: sheet surface to surface. 
+
+k: W/mK; TBR: thermal boundary resistance in m 2K/GW. Both use n-on-p stacking, a 300-K bottom and adiabatic sides. [2] T. Miao et al., “A novel thermal network model and electro-thermal coupling study for NSFETs and CFETs considering ther-mal crosstalk,” Micro Nanostruct. , vol. 208, Art. no. 208322, 2025. doi:10.1016/j.micrna.2025.208322. [3] S. Shahin et al., “Self-heating and parasitic effects in multi-tier CFET design,” IEEE J. Explor. Solid-State Comput. Devices Circuits , vol. 12, pp. 153–158, 2026. doi:10.1109/JXCDC.2026.3704373. [4] E. Yalon et al., “Energy dissipation in monolayer MoS 2
+
+electronics,” Nano Lett. , vol. 17, pp. 3429–3433, 2017. doi:10.1021/acs.nanolett.7b00252. [5] Synopsys, “Sentaurus Device: Multidimensional (1D/2D/3D) device simulator.” Accessed Sep. 12, 2026. [Online]. Available: Synopsys TCAD. [6] C. Lu et al., “The AI Scientist: Towards fully automated open-ended scientific discovery,” arXiv:2408.06292, 2024. doi:10.48550/arXiv.2408.06292. [7] S. B. Desai et al., “MoS 2 transistors with 1-nanometer gate lengths,” Science, vol. 354, pp. 99–102, 2016. doi:10.1126/science.aah4698. [8] F. Wu et al., “Vertical MoS 2 transistors with sub-1-nm gate lengths,” Nature, vol. 603, pp. 259–264, 2022. doi:10.1038/s41586-021-04323-3. [9] M. Perucchini et al., “Physical insights into the operation of a 1-nm gate length transistor based on MoS 2 with metallic carbon nanotube gate,” Appl. Phys. Lett., vol. 113, 183507, 2018. doi:10.1063/1.5054281. [10] D. J. Frank, Y. Taur, and H.-S. P. Wong, “Generalized scale length for two-dimensional effects in MOSFETs,” IEEE Electron Device Lett., vol. 19, pp. 385–387, 1998. doi:10.1109/55.720194. [11] C. Gilardi et al., “Extended Scale Length Theory for Low-Dimensional Field-Effect Transistors,” IEEE Trans. Electron Devices, vol. 69, pp. 5302–5309, 2022. doi:10.1109/TED.2022.3190464. [12] M. P. Anantram, M. S. Lundstrom, and D. E. Nikonov, “Modeling of Nanoscale Devices,” Proc. IEEE, vol. 96, pp. 1511–1550, 2008. doi:10.1109/JPROC.2008.927355. [13] D. Sanchez and L. Serra, “Thermoelectric transport of mesoscopic conductors coupled to voltage and thermal probes,” Phys. Rev. B, vol. 84, 201307(R), 2011. doi:10.1103/PhysRevB.84.201307. [14] W. Lee et al., “Heat dissipation in atomic-scale junctions,” Nature, vol. 498, pp. 209–212, 2013. doi:10.1038/nature12183. [15] A. Szabo, R. Rhyner, and M. Luisier, “Ab initio simulation of single-and few-layer MoS 2 transistors: Effect of electron-phonon scattering,” Phys. Rev. B, vol. 92, 035435, 2015. doi:10.1103/PhysRevB.92.035435. [16] C. Stieger, A. Szabo, T. Bunjaku, and M. Luisier, “Ab-initio quantum transport simulation of self-heating in single-layer 2-D materials,” J. Appl. Phys., vol. 122, 045708, 2017. doi:10.1063/1.4990384. [17] L. Hoang et al. , “Understanding the impact of contact-induced strain on the electrical performance of monolayer WS 2 transistors,” Nano Lett. ,vol. 24, pp. 12768–12774, 2024. doi:10.1021/acs.nanolett.4c02616.

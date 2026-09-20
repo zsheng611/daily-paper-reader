@@ -1,0 +1,201 @@
+{
+  "date": "20260920",
+  "date_label": "",
+  "generated_at": "2026-09-20 17:12:15 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.20461v1",
+      "route": "202609/20/2609.20461v1-correlation-free-transition-path-sampling-through-shooting-point-generation-guided-by-committor-learning",
+      "title": "Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "机器学习引导的过渡路径采样",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.14412v1",
+      "route": "202609/20/2609.14412v1-questions-gambit-the-first-move-matters-in-agentic-deep-search",
+      "title": "Question's Gambit: The First Move Matters in Agentic Deep Search",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "深度研究智能体检索策略",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.16245v1",
+      "route": "202609/20/2609.16245v1-metacognitive-steering-learning-the-structure-of-scientific-judgment",
+      "title": "Metacognitive Steering: Learning the Structure of Scientific Judgment",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向长程科学发现的智能体",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.16339v1",
+      "route": "202609/20/2609.16339v1-multi-task-graph-neural-network-predictions-of-auger-electron-and-x-ray-photoelectron-spectroscopy",
+      "title": "Multi-Task Graph Neural Network Predictions of Auger-Electron and X-ray Photoelectron Spectroscopy",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "多任务图神经网络用于光谱预测",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.17123v1",
+      "route": "202609/20/2609.17123v1-ai-for-science-with-gpt-6-astra-thermal-design-and-electrothermal-analysis-of-2d-cfet",
+      "title": "AI for Science with GPT-6 Astra: Thermal Design and Electrothermal Analysis of 2D CFET",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用于科研任务的AI智能体工作流",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.17736v1",
+      "route": "202609/20/2609.17736v1-machine-learning-kinetics-from-molecular-dynamics-data",
+      "title": "Machine learning kinetics from molecular dynamics data",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "从分子动力学数据机器学习动力学与committor",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.17831v1",
+      "route": "202609/20/2609.17831v1-procedural-pretraining-for-molecular-property-prediction",
+      "title": "Procedural Pretraining for Molecular Property Prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "预训练提升分子性质预测",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.19191v1",
+      "route": "202609/20/2609.19191v1-machine-learning-exploration-of-defect-topologies-and-thermodynamic-stability-in-graphene-with-atomic-vacancies",
+      "title": "Machine-Learning Exploration of Defect Topologies and Thermodynamic Stability in Graphene with Atomic Vacancies",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "可解释机器学习与符号回归研究石墨烯缺陷稳定性",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.19388v1",
+      "route": "202609/20/2609.19388v1-machine-learned-dynamical-representations-for-accelerated-riteweight-convergence",
+      "title": "Machine-Learned Dynamical Representations for Accelerated RiteWeight Convergence",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "比较机器学习表示以改进分子动力学轨迹重加权",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.19584v1",
+      "route": "202609/20/2609.19584v1-efficient-tensorized-evaluation-of-permutation-invariant-polynomials-for-representing-potential-energy-surfaces",
+      "title": "Efficient tensorized evaluation of permutation invariant polynomials for representing potential energy surfaces",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向势能面的置换不变多项式张量化评估",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.19774v1",
+      "route": "202609/20/2609.19774v1-treadstone-a-social-media-inspired-platform-for-multi-agent-collaborative-data-analysis",
+      "title": "Treadstone: A Social-Media-Inspired Platform for Multi-Agent Collaborative Data Analysis",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "支持假设追踪的多智能体协作分析平台",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    },
+    {
+      "paper_id": "2609.20592v1",
+      "route": "202609/20/2609.20592v1-crystalmo-turbo-multi-objective-trust-region-bayesian-optimization-for-high-precision-joint-crystal-structure-refinement",
+      "title": "CrystalMO-TuRBO: Multi-Objective Trust-Region Bayesian Optimization for High-precision Joint Crystal Structure Refinement",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用于晶体结构精修的贝叶斯优化AI方法",
+      "first_seen_at": "2026-09-20 17:12:15 UTC",
+      "updated_at": "2026-09-20 17:12:15 UTC"
+    }
+  ]
+}

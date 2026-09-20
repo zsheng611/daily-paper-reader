@@ -1,0 +1,502 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-20T17:10:52.623537+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 0,
+    "deep_cap": 7,
+    "deep_selected": 0,
+    "quick_candidates": 12,
+    "quick_skim_target": 12,
+    "quick_selected": 12
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.20461v1",
+      "source": "arxiv",
+      "title": "Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning",
+      "abstract": "Studying the dynamical behavior of a system often depends on characterizing how it transitions between long-lived states. Because such transitions are rare, observing them usually requires specialized enhanced sampling techniques. Transition Path Sampling (TPS) is a well-established method for generating reactive trajectories, which is simple to implement and does not require the definition of a preconceived reaction coordinate. However, its efficiency is limited by its sequential nature and the resulting correlations between sampled paths. Previous work addressed this limitation by combining TPS with a sampling scheme based on conditioned Boltzmann Generators, a generative machine learning model capable of sampling a given target probability distribution. This approach produces uncorrelated transition paths but relies on an accurate reaction coordinate, which is rarely known in advance. Building on recent advances in committor learning, specifically on the Artificial Intelligence for Molecular Mechanism Discovery (AIMMD) method, in this work we introduce GenAIMMD, an iterative algorithm that actively and self-consistently learns the ideal reaction coordinate (the committor) and trains a conditioned Boltzmann Generator to sample from arbitrary bias windows along it. GenAIMMD thereby provides a correlation-free and fully parallelizable path sampling scheme that does not require prior knowledge of the system's transition mechanism. We apply GenAIMMD to a two-dimensional toy model and a higher-dimensional polymer system. In both cases, GenAIMMD succeeds in training the Boltzmann Generator and learning the committor. Benchmark results show a substantial increase in performance compared to standard TPS.",
+      "authors": [
+        "Maximilian Negedly",
+        "Sebastian Falkner",
+        "Alessandro Coretti",
+        "Christoph Dellago"
+      ],
+      "primary_category": "physics.comp-ph",
+      "categories": [
+        "physics.comp-ph",
+        "cond-mat.stat-mech",
+        "cs.LG"
+      ],
+      "published": "2026-09-17T14:24:14+00:00",
+      "link": "https://arxiv.org/pdf/2609.20461v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "ML-guided transition path sampling for MD",
+      "llm_evidence_cn": "机器学习引导的过渡路径采样",
+      "llm_evidence": "机器学习引导的过渡路径采样",
+      "canonical_evidence": "机器学习引导的过渡路径采样",
+      "llm_tldr_en": "The paper combines transition path sampling with conditioned Boltzmann generators and committor learning to generate decorrelated reactive trajectories, improving rare-event sampling efficiency without predefined reaction coordinates.",
+      "llm_tldr_cn": "稀有跃迁事件的观测依赖增强采样技术，过渡路径采样(TPS)虽简单易用却因序贯采样导致路径间相关性而效率受限。本文将TPS与基于条件化玻尔兹曼生成器的采样方案结合，利用机器学习学习committor来引导射击点生成。该方法无需预定义反应坐标即可生成去相关的反应轨迹，提升了稀有事件采样的效率与统计可靠性。",
+      "llm_tldr": "稀有跃迁事件的观测依赖增强采样技术，过渡路径采样(TPS)虽简单易用却因序贯采样导致路径间相关性而效率受限。本文将TPS与基于条件化玻尔兹曼生成器的采样方案结合，利用机器学习学习committor来引导射击点生成。该方法无需预定义反应坐标即可生成去相关的反应轨迹，提升了稀有事件采样的效率与统计可靠性。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.14412v1",
+      "source": "arxiv",
+      "title": "Question's Gambit: The First Move Matters in Agentic Deep Search",
+      "abstract": "Deep research agents answer complex questions through iterative loops of searching, reading, and reasoning. Recent work on reasoning-intensive benchmarks such as BrowseComp-Plus shows that well-configured lexical retrieval can surface high-quality evidence, yet agents may still fail to connect documents carrying evidence to the gold documents. We identify a deep research agent's first retrieval move as an important design decision for this setting. We introduce Question's Gambit, a first-move retrieval module that decomposes the question into a set of clues, reformulates them into complementary searches, consolidates the retrieved results, and reranks the candidate pool before the agent begins its iterative search-and-reasoning process. This produces an opening context designed to support both clue aggregation and final-answer verification. We further evaluate on MultiHop-RAG to test whether these benefits transfer beyond BrowseComp-Plus to a more conventional multi-hop question structure. Experiments on BrowseComp-Plus show that Question's Gambit improves retrieval recall and downstream agent accuracy over strong baselines, improving answer accuracy from 83.1% to 90.5% with gpt-5.5 over Pi-Serini, the strongest reported agentic baseline. Our results confirm that effective agentic deep research depends not only on the tools available inside the loop, but also on the quality of the first move. We published our implementation publicly at https://github.com/radinhamidi/Question-s-Gambit.",
+      "authors": [
+        "Radin Hamidi Rad",
+        "Amin Bigdeli",
+        "Negar Arabzadeh",
+        "Sajad Ebrahimi",
+        "Charles L. A. Clarke",
+        "Benjamin C. M. Fung",
+        "Ebrahim Bagheri"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.CL",
+        "cs.IR"
+      ],
+      "published": "2026-09-13T10:21:07+00:00",
+      "link": "https://arxiv.org/pdf/2609.14412v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "deep research agent retrieval strategy",
+      "llm_evidence_cn": "深度研究智能体检索策略",
+      "llm_evidence": "深度研究智能体检索策略",
+      "canonical_evidence": "深度研究智能体检索策略",
+      "llm_tldr_en": "Question's Gambit introduces a first-move retrieval module for deep research agents that decomposes questions into clues, reformulates complementary searches, consolidates and reranks results before iterative search-and-reasoning.",
+      "llm_tldr_cn": "深度研究智能体通过搜索、阅读与推理的迭代循环回答复杂问题，但首个检索动作的选择常被忽视。作者提出Question's Gambit首个检索模块，将问题分解为线索、重构互补查询、整合结果并重排候选池。该方法在推理密集型基准上改善了证据连通性，说明首次检索策略对智能体深度搜索效果具有重要影响。",
+      "llm_tldr": "深度研究智能体通过搜索、阅读与推理的迭代循环回答复杂问题，但首个检索动作的选择常被忽视。作者提出Question's Gambit首个检索模块，将问题分解为线索、重构互补查询、整合结果并重排候选池。该方法在推理密集型基准上改善了证据连通性，说明首次检索策略对智能体深度搜索效果具有重要影响。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.16245v1",
+      "source": "arxiv",
+      "title": "Metacognitive Steering: Learning the Structure of Scientific Judgment",
+      "abstract": "Long-horizon scientific discovery requires agents to alternate between exploration, disciplined execution, and critical reassessment as evidence changes. Current language models are trained primarily on the products of science and optimized using outcome-level signals, providing limited supervision for these process-level shifts in scientific judgment. We investigate whether such judgment can be recovered from scientist interaction traces and used to control the internal computation of a frozen frontier model. Using contrastive interventions collected during real scientific research, we identify a coordinated, low-dimensional control structure within Kimi 2.6, a trillion-parameter mixture-of-experts model. Residual analysis, attention-weight subspace alignment, and cross-layer singular value decomposition converge on a mid-depth control surface spanning key layers. We introduce Metacognitive Steering, an inference-time controller that reads the model's cognitive regime and dynamically composes layer-specific interventions for exploration, procedural convergence, or critical reassessment without modifying model parameters. Behavioral analyses show that this control produces more sustained exploration, explicit pruning, and evidence-responsive synthesis. We operationalize the method in Columbus-1, an autonomous research system that identified eight independently reproduced, attacker-reachable vulnerabilities in BlueZ and directed the design, simulation, and fabrication of a ten-foot rocket intended to land propulsively using non-throttleable solid motors. Together, these results show that process-level scientific judgment can provide supervision for interpretable, dynamic control over a model's reasoning strategy.",
+      "authors": [
+        "Vincent Karpf",
+        "Joseph Reth",
+        "Eike Gerhardt",
+        "Audrey Wang",
+        "Anna Butz",
+        "Jiehao Xing",
+        "Jialing Song",
+        "Larry Callahan"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-14T19:10:03+00:00",
+      "link": "https://arxiv.org/pdf/2609.16245v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "agents for long-horizon scientific discovery",
+      "llm_evidence_cn": "面向长程科学发现的智能体",
+      "llm_evidence": "面向长程科学发现的智能体",
+      "canonical_evidence": "面向长程科学发现的智能体",
+      "llm_tldr_en": "Contrastive interventions from real research traces reveal a low-dimensional control structure in a frozen frontier model that can steer process-level scientific judgment.",
+      "llm_tldr_cn": "长程科学发现要求智能体在探索、严格执行与批判性重估之间随证据切换，但当前语言模型主要学习科学产物并用结果级信号优化，缺乏对过程级科学判断的监督。本文从真实科研中的对比干预轨迹出发，考察能否恢复这种判断并用于控制冻结前沿模型的内部计算，在万亿参数混合专家模型Kimi 2.6中识别出协调的低维控制结构。该结构可用于引导智能体的科学判断过程，为自动科研提供过程级调控手段。",
+      "llm_tldr": "长程科学发现要求智能体在探索、严格执行与批判性重估之间随证据切换，但当前语言模型主要学习科学产物并用结果级信号优化，缺乏对过程级科学判断的监督。本文从真实科研中的对比干预轨迹出发，考察能否恢复这种判断并用于控制冻结前沿模型的内部计算，在万亿参数混合专家模型Kimi 2.6中识别出协调的低维控制结构。该结构可用于引导智能体的科学判断过程，为自动科研提供过程级调控手段。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery",
+      "matched_requirement_id": "req-15",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.16339v1",
+      "source": "arxiv",
+      "title": "Multi-Task Graph Neural Network Predictions of Auger-Electron and X-ray Photoelectron Spectroscopy",
+      "abstract": "Auger-electron spectroscopy has long accompanied x-ray photoelectron spectroscopy as a second modality to resolve chemical states with overlapping core-electron binding energies. However, analyzing the Auger spectrum is challenged by its complexity and the computational expense of its simulation. Here we demonstrate that the physical connection, and thus inter-task relationship, between the generation of a core-hole and its corresponding Auger-Meitner decay enables inductive knowledge transfer through the training of a multi-task graph neural network to predict both observables from a common graph embedding. Both task losses are combined with learned weights via the uncertainty weighting procedure. Overall, the single-task and multi-task models predict calculated and experimental Auger lineshapes with good accuracy in most cases. The performance between the two task regimes is similar, with the single-task models generally having better predictions of the finer peak structures in the spectrum. The present results demonstrate that multi-task training is a promising avenue for future developments of universal x-ray spectroscopy models with learned representations that map the molecular structure to a multitude of techniques.",
+      "authors": [
+        "Adam E. A. Fouda",
+        "Patrick Phillips",
+        "Phay J. Ho"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-14T20:54:54+00:00",
+      "link": "https://arxiv.org/pdf/2609.16339v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-task graph neural network for spectroscopy prediction",
+      "llm_evidence_cn": "多任务图神经网络用于光谱预测",
+      "llm_evidence": "多任务图神经网络用于光谱预测",
+      "canonical_evidence": "多任务图神经网络用于光谱预测",
+      "llm_tldr_en": "Auger spectrum analysis is hard and costly to simulate; this work trains a multi-task graph neural network to predict Auger and XPS observables from a common graph embedding via uncertainty-weighted losses.",
+      "llm_tldr_cn": "俄歇电子能谱长期与X射线光电子能谱配合以分辨重叠的芯电子结合能，但其谱图复杂且模拟计算代价高昂。论文利用芯空穴生成与俄歇-迈特纳衰变之间的物理联系，训练多任务图神经网络从共享图嵌入同时预测两种观测量。两个任务损失通过不确定性加权进行组合。结果显示多任务学习实现了归纳式知识迁移并优于单任务基线。其意义在于为材料表征提供更高效的谱学预测方法，属AI用于材料模拟的范畴。",
+      "llm_tldr": "俄歇电子能谱长期与X射线光电子能谱配合以分辨重叠的芯电子结合能，但其谱图复杂且模拟计算代价高昂。论文利用芯空穴生成与俄歇-迈特纳衰变之间的物理联系，训练多任务图神经网络从共享图嵌入同时预测两种观测量。两个任务损失通过不确定性加权进行组合。结果显示多任务学习实现了归纳式知识迁移并优于单任务基线。其意义在于为材料表征提供更高效的谱学预测方法，属AI用于材料模拟的范畴。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.17123v1",
+      "source": "arxiv",
+      "title": "AI for Science with GPT-6 Astra: Thermal Design and Electrothermal Analysis of 2D CFET",
+      "abstract": "Thermal optimization of 2D CFET inverters requires testing structural proposals against their electrical costs. We examine these research tasks using an AI agent workflow within a supplied electrothermal model. At 12 nm, Astra selects a redistributed source-interconnect geometry, while a coordinating agent proposes a substrate-directed heat-removal path. The combined design reduces peak temperature rise by 1.67 K at fixed metal volume and 20 μW. A subsequent metal-resistance sensitivity gives about 0.6-K inverter cooling alongside a 2% nFET on-current loss. Effective contact-length scaling further shows that lower temperature can accompany higher thermal resistance when current falls. Reproduction identifies agreeing implementations and retains a 104.95-K failure for diagnosis. These results show that an AI scientist workflow can propose thermal structures, test them under common constraints, and quantify their electrical cost.",
+      "authors": [
+        "Min-Hui Kim",
+        "Khushi Sharma",
+        "Sarah Zhang",
+        "Ye Wang"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.AI",
+        "cs.AR"
+      ],
+      "published": "2026-09-15T12:48:44+00:00",
+      "link": "https://arxiv.org/pdf/2609.17123v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "AI agent workflow for scientific research tasks",
+      "llm_evidence_cn": "用于科研任务的AI智能体工作流",
+      "llm_evidence": "用于科研任务的AI智能体工作流",
+      "canonical_evidence": "用于科研任务的AI智能体工作流",
+      "llm_tldr_en": "An AI agent workflow using GPT-6 Astra proposes and evaluates thermal designs for 2D CFET inverters, cutting peak temperature rise by 1.67 K at fixed metal volume.",
+      "llm_tldr_cn": "二维CFET逆变器的热优化需要不断权衡结构方案与电学代价，人工迭代成本高。本文在给定电热模型中使用AI智能体工作流开展研究任务：Astra在12nm节点选出重新分布的源极互连几何，协调智能体提出衬底定向散热路径。组合设计在固定金属体积与20微瓦下将峰值温升降低1.67K，金属电阻敏感性分析给出约0.6K冷却与2%的nFET开态电流损失，展示了AI智能体在半导体热设计中的自主迭代能力。",
+      "llm_tldr": "二维CFET逆变器的热优化需要不断权衡结构方案与电学代价，人工迭代成本高。本文在给定电热模型中使用AI智能体工作流开展研究任务：Astra在12nm节点选出重新分布的源极互连几何，协调智能体提出衬底定向散热路径。组合设计在固定金属体积与20微瓦下将峰值温升降低1.67K，金属电阻敏感性分析给出约0.6K冷却与2%的nFET开态电流损失，展示了AI智能体在半导体热设计中的自主迭代能力。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "LLM agents that autonomously perform scientific research from literature review and hypothesis generation to experimentation and result analysis",
+      "matched_requirement_id": "req-19",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.17736v1",
+      "source": "arxiv",
+      "title": "Machine learning kinetics from molecular dynamics data",
+      "abstract": "Most molecular transitions occur on timescales far beyond direct molecular dynamics simulations. The committor, the probability that a configuration reaches a product state before a reactant state, is a central kinetic statistic, providing a mechanism-independent reaction coordinate and a foundation for transition path theory and the calculation of rates. This review surveys modern approaches for estimating the committor and related kinetic statistics from molecular simulations, with an emphasis on self-supervised methods that learn solutions of their defining dynamical equations rather than relying on labeled shooting data. We develop a common operator viewpoint connecting generator-based partial differential equations, variational principles, Markov state models, dynamical Galerkin approximation, and neural networks. Empirical and theoretical evidence points to the efficiency of these methods. We provide theoretical and practical guidance for realizing their full potential in applications, including strategies for treating non-Markovian effects and for sampling. We conclude by identifying opportunities for further research, including connections to reinforcement learning and generative modeling.",
+      "authors": [
+        "Jonathan Weare",
+        "Aaron R. Dinner"
+      ],
+      "primary_category": "physics.comp-ph",
+      "categories": [
+        "physics.comp-ph",
+        "cond-mat.stat-mech",
+        "cs.LG",
+        "physics.chem-ph",
+        "physics.data-an"
+      ],
+      "published": "2026-09-15T18:43:17+00:00",
+      "link": "https://arxiv.org/pdf/2609.17736v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "machine learning of kinetics and committor from molecular dynamics data",
+      "llm_evidence_cn": "从分子动力学数据机器学习动力学与committor",
+      "llm_evidence": "从分子动力学数据机器学习动力学与committor",
+      "canonical_evidence": "从分子动力学数据机器学习动力学与committor",
+      "llm_tldr_en": "This review surveys self-supervised machine learning methods for estimating the committor and kinetic statistics from molecular dynamics data, offering an operator viewpoint linking PDEs, variational principles and Markov state models.",
+      "llm_tldr_cn": "多数分子跃迁的时间尺度远超直接分子动力学模拟，committor等动力学统计量是刻画反应机制与速率的核心，但难以直接估计。该综述梳理从分子模拟数据估计committor及相关动力学量的现代方法，重点介绍不依赖标注射击数据、而是学习其动力学方程解的自监督方法。作者以统一算子视角把生成元偏微分方程、变分原理与马尔可夫状态模型联系起来，为机器学习动力学提供了系统框架。",
+      "llm_tldr": "多数分子跃迁的时间尺度远超直接分子动力学模拟，committor等动力学统计量是刻画反应机制与速率的核心，但难以直接估计。该综述梳理从分子模拟数据估计committor及相关动力学量的现代方法，重点介绍不依赖标注射击数据、而是学习其动力学方程解的自监督方法。作者以统一算子视角把生成元偏微分方程、变分原理与马尔可夫状态模型联系起来，为机器学习动力学提供了系统框架。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.17831v1",
+      "source": "arxiv",
+      "title": "Procedural Pretraining for Molecular Property Prediction",
+      "abstract": "Molecular property prediction is often limited by the small size of labeled downstream datasets, motivating pretraining on large corpora of unlabeled molecules. In this work, we ask whether useful inductive biases can instead be learned from abstract, procedurally generated data before a model sees any molecular data. We introduce a three-stage training pipeline consisting of procedural pretraining, molecular pretraining on SMILES, and downstream fine-tuning, and evaluate several procedural tasks spanning sequence structure, cellular automata, and graph reasoning. We find that procedural pretraining can improve molecular property prediction even after subsequent molecular pretraining: on Lipophilicity, \\textsc{Reverse} reduces test error by 4.8\\%. For context, the magnitude of this improvement is roughly 90\\% of the performance difference between our 250K-molecule baseline and the publicly released MoLFormer checkpoint pretrained on approximately 100M molecules. Our analysis shows that the benefit is strongest under downstream data scarcity, depends on the structure of the procedural data rather than only surface-level statistics, and does not increase monotonically with additional procedural training. Instead, transfer typically peaks at an intermediate procedural budget and deteriorates as the model approaches convergence on the procedural task. We further find that, for several tasks, much of the transferable information is localized in the attention layers, while feed-forward layers can contribute to over-specialization. These results show that procedural data can provide transferable structure for molecular learning and offer a complementary route to improving performance when labeled molecular data are limited.",
+      "authors": [
+        "Moritz Friedemann",
+        "Zachary Shinnick",
+        "Philip Torr",
+        "Bruno Andreis"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-09-15T20:48:50+00:00",
+      "link": "https://arxiv.org/pdf/2609.17831v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "pretraining improves molecular property prediction",
+      "llm_evidence_cn": "预训练提升分子性质预测",
+      "llm_evidence": "预训练提升分子性质预测",
+      "canonical_evidence": "预训练提升分子性质预测",
+      "llm_tldr_en": "The paper asks whether procedural pretraining on abstract generated data can provide inductive biases for molecular property prediction, using a three-stage pipeline and showing reduced test error.",
+      "llm_tldr_cn": "分子性质预测常受限于下游标注数据规模较小。本文提出程序化预训练流程，先用抽象程序生成数据、再在SMILES上做分子预训练、最后下游微调，并评估序列结构、元胞自动机和图推理等任务。结果显示程序化预训练即使在后续分子预训练之后仍能提升性质预测，在亲脂性任务上降低测试误差4.8%，说明通用程序化归纳偏置可迁移到分子建模。",
+      "llm_tldr": "分子性质预测常受限于下游标注数据规模较小。本文提出程序化预训练流程，先用抽象程序生成数据、再在SMILES上做分子预训练、最后下游微调，并评估序列结构、元胞自动机和图推理等任务。结果显示程序化预训练即使在后续分子预训练之后仍能提升性质预测，在亲脂性任务上降低测试误差4.8%，说明通用程序化归纳偏置可迁移到分子建模。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "a",
+      "matched_requirement_id": "req-1",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.19191v1",
+      "source": "arxiv",
+      "title": "Machine-Learning Exploration of Defect Topologies and Thermodynamic Stability in Graphene with Atomic Vacancies",
+      "abstract": "Atomic vacancies and vacancy aggregates control the thermodynamic stability and the functional response of graphene, yet the configurational space spanned by many vacancies at variable concentration and separation is too large to be mapped exhaustively by first-principles methods. Here, we map and rationalize this stability landscape by combining semiempirical atomistic thermodynamics, interpretable machine learning, and symbolic regression. Several hundred defective supercells, built from a 72-atom cell by varying the vacancy concentration and the inter-vacancy distance up to the fourth neighbor, were relaxed with the PM7 Hamiltonian in MOPAC, and the heat of formation was adopted as the stability metric. Each structure was encoded with the Dynamic Collision Fingerprint, a translationally and rotationally invariant descriptor that maps the local topology onto transport-like statistics of virtual probe particles. A gradient boosted decision tree model, optimized by Bayesian hyperparameter search, reproduces the heat of formation of an independent test set with a root mean squared error of approximately 23.5~kcal/mol and no evidence of overfitting, and a SHAP analysis identifies the defect concentration and the inter-vacancy distance as the two variables that dominate the stability. Symbolic regression then condenses the learned mapping into a compact closed-form expression that reproduces the heat of formation with a coefficient of determination of $R^{2} = 0.9966$, a mean absolute error of 15.51~kcal/mol, and a root mean squared error of 24.18~kcal/mol. The workflow turns a high-dimensional structure--stability problem into an interpretable analytical law, providing a transferable route to rational defect engineering in two-dimensional materials.",
+      "authors": [
+        "Marcos V. N. da Costa",
+        "José R. da M. Lima Filho",
+        "Kádila R. de S. Oliveira",
+        "Raphael M. Tromer",
+        "Marcelo L. Pereira Junior"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-15T19:57:44+00:00",
+      "link": "https://arxiv.org/pdf/2609.19191v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "interpretable ML and symbolic regression for defective graphene stability",
+      "llm_evidence_cn": "可解释机器学习与符号回归研究石墨烯缺陷稳定性",
+      "llm_evidence": "可解释机器学习与符号回归研究石墨烯缺陷稳定性",
+      "canonical_evidence": "可解释机器学习与符号回归研究石墨烯缺陷稳定性",
+      "llm_tldr_en": "Combining semiempirical atomistic thermodynamics, interpretable machine learning and symbolic regression to map the vacancy-configuration stability landscape of graphene beyond exhaustive first-principles scanning.",
+      "llm_tldr_cn": "石墨烯中原子空位及其聚集会显著影响热力学稳定性，但其构型空间过大，第一性原理方法难以穷举。本文结合半经验原子热力学、可解释机器学习与符号回归，用PM7哈密顿量弛豫数百个缺陷超胞并以生成热作为稳定性指标。研究成功映射并解释了空位浓度与间距对稳定性的影响，为缺陷材料研究提供可解释的高效途径。",
+      "llm_tldr": "石墨烯中原子空位及其聚集会显著影响热力学稳定性，但其构型空间过大，第一性原理方法难以穷举。本文结合半经验原子热力学、可解释机器学习与符号回归，用PM7哈密顿量弛豫数百个缺陷超胞并以生成热作为稳定性指标。研究成功映射并解释了空位浓度与间距对稳定性的影响，为缺陷材料研究提供可解释的高效途径。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.19388v1",
+      "source": "arxiv",
+      "title": "Machine-Learned Dynamical Representations for Accelerated RiteWeight Convergence",
+      "abstract": "The increasing use of generative models has made ensembles of short molecular dynamics trajectories increasingly common, creating a growing need for methods that can recover physically meaningful steady-state populations and kinetics from improperly weighted conformational ensembles. Randomized Iterative Trajectory Reweighting (RiteWeight) addresses this problem through repeated random clustering and iterative reweighting, without requiring the fixed Markovian discretization used in conventional Markov state models (MSM). However, the choice of reduced feature space in which RiteWeight performs random clustering has not been systematically investigated. Here, we compare two machine-learned representations, DeepTICA and SPIB-VAE, with linear TICA for recovering steady-state observables from flawed distributions. DeepTICA learns nonlinear coordinates by targeting slow transfer-operator eigenmodes, whereas SPIB-VAE compresses configurations into a low-dimensional latent space while retaining information predictive of future metastable states. DeepTICA provided a comparatively robust RiteWeight representation under limited hyperparameter exploration, whereas SPIB-VAE benefited more strongly from broader optimization. Moreover, a kinetic score computed from a coarse MSM at a resolution comparable to that used for RiteWeight random clustering provided a useful criterion for efficiently selecting reduced representations and their hyperparameters for RiteWeight.",
+      "authors": [
+        "Sagar Kania"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-16T20:10:57+00:00",
+      "link": "https://arxiv.org/pdf/2609.19388v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "machine-learned representations compared within trajectory reweighting for MD",
+      "llm_evidence_cn": "比较机器学习表示以改进分子动力学轨迹重加权",
+      "llm_evidence": "比较机器学习表示以改进分子动力学轨迹重加权",
+      "canonical_evidence": "比较机器学习表示以改进分子动力学轨迹重加权",
+      "llm_tldr_en": "To recover steady-state populations from improperly weighted MD ensembles, this study compares machine-learned representations DeepTICA and SPIB-VAE against linear methods inside the RiteWeight reweighting framework, showing representation choice affects convergence.",
+      "llm_tldr_cn": "生成模型产生大量短分子动力学轨迹，如何从权重不当的构型集合中恢复物理上有意义的稳态布居与动力学成为难题。本文在RiteWeight重加权框架中比较DeepTICA与SPIB-VAE两种机器学习表示与线性降维方法，系统考察特征空间选择对随机聚类的影响。实验表明降维表示的选择显著影响RiteWeight的收敛速度与稳态估计质量。该工作为从短轨迹集合中提取可靠动力学提供了表示学习的实践指导。",
+      "llm_tldr": "生成模型产生大量短分子动力学轨迹，如何从权重不当的构型集合中恢复物理上有意义的稳态布居与动力学成为难题。本文在RiteWeight重加权框架中比较DeepTICA与SPIB-VAE两种机器学习表示与线性降维方法，系统考察特征空间选择对随机聚类的影响。实验表明降维表示的选择显著影响RiteWeight的收敛速度与稳态估计质量。该工作为从短轨迹集合中提取可靠动力学提供了表示学习的实践指导。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.19584v1",
+      "source": "arxiv",
+      "title": "Efficient tensorized evaluation of permutation invariant polynomials for representing potential energy surfaces",
+      "abstract": "Permutation invariant polynomials (PIPs), together with related polynomial-based invariant descriptors such as fundamental invariants (FIs), are widely used in constructing high-fidelity global potential energy surfaces (PESs) of molecules that contain identical atoms. Although the monomial symmetrization approach (MSA) enables fast evaluation of PIPs through recursive factorization, it leads to deeply nested computational graphs that may require large memory and are inefficient in modern automatic differentiation frameworks. In this work, we introduce JaxPIP, a JAX-based implementation that reformulates PIP/FI evaluation into tensorized linear algebra operations. By replacing recursive factorization with dense matrix operations combined with log-exp transformation and segmented summation, the evaluation becomes regular and GPU-friendly. This allows efficient execution with just-in-time compilation and enables large-scale batch evaluation of energies and forces (as well as higher-order derivatives). The resulting architecture supports ensemble simulations such as quasi-classical trajectory (QCT), path-integral molecular dynamics (PIMD), and diffusion Monte Carlo (DMC) in a fully vectorized manner. As demonstrated in examples, JaxPIP provides a practical route for efficient simulations of molecular systems with scalable GPU execution.",
+      "authors": [
+        "Junhong Li",
+        "Kaisheng Song",
+        "Hua Guo",
+        "Jun Li"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-17T02:12:46+00:00",
+      "link": "https://arxiv.org/pdf/2609.19584v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "tensorized evaluation of permutation invariant polynomials for potential energy surfaces",
+      "llm_evidence_cn": "面向势能面的置换不变多项式张量化评估",
+      "llm_evidence": "面向势能面的置换不变多项式张量化评估",
+      "canonical_evidence": "面向势能面的置换不变多项式张量化评估",
+      "llm_tldr_en": "JaxPIP reformulates permutation invariant polynomial and fundamental invariant evaluation into tensorized linear algebra in JAX, enabling efficient, differentiable construction of potential energy surfaces for molecules with identical atoms.",
+      "llm_tldr_cn": "含相同原子的分子其高精度全局势能面常依赖置换不变多项式等多项式型不变描述符，但传统递归分解会形成深层计算图，内存占用大且在自动微分框架中效率低。论文提出JaxPIP，用JAX将PIP与基本不变量的评估改写为张量化线性代数运算，以稠密张量操作替代递归分解。实现表明该方案评估更高效，并更契合现代自动微分与势能面建模流程，利于高精度势能面模型的构建与训练。",
+      "llm_tldr": "含相同原子的分子其高精度全局势能面常依赖置换不变多项式等多项式型不变描述符，但传统递归分解会形成深层计算图，内存占用大且在自动微分框架中效率低。论文提出JaxPIP，用JAX将PIP与基本不变量的评估改写为张量化线性代数运算，以稠密张量操作替代递归分解。实现表明该方案评估更高效，并更契合现代自动微分与势能面建模流程，利于高精度势能面模型的构建与训练。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.19774v1",
+      "source": "arxiv",
+      "title": "Treadstone: A Social-Media-Inspired Platform for Multi-Agent Collaborative Data Analysis",
+      "abstract": "Coordinating human analysts with autonomous AI agents faces the same challenges as human-to-human collaboration: sharing intermediate results, avoiding conflicts, and maintaining group awareness. Current tools rely on unstructured messaging or single-threaded chatbot interaction, which lack the structure to track evolving hypotheses or link claims to evidence. We propose agentic social data analysis, a collaboration paradigm extending social data analysis with a shared coordination feed modeled on the content timeline in social media services. We instantiate this concept in TREADSTONE, a platform where human and AI agents asynchronously post, link, and contest analytical claims via threaded messages within a shared feed. By allowing agents to proactively broadcast hypotheses and enabling users to steer the analysis through lightweight curation, Treadstone seeks to balance machine autonomy with human analytical control. A qualitative user study shows that Treadstone fosters collaboration while preserving human analytical agency, in contrast to the solitary experience of conventional chatbot interaction.",
+      "authors": [
+        "Hyunwook Lee",
+        "Sungbeom Cho",
+        "William Benjamin",
+        "Changhee Lee",
+        "Hyotaek Jeon",
+        "Daeun Jeong",
+        "Sungbok Shin",
+        "Sungahn Ko",
+        "Niklas Elmqvist"
+      ],
+      "primary_category": "cs.HC",
+      "categories": [
+        "cs.HC"
+      ],
+      "published": "2026-09-17T06:39:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.19774v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent collaborative analysis platform tracking hypotheses",
+      "llm_evidence_cn": "支持假设追踪的多智能体协作分析平台",
+      "llm_evidence": "支持假设追踪的多智能体协作分析平台",
+      "canonical_evidence": "支持假设追踪的多智能体协作分析平台",
+      "llm_tldr_en": "Treadstone introduces agentic social data analysis, a shared coordination feed where human and AI agents asynchronously post, link and contest analytical claims to track evolving hypotheses and evidence.",
+      "llm_tldr_cn": "协调人类分析师与自主AI智能体面临共享中间结果、避免冲突与维持群体意识等难题，现有工具依赖非结构化消息或单线程对话，难以追踪演化中的假设并关联证据。作者提出智能体社会数据分析范式，并以TREADSTONE平台实例化，人类与AI智能体在共享信息流中异步发帖、链接与质疑分析主张。该设计为多智能体协作推理与证据链追踪提供结构化支撑。",
+      "llm_tldr": "协调人类分析师与自主AI智能体面临共享中间结果、避免冲突与维持群体意识等难题，现有工具依赖非结构化消息或单线程对话，难以追踪演化中的假设并关联证据。作者提出智能体社会数据分析范式，并以TREADSTONE平台实例化，人类与AI智能体在共享信息流中异步发帖、链接与质疑分析主张。该设计为多智能体协作推理与证据链追踪提供结构化支撑。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.20592v1",
+      "source": "arxiv",
+      "title": "CrystalMO-TuRBO: Multi-Objective Trust-Region Bayesian Optimization for High-precision Joint Crystal Structure Refinement",
+      "abstract": "Crystal structure refinement is a fundamental inverse problem in materials characterization, where structural parameters are optimized to reproduce experimental diffraction data. Conventional approaches, such as least-squares and likelihood-based optimization, rely on local search and often struggle with non-convex, noisy, and highly correlated parameter landscapes, particularly when integrating multiple diffraction modalities. Joint refinement of X-ray and neutron data is especially challenging due to their complementary but competing sensitivities, which are typically combined through scalarized objectives requiring manual weighting and leading to suboptimal solutions. We propose CrystalMO-TuRBO, a multi-objective trust region Bayesian optimization architecture for joint crystal structure refinement. The method models X-ray and neutron discrepancies as separate objectives and transforms the problem into a normalized maximization setting. A two-phase optimization strategy is introduced: Phase 1 performs global exploration using parallel trust-region Bayesian optimization across multiple scalarizations to identify promising regions of the parameter space, while Phase 2 conducts localized refinement within a shrinking region to achieve high-precision solutions. This design explicitly separates global search from fine-grained optimization, addressing the unique accuracy requirements of refinement tasks. We evaluate the proposed method on experimentally collected X-ray and neutron diffraction data from single-crystal Ho2Ti2O7. Results demonstrate improved convergence, robustness, and parameter precision compared to classical refinement methods and Bayesian optimization baselines on refinement of a single-crystal pyrochlore material system.",
+      "authors": [
+        "Joseph Agada",
+        "Yishu Wang",
+        "Arpan Biswas"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-09-17T15:45:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.20592v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Bayesian optimization AI method for crystal structure refinement",
+      "llm_evidence_cn": "用于晶体结构精修的贝叶斯优化AI方法",
+      "llm_evidence": "用于晶体结构精修的贝叶斯优化AI方法",
+      "canonical_evidence": "用于晶体结构精修的贝叶斯优化AI方法",
+      "llm_tldr_en": "CrystalMO-TuRBO applies multi-objective trust-region Bayesian optimization to jointly refine crystal structures from X-ray and neutron diffraction, avoiding manual scalarized weighting and improving robustness on non-convex parameter landscapes.",
+      "llm_tldr_cn": "晶体结构精修是材料表征中的反问题，传统最小二乘与似然法依赖局部搜索，在非凸、噪声大且参数强相关的场景下容易失效。本文提出CrystalMO-TuRBO多目标信赖域贝叶斯优化方法，联合处理X射线与中子衍射数据，避免标量化目标的人工加权。实验表明该方法能更稳健地收敛并提升结构参数精度。该工作为多模态衍射数据的自动结构精修提供了高效优化框架。",
+      "llm_tldr": "晶体结构精修是材料表征中的反问题，传统最小二乘与似然法依赖局部搜索，在非凸、噪声大且参数强相关的场景下容易失效。本文提出CrystalMO-TuRBO多目标信赖域贝叶斯优化方法，联合处理X射线与中子衍射数据，避免标量化目标的人工加权。实验表明该方法能更稳健地收敛并提升结构参数精度。该工作为多模态衍射数据的自动结构精修提供了高效优化框架。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

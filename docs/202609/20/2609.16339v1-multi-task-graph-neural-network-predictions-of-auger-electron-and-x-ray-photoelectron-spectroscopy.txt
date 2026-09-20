@@ -1,0 +1,1021 @@
+Title: Multi-Task Graph Neural Network Predictions of Auger-Electron and X-ray Photoelectron Spectroscopy
+
+URL Source: https://arxiv.org/pdf/2609.16339v1
+
+Published Time: Wed, 16 Sep 2026 00:18:06 GMT
+
+Number of Pages: 14
+
+Markdown Content:
+# Multi-Task Graph Neural Network Predictions of Auger-Electron and X-ray Photoelectron Spectroscopy 
+
+Adam E. A. Fouda*, 1, 2 Patrick Phillips, 2, 3 and Phay J. Ho 2
+
+> 1)
+
+Department of Physics, The University of Chicago, Chicago, IL 60637, USA 
+
+> 2)
+
+Chemical Sciences and Engineering Division, Argonne National Laboratory, 9700 S. Cass Avenue, Lemont, IL 60439, USA 
+
+> 3)
+
+Department of Computer Science, The University of Chicago, Chicago, Illinois 60637, United States 
+
+(*Electronic mail: adamfouda@uchicago.edu) 
+
+Auger-electron spectroscopy has long accompanied x-ray photoelectron spectroscopy as a second modality to resolve chemical states with overlapping core-electron binding energies. However, analyzing the Auger spectrum is challenged by its complexity and the computational expense of its simulation. Here we demonstrate that the physical connection, and thus inter-task relationship, between the generation of a core-hole and its corresponding Auger-Meitner decay en-ables inductive knowledge transfer through the training of a multi-task graph neural network to predict both observables from a common graph embedding. Both task losses are combined with learned weights via the uncertainty weighting procedure. Overall, the single-task and multi-task models predict calculated and experimental Auger lineshapes with good accuracy in most cases. The performance between the two task regimes is similar, with the single-task models generally having better predictions of the finer peak structures in the spectrum. The present results demonstrate that multi-task training is a promising avenue for future developments of universal x-ray spectroscopy models with learned representations that map the molecular structure to a multitude of techniques. 
+
+I. INTRODUCTION 
+
+Photoelectrons emitted from chemical samples following x-ray irradiation are affected by the local bond environments of the target atoms. This enables x-ray photoelectron spec-troscopy (XPS) to identify different chemical states among common atom types in materials, 1 molecules, 2 solutions, 3
+
+liquids, 4,5 and biological matter. 6 While this phenomenon, known as the chemical shift, 7 can resolve different oxidation states and local bond environments within the XPS spectrum, overlapping peaks in the spectrum can limit this capability through XPS measurements alone. Moreover, the availabil-ity of reliable reference spectra to support precise peak as-signments is challenged by the influence of multiple compet-ing mechanisms, such as charge transfer, electric fields and hybridization, 7 which govern the structural environment ef-fects on the binding energies of core-electrons. Combining multiple complementary spectral measure-ments yields a more holistic observation of the chemical sys-tem and can resolve the spectral ambiguities of a single mea-surement. XPS has long been implemented with the simul-taneous detection of electrons autoionized from the irradi-ated sample via the core-hole decay of the ionized atom. 8,9 
+
+This decay process, known as Auger-Meitner decay, involves an outer-shell electron filling the core vacancy, and another outer-shell electron being ejected to the continuum. Auger-electron spectroscopy (AES) is often used to distinguish oxi-dation states of active metal sites in catalysts and functional materials. 10–18 This multi-modal analysis is primarily im-plemented via a Wagner plot, 19 which plots the XPS core-electron binding energy ( Eb) against Auger kinetic energy (Ek). The Wagner plot is thus a representation of the Auger parameter ( α), 20 
+
+α = Eb + Ek, (1) which assumes that the binding energies of electrons re-sulting in Ek are deep core orbitals, and therefore approxi-mates them to have equal couplings to the valence orbitals. This approximation enables the Auger-parameter and Wag-ner plot to isolate different final state relaxation effects in the Auger-Meitner decay, which are more sensitive to correlation effects, 21 and thus resolve different chemical states with over-lapping Eb values. Beyond its complementary chemical state identification ca-pabilities to XPS, AES is a common observable for funda-mental molecular physics applications exploring novel in-teractions under ultra-fast and intense x-ray free electron laser conditions 22 and monitoring ultra-fast dynamics in time-resolved and imaging studies. 23–27 AES is a powerful observ-able for light-induced phenomena with relatively low cross-sections in organic molecules, as the underlying decay mecha-nism out-competes fluorescence decay in the first row p-block elements. Furthermore, Auger processes play a key role in the formation of radiation damage effects that influence structural x-ray diffraction measurements, and are utilized in medical radiotherapy applications. 28–30 
+
+The implementation of AES analysis to the aforementioned applications is limited by the complexity of Auger-Meitner decay. All energetically possible decay channels involving two outer-shell electrons contribute to the spectrum, which challenges both its experimental interpretation and computa-tional simulation. The number of possible final states scales non-linearly with respect to the system size. This can be illus-trated in the case of a closed shell ground state system under-going core-ionization. By excluding the contribution of mul-tielectron shakeup and shakeoff processes, the number of final states can be approximated by Weyl’s formula for determining the number of configuration state functions in an active orbital arXiv:2609.16339v1 [physics.chem-ph] 14 Sep 2026 2space, 
+
+K(n, N, S) = 2S + 1
+
+n + 1
+
+ n + 1 
+
+> 12
+
+N − S
+
+ n + 1 
+
+> 12
+
+N + S + 1
+
+
+
+, (2) where n, N, and S are the number of molecular orbitals, the number of electrons, and the spin quantum number, respec-tively. Figure 1 uses Equation 2 to plot the number of sin-glet and triplet final dication states, with respect to the num-ber of doubly occupied orbitals energetically higher than the core-ionized orbital. The computation of these states is fur-ther complicated by their multiconfigurational character, 31,32 
+
+which limits the capability of single reference electronic struc-ture methods, such as density functional theory (DFT), to de-scribe the states accurately. Another complexity in AES sim-ulation is the treatment of the ejected electron’s continuum wave function and its interaction with the dication molecu-lar frame. Numerous approaches have been developed for its treatment, including approximating the spectral intensity by an electron population analysis, 33–36 and both implicit 37–49 
+
+and explicit 50–57 considerations of the continuum electron wave function. 5 10 15 20 25 30  
+
+> Double Occ. MOs
+> 0200 400 600 800
+> Final 2 h States
+> Singlet Triplet Total
+> FIG. 1. Plot showing how the number of singlet and triplet final dication states (excluding multielectron shakeup and shakeoff pro-cesses) increases with respect to the number of doubly occupied or-bitals above the core-ionized orbital of a closed-shell ground-state system by Weyl’s formula in Equation 2.
+
+Previously, we found that implicitly treating the continuum with pre-calculated bound-continuum integrals from atomic calculations via the one center approximation (OCA) 43–49 im-plementation in OpenMolcas, 58,59 combined with the multi-configuration pair-density functional theory 60–63 (MC-PDFT) method for treating the bound electronic structure, efficiently provides carbon 1 s Auger spectra for a set of 20 organic molecules with reasonable experiment accuracy. 32 MC-PDFT enables an efficient description of the large number of dou-bly ionized final states in AES. It adds correlation effects to a restricted active space self-consistent field wave function 64,65 
+
+(RASSCF), through a straightforward computation of the one- and two-particle reduced density matrices, and the opti-mized orbitals derived from the RASSCF wave function. The RASSCF protocol enables both the description of core-hole and multiconfigurational valence dication states. Tradition-ally, the calculation of the RASSCF wave function was fol-lowed by second order perturbation theory (RASPT2) to in-clude additional effects of the correlation energy. 66 However, the RASPT2 method requires the calculation of higher-order density matrices to determine the perturbed wave function used to compute the energy. MC-PDFT has been shown to achieve an accuracy comparable to RASPT2 for the energies and properties of the ground and excited states, 62,63 and more recently AES. 32 The OCA MC-PDFT level of theory thus en-ables the possibility to construct high-quality AES datasets. Recently, there has been a widespread surge in the devel-opment of data driven, machine learning (ML) approaches to predicting spectroscopy. 67,68 The popularity of such methods is driven by their ability to reproduce calculated spectra at comparatively negligible computational cost. To the best of our knowledge, no previous ML models for predicting molec-ular Auger spectra directly from structure have been reported. However, neural networks have been applied to the spectrum-to-structure analysis of AES 69–71 and Budewig et al. deep neural networks to the prediction of multiple x-ray induced transitions, including Auger-Meitner decay rates, in atomic systems. 72 Furthermore, multiple deep learning models have been developed for the prediction of x-ray absorption spec-troscopy (XAS) 73–82 and XPS, 83–90 due to the availability of databases 91,92 and high-throughput simulation methods. 93–95 
+
+Graph neural networks (GNNs) are a class of deep geo-metric learning methods, which have gained broad popular-ity in the chemical sciences, 96–98 including the prediction of XAS, 77,80,81 as they embed the molecular structure directly into the architecture via the representation of atoms and bonds as the network nodes and edges. This alleviates the require-ment to tune appropriate input descriptors to numerically rep-resent the local bond environment in non-geometric model ar-chitectures. Furthermore, GNN models can incorporate 3D geometric information by respecting the invariant or equivari-ant nature of molecular properties to rotational and transla-tional symmetries. 97,99–102 Recently, we have shown that the equivariant graph neural network (EGNN), which includes 3D geometry effects via an equivariant coordinate update mes-sage operation, 99 accurately predicts XPS Eb values for or-ganic molecules with respect to experiment, when trained on values calculated by MC-PDFT. 103 
+
+Here, we extend this EGNN framework to direct prediction of molecular C 1s Auger spectra from molecular structure. We construct a large OCA/MC-PDFT AES dataset and investi-gate whether the physical relationship between XPS and AES can be exploited through multi-task learning of Eb and f (Ek). We compare the predictive performance and generalization of single- and multi-task models for both observables and show that both regimes reproduce the overall lineshape with a simi-lar level of accuracy. The work demonstrates the applicability of multi-task learning schemes to x-ray spectroscopy, where the observables from different techniques share are common relationship to the local-bond environment. 3a) 
+
+## b)   
+
+> FIG. 2. a) Schematic showing the split of the Auger spectra cal-culated on the subset of QM9 molecules (grey) between the train (blue), validation (yellow) and hold-out test (green) sets, and the ad-ditional set of evaluation molecules with experimental and calculated spectra (orange). b) Plots of the molecular size (top row) and atom types (bottom row) counts of the QM9 calculated dataset (left col-umn, grey) and the evaluation dataset (right column, orange).
+> II. DATASET AND MODEL
+
+This work was enabled through the construction of an AES dataset by the previously benchmarked OCA MC-PDFT method with the tPBE0 functional and ANO-RCC-VTZP ba-sis set. The approach uses a RASSCF active space that ex-cludes virtual ground state orbitals and thus enables high-throughput AES simulation. 32 We refer the reader to this study for additional details on the electronic structure calculations. The AES dataset contains 1689 molecules, containing 3-12 atoms, extracted from a subset of randomly selected QM9 molecules 104 previously used for EGNN predictions of car-bon 1 s E b values. 105 The number of final dication states for each molecule was limited to 300 singlet and 300 triplet states and the Auger spectra for every possible carbon 1 s hole state to these final states were computed. The singlet and triplet final states for each carbon were combined and fitted to a ki-netic energy grid of 751 points between 200 and 275 eV. Un-less stated otherwise, a Gaussian FWHM of 1.6 eV was ap-plied. In the Supplementary Material (SM) we give the full details on the dataset and molecular graph generation used in this work. The full set of calculated 6,501 carbon site spectra generated by this work has been made publicly available at https://doi.org/10.5281/zenodo.22285217. 4 2 0 2 4PC1 4 
+
+> 3
+> 2
+> 1
+> 0123PC2
+> 290 292 294 296 298 300
+> Eb (eV)
+> FIG. 3. Scatter plot of the two dominant modes from principal com-ponent analysis (PCA) of the Auger spectra calculated on the set of QM9 molecules. The color gradient of the scatter points is based on the calculated carbon 1 sbinding energies.
+
+Figure 2 a) shows the train and validation split of our Auger dataset, and details the evaluation data used for AES predic-tions. Initially a randomly selected sample of 50 molecules was extracted for the hold-out test set, then the remaining molecules underwent a 10-fold cross validation (CV) using the Butina splitting approach. 106 In addition to the hold-out test, we provide an additional evaluation test set, which contains experimental and calculated spectra for 16 of the 20 organic molecules used in the study benchmarking the electronic structure calculations. 32 We refer to each of these datasets as eval-calc and eval-exp. The structures of the molecules are provided in the SM. The counts of the molec-ular sizes and atom types for the calculated QM9 (grey) and evaluation (orange) Auger spectra are shown in Figure 2 b). The calculated data used for the train, valid and hold-out sets is imbalanced towards containing more 12-atom molecules and fewer fluorinated molecules, which is inherited from the distribution in the full QM9 database. The evaluation data consists mostly of molecules with fewer than 12 atoms, and therefore examines the model’s performance on smaller molecules. A key difference between the present EGNN architecture and the one previously used to predict carbon 1 s E b values, 105 
+
+is that the dataset now contains both the Auger spectrum ( f (Ek)) and the corresponding Eb values. This presents an opportunity to implement a multi-task training scheme to de-4EGNN Encoder XPS Decoder XPS head AES head AES Decoder             
+
+> EGNN Encoder 296 eV XPS Decoder Single-task Multi-task
+> 296 eV
+> EGNN Encoder AES Decoder
+> FIG. 4. Left: single-task architectures for training separate models to predict carbon 1 s E bvalues in XPS and f(Ek)in AES. Right: Multi-task architecture for training a single model that predicts both Eband f(Ek), with a shared graph embedding generated by the EGNN encoder, and separate output heads for each observable. The loss functions for each task ( L1and L2) are combined to the total loss ( LTotal ) via uncertainty weighting in this work. 107
+
+velop a model that predicts both f (Ek) and Eb observables from the same weights. This utilizes the inter-task relationship to facilitate inductive knowledge transfer during the training, and enable more efficient model training while potentially im-proving the single task model prediction accuracy. 107,108 Fig-ure 3 shows the relationship between f (Ek) and Eb in our cal-culated QM9 subset via principal component analysis of the 
+
+f (Ek), with a color gradient corresponding to Eb. While the variance in f (Ek) will be influenced by other factors such as the size of the molecule, the analysis shows a relationship by the presence of Eb clustering in the two dominant variation modes (PC1 and PC2) of f (Ek), which can be exploited by multi-task learning. While multi-task learning is commonplace in computer vision, 109,110 natural language processing, 111 and speech recognition, 112 its application to molecular property, 113,114 
+
+and particularly spectroscopy prediction, is sparse. The DetaNet 115 and Molspectra 116 models apply common ar-chitectures to predicting multiple spectroscopic techniques, including infrared, UV-visible, nuclear magnetic resonance and mass spectrometry, but as separate single-task models. Han et al. applied multi-task training schemes to predict-ing molecular properties in the QM9 database. They found that architectures containing separate modules for learning a common embedding representation and learning task spe-cific output heads, improve predictions on tasks with complex relationships, 117 and outperform previous approaches simply extending a single-task model’s output dimension from 1 to number of predicted tasks. 108 
+
+We have applied the hard parameter sharing adaptation to the EGNN model previously used for Eb predictions, 103 and a schematic for this is given in Figure 4. The single-task mod-els on the left show how the EGNN encodes the molecular structure into a graph embedding, which is used as an input to either an XPS decoder for Eb or an AES decoder for f (Ek).In the multi-task scheme on the right, the graph embedding is simultaneously passed to two output heads for XPS and AES, which are multi-layer perceptrons (MLPs) generating inputs for the XPS and AES decoders. Each output head con-tains two fully connected layers followed by the SiLU activa-tion function. In the single and multi-task models, the XPS decoder is a linear projection of the embedding dimension to a dimension of 1 for the scalar Eb output. The AES de-coder is an MLP with an architecture inspired by the ML XAS literature. 78,81 First, the node embedding is linearly projected to a higher dimension and passed through layer normalization and Softplus activation, to a second fully connected layer and Softplus activation. A final linear projection to the energy grid dimension, fixed to 751 in this work, is then followed by Soft-plus activation to re-enforce positive output intensities. The EGNN encoder uses 3 message passing layers with an em-bedding dimension of 64. In the SM we provide the full set of computational details for the model architecture and training used in this work. In order to simultaneously train the model on multiple tasks, the loss functions for each task must be combined for the steepest gradient descent optimization. This work com-bines the task specific losses via the uncertainty weighted (UW) loss procedure. 107 UW loss circumvents manually tun-ing the weights for each task loss, by instead considering the homoscedastic, or task-dependent, uncertainty. This is a type of model uncertainty that is independent of the uncertainties attributed to the training data size and the nature of the data itself (i.e. the electronic structure theory and graph represen-tation), but depends on the representation of the task and its unit of measure. If we define the prediction of Eb as Task 1 and the predictions of f (Ek) as Task 2 and both tasks use a mean squared error (MSE) loss function ( L MSE  
+
+> 1
+
+and L MSE  
+
+> 2
+
+), then the total uncertainty weighted loss ( LTotal ) can then be expressed as, 
+
+LTotal = 12σ 21
+
+L MSE  
+
+> 1
+
++ 12σ 22
+
+L MSE  
+
+> 2
+
++ log σ1σ2, (3) where σ is the noise parameter for the Gaussian likelihood resulting from the respective MSE loss function. Equation 3 is implemented by initializing s = log (σ 2) to zero and passing 
+
+s through the backpropagation procedure that minimizes the model weights, which is more numerically stable than using 
+
+σ 2.107 As the noise parameter for the task decreases, the task’s loss function weights increase. The log σ1σ2 term in Equation 3 acts as a regularizer that prevents the noise parameter from increasing and collapsing the task loss weight to zero. We 50.0 0.1 0.2 0.3                 
+
+> Eb Loss (MSE)
+> a)
+> Train Val 0.02 0.03 0.04
+> f(Ek) Loss (MAE)
+> b)
+> 050 100 150 Epoch 020 40 60 UW Loss Weights
+> c)
+> Eb
+> f(Ek)050 100 150 Epoch 4
+> 2
+> 0Total Loss (UW)
+> d)
+> FIG. 5. Training curves for the multi-task learning with the MSE loss function for Ebprediction and the MAE loss function for f(Ek)
+> prediction. a) and b) show the training and validation losses per epoch for Eband f(Ek)respectively. c) the uncertainty loss weights learned during training for each task. The loss weights in c) are applied to the curves in a) and b) and summed to form the total uncertainty weight loss curves in d). The black dotted line in d) indicates the best total validation loss within a patience of 30 epochs, used for the model selection.
+
+refer the reader to the original UW publication by Kendall et al. 107 for the full derivation. The MSE loss function may not be preferable for all regression tasks and for cases where Task 1 uses L MSE  
+
+> 1
+
+and Task 2 uses a mean absolute error (MAE) loss function ( L MAE  
+
+> 2
+
+), the total uncertainty weighted loss is expressed as, 
+
+LTotal = 12σ 21
+
+L MSE  
+
+> 1
+
++ 1
+
+b2
+
+L MAE  
+
+> 2
+
++ log σ1 + log b2, (4) where b2 is now the noise parameter corresponding to the Laplace likelihood, 118 and s = log b2 and initialized to zero in the training. Figure 5 illustrates the UW loss mechanism during the training with the L MSE  
+
+> 1
+
+for the Eb prediction task and L MAE 
+
+> 2
+
+for the f (Ek) prediction task. The train (blue) and validation (orange) curves for Eb and f (Ek) are given in a) and b) re-spectively. Between 0 and 100 epochs, the f (Ek) loss reaches a lower value than the Eb loss and therefore its noise param-eter is smaller, and the loss weight in c) (green for Eb and magenta for f (Ek)) reaches a higher value. This balances the contributions of each task to the total UW loss shown in d). The total loss becomes negative as σ for each task de-creases, due to the presence of the regularizer terms. The dataset and code for the models used in this work are pub-licly available at https://doi.org/10.5281/zenodo.22285217 and https://doi.org/10.5281/zenodo.22283453 respectively. The Git repository for the software can be found at https://github.com/afouda11/AugerNet.   
+
+> III. RESULTS AND DISCUSSION A. Overall Model Performance
+
+The results of the single-task and multi-task EGNN models with respect to both L MSE and L MAE are presented as the mean and standard deviations across the 10 CV folds in Table I. For Eb prediction, the models are evaluated with the MAE against a set of 113 molecules with experimental carbon 1 sEb values, previously used to evaluate single-task EGNN Eb
+
+predictions, 105 we refer the reader to this publication and the present SM for the full list of molecules and experimental Eb
+
+values. To evaluate the AES predictions, two complementary metrics are provided, the median (MSE) and the average Pear-son’s correlation coefficient (PCC). Taking the median of the spectral MSE was previously found to be robust to the differ-ences between model error distributions in the prediction of XAS spectra. 78 The PCC is a measure of the lineshape simi-larity, based on the cosine similarity between two vectors and their means. Previously, this metric was found to be robust to spectral noise and peak broadening in the evaluation of XAS spectra. 119 
+
+Across the 10 CV folds, the single- and multi-task models show similar overall predictive performance for both tasks, loss functions, evaluation metrics and datasets. This indicates that the physical connection, and thus correlation, between 
+
+Eb and f (Ek) is sufficient for both tasks to share a common graph embedding representation. For reference, we have in-cluded the performance metrics for the eval-exp dataset and note that the training data level of theory has a median MSE of 0.067 and average PCC of 0.78 against the experimental 6
+
+TABLE I. Summary of the single-task and multi-task EGNN models for predicting the Eb and f (Ek), with respect to the MSE and MAE loss function applied to each task ( L MSE and L MAE ). All values are the mean ± standard deviation over the 10 CV folds. The Eb prediction performance metric is the mean absolute error (MAE) in eV for the 113 molecules with experimental carbon 1 s binding energies, taken from a previous study. 105 The full list of molecules and experimental Eb values can be found in the SM. Two metrics are used for the performance of f (Ek) prediction, the median mean squared error (MSE), reported in units of 10 −3, and the average Pearson’s correlation coefficient (PCC). These metrics are given for the hold-out, eval-calc and eval-exp test sets detailed in Figure 2. Model: Loss Functions Eb Exp. f (Ek) Median MSE ( ×10 −3) f (Ek) Avg. PCC MAE (eV) Hold-out Eval-calc Eval-exp Hold-out Eval-calc Eval-exp Single-task: L MSE 0.32 ± 0.02 6.0 ± 0.5 23.3 ± 3.1 42.1 ± 5.3 0.96 ± 0.00 0.81 ± 0.01 0.85 ± 0.01 Single-task: L MAE 0.34 ± 0.02 5.0 ± 0.2 20.7 ± 2.8 48.7 ± 3.9 0.96 ± 0.00 0.80 ± 0.02 0.83 ± 0.01 Multi-task:  L MSE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ 0.32 ± 0.03 7.1 ± 0.8 23.6 ± 2.8 37.0 ± 3.7 0.96 ± 0.00 0.83 ± 0.01 0.87 ± 0.01 Multi-task:  L MAE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ 0.32 ± 0.02 6.4 ± 0.4 21.1 ± 1.3 38.6 ± 3.4 0.96 ± 0.00 0.83 ± 0.01 0.87 ± 0.01 Multi-task:  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ 0.32 ± 0.01 6.3 ± 0.5 21.6 ± 1.6 37.0 ± 3.4 0.96 ± 0.00 0.83 ± 0.01 0.87 ± 0.01 Multi-task:  L MAE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ 0.33 ± 0.03 7.3 ± 0.6 23.9 ± 2.1 36.2 ± 3.3 0.96 ± 0.00 0.82 ± 0.01 0.87 ± 0.01  
+
+> For the calculated Eval. spectra against the experimental Eval. spectra the Avg. PCC is 0.78 and the Median MSE is 67.2 ×10 −3. (Model-independent; identical for every row.)
+
+spectra. While all models give better agreement to experiment than the calculated spectra, this is not a reliable metric for the model performance; Subsection III B discusses how the pre-dicted spectra tends to be broader, with less sharp peaks than the calculated spectra. This happens to show better agreement to experiment at the Gaussian FWHM of 1.6 eV. For Eb prediction, the range of the mean MAEs across all the models is 0.02 eV, the single-task L MAE model gives the worse overall performance and the multi-task  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ model has the best overall performance by a small margin, with the same mean MAE as the single-task 
+
+L MSE and multi-task  L MAE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ models of 0.32 eV and a slightly improved standard deviation of 0.01 eV. The over-all Eb results also indicate a multi-task advantage with respect to the choice of the loss function, as both multi-task models using L MAE  
+
+> 1
+
+, have an improved performance over the single task L MAE model. For f (Ek) prediction, all models give the same performance for the average PCC values on the hold-out set with a CV fold-averaged average PCC value of 0.96. The hold-out median MSE values however, have a fold averaged range of 2 .3 ×
+
+10 −3. This indicates that the median MSE is a more precise metric for evaluating the model performance. For the eval-calc dataset, the average PCC values show a range of 0.03 across the fold averaged values, and the median MSE range in fold averaged values is 3 .2 × 10 −3. The larger deviations in performance on the eval-calc dataset are expected due to the smaller number of molecules in this dataset, which have a different molecular size and atom type distribution to the dataset the hold-out molecules were sampled from (see Figure 2). In all cases, the median MSE and average PCC values in the hold-out and eval-calc datasets are improved when L MAE 
+
+is used instead of L MSE for the f (Ek) prediction. L MAE is better at describing finer peak structures by applying a less strict penalty to deviations from the target line-shape during the training. Unlike the Eb prediction task, there is no ap-parent multi-task advantage with respect to stability of the model performance and the choice of the loss function. The median MSE values of the hold-out and eval-calc datasets show that the multi-task training does not appear to correct for the reduced performance of L MSE in the single-task mod-els. The multi-task  L MAE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ and  L MSE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ per-form worse than the both single-task models. However, the performance of the f (Ek) prediction appears to be relatively stable with respect to the choice of the loss function for the 
+
+Eb task as the fold averaged hold-out median MSE values for the  L MSE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ and  L MAE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ multi-task mod-els are 7.1 and 7.3 respectively, and for  L MAE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ and  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ they are 6.4 and 6.3 respectively. This insen-sitivity to the choice of Eb task task loss is also reflected in the fold averaged eval-calc values. The lack of a clear multi-task advantage for the f (Ek) pre-diction possibly relates to the increased complexity of this task. Despite this, the overall agreement of the CV fold av-eraged results between the multi-task and single-task models is good within the context of the available evaluation datasets. In the following discussion, to give a fair comparison between the models, the results are taken from a single fold (fold 8), This fold was selected for its validation loss being close to the fold averaged validation loss across all models, and therefore not particularly advantageous for any of the models shown in the following results. 
+
+B. What Do the Models Learn About AES? 
+
+Figure 6 examines the predicted and calculated Auger spec-tra for 3 molecules from the hold-out dataset labeled A, B
+
+and C, which are shown above the spectra. These molecules are showcased as they each contain 4 unique carbon envi-ronments. The combined molecular spectra are given in the top row, and the individual carbon spectra are presented in the rows below. Each carbon is labeled C1-C4, which corre-7A B C
+
+C1 
+
+C2 
+
+C3 
+
+C4 
+
+C1 
+
+C2 
+
+C3 
+
+C4  C1 
+
+C2 
+
+C3  C4 
+
+FIG. 6. Auger spectra for 3 hold-out test set molecules labeled A, B and C, each molecule has 4 unique carbon environments. The top row is the combination of all four carbon 1 s spectra and the panels below correspond to the carbons labeled in the structures above. The single-task models with the L MSE (solid blue) and L MAE (dashed blue), and multi-task models with  L MSE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ (solid orange) and 
+
+ L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ (dashed orange) spectra are compared to the calculated (black dashed) spectra. 
+
+spond to the labels in the structures above the spectra. The environment class and calculated Eb for each carbon are pro-vided in the panels. The calculated spectra (black dashed lines) are compared to the single task models with the L MSE 
+
+(blue solid) and L MAE (blue dashed) loss functions and the  L MSE  
+
+> 1
+
+, L MSE 
+
+> 2
+
+ (orange solid) and  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ (orange dashed) multi-task models. These multi-task models were se-lected to show the effect of switching from L MSE  
+
+> 2
+
+to L MAE 
+
+> 2
+
+on the line-shape prediction. Generally, both single-task and multi-task models give a good predictive accuracy of the cal-culated spectra, but as mentioned earlier the predicted spec-tra tend to be more broad with less well defined peak struc-tures. Furthermore, this broadness is generally increased for the multi-task predictions. This is evidenced by the aromatic 8acetaldehyde acetone acetylene benzene butane cyclobutane cyclopropane ethane ethylene formaldehyde formamide methane                 
+
+> 230 240 250 260
+> propane
+> 230 240 250 260
+> pyrimidine
+> 230 240 250 260
+> tetrafluoromethane
+> Kinetic Energy (eV) Normalized Intensity (arb. units)
+> Exp. Theory MAE (MSE
+> 1,MAE
+> 2)
+
+FIG. 7. Auger spectra for evaluation test set of molecules, with individual carbon spectra combined to the molecular spectra. A single-task model with L MAE (solid blue) and multi-task models with  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ (dashed orange) spectra are compared to the calculated (eval-calc) (black dashed) and experimental (eval-exp) (black solid) spectra. The experimental spectra for each molecule are taken from the follow-ing references: acetaldehyde, 120 acetone, 120 acetylene, 121 benzene, 122 butane, 123 cyclobutane, 121 cyclopropane, 121 ethane, 123 ethylene, 121 
+
+formaldehyde, 120 formamide, 120 methane, 123 propane, 123 pyrimidine 124 and tetrafluoromethane. 125 . Predictions on oxazole 126 are included in Table I’s metrics, but not in the present figure. 
+
+carbons at molecule A C2 and C3, and molecule C C2 and C3, where the single-task models resolve a finer peak struc-ture than the multi-task models. In some cases, such as C2 
+
+A, C4 B and C1 C, switching from L MSE  
+
+> 2
+
+to L MAE  
+
+> 2
+
+in the multi-task model appears to recover some of the finer peak structures. However, in most cases presented, switching to the less strict L MAE  
+
+> 2
+
+loss function in the multi-task models shows little advantage to using to stricter L MSE loss in the single-task model. The single-task and multi-task models describe common lineshape features between common carbon environments across different molecules. For the terminal nitrile carbons C4 in molecules A and B, all models capture the single sharp peak between 250 and 260 eV which dominates the lineshape, 90.0 0.5 1.0 1.5 2.0 Median MSE (10  2)            
+
+> Hold-out
+> a)
+> MAE
+> (MSE
+> 1,MAE
+> 2)
+> 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0 FWHM (eV) 1.0 2.0 3.0 4.0 5.0 6.0 Median MSE (10  2)
+> Eval.
+> b)
+> Eval-calc Eval-exp
+> FIG. 8. Plot showing the effect of the Gaussian FWHM used to fit the spectrum on the median MSE of the a) hold-out and b) evaluation (eval-calc: solid, eval-exp: dashed) test sets. The single-task LMAE
+> model (blue) is compared to the multi-task  LMSE
+> 1,LMAE
+> 2
+> (orange) model.
+
+and for the aromatic carbons in molecules A and C, all models capture the significant intensity spread spanning the full ki-netic energy range. This demonstrates the potential of EGNN models, in both the single and multi task settings to provide a rapid, approximate analysis of AES lineshapes and make carbon specific assignments in high-resolution AES measure-ments. In Figure 7, the model performance on the eval-calc (black dashed) and eval-exp (black solid) spectra supports this fur-ther, which compares the single-task L MAE model (blue solid) with the multi-task  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ model (orange dashed). The combined molecular spectra are shown, but acetylene, benzene, cyclobutane, cyclopropane, ethane, ethy-lene, formaldehyde, methane and tetrafluoromethane all con-tain a single carbon environment and only acetaldehyde, ace-tone, butane, propane and pyrimidine contain a combination of multiple carbon spectra. For consistency with the previ-ous study which benchmarked the theory, 32 the calculated and thus predicted spectra have all been shifted by -2 eV to align them better to the experiment. While for most cases this shift aligns the highest energy peaks of predictions and calcula-tions to experiments well. In some cases this shift causes a increased misalignment of the predicted spectra to lower kinetic energies with respect to the calculations and experi-ment. For example in tetrafluoromethane, both the single and multi-task models major peak appears at a lower kinetic en-ergy to the calculated and experimental major peak about 250 eV. However, in other cases such as acetylene, ethylene and formaledyde the multi-task model has a better alignment of spectrum kinetic energies than the single-task model to the calculations and experiment. However, acetylene is the only case where the lineshape of the multi-task predictions shows an improvement over the single-task prediction. Generally, the models give a good reproduction of the overall lineshape with respect to the calculations and the experiment, though the performance of both single-task and multi-task models is poor for some of the smaller molecules such as ethane, formalde-hyde and formamide, which is not surprising considering the size imbalances in the training data (see Figure 2). The choice to train the EGNN models on spectra fitted with a 1.6 eV FWHM Gaussian was somewhat arbitrary, but tests how well the models can resolve complex peak structures. It is clear however, that the available experimental reference spectra are much broader and a FWHM of 3.8 eV was previ-ously used to benchmark the theory to experiment. 32 Figure 8, shows the model’s accuracy with respect to the FWHM over a 0.5 to 4.0 eV range. The median MSE of the single-task 
+
+L MAE (blue solid) and multi-task  L MSE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ (orange solid) models is shown with respect to the hold-out set in a). b) shows the performance on the eval-calc (solid) and eval-exp (dashed) datasets. As expected, the single-task and multi-task models are more accurate at reproducing the calculated spec-tra at broader FWHM, and show a similar on the hold-out set. On the eval-calc dataset the single-task model shows an im-proved performance below a FWHM of 2.5 eV. This dataset contains a larger proportion of smaller molecules, which have spectra with sharper peak structures and thus better predicted by the single-task model. The experimental spectra are kept fixed at their reported widths and the fluctuations in model performance across the FWHM range reflects the diversity molecules within this smaller dataset. Finally, we show a scatter plot of the EGNN predictions of the 113 molecules with experimental carbon 1 s E b values used for the MAE values in Table I. The left panel shows the single-task L MAE model and the right panel has the multi-task  L MAE  
+
+> 1
+
+, L MAE 
+
+> 2
+
+ model. The yellow to red color gradient indicates binding energies from molecules with more than 16 atoms, to show the size transferability of the model to larger organic molecules. Whilst the R 2, MAE and standard devi-ation (STD) performance metrics have similar values for the single and multi-task models, a minor multi-task advantage is observed for the two highest binding energy carbons with ex-perimental values above 300 eV. In this region, the single-task model reaches an upper limit to the energies it can predict, as shown by the vertical scatter points around 299 eV. This en-ergy region contains highly fluorinated carbons, which are un-derrepresented in the training data (see Figure 2), and despite this the multi-task model is able to more accurately predict these as values above 300 eV. This indicates that a shared em-bedding learned across multiple related tasks can improve the generalization of predictive models for data-points from low population regions in the training data. 10 290 292 294 296 298 300 GNN Predicted CEBE (eV) 290 292 294 296 298 300 Experimental  Eb (eV)   
+
+> R2= 0.97 MAE = 0.34 eV STD = 0.41 eV Single-task: MAE
+
+290 292 294 296 298 300 GNN Predicted Eb (eV)       
+
+> R2= 0.97 MAE = 0.34 eV STD = 0.42 eV Multi-task: (MAE
+> 1,MAE
+> 2)
+
+20 25 30 35 40 45 Molecule Size (atoms)             
+
+> FIG. 9. Scatter plots for the single-task LMAE model (left) and multi-task  LMAE
+> 1,LMAE
+> 2
+> (right) model predictions of experimental carbon 1s E bvalues on the 113 organic molecules previously used to evaluate EGNN predictions. 105 Molecules with under 16 atoms are shown by blue scatter points and molecules with 16 atoms or more are shown by the yellow-to-red color gradient.
+> IV. CONCLUSION
+
+To conclude, by constructing a dataset of AES spectra with efficient multiconfigurational chemistry calculations, we have demonstrated that multi-task training of the observables in XPS and AES is possible with EGNN models. The predicted spectra, in both the single and multi task regimes give good reproductions of calculated and experimental lineshapes, and experimental Eb values. Multi-task training schemes for pre-dicting spectroscopy observables open the possibility of build-ing universal x-ray spectroscopy models trained on multi-modal datasets. Inductive knowledge transfer and shared em-bedding spaces are well suited to x-ray spectroscopy, as the different techniques share a common relationship to the local bond environment about the atom which absorbs the x-ray. In order to overcome the model’s dependency on a fixed FWHM, future models could train over spectra fitted across a range of FWHM values and the FWHM could be included as a graph or node level input feature. A more sophisticated ap-proach however, would be to utilize multi-task training to de-velop a model that predicts the Auger stick spectrum, then ap-ply the FWHM as a postprocessing step, in the same way that calculated spectra are presented. Such a model would require separate decoders for the energies and intensities for both the singlet and triplet final states, yielding a 4 task model solely for AES prediction. This lies beyond the scope of the current work and would require a larger and more diverse training data sample. The complexity of AES limits the availability of its training and evaluation data, and thus current scope of ML applications in this field. We hope that this work, and the continued devel-opment of AES calculations and experimental measurements can inspire more data-driven approaches exploiting the wealth of information encoded in the Auger-spectrum lineshape and its sensitivity to the local bond environment. 
+
+> ACKNOWLEDGMENTS
+
+We would like to thank Linda Young for her support and recommendations on the manuscript. A.E.A.F. is grateful for the support from the Eric and Wendy Schmidt AI in Science Postdoctoral Fellowship, a Schmidt Futures Program. This work was supported by the U.S. Department of Energy, Of-fice of Basic Energy Sciences, Division of Chemical Sciences, Geosciences, and Biosciences at Argonne National Labora-tory, under contract DE-AC02-06CH11357. 
+
+> DATA AND SOFTWARE AVAILABILITY STATEMENT
+
+The data and the software are freely avail-able at https://doi.org/10.5281/zenodo.22285217 and https://doi.org/10.5281/zenodo.22283453 respectively. The Git repository for the software can be found at https://github.com/afouda11/AugerNet. 
+
+> SUPPLEMENTARY MATERIAL
+
+The Supplementary Material (SM) for this work includes the full set of computational details for the database, molec-ular graphs, model architecture and training parameters. Fur-thermore the SM contains a table of the all the molecules and experimental carbon 1 s binding energies used to evaluate the models in this work.  
+
+> REFERENCES
+> 1P. S. Bagus, E. S. Ilton, and C. J. Nelin, “The interpretation of XPS spec-tra: Insights into materials properties,” Surface Science Reports 68 , 273–
+
+11 
+
+304 (2013). 
+
+> 2
+
+K. Siegbahn, ESCA applied to free molecules. By K. Siegbahn [and oth-ers] (North-Holland Pub. Co., Amsterdam, 1970) publication Title: ESCA applied to free molecules. 
+
+> 3
+
+R. Seidel, B. Winter, and S. E. Bradforth, “Valence Electronic Structure of Aqueous Solutions: Insights from Photoelectron Spectroscopy,” Annual Review of Physical Chemistry 67 , 283–305 (2016). 
+
+> 4
+
+B. B. Hurisso, K. R. J. Lovelock, and P. Licence, “Amino acid-based ionic liquids: using XPS to probe the electronic environment via binding energies,” Physical Chemistry Chemical Physics 13 , 17737 (2011). 
+
+> 5
+
+E. J. Dick, A. E. A. Fouda, N. A. Besley, and P. Licence, “Probing the electronic structure of ether functionalised ionic liquids using X-ray photo-electron spectroscopy,” Phys. Chem. Chem. Phys. 22 , 1624–1631 (2020). 
+
+> 6
+
+B. D. Ratner, “Surface characterization of biomaterials by electron spec-troscopy for chemical analysis,” Annals of Biomedical Engineering 11 ,313–336 (1983). 
+
+> 7
+
+P. S. Bagus, F. Illas, G. Pacchioni, and F. Parmigiani, “Mechanisms re-sponsible for chemical shifts of core-level binding energies and their rela-tionship to chemical bonding,” Journal of Electron Spectroscopy and Re-lated Phenomena 100 , 215–236 (1999). 
+
+> 8
+
+K. Siegbahn, “Esca : atomic, molecular and solid state structure studied by means of electron spectroscopy,” (1967). 
+
+> 9
+
+C. D. Wagner, “Auger lines in x-ray photoelectron spectrometry,” Ana-lytical Chemistry 44 , 967–973 (2002), https://pubs.acs.org/ancham/article-pdf/44/6/967/10761625/ac60314a015.pdf. 
+
+> 10
+
+M. Bouchabou, J. M. Rives López, M. d. C. Román Martínez, and M. A. Lillo-Rodenas, “Evaluating h2 production by ultraviolet-induced water splitting over (cu or ni)-tio2 nanoparticle photo-catalysts,” ACS Applied Nano Materials 8, 8646–8662 (2025), https://doi.org/10.1021/acsanm.5c00100. 
+
+> 11
+
+M. C. Biesinger, “Advanced analysis of copper x-ray photoelec-tron spectra,” Surface and Interface Analysis 49 , 1325–1334 (2017), https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/pdf/10.1002/sia.6239. 
+
+> 12
+
+M. Soldemo, F. Garcia-Martinez, C. M. Goodwin, P. Lömker, M. Shipilin, A. Nilsson, P. Amann, S. Kaya, and J. Weissenrieder, “Using auger transi-tions as a route to determine the oxidation state of copper in high-pressure electron spectroscopy,” Surface Science 749 , 122565 (2024). 
+
+> 13
+
+J. D. Henderson, M. Sabeti, X. Li, N. Wang, M. Behazin, M. C. Biesinger, J. J. Noël, and S. Ramamurthy, “Applications of auger electron spec-troscopy in the chemical state analysis of copper and its oxides,” Journal of Electron Spectroscopy and Related Phenomena 283 , 147578 (2025). 
+
+> 14
+
+J. Fox, J. Nuttall, and T. Gallon, “Solid state effects in the auger spectrum of zinc and oxidised zinc,” Surface Science 63 , 390–402 (1977). 
+
+> 15
+
+M. C. Biesinger, L. W. M. Lau, A. R. Gerson, and R. S. C. Smart, “The role of the auger parameter in xps studies of nickel metal, halides and oxides,” Physical Chemistry Chemical Physics 14 , 2434–2442 (2012), https://pubs.rsc.org/cp/article-pdf/14/7/2434/2577395/c2cp22419d.pdf. 
+
+> 16
+
+A. Wieczorek, H. Lai, J. Pious, F. Fu, and S. Siol, “Resolving oxidation states and x–site composition of sn perovskites through auger parame-ter analysis in xps,” Advanced Materials Interfaces 10 , 2201828 (2023), https://advanced.onlinelibrary.wiley.com/doi/pdf/10.1002/admi.202201828. 
+
+> 17
+
+C. Hu, Y. Lan, J. Qu, X. Hu, and A. Wang, “Ag/agbr/tio2 visible light photocatalyst for destruction of azodyes and bacteria,” The Jour-nal of Physical Chemistry B 110 , 4066–4072 (2006), pMID: 16509698, https://doi.org/10.1021/jp0564400. 
+
+> 18
+
+W.-C. Lin, W.-C. Lo, J.-X. Li, P.-C. Huang, and M.-Y. Wang, “Auger electron spectroscopy analysis of the thermally induced degrada-tion of mapbi3 perovskite films,” ACS Omega 6, 34606–34614 (2021), https://doi.org/10.1021/acsomega.1c05002. 
+
+> 19
+
+G. Moretti, “The wagner plot and the auger parameter as tools to separate initial- and final-state contributions in x-ray photoemission spectroscopy,” Surface Science 618 , 3–11 (2013). 
+
+> 20
+
+C. Wagner and A. Joshi, “The auger parameter, its utility and advantages: a review,” Journal of Electron Spectroscopy and Related Phenomena 47 ,283–313 (1988). 
+
+> 21
+
+W. Egelhoff, “Core-level binding-energy shifts at surfaces and in solids,” Surface Science Reports 6, 253–415 (1987). 
+
+> 22
+
+E. Pelimanni, A. E. A. Fouda, P. J. Ho, T. M. Baumann, S. I. Bokarev, A. D. Fanis, S. Dold, G. Grell, I. Ismail, D. Koulentianos, T. Mazza, M. Meyer, M.-N. Piancastelli, R. Püttner, D. E. Rivas, B. Senfftleben, M. Simon, L. Young, and G. Doumy, “Observation of molecular resonant double-core excitation driven by intense x-ray pulses,” Communications Physics 
+
+7, 341 (2024). 
+
+> 23
+
+H. J. Thompson, O. Plekan, M. Bonanomi, N. Pal, F. Allum, A. D. Brynes, M. Coreno, S. Coriani, M. B. Danailov, P. Decleva, A. Demi-dovich, M. Devetta, D. Faccialà, R. Feifel, R. Forbes, C. Grazioli, D. M. P. Holland, P. Piseri, K. C. Prince, D. Rolles, M. S. Schuurman, A. Simon-cig, R. J. Squibb, B. N. C. Tenorio, C. Vozzi, M. Zangrando, C. Callegari, R. S. Minns, and M. D. Fraia, “Time-resolved auger–meitner spectroscopy of the photodissociation dynamics of cs2,” Journal of Physics B: Atomic, Molecular and Optical Physics 57 , 215602 (2024). 
+
+> 24
+
+Y. Kissin, M. Ruberti, P. Kolorenˇ c, and V. Averbukh, “Attosecond pump–attosecond probe spectroscopy of auger decay,” Physical Chemistry Chemical Physics 23 , 12376–12386 (2021). 
+
+> 25
+
+S. Li, T. Driver, P. Rosenberger, E. G. Champenois, J. Duris, A. Al-Haddad, V. Averbukh, J. C. T. Barnard, N. Berrah, C. Bostedt, P. H. Bucksbaum, R. N. Coffee, L. F. DiMauro, L. Fang, D. Garratt, A. Gat-ton, Z. Guo, G. Hartmann, D. Haxton, W. Helml, Z. Huang, A. C. LaForge, A. Kamalov, J. Knurr, M.-F. Lin, A. A. Lutman, J. P. MacArthur, J. P. Marangos, M. Nantel, A. Natan, R. Obaid, J. T. O’Neal, N. H. Shivaram, A. Schori, P. Walter, A. L. Wang, T. J. A. Wolf, Z. Zhang, M. F. Kling, A. Marinelli, and J. P. Cryan, “Attosecond coherent electron motion in auger-meitner decay,” Science 375 , 285–290 (2022), https://www.science.org/doi/pdf/10.1126/science.abj2096. 
+
+> 26
+
+T. Driver, M. Mountney, J. Wang, L. Ortmann, A. Al-Haddad, N. Berrah, C. Bostedt, E. G. Champenois, L. F. DiMauro, J. Duris, D. Garratt, J. M. Glownia, Z. Guo, D. Haxton, E. Isele, I. Ivanov, J. Ji, A. Kamalov, S. Li, M.-F. Lin, J. P. Marangos, R. Obaid, J. T. O’Neal, P. Rosenberger, N. H. Shivaram, A. L. Wang, P. Walter, T. J. A. Wolf, H. J. Wörner, Z. Zhang, P. H. Bucksbaum, M. F. Kling, A. S. Landsman, R. R. Lucchese, A. Em-manouilidou, A. Marinelli, and J. P. Cryan, “Attosecond delays in x-ray molecular ionization,” Nature 632 , 762–767 (2024). 
+
+> 27
+
+M. Simmermacher, N. Goff, A. Moreno Carrascosa, E. Fasshauer, T. Northey, L. Ma, H. Yong, B. Stankus, A. Odate, X. Xu, W. Du, K. Acheson, J. C. Cooper, D. Ratner, M. Liang, R. Forbes, M. P. Minitti, A. Kirrander, and P. M. Weber, “Real-space imaging of the electron-pair density hole in molecular auger–meitner decay,” Nature Physics (2026), 10.1038/s41567-026-03363-8. 
+
+> 28
+
+R. W. Howell, “Advancements in the use of auger electrons in science and medicine during the period 2015–2019,” International Journal of Radiation Biology 99 , 2–27 (2023), pMID: 33021416, https://doi.org/10.1080/09553002.2020.1831706. 
+
+> 29
+
+A. Ku, V. J. Facca, Z. Cai, and R. M. Reilly, “Auger electrons for cancer therapy – a review,” EJNMMI Radiopharmacy and Chemistry 4, 27 (2019). 
+
+> 30
+
+P. R. Stollenwerk, S. H. Southworth, F. Granato, A. Renne, B. Mustapha, K. G. Bailey, P. Mueller, J. Nolen, T. P. O’Connor, J. Xie, L. Young, and M. R. Dietrich, “The auger radioisotope microscope: an instrument for characterization of auger electron multiplicities and energy distributions,” New Journal of Physics 27 , 053901 (2025). 
+
+> 31
+
+M. S. Deleuze, A. B. Trofimov, and L. S. Cederbaum, “Valence one-electron and shake-up ionization bands of polycyclic aromatic hydro-carbons. i. benzene, naphthalene, anthracene, naphthacene, and pen-tacene,” The Journal of Chemical Physics 115 , 5859–5882 (2001), https://doi.org/10.1063/1.1386414. 
+
+> 32
+
+A. E. A. Fouda, B. Jangid, E. Pelimanni, S. H. Southworth, P. J. Ho, L. Gagliardi, and L. Young, “Computation of auger electron spectra in organic molecules with multiconfiguration pair-density functional theory,” The Journal of Physical Chemistry A 129 , 8419–8431 (2025), pMID: 40879544, https://doi.org/10.1021/acs.jpca.5c01789. 
+
+> 33
+
+M. Mitani, O. Takahashi, K. Saito, and S. Iwata, “Theoretical molecu-lar auger spectra with electron population analysis,” Journal of Electron Spectroscopy and Related Phenomena 128 , 103–117 (2003). 
+
+> 34
+
+O. Takahashi, M. Odelius, D. Nordlund, A. Nilsson, H. Bluhm, and L. G. M. Pettersson, “Auger decay calculations with core-hole excited-state molecular-dynamics simulations of water,” The Journal of Chemical Physics 124 , 064307 (2006), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/1.2166234/14038028/064307_1_online.pdf. 
+
+> 35
+
+C. E. V. de Moura, J. Laurent, J. Bozek, M. Briant, P. Çarçabal, D. Cubaynes, N. Shafizadeh, M. Simon, B. Soep, R. Püttner, and et al., “Experimental and theoretical study of resonant core-hole spectroscopies 12 
+
+of gas-phase free-base phthalocyanine,” Physical Chemistry Chemical Physics 25 , 15555–15566 (2023). 
+
+> 36
+
+A. E. A. Fouda, V. Lindblom, S. H. Southworth, G. Doumy, P. J. Ho, L. Young, L. Cheng, and S. L. Sorensen, “Influence of selective carbon 1s excitation on auger–meitner decay in the esca molecule,” The Journal of Physical Chemistry Letters 15 , 4286–4293 (2024), pMID: 38608168, https://doi.org/10.1021/acs.jpclett.3c03611. 
+
+> 37
+
+V. Carravetta, H. Ågren, O. Vahtras, and H. J. A. Jensen, “Ab initio calculations of molecular resonant pho-toemission spectra,” The Journal of Chemical Physics 
+
+113 , 7790–7798 (2000), https://pubs.aip.org/aip/jcp/article-pdf/113/18/7790/19287894/7790_1_online.pdf. 
+
+> 38
+
+B. Schimmelpfennig, B. Nestmann, and S. D. Peyerimhoff, “Ab initio calculation of partial linewidths in the auger decay of k-shell excited hcl,” Journal of Physics B: Atomic, Molecular and Optical Physics 25 , 1217 (1992). 
+
+> 39
+
+B. Schimmelpfennig, B. Nestmann, and S. Peyerimhoff, “Ab initio cal-culation of transition rates for autoionization: the auger spectra of hf and f−,” Journal of Electron Spectroscopy and Related Phenomena 74 , 173– 186 (1995). 
+
+> 40
+
+C.-M. Liegener, “Auger spectra by the green’s function method,” Chemical Physics Letters 90 , 188–192 (1982). 
+
+> 41
+
+V. Averbukh and L. S. Cederbaum, “Ab initio calculation of inter-atomic decay rates by a combination of the Fano ansatz, Green’s-function methods, and the Stieltjes imaging technique,” The Journal of Chemical Physics 123 , 204107 (2005), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/1.2126976/15376746/204107_1_online.pdf. 
+
+> 42
+
+W. Skomorowski and A. I. Krylov, “Feshbach–Fano approach for calculation of Auger decay rates using equation-of-motion coupled-cluster wave functions. I. Theory and implementation,” The Journal of Chemical Physics 154 , 084124 (2021), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/5.0036976/15587589/084124_1_online.pdf. 
+
+> 43
+
+H. Siegbahn, L. Asplund, and P. Kelfve, “The auger electron spectrum of water vapour,” Chemical Physics Letters 35 , 330–335 (1975). 
+
+> 44
+
+D. R. Jennison, “The calculation of molecular and cluster auger spectra,” Chemical Physics Letters 69 , 435–440 (1980). 
+
+> 45
+
+F. P. Larkins, L. C. Tulea, and E. Z. Chelkowska, “Auger electron spectra of molecules: The first row hydrides,” Australian Journal of Physics 43 ,625–640 (1990). 
+
+> 46
+
+R. Fink, “Theoretical autoionization spectra of 1s → π∗ excited n2 and n2o,” Journal of Electron Spectroscopy and Related Phenomena 76 , 295– 300 (1995), proceedings of the Sixth International Conference on Electron Spectroscopy. 
+
+> 47
+
+O. Travnikova, R. F. Fink, A. Kivimäki, D. Céolin, Z. Bao, and M. N. Piancastelli, “Assignment of the l2,3vv normal auger decay spectrum of cl2 by ab initio calculations,” Chemical Physics Letters 474 , 67–73 (2009). 
+
+> 48
+
+L. Inhester, K. Hanasaki, Y. Hao, S.-K. Son, and R. Santra, “X-ray mul-tiphoton ionization dynamics of a water molecule irradiated by an x-ray free-electron laser pulse,” Physical Review A 94 , 023422 (2016). 
+
+> 49
+
+Y. Hao, L. Inhester, K. Hanasaki, S.-K. Son, and R. Santra, “Efficient electronic structure calculation for molecular ion-ization dynamics at high x-ray intensity,” Structural Dy-namics 2, 041707 (2015), https://pubs.aip.org/aca/sdy/article-pdf/doi/10.1063/1.4919794/13755898/041707_1_online.pdf. 
+
+> 50
+
+K. Faegri and H. P. Kelly, “Calculated auger transition rates for hf,” Phys-ical Review A 19 , 1649–1655 (1979). 
+
+> 51
+
+M. Higashi, E. Hiroike, and T. Nakajima, “Calculations of the auger tran-sition rates in molecules. i. effect of the nonspherical potential: Applica-tion to ch4,” Chemical Physics 68 , 377–382 (1982). 
+
+> 52
+
+K. Zähringer, H.-D. Meyer, and L. S. Cederbaum, “Molecular scattering wave functions for auger decay rates: The auger spectrum of hydrogen fluoride,” Physical Review A 45 , 318–328 (1992). 
+
+> 53
+
+P. V. Demekhin, D. V. Omel’yanenko, B. M. Lagutin, V. L. Sukhorukov, L. Werner, A. Ehresmann, K.-H. Schartner, and H. Schmoranzer, “Inves-tigation of photoionization and photodissociation of an oxygen molecule by the method of coupled differential equations,” Optics and Spectroscopy 
+
+102 , 318–329 (2007). 
+
+> 54
+
+P. V. Demekhin, I. D. Petrov, V. L. Sukhorukov, W. Kielich, P. Reiss, R. Hentges, I. Haar, H. Schmoranzer, and A. Ehresmann, “Interference effects during the auger decay of the c ∗O 1 s−1π∗ resonance studied by an-gular distribution of the co +(a) photoelectrons and polarization analysis of the co +(a−x) fluorescence,” Physical Review A 80 , 063425 (2009). 
+
+> 55
+
+P. V. Demekhin, A. Ehresmann, and V. L. Sukhorukov, “Sin-gle center method: A computational tool for ionization and elec-tronic excitation studies of molecules,” The Journal of Chemi-cal Physics 134 , 024113 (2011), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/1.3526026/13040006/024113_1_online.pdf. 
+
+> 56
+
+L. Inhester, C. F. Burmeister, G. Groenhof, and H. Grub-müller, “Auger spectrum of a water molecule after sin-gle and double core ionization,” The Journal of Chemical Physics 136 , 144304 (2012), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/1.3700233/15451343/144304_1_online.pdf. 
+
+> 57
+
+H. I. B. Banks, D. A. Little, J. Tennyson, and A. Emmanouilidou, “Inter-action of molecular nitrogen with free-electron-laser radiation,” Physical Chemistry Chemical Physics 19 , 19794–19806 (2017). 
+
+> 58
+
+B. N. C. Tenorio, P. Decleva, and S. Coriani, “Multi-reference approach to the computation of double core-hole spectra,” The Journal of Chemical Physics 155 , 131101 (2021), _eprint: https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/5.0062130/16043240/131101_1_online.pdf. 
+
+> 59
+
+I. Fdez. Galván, M. Vacher, A. Alavi, C. Angeli, F. Aquilante, J. Autschbach, J. J. Bao, S. I. Bokarev, N. A. Bogdanov, R. K. Carlson, and et al., “Openmolcas: From source code to insight,” Journal of Chem-ical Theory and Computation 15 , 5925–5964 (2019), pMID: 31509407, https://doi.org/10.1021/acs.jctc.9b00532. 
+
+> 60
+
+G. Li Manni, R. K. Carlson, S. Luo, D. Ma, J. Olsen, D. G. Truhlar, and L. Gagliardi, “Multiconfiguration pair-density functional theory,” Jour-nal of Chemical Theory and Computation 10 , 3669–3680 (2014), pMID: 26588512, https://doi.org/10.1021/ct500483t. 
+
+> 61
+
+L. Gagliardi, D. G. Truhlar, G. Li Manni, R. K. Carlson, C. E. Hoyer, and J. L. Bao, “Multiconfiguration pair-density functional theory: A new way to treat strongly correlated systems,” Accounts of Chemical Research 50 ,66–73 (2017). 
+
+> 62
+
+P. Sharma, J. J. Bao, D. G. Truhlar, and L. Gagliardi, “Multiconfiguration pair-density functional theory,” Annual Review of Physical Chemistry 72 ,541–564 (2021). 
+
+> 63
+
+C. Zhou, M. R. Hermes, D. Wu, J. J. Bao, R. Pandharkar, D. S. King, D. Zhang, T. R. Scott, A. O. Lykhin, L. Gagliardi, et al. , “Electronic struc-ture of strongly correlated systems: recent developments in multiconfigu-ration pair-density functional theory and multiconfiguration nonclassical-energy functional theory,” Chemical Science 13 , 7685–7706 (2022). 
+
+> 64
+
+H.-J. Werner and W. Meyer, “A quadratically convergent mcscf method for the simultaneous optimization of several states,” The Journal of Chemical Physics 74 , 5794–5801 (1981). 
+
+> 65
+
+P. Å. Malmqvist, A. Rendell, and B. O. Roos, “The restricted active space self-consistent-field method, implemented with a split graph unitary group approach,” Journal of Physical Chemistry 94 , 5477–5482 (1990). 
+
+> 66
+
+P. Å. Malmqvist, K. Pierloot, A. R. M. Shahi, C. J. Cramer, and L. Gagliardi, “The restricted active space followed by second-order per-turbation theory method: Theory and application to the study of cu o 2 and cu 2 o 2 systems,” The Journal of Chemical Physics 128 , 204109 (2008). 
+
+> 67
+
+C. D. Rankine and T. J. Penfold, “Progress in the Theory of X-ray Spec-troscopy: From Quantum Chemistry to Machine Learning and Ultrafast Dynamics,” The Journal of Physical Chemistry A 125 , 4276–4293 (2021). 
+
+> 68
+
+J. Westermayr and P. Marquetand, “Machine learning spec-troscopy to advance computation and analysis,” Chemical Sci-ence 16 , 21660–21676 (2025), https://pubs.rsc.org/sc/article-pdf/16/46/21660/10667629/d5sc05628d.pdf. 
+
+> 69
+
+M. N. Souza, C. Gatts, and M. A. Figueira, “Applica-tion of the artificial neural network approach to the recog-nition of specific patterns in auger electron spectroscopy,” Surface and Interface Analysis 20 , 1047–1050 (1993), https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/pdf/10.1002/sia.740201303. 
+
+> 70
+
+J. Card, A. L. Testoni, and L. A. Le Tarte, “Target factor and neural network analyses applied to titanium nitride composition recogni-tion by aes,” Surface and Interface Analysis 23 , 495–505 (1995), https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/pdf/10.1002/sia.740230709. 
+
+> 71
+
+I. Beliˇ c, B. Poniku, and M. Jenko, “Neural net-work for aes spectra peak base background removal,” Surface and Interface Analysis 44 , 1141–1146 (2012), https://analyticalsciencejournals.onlinelibrary.wiley.com/doi/pdf/10.1002/sia.5011. 13 
+
+> 72
+
+L. Budewig, S.-K. Son, Z. Jurek, M. M. Abdullah, M. Tropmann-Frick, and R. Santra, “X-ray-induced atomic transitions via machine learning: A computational investigation,” Phys. Rev. Res. 6, 013265 (2024). 
+
+> 73
+
+C. D. Rankine, M. M. M. Madkhali, and T. J. Penfold, “A Deep Neu-ral Network for the Rapid Prediction of X-ray Absorption Spectra,” The Journal of Physical Chemistry A 124 , 4263–4270 (2020). 
+
+> 74
+
+C. D. Rankine and T. J. Penfold, “Accurate, affordable, and generalizable machine learning simulations of transition metal x-ray absorption spectra using the XANESNET deep neural network,” The Journal of Chemical Physics 156 , 164102 (2022). 
+
+> 75
+
+M. M. Madkhali, C. D. Rankine, and T. J. Penfold, “The Role of Structural Representation in the Performance of a Deep Neural Network for X-ray Spectroscopy,” Molecules 25 , 2715 (2020). 
+
+> 76
+
+M. R. Carbone, M. Topsakal, D. Lu, and S. Yoo, “Machine-Learning X-Ray Absorption Spectra to Quantitative Accuracy,” Physical Review Let-ters 124 , 156401 (2020). 
+
+> 77
+
+A. Kotobi, K. Singh, D. Höche, S. Bari, R. H. Meißner, and A. Bande, “Integrating Explainability into Graph Neural Network Models for the Pre-diction of X-ray Absorption Spectra,” Journal of the American Chemical Society 145 , 22584–22598 (2023). 
+
+> 78
+
+S. R. Kharel, F. Meng, X. Qu, M. R. Carbone, and D. Lu, “OmniXAS: A universal deep-learning framework for materials x-ray absorption spectra,” Physical Review Materials 9, 043803 (2025). 
+
+> 79
+
+J. Lüder, “Machine learning approach to predict L -edge x-ray absorption spectra of light transition metal ion compounds,” Physical Review B 111 ,085110 (2025). 
+
+> 80
+
+F. Zhan, H. Yao, Z. Geng, L. Zheng, C. Yu, X. Han, X. Song, S. Chen, and H. Zhao, “A Graph Neural Network-Based Approach to XANES Data Analysis,” The Journal of Physical Chemistry A 129 , 874–884 (2025). 
+
+> 81
+
+S. P. Gleason, M. R. Carbone, D. Lu, and J. Ciston, “CuXASNet: Rapid and accurate prediction of copper L -edge x-ray absorption spectra using machine learning,” Physical Review Materials 9, 073803 (2025). 
+
+> 82
+
+M. P. Prange, N. Govind, P. Stinis, E. S. Ilton, and A. A. Howard, “To-ward a Machine Learning Approach to Interpreting X-ray Spectra of Trace Impurities by Converting XANES to EXAFS,” The Journal of Physical Chemistry A 129 , 346–355 (2025). 
+
+> 83
+
+Q. Sun, Y. Xiang, Y. Liu, L. Xu, T. Leng, Y. Ye, A. Fortunelli, W. A. God-dard, and T. Cheng, “Machine Learning Predicts the X-ray Photoelectron Spectroscopy of the Solid Electrolyte Interface of Lithium Metal Battery,” The Journal of Physical Chemistry Letters 13 , 8047–8054 (2022). 
+
+> 84
+
+A. P. Bartók, R. Kondor, and G. Csányi, “On representing chemical envi-ronments,” Physical Review B 87 , 184115 (2013). 
+
+> 85
+
+D. Mejia-Rodriguez, A. Kunitsa, E. Aprà, and N. Govind, “Scalable Molecular GW Calculations: Valence and Core Spectra,” Journal of Chem-ical Theory and Computation 17 , 7504–7517 (2021). 
+
+> 86
+
+D. Mejia-Rodriguez, A. Kunitsa, E. Aprà, and N. Govind, “Basis Set Se-lection for Molecular Core-Level GW Calculations,” Journal of Chemical Theory and Computation 18 , 4919–4926 (2022). 
+
+> 87
+
+D. Golze, M. Hirvensalo, P. Hernández-León, A. Aarva, J. Etula, T. Susi, P. Rinke, T. Laurila, and M. A. Caro, “Accurate Computational Pre-diction of Core-Electron Binding Energies in Carbon-Based Materials: A Machine-Learning Model Combining Density-Functional Theory and 
+
+GW ,” Chemistry of Materials 34 , 6240–6254 (2022). 
+
+> 88
+
+T. Zarrouk, R. Ibragimova, A. P. Bartók, and M. A. Caro, “Experiment-Driven Atomistic Materials Modeling: A Case Study Combining X-Ray Photoelectron Spectroscopy and Machine Learning Potentials to Infer the Structure of Oxygen-Rich Amorphous Carbon,” Journal of the American Chemical Society 146 , 14645–14659 (2024). 
+
+> 89
+
+S. Tripathy, S. Das, S. Jindal, and R. Ramakrishnan, “Chemical space-informed machine learning models for rapid predictions of x-ray photo-electron spectra of organic molecules,” Machine Learning: Science and Technology 5, 045023 (2024). 
+
+> 90
+
+F. Porcelli, F. Filippone, E. Colasante, and G. Mattioli, “Photoemission spectroscopy of organic molecules using plane wave/pseudopotential den-sity functional theory and machine learning: A comprehensive and predic-tive computational protocol for isolated molecules, molecular aggregates, and organic thin films,” The Journal of Chemical Physics 162 , 244101 (2025). 
+
+> 91
+
+G. Cibin, D. Gianolio, S. A. Parry, T. Schoonjans, O. Moore, R. Draper, L. A. Miller, A. Thoma, C. L. Doswell, and A. Graham, “An open access, integrated xas data repository at diamond light source,” Radiation Physics and Chemistry 175 , 108479 (2020), 17th International Conference on X-ray Absorption Fine Structure - XAFS2018. 
+
+> 92
+
+H. Guo, M. R. Carbone, C. Cao, J. Qu, Y. Du, S.-M. Bak, C. Weiland, F. Wang, S. Yoo, N. Artrith, A. Urban, and D. Lu, “Simulated sulfur k-edge x-ray absorption spectroscopy database of lithium thiophosphate solid electrolytes,” Scientific Data 10 , 349 (2023). 
+
+> 93
+
+K. Mathew, C. Zheng, D. Winston, C. Chen, A. Dozier, J. J. Rehr, S. P. Ong, and K. A. Persson, “High-throughput computational x-ray absorp-tion spectroscopy,” Scientific Data 5, 180151 (2018). 
+
+> 94
+
+J. J. Rehr, J. J. Kas, F. D. Vila, M. P. Prange, and K. Jorissen, “Parameter-free calculations of x-ray spectra with feff9,” Physical Chemistry Chemical Physics 12 , 5503–5513 (2010), https://pubs.rsc.org/cp/article-pdf/12/21/5503/2008760/b926434e.pdf. 
+
+> 95
+
+X.-e. Li, X. Wei, W. Guo, J. Liu, R. Gubo, X. Yu, Y. Yang, Y.-w. Li, P. Ren, X. Zhou, and X.-D. Wen, “Efficient and accurate theoretical simulation on x-ray photoelectron spec-troscopy for iron compounds,” The Journal of Physical Chemistry C 128 , 10955–10962 (2024), https://pubs.acs.org/jpccck/article-pdf/128/26/10955/9573574/jp4c03339.pdf. 
+
+> 96
+
+D. Buterez, J. P. Janet, S. J. Kiddle, D. Oglic, and P. Lió, “Transfer learn-ing with graph neural networks for improved molecular property predic-tion in the multi-fidelity setting,” Nature Communications 15 , 1517 (2024). 
+
+> 97
+
+K. T. Schütt, O. T. Unke, and M. Gastegger, “Equivariant Message Passing for the Prediction of Tensorial Properties and Molecular Spectra,” . 
+
+> 98
+
+Y. Xu, D. Bian, C.-W. Ju, F. Zhao, P. Xie, Y. Wang, W. Hu, Z. Sun, J. Z. H. Zhang, and T. Zhu, “Pretrained E(3)-equivariant message-passing neu-ral networks with multi-level representations for organic molecule spectra prediction,” npj Computational Materials 11 , 203 (2025). 
+
+> 99
+
+V. G. Satorras, E. Hoogeboom, and M. Welling, “E(n) Equivariant Graph Neural Networks,” (2022), arXiv:2102.09844 [cs]. 
+
+> 100
+
+I. Batatia, D. P. Kovács, G. N. C. Simm, C. Ortner, and G. Csányi, “MACE: Higher Order Equivariant Message Passing Neural Networks for Fast and Accurate Force Fields,” (2023), arXiv:2206.07697 [stat]. 
+
+> 101
+
+M. Geiger and T. Smidt, “e3nn: Euclidean Neural Networks,” (2022), arXiv:2207.09453 [cs]. 
+
+> 102
+
+S. Passaro and C. L. Zitnick, “Reducing SO(3) Convolutions to SO(2) for Efficient Equivariant GNNs,” (2023), arXiv:2302.03655 [cs]. 
+
+> 103
+
+A. E. A. Fouda, “Augernet: Gnn predictions of carbon 1s core- electron binding energies.” (2026). 
+
+> 104
+
+R. Ramakrishnan, P. O. Dral, M. Rupp, and O. A. Von Lilienfeld, “Quan-tum chemistry structures and properties of 134 kilo molecules,” Scientific Data 1, 140022 (2014). 
+
+> 105
+
+A. E. A. Fouda, J. Zhou, R. Ferreira, P. Phillips, V. Agarawal, B. Jangid, J. J. Wardzala, R. Ding, J. Chen, N. Tebaldi, P. J. Ho, L. Gagliardi, and L. Young, “Experimentally accurate graph neural network pre-dictions of core-electron binding energies,” (2026), arXiv:2604.27070 [physics.chem-ph]. 
+
+> 106
+
+D. Butina, “Unsupervised Data Base Clustering Based on Daylight’s Fin-gerprint and Tanimoto Similarity: A Fast and Automated Way To Cluster Small and Large Data Sets,” Journal of Chemical Information and Com-puter Sciences 39 , 747–750 (1999). 
+
+> 107
+
+A. Kendall, Y. Gal, and R. Cipolla, “Multi-task learning using uncertainty to weigh losses for scene geometry and semantics,” in Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR) 
+
+(2018). 
+
+> 108
+
+Z. Tan, Y. Li, W. Shi, and S. Yang, “A multitask approach to learn molec-ular properties,” Journal of Chemical Information and Modeling 61 , 3824– 3834 (2021), pMID: 34289687, https://doi.org/10.1021/acs.jcim.1c00646. 
+
+> 109
+
+W.-H. Li, X. Liu, and H. Bilen, “Universal representations: A unified look at multiple task and domain learning,” International Journal of Computer Vision 132 , 1521–1545 (2024). 
+
+> 110
+
+W. Zhang, G. Zhai, Y. Wei, X. Yang, and K. Ma, “Blind image qual-ity assessment via vision-language correspondence: A multitask learning perspective,” in Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR) (2023) pp. 14071–14081. 
+
+> 111
+
+R. Collobert and J. Weston, “A unified architecture for natural language processing: deep neural networks with multitask learning,” in Proceed-ings of the 25th International Conference on Machine Learning , ICML ’08 (Association for Computing Machinery, New York, NY, USA, 2008) 14 
+
+p. 160–167. 
+
+> 112
+
+J.-T. Huang, J. Li, D. Yu, L. Deng, and Y. Gong, “Cross-language knowl-edge transfer using multilingual deep neural network with shared hidden layers,” in 2013 IEEE International Conference on Acoustics, Speech and Signal Processing (2013) pp. 7304–7308. 
+
+> 113
+
+X. Yang, Y. Wang, Y. Lin, M. Zhang, O. Liu, J. Shuai, and Q. Zhao, “A multi-task self-supervised strategy for predicting molecular prop-erties and fgfr1 inhibitors,” Advanced Science 12 , 2412987 (2025), https://advanced.onlinelibrary.wiley.com/doi/pdf/10.1002/advs.202412987. 
+
+> 114
+
+K. E. Fisher, M. F. Herbst, and Y. M. Marzouk, “Multitask methods for predicting molecular properties from heterogeneous data,” The Journal of Chemical Physics 161 , 014114 (2024). 
+
+> 115
+
+Z. Zou, Y. Zhang, L. Liang, M. Wei, J. Leng, J. Jiang, Y. Luo, and W. Hu, “A deep learning model for predicting selected organic molecular spectra,” Nature Computational Science 3, 957–964 (2023). 
+
+> 116
+
+Z. Liu, C. Yang, R. Lai, and W. Li, “Molspectra: a general framework for multi-spectra prediction from molecular structures,” Journal of Molecular Modeling 32 , 189 (2026). 
+
+> 117
+
+C. Han, H. Wang, J. Zhu, Q. Liu, and W. Zhu, “Comparison of multi-task approaches on molecular property prediction,” Chinese Journal of Chemi-cal Physics 36 , 443–452 (2023). 
+
+> 118
+
+L. Kirchdorfer, T. Sesterhenn, C. Bartelt, H. Stuckenschmidt, L. Schott, and J. M. Köhler, “Investigating uncertainty weighting for multi-task learning: Insights and analytical alternative,” International Journal of Computer Vision 134 , 8 (2025). 
+
+> 119
+
+Y. Suzuki, H. Hino, M. Kotsugi, and K. Ono, “Automated estimation of materials parameter from x-ray absorption and electron energy-loss spectra with similarity measures,” npj Computational Materials 5, 39 (2019). 
+
+> 120
+
+N. Correia, A. Naves de Brito, M. P. Keane, L. Karlsson, S. Svensson, C. Liegener, A. Cesar, and H. Ågren, “Dou-bly charged valence states of formaldehyde, acetaldehyde, acetone, and formamide studied by means of photon excited Auger elec-tron spectroscopy and ab initio calculations,” The Journal of Chem-ical Physics 95 , 5187–5197 (1991), https://pubs.aip.org/aip/jcp/article-pdf/95/7/5187/18995148/5187_1_online.pdf. 
+
+> 121
+
+J. E. Houston and R. R. Rye, “Auger electron spectra of the cycloalkanes C3 through C6,” The Journal of Chemical Physics 74 , 71–76 (1981), https://pubs.aip.org/aip/jcp/article-pdf/74/1/71/18926088/71_1_online.pdf. 
+
+> 122
+
+E. E. Rennie, B. Kempgens, H. M. Köppe, U. Hergenhahn, J. Feld-haus, B. S. Itchkawitz, A. L. D. Kilcoyne, A. Kivimäki, K. Maier, M. N. Piancastelli, M. Polcik, A. Rüdel, and A. M. Bradshaw, “A comprehensive photoabsorption, photoionization, and shake-up excita-tion study of the C 1s cross section of benzene,” The Journal of Chem-ical Physics 113 , 7362–7375 (2000), https://pubs.aip.org/aip/jcp/article-pdf/113/17/7362/19039403/7362_1_online.pdf. 
+
+> 123
+
+R. R. Rye, D. R. Jennison, and J. E. Houston, “Auger spectra of alkanes,” The Journal of Chemical Physics 
+
+73 , 4867–4874 (1980), https://pubs.aip.org/aip/jcp/article-pdf/73/10/4867/18926219/4867_1_online.pdf. 
+
+> 124
+
+L. Storchi, F. Tarantelli, S. Veronesi, P. Bolognesi, E. Fainelli, and L. Avaldi, “The auger spectroscopy of pyrimidine and halogen-substituted pyrimidines,” The Journal of Chemical Physics 129 , 154309 (2008), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/1.2993317/14904907/154309_1_online.pdf. 
+
+> 125
+
+M. Neeb, A. Kivimäki, B. Kempgens, H. M. Köppe, and A. M. Bradshaw, “The c 1s auger decay spectrum of cf4: an analysis of the core-excited states,” Journal of Physics B: Atomic, Molecular and Optical Physics 30 ,93 (1997). 
+
+> 126
+
+A. K. Schnack-Petersen, B. N. C. Tenorio, S. Coriani, P. De-cleva, J. Troß, K. Ramasesha, M. Coreno, R. Totani, and A. Röder, “Core spectroscopy of oxazole,” The Journal of Chem-ical Physics 157 , 214305 (2022), https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/5.0122088/16555597/214305_1_online.pdf.

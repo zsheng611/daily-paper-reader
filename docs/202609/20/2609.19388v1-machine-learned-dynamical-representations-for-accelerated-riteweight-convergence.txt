@@ -1,0 +1,178 @@
+Title: Machine-Learned Dynamical Representations for Accelerated RiteWeight Convergence
+
+URL Source: https://arxiv.org/pdf/2609.19388v1
+
+Published Time: Fri, 18 Sep 2026 00:14:49 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Machine-Learned Dynamical Representations for Accelerated RiteWeight Convergence 
+
+# Sagar Kania ∗1 1Independent Researcher, Portland, OR 97214, USA September 18, 2026 
+
+# Abstract 
+
+The increasing use of generative models has made ensembles of short molecular dynamics tra-jectories increasingly common, creating a growing need for methods that can recover phys-ically meaningful steady-state populations and kinetics from improperly weighted confor-mational ensembles. Randomized Iterative Trajectory Reweighting (RiteWeight) addresses this problem through repeated random clustering and iterative reweighting, without requir-ing the fixed Markovian discretization used in conventional Markov state models (MSM). However, the choice of reduced feature space in which RiteWeight performs random clus-tering has not been systematically investigated. Here, we compare two machine-learned representations, DeepTICA and SPIB-VAE, with linear TICA for recovering steady-state observables from flawed distributions. DeepTICA learns nonlinear coordinates by target-ing slow transfer-operator eigenmodes, whereas SPIB-VAE compresses configurations into a low-dimensional latent space while retaining information predictive of future metastable states. DeepTICA provided a comparatively robust RiteWeight representation under lim-ited hyperparameter exploration, whereas SPIB-VAE benefited more strongly from broader optimization. Moreover, a kinetic score computed from a coarse MSM at a resolution compa-rable to that used for RiteWeight random clustering provided a useful criterion for efficiently selecting reduced representations and their hyperparameters for RiteWeight. 
+
+# 1 Introduction 
+
+Recent advances in protein structure prediction and generative modeling can generate di-verse, physically plausible conformations spanning multiple regions of biomolecular configu-ration space. These structures can provide starting points for ensembles of short molecular dynamics trajectories, enabling broader exploration than may be accessible from a sin-gle conventional trajectory [1, 2, 3]. However, neither the generated conformations nor the resulting trajectory ensemble is necessarily distributed according to the equilibrium or nonequilibrium steady-state distribution of interest. Additional statistical treatment is  
+
+> ∗Corresponding author: sagarkania@gmail.com
+
+1arXiv:2609.19388v1 [physics.chem-ph] 16 Sep 2026 therefore required to recover correct configurational populations and associated thermody-namic and kinetic observables [1, 3, 4]. Conventional Markov state models (MSM) can analyze such trajectory ensembles, but their accuracy depends on a fixed discretization of configuration space and on choosing a lag time for which the dynamics between discrete states are sufficiently Markovian [5, 6, 7, 8]. In our previous work, we introduced Randomized Iterative Trajectory Reweighting (RiteWeight), which repeatedly changes the cluster boundaries and uses the resulting tran-sition matrices to estimate stationarity rather than to propagate dynamics [9]. RiteWeight thereby mitigates fixed-discretization error and does not require cluster-level Markovian-ity, enabling accurate reweighting using substantially shorter trajectory segments than are typically required for MSM analysis [9]. In the ideal limit of dense sampling and complete iterative convergence, the RiteWeight stationary solution is determined by the underlying fine-resolution transition process rather than by a particular coarse clustering. In practical calculations, however, both the avail-able data and the number of RiteWeight iterations are finite. Configurations that remain close in the feature space used for random clustering are unlikely to be separated and may therefore remain insufficiently reweighted. Consequently, an effective RiteWeight represen-tation should distinguish configurations separated by important kinetic or energetic barriers. In the original atomistic Trp-cage application, this clustering representation was based on time-lagged independent component analysis (TICA), which identifies linear combinations of molecular descriptors with slowly decaying time-lagged correlations [9]. The same TICA representation used for the established MSM analysis was retained for RiteWeight to en-able a controlled comparison between the two approaches. For the nonequilibrium folding analysis, this representation was constructed from minimal residue–residue distances using a 10-ns TICA lag time and 100 tICs. Although this representation facilitated comparison with the established MSM analysis, it was not specifically selected to optimize the RiteWeight clustering space. This raises the question of whether the transition-relevant information required by RiteWeight can be concentrated into a substantially lower-dimensional representation. Acompact feature space can reduce the cost of repeated distance calculations and random clustering and, if kinetically distinct configurations are more effectively separated, may also accelerate RiteWeight convergence. Machine-learning-based dimensionality reduction pro-vides a natural route toward this goal because nonlinear representations can be optimized directly using dynamical objectives rather than being restricted to linear combinations of predefined molecular descriptors, as in conventional TICA [10, 11]. These considerations lead to two central questions. First, what type of low-dimensional dynamical representation provides an effective clustering space for RiteWeight? Second, can candidate representa-tions be efficiently selected using a common, representation-independent criterion without performing a full downstream RiteWeight calculation for every dimensionality-reduction method or hyperparameter set? To address the first question, we investigate two complementary representation-learning approaches with distinct dynamical objectives. DeepTICA belongs to a class of operator-based methods that seek nonlinear approximations to the leading nontrivial eigenfunctions of the molecular transfer operator, which encode the dominant long-timescale dynamical processes [12, 13]. Such coordinates may therefore provide an effective feature space for separating kinetically distinct configurations during RiteWeight random clustering. In con-trast, the State Predictive Information Bottleneck (SPIB) framework, referred to here as SPIB-VAE, learns a compressed latent representation that retains information predictive of 2future metastable-state identity [14]. To address the second question, candidate representations were evaluated using a coarse MSM-based kinetic score on held-out data, defined here as the sum of the squared leading nontrivial MSM eigenvalues. The MSM was constructed using a deliberately coarse dis-cretization, with a clustering resolution comparable to that used during RiteWeight random clustering. Such spectral kinetic scores are commonly used in MSM model selection to iden-tify representations and discretizations that preserve the dominant slow dynamical processes and thereby improve the quality of the finite-state Markov approximation at a chosen lag time[13, 15, 16, 17]. Here, however, the score is used for a different purpose. RiteWeight does not require the coarse clusters themselves to define Markovian dynamics; instead, the score serves as a proxy for whether kinetically distinct regions remain sufficiently resolved in the reduced feature space used for random clustering. Importantly, RiteWeight performance itself was not used during model or hyperparameter selection. The subsequent RiteWeight calculations therefore provide an independent test of whether this coarse-grained kinetic criterion can efficiently identify suitable representation-learning methods and their hyper-parameters. Hyperparameters were explored using an initial random search followed by Tree-structured Parzen Estimator (TPE) Bayesian optimization. Using atomistic Trp-cage dynamics as a test system, we use the 208 μs trajectory as equilibrium-like input and apply RiteWeight to estimate the unfolded-to-folded mean first-passage time (MFPT) [18]. RiteWeight random clustering is performed separately in five-dimensional linear-TICA, DeepTICA, and SPIB-VAE representations, allowing the effect of the reduced feature space to be examined at fixed dimensionality. Candidate learned representations are first evaluated using the held-out MSM-based kinetic criterion and are subsequently tested as clustering spaces for RiteWeight over a range of iteration counts. This framework allows us to assess both how the dynamical information encoded by the reduced representation affects RiteWeight convergence and whether a common coarse-grained kinetic criterion can be used to efficiently select representation methods and their hyperparameters for RiteWeight clustering. 
+
+# 2 Method 
+
+# 2.1 Trp-cage nonequilibrium data and state definitions 
+
+We used the 208 μs atomistic MD trajectory of Trp-cage to study the unfolded-to-folded mean first-passage time (MFPT), using the folded and unfolded state definitions established in the original RiteWeight analysis [9]. Briefly, minimal residue–residue distances were pro-jected onto a TICA representation constructed with a 10 ns lag time, and a 50-state reference MSM was built in this space. PCCA++ analysis at a lag time of 100 ns was then used to identify the two extreme states corresponding to folded and unfolded conformations. These state definitions were retained throughout the present study, with the unfolded state serving as the source and the folded state as the sink in the RiteWeight calculations. The same folded and unfolded macrostates were also used to construct the history-resolved haMSM reference for evaluating the folding MFPT, as described in the Results section. 
+
+# 2.2 DeepTICA representation 
+
+We implemented a nonlinear reduced representation following the DeepTICA framework[12]. The neural-network architecture, training procedure, validation strategy, and hyperparameter-3optimization workflow were implemented in the present work. The mlcolvar package was used only for the differentiable solution of the generalized TICA eigenvalue problem required by the DeepTICA objective. For each molecular configuration X(t), a feed-forward neural network fθ generated a latent representation, 
+
+Z(t) = fθ [X(t)] , (1) where θ denotes the trainable neural-network parameters. The latent representations at t
+
+and t + ∆ t were used to construct the instantaneous covariance matrix C0 and the sym-metrized time-lagged covariance matrix C∆t. The generalized TICA eigenvalue problem, 
+
+C∆tvi = λiC0vi, (2) was solved using the differentiable cholesky_eigh routine from the mlcolvar package. Because this eigensolution remained within the PyTorch computational graph, gradients of the eigenvalue-based objective could be propagated through the neural network. The network parameters were optimized by minimizing 
+
+LDeepTICA = −
+
+> 5
+
+X
+
+> i=1
+
+λ2 
+
+> i
+
+, (3) so that training maximized the sum of the squared DeepTICA eigenvalues and favored latent representations retaining slowly decorrelating dynamical processes. The input X(t) consisted of minimal residue–residue distances. The neural network con-tained two hidden layers with hyperbolic-tangent activation functions followed by a linear output layer of dimension d = 5 . Because the aim of this study was to compare differ-ent dimensionality-reduction approaches as clustering representations for RiteWeight, the reduced-space dimensionality was fixed at five for all methods. This ensured that differences in downstream RiteWeight performance reflected differences in the organization of the re-duced feature space rather than differences in dimensionality. The number of hidden layers and the activation function were fixed, whereas the widths of the two hidden layers were optimized as described below. Time-lagged training pairs were constructed using a lag time of 10 ns. 
+
+# 2.3 DeepTICA hyperparameter optimization and model selection 
+
+The DeepTICA training and model-selection workflow was implemented in PyTorch, with hyperparameter optimization performed using Optuna[19]. Five quantities were varied: the widths of the first and second hidden layers, N1 and N2; the Adam learning rate, η; the minimum validation improvement required by the early-stopping criterion, ϵ; and the early-stopping patience, p. The corresponding search spaces were 
+
+N1, N 2 ∈ { 16 , 32 , 64 , 128 }, (4) 
+
+η ∈ [10 −3, 10 −1], (5) with logarithmic sampling, 
+
+ϵ ∈ [10 −5, 10 −3], (6) also with logarithmic sampling, and 
+
+p ∈ { 20 , 40 , 80 }. (7) 4Each candidate hyperparameter combination was evaluated independently over 10 train/validation splits. Within each split, the neural network was optimized on the training data using the DeepTICA eigenvalue objective. Validation-based early stopping was evaluated after an initial 150 training epochs. At each subsequent epoch, the DeepTICA eigenvalue objective was evaluated on the held-out data, 
+
+Lval = −
+
+> 5
+
+X
+
+> i=1
+
+(λi, val )2 . (8) A validation improvement was recorded when 
+
+Lcurrent val < Lbest val − ϵ. (9) When this condition was satisfied, the current network parameters and epoch were recorded and the patience counter was reset. Otherwise, the counter was incremented. Training was terminated when the counter reached p or when the maximum of 1000 epochs was reached, after which the network parameters corresponding to the best validation epoch were restored. Thus, ϵ and p were not parameters of the final DeepTICA representation itself; rather, they controlled the training duration and checkpoint selection for each candidate hyperparameter combination. Importantly, the DeepTICA training objective itself was not used as the Optuna model-selection objective. Because the ultimate purpose of the learned representation was to provide a clustering space for RiteWeight, we instead evaluated the kinetic quality of each candidate representation using an independent MSM-based score on the held-out data. After restoring the best network checkpoint for each split, the TICA transformation was deter-mined from the corresponding training data, and the held-out configurations were projected into the resulting five-dimensional DeepTICA space. The held-out reduced features were partitioned into 10 states using k-means clustering. A MSM was then constructed from transitions between these states. Retention of slow kinetics was quantified using 
+
+SMSM =
+
+> 7
+
+X
+
+> i=1
+
+ λMSM 
+
+> i
+
+2 , (10) where the stationary eigenvalue was excluded and the first seven nontrivial MSM eigenvalues were included. In the implementation, Optuna minimized the equivalent negative score, 
+
+LMSM = −
+
+> 7
+
+X
+
+> i=1
+
+ λMSM 
+
+> i
+
+2 . (11) The score was averaged over the 10 train/validation splits, and the resulting mean value was used as the Optuna objective. This model-selection criterion was motivated by the downstream use of the representa-tion for RiteWeight clustering. RiteWeight repeatedly partitions the reduced feature space; therefore, a useful representation should distinguish configurations associated with slowly interconverting or barrier-separated regions. The MSM-based eigenvalue score provides a coarse-grained kinetic assessment of whether such slow processes remain resolved in the learned feature space. The subsequent RiteWeight calculations provide an independent test of whether hyperparameter selection based on this kinetic criterion yields a more effective clustering representation. 5Hyperparameter sampling was performed using the Tree-structured Parzen Estimator (TPE) algorithm. The first 10 trials were sampled randomly, after which TPE was used to guide the remaining 40 trials, for a total of 50 trials per optimization run. A median-based Optuna pruner was additionally used to terminate poorly performing trials before completion of all 10 train/validation splits. After each completed split, the running mean MSM score was reported to Optuna, with pruning enabled only after the initial 10 startup trials. 
+
+# 2.4 Final DeepTICA model 
+
+After hyperparameter selection, a new DeepTICA model was trained using all available time-lagged data. The selected hidden-layer widths and learning rate were retained, whereas validation-based early stopping was no longer applied. Instead, the training duration was determined from the early-stopping results obtained during hyperparameter optimization. For the selected Optuna trial, the best validation epoch e(s)best was recorded independently for each of the 10 train/validation splits according to the early-stopping criterion described above. The final training duration was then chosen as 
+
+erun = max 
+
+h
+
+e(1) best , e (2) best , . . . , e (10) best 
+
+i
+
+. (12) The final network was therefore trained on the complete time-lagged dataset for exactly erun 
+
+epochs. After training, the neural network transformed the molecular descriptors into a five-dimensional nonlinear latent representation. TICA was then recomputed using the com-plete latent dataset, and the latent coordinates were projected onto the five resulting TICA eigenvectors. These five DeepTICA coordinates constituted the final reduced representation used for RiteWeight clustering. 
+
+# 2.5 SPIB-VAE representation and hyperparameter optimization 
+
+The information-bottleneck variational representation used here followed the State Predic-tive Information Bottleneck (SPIB) framework[14]. Briefly, SPIB encodes the current molec-ular configuration into a stochastic latent representation and trains a decoder to predict the metastable-state label at a future time, while a KL-divergence term regulates the informa-tion retained in the latent space. We used the published nonlinear SPIB implementation with iterative state-label refinement. As for DeepTICA, the reduced-space dimensionality was fixed at five and time-lagged training pairs were constructed using a lag time of 10 ns. Hyperparameter optimization followed the same train/validation and MSM-based model-selection procedure described above for DeepTICA. Seven SPIB hyperparameters were varied: the encoder and decoder hidden-layer widths, the learning rate, the information-bottleneck weight β, the state-population convergence threshold, the convergence patience, and the maximum number of label-refinement cycles. The corresponding search spaces were 
+
+N1, N 2 ∈ { 16 , 32 , 64 , 128 }, η ∈ [10 −5, 5 × 10 −2], β ∈ [10 −5, 10 −1], the convergence threshold in [10 −3, 10 −1], p ∈ { 1, 2, 3}, and nrefine ∈ { 10 , 15 , 20 }. The learning rate, β, and convergence threshold were sampled logarithmically. Each candidate hyperparameter set was evaluated over the 10 train/validation splits similar as DeepTICA. The held-out five-dimensional SPIB-VAE representation was clustered into 10 MSM states, and the same MSM-based kinetic score constructed from the first seven 6nontrivial eigenvalues was averaged across the splits and used as the Optuna objective. Hyperparameter sampling likewise consisted of 10 initial random trials followed by 40 TPE-guided trials, with the same median-based pruning strategy described above. 
+
+# 3 Results 
+
+# 3.1 Effect of the reduced feature space on RiteWeight error 
+
+RiteWeight performance was evaluated using the relative error in the folding mean first-passage time (MFPT) with respect to a history-augmented Markov state model (haMSM) reference. For both the RiteWeight and haMSM analyses, transition matrices were con-structed from trajectory pairs separated by a lag time of 10 ns. The haMSM model parameters used here were taken directly from those previously established and validated for this Trp-cage dataset[8]. In the haMSM analysis, each tra-jectory segment is labeled according to whether the system most recently visited the un-folded or folded macrostate. For estimation of the folding MFPT, only trajectory segments whose most recently visited macrostate was the unfolded state were used to construct the history-resolved source–sink transition matrix, from which the corresponding nonequilib-rium steady-state distribution and folding MFPT were obtained as described previously[8]. Previous work has shown that this history-resolved construction provides accurate estimates of source–sink steady-state populations and folding kinetics[8]. RiteWeight is not provided these last-visited-state labels. Instead, it uses the 10-ns tra-jectory pairs extracted from the equilibrium-like 208 μs Trp-cage trajectory and iteratively constructs weighted transition matrices under unfolded-source/folded-sink boundary con-ditions. Random clustering was applied only to configurations in the intermediate region, excluding the predefined folded and unfolded states. The intermediate configurations were partitioned into 10 random clusters, which together with the folded and unfolded states yielded a 12 × 12 transition matrix. To impose the source–sink condition, transitions from the folded sink were redirected entirely to the unfolded source. The stationary solution of the resulting transition matrix was then used to update the trajectory weights. The folding mean first-passage time (MFPT) was then calculated from the RiteWeight steady-state weights using the reciprocal-flux relation [20, 21], 
+
+MFPT = 
+
+ 1
+
+τ
+
+X 
+
+> i1/∈folded , i 2∈folded
+
+wi
+
+
+
+> −1
+
+, (13) where τ = 10 ns is the transition lag time and and wi is the weight assigned to each trajectory segment i.Across the calculations compared here, this RiteWeight procedure was kept fixed; the only change was the reduced feature space in which the 10 intermediate random clusters were constructed. Specifically, clustering was performed in five-dimensional linear-TICA, DeepTICA, or SPIB-VAE representations. The resulting folding MFPT therefore provides a direct measure of how the choice of reduced clustering representation affects RiteWeight convergence toward the target source–sink steady state. RiteWeight performance was quantified using the relative error with respect to the haMSM reference MFPT, 
+
+Relative Error (%) = 100 |MFPT RW (n) − MFPT haMSM |
+
+MFPT haMSM 
+
+, (14) 7(a) (b) Figure 1: Effect of the reduced feature representation on RiteWeight estimation of the Trp-cage folding MFPT. Relative error with respect to the history-resolved reference MFPT (HaMSM) is shown as a function of the number of RiteWeight iterations for five-dimensional DeepTICA, SPIB-VAE, and linear-TICA clustering spaces. For DeepTICA and SPIB-VAE, three independent hyperparameter-optimization runs were performed. (a) Representations selected from the best of 10 randomly sampled hyperparameter trials. (b) Representations selected from the best of 50 trials, consisting of 10 initial random trials followed by 40 TPE-guided trials. Linear TICA provides a single baseline because no neural-network hy-perparameter optimization was performed. where MFPT RW (n) is the folding MFPT estimated after n RiteWeight iterations and 
+
+MFPT haMSM is the history-augmented reference value. Evaluating this error as a func-tion of the number of RiteWeight iterations allows the convergence efficiency of the different reduced feature spaces to be compared directly. A lower relative error at a given iteration count indicates faster convergence of the folding MFPT toward the value associated with the target source–sink NESS. Figure 1 compares the folding-MFPT relative error obtained using five-dimensional linear TICA, DeepTICA, and SPIB-VAE representations as the clustering space for RiteWeight. For the learned representations, three independent hyperparameter-optimization runs were performed, and each point corresponds to the representation selected from one of these independent searches. The linear-TICA representation does not involve neural-network hy-perparameter optimization and therefore provides a single reference value at each RiteWeight iteration count. When the learned representations were selected using only 10 randomly sampled hy-perparameter combinations, DeepTICA consistently produced substantially lower relative errors than the five-dimensional linear-TICA reference across the tested RiteWeight iteration counts (Fig. 1a). Moreover, the three independently optimized DeepTICA representations yielded relatively similar errors, indicating that an effective clustering representation could be obtained without an extensive hyperparameter search. In contrast, the SPIB-VAE rep-resentations exhibited considerably larger variability among the three independent searches. Although some SPIB-VAE models achieved low error, other hyperparameter selections pro-duced substantially less accurate RiteWeight estimates. Thus, under a limited search budget, DeepTICA was both more accurate and more robust to hyperparameter selection. 8Expanding the search to 50 trials, consisting of 10 initial random trials followed by 40 TPE-guided trials, improved the performance of the learned representations, with the largest improvement observed for SPIB-VAE (Fig. 1b). Following the extended optimization, both DeepTICA and SPIB-VAE produced substantially lower folding-MFPT errors than five-dimensional linear TICA over the tested RiteWeight iteration counts. The SPIB-VAE results also became markedly more consistent across independent optimization runs and reached particularly low errors at the larger RiteWeight iteration counts. DeepTICA improved more modestly, consistent with its already strong performance after only the initial 10 random trials. 
+
+# 3.2 Kinetic-score optimization and downstream RiteWeight per-formance 
+
+Figure 2 shows the progression of the best-so-far mean held-out MSM kinetic score during hyperparameter optimization for DeepTICA and SPIB-VAE. For each independent opti-mization run, the value shown at a given trial number is the highest mean held-out score obtained among all hyperparameter trials evaluated up to that point. The first 10 trials were sampled randomly, after which the remaining 40 trials were selected using Tree-structured Parzen Estimator (TPE) Bayesian optimization. For DeepTICA, high kinetic scores were identified within the initial random search, and only modest additional improvement was obtained during the subsequent TPE-guided tri-als. In contrast, the SPIB-VAE searches showed larger and more gradual increases in the best-so-far kinetic score as additional hyperparameter combinations were evaluated. This behavior indicates that the DeepTICA objective was relatively easy to optimize within the explored hyperparameter space, whereas identification of high-scoring SPIB-VAE represen-tations benefited more strongly from the extended TPE search. These optimization trends are qualitatively consistent with the downstream RiteWeight results in Fig. 1. DeepTICA already produced low RiteWeight errors when the representa-tion was selected from only the first 10 random trials, consistent with the early saturation of its best-so-far kinetic score. In contrast, SPIB-VAE showed continued improvement in the kinetic score during the extended search and substantially better downstream RiteWeight performance after the full 50-trial optimization. Because RiteWeight error was not used dur-ing hyperparameter optimization, this agreement supports the held-out kinetic score from a coarse MSM with a clustering resolution comparable to RiteWeight as a practical criterion for selecting reduced representations and their hyperparameters. 9(a) (b) Figure 2: Progression of the best-so-far mean held-out MSM-based VAMP2 score during hyperparameter optimization for (a) DeepTICA and (b) SPIB-VAE. For each independent optimization run, the score shown at trial n is the highest mean held-out score obtained among all hyperparameter trials evaluated through trial n. Scores were averaged over the 10 train/validation splits used to evaluate each candidate hyperparameter set. The first 10 trials were sampled randomly, followed by 40 trials selected using Tree-structured Parzen Estimator (TPE) Bayesian optimization. DeepTICA reached a high-scoring region during the initial random-search stage and showed only modest subsequent improvement, whereas SPIB-VAE exhibited larger and more gradual gains during the extended optimization. 
+
+# 4 Conclusion 
+
+This study examined how the reduced feature space used for random clustering affects the finite-iteration performance of RiteWeight. By fixing the reduced dimensionality at five, we directly compared linear TICA with two nonlinear dynamical representations, DeepTICA and SPIB-VAE, while keeping the remaining RiteWeight procedure unchanged. For the Trp-cage folding problem, both learned representations could provide substantially lower folding-MFPT errors than five-dimensional linear TICA, demonstrating that the organization of the reduced feature space can strongly influence RiteWeight convergence even when the dimensionality itself is fixed. The two learned approaches showed different sensitivities to hyperparameter optimiza-tion. DeepTICA identified effective RiteWeight clustering spaces within a relatively limited random search and improved only modestly during the extended TPE-guided optimization. SPIB-VAE showed greater variability under the limited search but benefited substantially from broader hyperparameter exploration. These differences suggest that learning nonlinear representations aligned with the leading nontrivial eigenfunctions of the molecular transfer operator can provide a comparatively robust route for constructing compact feature spaces for RiteWeight. Importantly, representation selection was performed using only a held-out MSM-based kinetic score; RiteWeight error was not included in the hyperparameter-optimization objec-tive. This score was obtained from a coarse MSM with a clustering resolution comparable to that used during RiteWeight random clustering, providing a coarse-grained assessment of whether kinetically distinct regions remain sufficiently resolved after dimensionality reduc-10 tion. The qualitative correspondence between improvements in the held-out kinetic score and downstream RiteWeight performance therefore supports the use of such a coarse-grained kinetic criterion for selecting transition-relevant representations and their hyperparameters before performing the full iterative reweighting calculation. Future work will be needed to determine how well these observations generalize across biomolecular systems and alternative molecular representations. In the present study, both DeepTICA and SPIB-VAE were constructed from predefined minimal residue–residue dis-tance descriptors that were subsequently transformed by neural networks. An important ex-tension would be to integrate graph-based architectures with DeepTICA to learn transition-relevant molecular representations more directly from three-dimensional structural informa-tion. 
+
+# Acknowledgments 
+
+The author acknowledges D. E. Shaw Research for making the Trp-cage molecular dynamics trajectory used in this study available. 
+
+# References 
+
+[1] Soumendranath Bhakat and Eva-Maria Strauch. Accelerated sampling of protein dy-namics using bioemu-augmented molecular simulation. Journal of Chemical Informa-tion and Modeling , 66(12):7168–7178, 2026. [2] Bodhi P. Vani, Akashnathan Aranganathan, Dedi Wang, and Pratyush Tiwary. Alphafold2-rave: From sequence to boltzmann ranking. Journal of Chemical Theory and Computation , 19(14):4351–4354, 2023. [3] Chenyu Tang, Mayank Prakash Pandey, Cheng Giuseppe Chen, Alberto Megías, François Dehez, and Christophe Chipot. Breaking timescales with generative sampling of conformational transitions. Nature , 2026. [4] Yanchen Zhu, Matteo T. Degiacomi, Antonia S. J. S. Mey, and Sukrit Singh. Tyrosine kinases sample unique activation ensembles. bioRxiv , page 2026.06.26.734786, 2026. [5] Riccardo Scalco and Amedeo Caflisch. Equilibrium distribution from distributed computing (simulations of protein folding). The Journal of Physical Chemistry B ,115(19):6358–6365, 2011. [6] Marco Bacci, Amedeo Caflisch, and Andreas Vitalis. On the removal of initial state bias from simulation data. The Journal of chemical physics , 150(10), 2019. [7] Hongbin Wan and Vincent A Voelz. Adaptive markov state model estimation using short reseeding trajectories. The Journal of chemical physics , 152:24103, 2020. [8] Ernesto Suárez, Rafal P Wiewiora, Chris Wehmeyer, Frank Noé, John D Chodera, and Daniel M Zuckerman. What Markov state models can and cannot do: Correlation versus path-based observables in protein-folding models. Journal of chemical theory and computation , 17:3119, 2021. 11 [9] Sagar Kania, Robert J. Webber, Gideon Simpson, David Aristoff, and Daniel M. Zuckerman. Randomized iterative trajectory reweighting for steady-state distribu-tions without discretization error. Proceedings of the National Academy of Sciences ,123(19):e2529246123, 2026. [10] Wei Zhang and Christof Schütte. Understanding recent deep-learning techniques for identifying collective variables of molecular dynamics. Proceedings in Applied Mathe-matics and Mechanics , 23(4):e202300189, 2023. [11] Haohao Fu, Hengwei Bian, Xueguang Shao, and Wensheng Cai. Collective variable-based enhanced sampling: From human learning to machine learning. The Journal of Physical Chemistry Letters , 15(6):1774–1783, 2024. [12] Luigi Bonati, Giovanni Maria Piccini, and Michele Parrinello. Deep learning the slow modes for rare events sampling. Proceedings of the National Academy of Sciences ,118(44):e2113533118, 2021. [13] Guillermo Pérez-Hernández, Fabian Paul, Toni Giorgino, Gianni De Fabritiis, and Frank Noé. Identification of slow molecular order parameters for markov model con-struction. The Journal of Chemical Physics , 139(1):015102, 2013. [14] Dedi Wang and Pratyush Tiwary. State predictive information bottleneck. The Journal of Chemical Physics , 154(13):134111, 2021. [15] Robert T. McGibbon and Vijay S. Pande. Variational cross-validation of slow dynamical modes in molecular kinetics. The Journal of Chemical Physics , 142(12):124105, 2015. [16] Brooke E. Husic, Robert T. McGibbon, Mohammad M. Sultan, and Vijay S. Pande. Optimized parameter selection reveals trends in markov state models for protein folding. 
+
+The Journal of Chemical Physics , 145(19):194103, 2016. [17] Hao Wu and Frank Noé. Variational approach for learning markov processes from time series data. Journal of Nonlinear Science , 30(1):23–66, 2020. [18] Kresten Lindorff-Larsen, Stefano Piana, Ron O. Dror, and David E. Shaw. How fast-folding proteins fold. Science , 334(6055):517–520, 2011. [19] Takuya Akiba, Shotaro Sano, Toshihiko Yanase, Takeru Ohta, and Masanori Koyama. Optuna: A next-generation hyperparameter optimization framework. In Proceedings of the 25th ACM SIGKDD International Conference on Knowledge Discovery and Data Mining , 2019. [20] Terrell L. Hill. Free Energy Transduction and Biochemical Cycle Kinetics . Springer-Verlag, New York, 1989. [21] Divesh Bhatt, Bin W. Zhang, and Daniel M. Zuckerman. Steady-state simulations using weighted ensemble path sampling. The Journal of Chemical Physics , 133(1):014110, 2010. 12

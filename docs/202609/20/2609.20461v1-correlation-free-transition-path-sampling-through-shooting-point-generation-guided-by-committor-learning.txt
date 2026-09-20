@@ -1,0 +1,958 @@
+Title: Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning
+
+URL Source: https://arxiv.org/pdf/2609.20461v1
+
+Published Time: Fri, 18 Sep 2026 01:24:09 GMT
+
+Number of Pages: 18
+
+Markdown Content:
+# Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning 
+
+Maximilian Negedly, 1, 2 Sebastian Falkner, 1, 3 Alessandro Coretti, 1 and Christoph Dellago 1, a) 
+
+> 1)
+
+Faculty of Physics, University of Vienna, 1090 Vienna, Austria 
+
+> 2)
+
+Vienna Doctoral School in Physics, University of Vienna, 1090 Vienna, Austria 
+
+> 3)
+
+Institute of Physics, University of Augsburg, 86159 Augsburg, Germany 
+
+(Dated: September 18, 2026) 
+
+Studying the dynamical behavior of a system often depends on characterizing how it transitions between long-lived states. Because such transitions are rare, observing them usually requires specialized enhanced sampling techniques. Transition Path Sampling (TPS) is a well-established method for generating reactive trajectories, which is simple to implement and does not require the definition of a preconceived reaction coordinate. However, its efficiency is limited by its sequential nature and the resulting correlations between sampled paths. Previous work addressed this limitation by combining TPS with a sampling scheme based on conditioned Boltzmann Generators, a generative machine learning model capable of sampling a given target probability distribution. This approach produces uncorrelated transition paths but relies on an accurate reaction coordinate, which is rarely known in advance. Building on recent advances in committor learning, specifically on the Artificial Intelligence for Molecular Mechanism Discovery (AIMMD) method, in this work we introduce GenAIMMD, an iterative algorithm that actively and self-consistently learns the ideal reaction coordinate (the committor) and trains a conditioned Boltzmann Generator to sample from arbitrary bias windows along it. GenAIMMD thereby provides a correlation-free and fully parallelizable path sampling scheme that does not require prior knowledge of the system’s transition mechanism. We apply GenAIMMD to a two-dimensional toy model and a higher-dimensional polymer system. In both cases, GenAIMMD succeeds in training the Boltzmann Generator and learning the committor. Benchmark results show a substantial increase in performance compared to standard TPS. 
+
+I. INTRODUCTION 
+
+Rare events, which occur in many processes ranging from chemical reactions to phase transitions, are difficult to study with conventional simulation methods, because their char-acteristic waiting times often exceed accessible simulation time scales. 1–5 Established enhanced sampling approaches ad-dress this rare event problem either in configuration space through biasing techniques 6 such as Umbrella Sampling 7,8 
+
+and Metadynamics, 9 or in trajectory space through path-based methods 10 such as Transition Path Sampling (TPS). Despite their success, these approaches have important limitations. Their sequential nature produces correlated samples and re-stricts parallelization, while many methods additionally re-quire the definition of suitable reaction coordinates (RCs). These limitations can lead to substantial computational costs, particularly for complex systems with poorly understood tran-sition mechanisms. Recent advances in machine learning (ML) for rare-event sampling, particularly for collective variables, committor learning 11–15 and generative models, 16–19 promise to help overcome some of these limitations. However, they remain fragmented and lack integration into a unified framework. Moreover, important challenges persist. Committor-learning methods typically rely on reactive trajectories, whose gener-ation is computationally expensive and inherits some of the limitations of TPS, including strong correlations between suc-cessively sampled pathways that hinder the exploration of multiple reaction mechanisms. Conversely, the use of genera-tive models in the context of rare events requires conditioning 
+
+> a) Electronic mail: christoph.dellago@univie.ac.at
+
+to target the transition-state region, potentially reintroducing the need for predefined reaction coordinates. In this work, we develop an active learning framework that integrates Artificial Intelligence for Molecular Mechanism Discovery (AIMMD) 13 with conditioned Boltzmann Gener-ators (cBGs) for rare-event sampling 16 within a unified sim-ulation scheme. Reflecting this combination of generative sampling and AIMMD, we call the framework GenAIMMD. Starting from an initial set of training data generated using a combination of equilibrium and path sampling techniques, GenAIMMD learns a committor model that identifies the tran-sition region and conditions the generator to produce configu-rations likely to initiate reactive trajectories. The active learn-ing loop then iteratively refines both models, without further Markov-chain-based trajectory generation. By eliminating the need for predefined RCs and generating independent shoot-ing points, this integrated approach removes correlations and enables the efficient parallel generation of independent tra-jectories while providing access to both thermodynamic and dynamical information. The remainder of the paper is organized as follows. In Sec. II, we review the three building blocks underlying our approach, namely TPS, AIMMD, and cBGs, and describe their integration into the GenAIMMD iterative algorithm. In Sec. III, we present numerical results for a two-dimensional model and a polymer model, and benchmark our method against standard TPS. Finally, in Sec. IV, we discuss limi-tations of the presented algorithm as well as possible future directions. arXiv:2609.20461v1 [physics.comp-ph] 17 Sep 2026 2  
+
+> II. METHODS A. Transition Path Sampling
+
+Like many other enhanced sampling schemes, TPS 20,21 ad-dresses the time-scale separation problem that prevents stan-dard methods from efficiently crossing large energetic or en-tropic barriers in configuration space. Specifically, TPS sam-ples the equilibrium ensemble of transition paths, that is, the ensemble of trajectories that connect two disconnected re-gions A and B in configuration space, typically correspond-ing to stable or metastable states of the system. By sampling directly in the space of reactive trajectories, TPS avoids the long waiting periods between rare transitions encountered in unbiased simulations. In essence, TPS is a Markov Chain Monte Carlo method that operates in the space of equilibrium transition paths, proposing new path candidates and accepting or rejecting them according to a criterion derived from detailed balance. The most widely used algorithm implementing this idea is the 
+
+shooting algorithm .22 Starting from a current path X, a con-figuration (the shooting point) along that path is selected with a certain probability and, if necessary, perturbed. From this configuration, two new trajectories are generated, one forward and one backward in time. The latter is obtained by propagat-ing the system with inverted momenta. The two trajectories are then joined together preserving continuity of positions and velocities, forming a new candidate path X′. If accepted, X′
+
+forms the next state in the Markov chain. Employing an appropriate acceptance criterion ensures that TPS samples the same ensemble of transition paths that would be obtained from a long equilibrium simulation. The accep-tance criterion follows from the detailed balance condition in path space and has been shown for different algorithms 23 to depend on the probability of selecting a shooting point xs on the path X. For the two-way shooting algorithm considered here, it can be written as 
+
+Pacc [X → X′] = HAB [X′] min 
+
+
+
+1, psel [x′ 
+
+> s′
+
+|X′]
+
+psel [xs|X]
+
+
+
+, (1) where psel [xs|X] is the shooting point selection probability, and HAB (X) is equal to 1 if X is a valid reactive path and 0 otherwise. This acceptance criterion assumes an unperturbed shooting point, which can sensibly only be used in combina-tion with a stochastic kernel for the generation of trajectories. For uniform shooting point selection, i.e., psel [xs|X(L)] = L−1,the acceptance criterion for paths of variable length reduces to 24,25 
+
+Pacc [X(L) → X′(L′)] = HAB [X′(L′)] min 
+
+
+
+1, LL′
+
+
+
+. (2) The main advantage of uniform shooting point selection is that it requires no prior information about the system under investigation. Its drawback, however, is that it can result in very low acceptance probabilities. This is because many pro-posed paths will result in excursions that begin and end in the same state rather than genuine transition pathways. One way to increase the acceptance rate in TPS is therefore to bias the shooting point selection probability toward the barrier region, 23,26,27 for example by restricting shooting points to lie only within a prescribed range or by using different shooting point distributions centered near the barrier region. Although such biasing can increase the acceptance rate, it reintroduces a key limitation that is absent when an unbiased (e.g. uniform) shooting point distribution is used: the need for prior knowledge of the system, typically in the form of a suitable reaction coordinate. While this information can be inferred for a specific system by combining physical intuition with computational methods, a suitable reaction coordinate is, in general, not easy to identify. Moreover, it can depend on several variables specific to the simulation, such as the po-tential energy surface, the definition of the stable states, and the particular model used to describe the dynamics. Ideally, the optimal reaction coordinate would be given in form of the 
+
+committor 28–31 pB(x), defined as the probability that a trajec-tory initiated from a configuration x reaches the product state (i.e., B) before reaching the reactant state (i.e., A). Unfortu-nately, closed-form expressions for the committor are avail-able only for a limited number of simple systems. Machine learning techniques therefore provide a promising approach to estimating the committor for more complex systems, as dis-cussed in the next section.  
+
+> B. AIMMD
+
+The committor is a function defined on the full phase space and is analytically intractable, while its numerical estimation is generally computationally expensive. Nevertheless, knowl-edge of the committor is highly desirable, as it provides de-tailed insight into reaction mechanisms and represents the ideal reaction coordinate. In the context of TPS, the com-mittor can be used to increase the probability of generating reactive path candidates in two-way shooting moves by bi-asing the selection of shooting points towards configurations with pB ≈ 0.5. This substantially reduces the number of non-reactive paths. This idea forms the basis of the Artificial Intelligence for Molecular Mechanism Discovery (AIMMD) method. 13 
+
+AIMMD introduces a machine learning framework to recon-struct the committor from information obtained during a stan-dard TPS simulation. The resulting committor estimate is then used to improve shooting point selection, leading to a progres-sively more efficient sampling procedure. In the AIMMD framework, the committor is represented as 
+
+pB(x|θ ) = 11 + e−q(x|θ ) , (3) where q(x|θ ) is a multilayer perceptron with parameters θ .To train this model, one initiates N trajectories from each of 
+
+k shooting points {xi}i=1... k. For every shooting point xi, the numbers of trajectories reaching states A and B are recorded as nA(i) and nB(i), respectively. Since each trajectory con-stitutes a Bernoulli trial, these outcomes follow the binomial 3probability 13 
+
+p(nA, nB|xi) = 
+
+nA + nB
+
+nA
+
+
+
+[1 − pB(xi|θ )] nA [pB(xi|θ )] nB (4) and combining the probabilities for the k shooting points yields the likelihood function 
+
+L =
+
+> k
+
+# ∏
+
+> i=1
+
+p(nA(i), nB(i)|xi). (5) The negative log-likelihood is then used as a loss function, which, using Eqs. (3) and (4), can be expressed as 
+
+LAIMMD = − log L
+
+=
+
+> k
+
+# ∑
+
+> i=1
+> N
+
+# ∑
+
+> j=1
+
+log 
+
+
+
+1 + esi j q(xi|θ )
+
++ const . (6) Here, the matrix s ∈ Mk×N ({− 1, 1}) encodes the outcome of the j-th shooting move from shooting point xi, setting si j = −1if state B was reached before state A and si j = 1 otherwise.  
+
+> C. Boltzmann Generators
+
+Boltzmann Generators 32 are generative machine learn-ing models belonging to the broader class of normalizing flows. 33–35 Given a target distribution of the form pX (x) ∝
+
+exp [−βU(x)] with β = ( kBT )−1 and x ∈ ΩX and, optionally, a small set of independent samples from that distribution, nor-malizing flows parametrize the diffeomorphism Fzx : ΩZ →
+
+ΩX between the latent space ΩZ of a simple, readily sam-pled prior distribution pZ (z) (e.g. uniform or Gaussian) and the configuration space ΩX of the target distribution. Once trained, independent latent space samples z ∼ pZ (z) can be transformed using Fzx to generate uncorrelated samples from the target distribution at the computational cost of a forward pass through the network. For this reason, Boltzmann Gen-erators have found broad applicability across different areas of statistical physics, 36 with notable applications for atom-istic simulations in free-energy calculations, 18,37–39 equilib-rium simulations of solid 40 and liquid systems 41,42 and rare event sampling. 16,17 
+
+The form of Fzx and its inverse F−1 
+
+> zx
+
+:= Fxz is chosen such that their Jacobian determinants — det Jzx (z) and det Jxz (x),respectively — are tractable and efficient to compute. Fol-lowing the original design of Boltzmann Generators, 32 in this work the Real NVP architecture 35 is used, which splits the in-put into two channels and passes information between them through a series of affine transformations with learnable pa-rameters ϕ modeled as multilayer perceptrons, placing the model into the category of split coupling flows. A multivariate normal distribution is chosen as the prior distribution pZ (z).Training a Boltzmann Generator combines two comple-mentary strategies: training by energy and training by ex-ample . In both cases, samples are passed through the net-work and used to estimate the Kullback-Leibler (KL) diver-gence between the target distribution pα (a) and the distribu-tion qα (a) produced by the Boltzmann Generator, where α
+
+and a are placeholders for the space in which the KL diver-gence is calculated — latent space ( Z and z) when training by energy and configuration space ( X and x) when training by example. The objective of training is then to minimize this quantity, which, combining the two paradigms by summing their respective KL divergence estimators, can be written as a loss function 32 
+
+LBG == λKL Ez∼pZ (z) [βU(Fzx (z|ϕ)) − log (| det Jzx (z|ϕ)|)] + + λML Ex∼pX (x)
+
+ 12 || Fxz (x|ϕ)|| 2 − log (| det Jxz (x|ϕ)|)
+
+
+
+,
+
+(7) where λKL , λML control the strength of the contribution of the individual estimators. The difference between the two paradigms lies in the direc-tion in which the data flows through the generator — Z → X
+
+for training by energy and X → Z for training by example. In the latter case, samples from the target distribution are re-quired, which help converge the Boltzmann Generator espe-cially during the early stages of training and avoiding mode collapse. 43 Both strategies complement each other, balancing exploration with numerical stability and training efficiency. Since normalizing flows are exact-likelihood models, the probability density of generated samples qX (x) is known ana-lytically. This allows the exact computation of the importance weights of samples x ∼ qX
+
+ Fzx (z) with respect to the true tar-get distribution 32 pX (x) given the original sample z ∼ pZ (z)
+
+using 
+
+ω(Fzx (z)) = pX (Fzx (z)) 
+
+qX (Fzx (z)) 
+
+∝ e−βU(Fzx (z)) −log pZ (z)+ log (| det Jzx (z)|).
+
+(8) Provided the learned distribution qX
+
+ Fzx (z) has sufficient overlap with the target distribution pX (x), the latter can be recovered by re-weighting the generated samples. The importance weights also provide information about the quality of the sampling. A quantitative measure of this quality is given by the Effective Sample Size (ESS), 44 which becomes the Relative Effective Sample Size (RESS) RESS = 1
+
+N
+
+ ∑Ni=1 ωi
+
+2
+
+∑Ni=1 ω2
+
+> i
+
+(9) after dividing by N. The RESS is a number between N−1 and one, equaling one if the sampling is perfect (i.e., if ω(x) = 
+
+1/N for all N samples) and approaching zero in the opposite case.  
+
+> D. Conditioning Boltzmann Generators for TPS
+
+In the context of rare event sampling, it is desirable to bias the sample generation towards regions in configuration space that are visited during transitions but rarely in unbiased simu-lations. Such regions are typically characterized using a col-lective variable ξ (x). Falkner et al. 16 showed that such a 4targeted generation of configurations can be achieved by in-troducing an additive harmonic bias term with bias center ˆξ
+
+and strength kbias to the potential energy function, which then takes the form 
+
+U′ 
+
+> ˆξ
+
+(x) = U(x) + kbias 
+
+2
+
+h
+
+ξ (x) − ˆξ
+
+i2
+
+. (10) A Boltzmann Generator is then conditioned by including sam-ples from different bias windows in the training set in the case of training by example, appending the respective bias center to the input vector of the multilayer perceptron that parametrizes the bijector. When training by energy, where one samples the prior distribution pZ (z), each sample z is associated with a condition c drawn from an arbitrary distribution p(c), for ex-ample uniformly from a predefined set of conditions. A well-conditioned Boltzmann Generator is then able to sample from arbitrary bias windows even if they were neither represented in the training set nor sampled using p(c).Leveraging the ability of Boltzmann Generators to draw in-dependent and uncorrelated samples with known importance weights from a biased Boltzmann distribution, one can con-struct a transition path sampling algorithm 16 that alleviates two main limitations of the standard TPS procedure: its inher-ent sequentiality and the correlations between subsequently sampled paths. The central idea is to use the Boltzmann Gen-erator to produce independent shooting points instead of se-lecting them from an existing trajectory. To maximize the probability of obtaining a reactive path, those shooting points are generated as close as possible to the transition state re-gion of the system by conditioning the Boltzmann Generator on a pre-defined reaction coordinate. Transition paths are then generated by integrating the equations of motion forward and backward in time starting from the generated shooting points and retaining all paths that connect the two stable states. From the resulting ensemble, the correct transition path distribution can be recovered by re-sampling via the path weights 16 
+
+Ω(X) ∝
+
+L(X)
+
+# ∑
+
+> i=1
+
+ρ ˆξ
+
+> SP
+
+(xi)
+
+ρ(xi)
+
+
+
+> −1
+
+, (11) where X = {x1, x2, . . . , xL(X)} is one such path and ρ ˆξ
+
+> SP
+
+(x) ∝
+
+e−βU′  
+
+> ˆξ(x)
+
+and ρ(x) ∝ e−βU(x) are the shooting point and equilibrium Boltzmann distributions, respectively. For this scheme to perform well, it is essential that the chosen reac-tion coordinate provides an accurate parameterization of the transition process and that the location of the transition state along it is known.  
+
+> E. The GenAIMMD algorithm
+
+The central result of this work is GenAIMMD, a multi-step active learning algorithm designed to overcome the difficulty of generating efficient shooting points, and hence uncorrelated transition pathways, when a suitable reaction coordinate is not known a priori. The algorithm uses the learned committor to Sufficiently 
+
+trained? 
+
+Start 
+
+Generate initial training data 
+
+## AIMMD 
+
+Train AIMMD 
+
+Committor model Relabel samples 
+
+using committor 
+
+## Generator 
+
+Train Generator 
+
+Generate new samples 
+
+## Dynamics 
+
+Shoot o ff fl eeting trajectories Relax samples in 
+
+biased potential 
+
+End 
+
+Yes No   
+
+> Figure 1. Overview of the steps involved in the GenAIMMD al-gorithm. Flowchart elements connected by solid arrows make up the self-consistency loop, while dashed arrows connect steps outside of the loop. The in-loop steps are assigned one of three categories: Dynamics (blue), where the main focus lies on propagating training samples, AIMMD (orange), where the committor model and sam-ple labels are updated, and Generator (green), where the Boltzmann Generator is trained and used to generate new training samples.
+
+steer the generation of shooting points towards regions of con-figuration space with a high chance of generating a transition path (replacing ξ (x) with pB(x|θ ) in Eq. (10)) and uses these transition paths to refine the estimation of the committor. The active learning loop alternates between three stages: Evolv-ing training samples in a biased or unbiased potential, training the committor model and training the Boltzmann Generator as well as using it to generate new samples. An overview of the algorithm and its three stages is given in Fig. 1. 
+
+> Self-consistency loop
+
+To kick-start the training loop, a set of initial training con-figurations, which we will refer to as samples in the following, is required. This set should comprise samples both inside the stable states A and B as well as along transition paths. The size of the dataset depends on the complexity of the system under investigation and can therefore be treated as a hyperpa-rameter, to be tuned by weighing increased early-stage learn-ing performance and stability against the cost of producing additional data. Given the initial samples, the training loop is repeated un-til self-consistency is reached. The training paradigm for the AIMMD committor model requires configurations to be la-5beled with binary shooting outcomes si j . These labels are obtained by shooting off trajectories from the configurations in the training set — two per configuration — and recording which of the two states they enter first. The pairs of samples and labels are then used to train the committor model. Since the Boltzmann Generator’s target distribution in-cludes a harmonic bias around given bias centers, each sam-ple used in training the generator must also be associated with such a bias center. We refer to this process as re-labeling the samples using the committor , as the bias centers are assigned based on the committor model’s prediction for each sample’s committor. One can choose to either assign the exact value of the predicted committor to each sample, resulting in each bias window containing exactly one sample, or to bin samples into predefined bias windows based on the prediction. In prac-tice, we found both options to be equally valid and arbitrarily decided to associate each sample with the integer bias center closest to the committor model’s prediction in log-space. This rather arbitrary method of assigning bias centers, how-ever, does not guarantee that the samples are equilibrated in their respective biased potential, making them unsuitable for the training by example paradigm of the Boltzmann Genera-tor. Therefore, a short equilibration run must be performed after the re-labeling process. Crucially, this step also ensures that the generator is not trained on the exact same samples it produced at the end of the previous cycle. 45 After the re-laxation run is finished, the samples can be used to train the Boltzmann Generator. Before starting the next cycle, the algorithm checks whether self-consistency has been reached and, if so, the training is ter-minated. The exit condition must be chosen with care, as an inappropriate choice could either lead to stopping the train-ing prematurely or, conversely, to wasting resources on an al-ready fully trained system. In general, convergence of metrics like the RESS (Eq. (9)) or the loss functions of the Boltzmann Generator and the committor model can serve as reliable pre-dictors of training success. If the stopping criterion is not met, the loop continues to the next step, where the Boltzmann Generator is used to pro-duce new training samples to be added to the dataset. To limit the growth of the number of samples in the dataset, the old-est members are continuously removed following the first in, first out (FIFO) principle. Oftentimes, especially in the early stages of training, a large portion of the generated samples have exceedingly low weight in the target distribution due to the training of the Boltzmann Generator not being complete. Not only are such highly non-physical samples undesirable due to their low importance in training the committor model and Boltzmann Generator, but they also pose a numerical problem when trajectories are shot off from them: in this case, the numerical integration requires the use of much smaller time steps to guarantee stability of the dynamics. To alleviate this, the newly produced samples are first subjected to multi-ple iterations of re-generation, discarding highly non-physical samples that would break stability and replacing them with newly generated configurations. The procedure is repeated until either a maximum number of iterations is reached or a plateau in the RESS is detected. Each sample generation pro-cess is followed by a short equilibration run, where the sam-ples are further relaxed in their respective biased potential. By continuously generating new samples at various commit-tor bias centers, the algorithm is forced to explore the entire target space, adjusting the prediction for the committor when necessary. After relaxation of the new samples, the loop is repeated until self-consistency is reached. 
+
+> Fine-tuning
+
+As discussed in Sec. II C, training a Boltzmann Generator by energy is often not sufficient, since the reverse KL diver-gence suffers from mode-seeking behavior. This means that, with no target data, full coverage of all the modes of the tar-get distribution is not guaranteed and will not happen in gen-eral, particularly when the source and target distributions dif-fer significantly. In previous applications, 37,39,40,42 this issue has often been mitigated by choosing source and target dis-tributions that are sufficiently similar, which, in some cases, allows training by energy alone. In our case, however, the two distributions are considerably different. We therefore supply a few samples from the target distribution to improve mode cov-erage through maximum likelihood estimation (i.e., training by example). However, if the samples provided do not suffi-ciently cover the main modes of pX (x), the generator may still drastically under-sample regions that carry significant proba-bility mass in the target distribution. The few samples pro-duced in such regions will then have exceedingly large impor-tance weights, which can destabilize the re-weighting proce-dure. Although the presented algorithm automatically gener-ates additional training samples, these are unlikely to land in yet unexplored modes that were not represented in the initial training set. To address this issue, one can encourage the generator to explore the under-sampled modes by deliberately training it on samples from these regions. We apply this fine-tuning to the Boltzmann Generator as it leaves the GenAIMMD loop by 1. generating a large set of samples from the learned distri-bution in the bias window associated with the transition state characterized by ˆ pB = 0.5, 2. computing the associated importance weights, 3. smoothing the high-variance importance weights via Pareto Smoothed Importance Sampling (PSIS), 46 
+
+4. re-sampling the generated samples using the smoothed weights into the biased Boltzmann distribution, 5. training the Boltzmann Generator by example using the re-sampled, fully synthetic samples and 6. repeating steps 1 – 5 until an appropriate convergence criterion (e.g. a plateau of the ESS) is met. The reason we restrict the sampling and training to the ˆ pB =
+
+0.5 window is that, after training, the Boltzmann Generator is only used to produce shooting points inside this bias win-dow. In principle, however, this procedure can be expanded 6to an arbitrary number of different bias windows. Note that training on synthetic data is not problematic here, 45 since we previously did all the training on real samples and merely seek to reduce the variance of the importance weights. Moreover, generated samples are always re-weighted or re-sampled into the correct Boltzmann distribution. 
+
+> Obtaining transition paths
+
+Once the Boltzmann Generator has been trained and, if nec-essary, fine-tuned, shooting points can be generated in the transition state region defined by pB ≈ 0.5. From this gen-erated set of shooting points, trajectories can be shot off and connected to form transition paths. Inserting Eq. (10) into Eq. (11) with the learned committor pB(x|θ ) as the CV bias yields the expression 
+
+Ω(X) ∝
+
+"L(X)
+
+# ∑
+
+> i=1
+
+exp 
+
+
+
+−β kbias 
+
+2 [pB(xi|θ ) − ˆpB]2
+
+#−1
+
+(12) for the corresponding path weights, where ˆpB = 0.5 is the committor bias center.   
+
+> III. RESULTS A. Two-dimensional model
+
+To assess the efficacy of GenAIMMD, a two-dimensional system with two stable states is considered first, namely a rotated, shifted and scaled form of the Wolfe-Quapp poten-tial 47,48 depicted in Fig. 2A. The set of initial samples passed to the GenAIMMD algorithm consists of 100 samples inside each of the two stable states and 100 samples along transition paths obtained through TPS, summing up to a total of 300 initial samples. In this work, we restrict the dynamics to the overdamped regime in which velocities can be neglected. The GenAIMMD loop is run for a total of 50 cycles, and af-ter each cycle, the current RESS (Eq. (9)) is recorded and used to measure convergence (see Fig. 2C). After approximately 10 cycles (107 seconds on an RTX 5070 GPU), the RESS plateaus at ≈ 0.8, indicating that self-consistency has been reached. The Boltzmann Generator is then able to sample from the biased Boltzmann distribution arising from Eq. (10) with the committor model used as a reaction coordinate at ar-bitrary committor bias centers, as can be seen in Fig. 2B. For this system, no sign of poor mode coverage was observed dur-ing reweighting and therefore no fine tuning was performed after the GenAIMMD training loop.  
+
+> B. Polymer model
+
+Following the simulations in two dimensions, we increase the learning difficulty by moving to a higher-dimensional sys-tem — again using overdamped Langevin dynamics. We con-ABC     
+
+> Figure 2. Training results for the two-dimensional Wolfe-Quapp po-tential. (A) shows the iso-lines of the potential energy in solid black with labels in units of kBT, as well as the committor pB(x,y)corre-sponding to the states defined by the white circles, learned using the GenAIMMD algorithm. The two black dashed lines connecting the states illustrate transition paths using the upper (long dashes) and the lower (short dashes) reaction channel, respectively. (B) depicts sam-ples generated by the Boltzmann Generator in different committor bias windows and re-sampled into the corresponding biased Boltz-mann distribution (see Eq. (10)). (C) plots the mean relative effective sample size (Eq. (9)) as a function of algorithm cycles, where the av-erage is taken across multiple committor bias windows.
+
+sider a linear polymer in two spatial dimensions that con-sists of seven monomers, resulting in a total of 11 degrees of freedom after subtracting the center of mass and rotation of the polymer. 16 The non-bonded interactions between the monomers are modeled through a conventional 12-6 Lennard-7                         
+
+> Figure 3. Training results for the polymer model. (A) and (B) depict the stable conformations of the polymer, i.e., state A and state B, respectively. (C) shows the relative effective sample size as a function of GenAIMMD cycles, averaged over multiple committor bias windows within each cycle. (D) displays the predicted committor against the numerically estimated (reference) committor for a set of test samples, where each black dot corresponds to a single system configuration and the straight red line corresponds to perfect agreement between the reference and the prediction. The blue line marks the average reference committor binned by the predicted committor, and the orange area indicates the corresponding standard deviation. (E) histogram of the log-committor q(x)(Eq. (3)) of polymer samples generated using the Boltzmann Generator at seven different bias centers (the labels of the q-axis are the bias centers in log-committor space), along with reference histograms (gray outlines) obtained from Umbrella Sampling. Note that q→ − ∞⇔pB→0, q→+∞⇔pB→1 and q=0⇔pB=0.5.
+
+Jones potential, which is complemented by two bonded con-tributions: harmonic bond stretching and a cosine-based angle potential. This system has multiple (meta)stable states, from which we choose a curled-up conformation (Fig. 3A) and an extended conformation (Fig. 3B) for the purpose of testing our method. In our study, the radius of gyration is used as order parameter to distinguish the two stable states and the transi-tion region. To account for the translational and rotational invariance of the system, we introduce an invertible internal coordinate map that transforms Cartesian coordinates to normalized bond lengths and bond angles. To make the system invariant with respect to reflections, we constrain the first bond angle ϕ1 to the upper half of the unit circle, mirroring the polymer along the x-axis if sin ϕ1 < 0. To improve training stability, we con-dition the flow on the log-committor q(x|θ ) (see Eq. (3)) in-stead of the committor pB(x|θ ).The mean RESS (Fig. 3C) observed while running the GenAIMMD algorithm for this system is significantly lower compared to the two-dimensional model, which is expected due to the higher dimensionality of the learning problem. Convergence of the RESS was reached after about five GenAIMMD cycles. To provide a reference that can be used to assess the accu-racy of the trained committor model, we first generate poly-mer samples along an artificial reaction coordinate (in this case the radius of gyration) using Umbrella Sampling. 7,8 From each sample, we initiate 1000 fleeting trajectories and observe the states they hit first, which yields a numerical estimate for their committor values. Then, we plot these reference com-mittor values against the committor model’s predictions for the samples (Fig. 3D). The close clustering of the predictions along the y = x line shows a very good agreement between the committor model and the reference. Lastly, we verify that the Boltzmann Generator is able to sample from the biased Boltzmann distribution. For a set of arbitrarily chosen committor bias centers that span a broad range of possible committor values, including that which cor-responds to the transition state ( ˆ pB = 0.5), we produce poly-mer samples using the Boltzmann Generator and histogram their predicted log-committor, re-weighting each sample with the corresponding importance weight (Eq. (8)). As reference, we use the learned committor as a reaction coordinate and per-form Umbrella Sampling using the same bias windows. The resulting histogram is shown in Fig 3E. The spikes visible in the reweighted distribution are a sign of disproportionately high importance weights of specific configurations, which are related to the problem discussed in Sec. II E and in previous publications. 49 Therefore, before generating shooting points to be used in path sampling in the next section, we apply the fine-tuning procedure described in Sec. II E to the Boltzmann Generator in the bias window corresponding to ˆ q = 0.  
+
+> C. Application to Transition Path Sampling
+
+To illustrate the advantages of independently drawing highly reactive shooting points, we benchmark GenAIMMD against conventional two-way shooting TPS for both of the presented test systems. The results are shown in Fig. 4A for the two-dimensional model and Fig. 4B for the polymer model. As reference, we use long-running uniform-shooting-point-selection TPS simulations in both systems (see the Sup-plementary Material for details). For the performance analy-8
+
+Figure 4. Performance comparison between standard TPS (blue) and shooting points generation using the GenAIMMD-trained Boltzmann Generator conditioned on the learned committor (orange) in (A) the two-dimensional model and (B) the polymer model. The colored lines are 30 independent runs (TPS simulations in case of standard TPS, blocks of generated shooting points in case of the sampled shooting points). The solid black lines are averages over the colored lines at the respective step. First row: Absolute error of the distribution of points along transition paths p(x|TP ) as a function of two-way shooting trials, measured as the L1 distance between a reference histogram obtained via a long-running TPS simulation and the histogram arising from the respective method after ntrials trials (see the Supplementary Material for more information). Second row: Running average of the reaction channel indicator function g(X) (A) and the path length L(X) (B) after ntrials 
+
+two-way shooting trials. Dashed lines are averages from the reference simulation. Third row: Autocorrelation function CF(X)(k) and integrated autocorrelation time τa of F(X), which is the function averaged in the second row of (A) and (B), respectively. 
+
+sis, we use 30 replicas of the same simulation for both meth-ods whose resulting observables are plotted as thin colored lines in Fig. 4. The thick black lines represent the average over these replicas. Histogramming the individual configurations along tran-sition paths, one obtains the distribution p(x|TP ). For the polymer model, we divide the configurations into discrete classes ˆ x based on their bond angles, which then serve as his-togram bins. Such histograms are created for both test systems (Wolfe-Quapp potential and polymer) and both path sampling methods (standard TPS and Generated Shooting Points). We then proceed to calculate the L1 distance 
+
+d(p, q) = 
+
+> N
+
+# ∑
+
+> i=1
+
+|pi − qi| (13) between the bins p = ( p1, p2, . . . , pN ) of these histograms and those of the respective reference histogram q =(q1, q2, . . . , qN ) as a function of the number of two-way shoot-ing trials ntrials , which we report as the absolute error of 
+
+p(x|TP ) in the first row of Fig. 4. In the case of generated SPs, a trial is considered the generation of a shooting point and the integration of two trajectories, which are then stitched together to form a path, as described in Sec. II A. Trials that produce non-reactive paths are still counted towards the to-tal number of trials; however, the corresponding paths are as-9signed zero weight. Standard TPS is known to suffer from correlations between subsequently sampled paths, which often leads to trapping in-side one reaction channel for an extended period of time. The two-dimensional model has two such reaction channels that transition paths may use (black dashed lines in Fig. 2A), and we distinguish them via the indicator function g(X), which is 1 if a path X uses the upper channel and 0 if it uses the lower one. Computing the average ¯ g(n) = 1 
+
+> n
+
+∑ni=1 g(Xi) of g(X) after 
+
+n shooting attempts, one converges to the relative population of the two channels as n → ∞, which depends on their free en-ergy difference and is indicated by the dashed line in the sec-ond row of Fig. 4A. The plots show the convergence behav-ior of this average for standard TPS and the shooting points originating from the Boltzmann Generator. The third row of Fig. 4A then depicts the normalized autocorrelation function 
+
+Cg(X)(k) and integrated autocorrelation time τa of g(X) for the two methods. In the polymer model, a function that distinguishes the reac-tion channels is not readily available, which is why we instead choose to investigate the convergence of the mean path length ¯L(n) = 1 
+
+> n
+
+∑ni=1 L(Xi) after n shooting trials. This is shown in the second row of Fig. 4B along with the corresponding au-tocorrelation function CL(X)(k) and integrated autocorrelation time τa in the third row.  
+
+> IV. DISCUSSION AND CONCLUSION
+
+In this work, we introduced a new method we call GenAIMMD that enables efficient shooting point generation for TPS using generative machine learning 16 without requir-ing a priori knowledge of a suitable reaction coordinate. Since the shooting points obtained in this way are fully independent of each other, the resulting transition paths are free from corre-lations and can be harvested in parallel, overcoming two short-comings of the established shooting algorithm. The method also yields the committor for the process. At its core, the method employs an active learning loop that alternates be-tween committor learning through AIMMD 13 and training a Boltzmann Generator conditioned on the learned committor. The generator then seeds new training samples, and the loop continues until self-consistency is achieved. In comparison to recently proposed methods, 19 the exact-likelihood nature of Boltzmann Generators enables us to re-weight generated con-figurations into the correct distribution, allowing computation of unbiased thermodynamic estimates in addition to exploring the transition region. We tested our method on two systems: the two-dimensional Wolfe-Quapp potential and a polymer model with eleven de-grees of freedom. In both systems, GenAIMMD succeeded in training a Boltzmann Generator as well as learning the com-mittor. Employing the same shooting point resampling and path re-weighting scheme as in Ref. 16, we demonstrated that GenAIMMD manages to outperform standard TPS by orders of magnitude while maintaining independence of a predeter-mined reaction coordinate. Nevertheless, the method has some limitations. As men-tioned above, the success of GenAIMMD at covering all the target distribution’s modes depends strongly on their repre-sentation in the initial training set because the KL diver-gence used to train by energy promotes mode-seeking be-havior. These effects were already evident in the polymer model, where they were successfully mitigated by fine-tuning the Boltzmann Generator before producing shooting points. However, we expect them to intensify with growing system size and number of modes. As a possible solution, other train-ing objectives, such as α-divergence, have been proposed 49 
+
+because they are mass-covering and minimize the variance of the importance weights. Another limiting factor is the well-recognized decline in sampling efficiency of Boltzmann Gen-erators with increasing system dimensionality, 50 which is due to the exponential accumulation of error between the learned and target distributions. Moreover, our current implementa-tion uses affine transformations in the Boltzmann Generator’s coupling layers, which not only limits the model’s expressiv-ity but also prevents us from appropriately modeling periodic coordinates. However, the GenAIMMD scheme is largely ag-nostic to the architecture used to parameterize the diffeomor-phism in the Boltzmann Generator. This makes it straightfor-ward to incorporate more expressive transformations, such as those proposed in Refs. 51–53, in place of the affine trans-formations used here. Future implementations will further explore architectures specifically designed to improve scala-bility to higher-dimensional systems 50,54 and to appropriately handle periodic coordinates, 40 while also investigating more expressive transformations and strategies to mitigate mode collapse. We are confident that these developments will allow GenAIMMD to be extended to increasingly complex systems while addressing the limitations associated with the dimen-sionality and representational capacity of the current imple-mentation. 
+
+> SUPPLEMENTARY MATERIAL
+
+The supplementary material contains additional informa-tion about the presented test systems (system definition, in-ternal coordinate transformation), training and simulation pa-rameters, reference data and details about the benchmarking against standard TPS. 
+
+> ACKNOWLEDGMENTS
+
+This paper is dedicated to Gerhard Hummer on the occasion of his 60th birthday. We are grateful for many years of stimu-lating discussions and scientific exchange. Gerhard has been a role model and an inspiration for us and the entire commu-nity, and we look forward to many more years of friendship, collaboration, and shared scientific adventures. This research was funded in part by the Aus-trian Science Fund (FWF) through SFB TACO 10.55776/F8100 and in part by 10.55776/COE5 (Clus-ter of Excellence MECS), both of them available via https://www.fwf.ac.at/en/discover/research-radar. For open 10 access purposes, the author applied a CC BY public copyright license to any author-accepted manuscript version arising from this submission. The computational results presented have been achieved in part using the Vienna Scientific Cluster (VSC). 
+
+AUTHOR DECLARATIONS Conflict of Interest 
+
+The authors have no conflicts to disclose. 
+
+Author Contributions 
+
+Maximilian Negedly : Conceptualization (equal); Formal Analysis (equal); Investigation (lead); Methodology (equal); Software (lead); Visualization (lead); Writing — original draft (lead). 
+
+Sebastian Falkner : Conceptualization (equal); Formal Analysis (equal); Investigation (supporting); Methodology (equal); Supervision (equal). 
+
+Alessandro Coretti : Formal Analysis (equal); Investiga-tion (supporting); Methodology (equal); Supervision (equal); Writing — original draft (supporting). 
+
+Christoph Dellago : Conceptualization (equal); Formal Analysis (supporting); Funding Acquisition (lead); Method-ology (equal); Project Administration (lead); Supervision (equal); Writing — original draft (supporting). 
+
+DATA AVAILABILITY 
+
+The data that support the findings of this study are openly available on GitHub at https://github.com/CompPhysVienna/paper_genaimmd. 
+
+REFERENCES 
+
+> 1
+
+A. C. Pan and D. Chandler, “Dynamics of Nucleation in the Ising Model,” The Journal of Physical Chemistry B 108 , 19681–19686 (2004). 
+
+> 2
+
+J. Juraszek and P. G. Bolhuis, “Sampling the multiple folding mechanisms of Trp-cage in explicit solvent,” Proceedings of the National Academy of Sciences 103 , 15859–15864 (2006). 
+
+> 3
+
+K.-i. Okazaki, D. Wöhlert, J. Warnau, H. Jung, Ö. Yildiz, W. Kühlbrandt, and G. Hummer, “Mechanism of the electroneutral sodium/proton antiporter PaNhaP from transition-path shooting,” Nature Communications 10 , 1742 (2019). 
+
+> 4
+
+F. Angiolari, A. Coretti, M. Salanne, and S. Bonella, “Electrically driven first-order phase transition of a 2D ionic crystal at the elec-trode/electrolyte interface,” Proceedings of the National Academy of Sci-ences 122 , e2520026122 (2025). 
+
+> 5
+
+S. Falkner and N. Schwierz, “Kinetic pathways of water exchange in the first hydration shell of magnesium: Influence of water model and ionic force field,” The Journal of Chemical Physics 155 , 084503 (2021). 
+
+> 6
+
+J. Hénin, T. Lelièvre, M. R. Shirts, O. Valsson, and L. Delemotte, “Enhanced sampling methods for molecular dynamics simulations,” Living Journal of Computational Molecular Science 4 (2022), 10.33011/livecoms.4.1.1583, arXiv:2202.04164 [cond-mat]. 
+
+> 7
+
+G. Torrie and J. Valleau, “Nonphysical sampling distributions in Monte Carlo free-energy estimation: Umbrella sampling,” Journal of Computa-tional Physics 23 , 187–199 (1977). 
+
+> 8
+
+J. Kästner, “Umbrella sampling,” WIREs Computational Molecular Science 
+
+1, 932–942 (2011). 
+
+> 9
+
+A. Laio and M. Parrinello, “Escaping free-energy minima,” Proceedings of the National Academy of Sciences 99 , 12562–12566 (2002). 
+
+> 10
+
+C. Dellago and P. G. Bolhuis, “Transition path sampling and other advanced simulation techniques for rare events,” in Advanced Computer Simulation Approaches for Soft Matter Sciences III , edited by C. Holm and K. Kremer (Springer Berlin Heidelberg, Berlin, Heidelberg, 2009) pp. 167–233. 
+
+> 11
+
+A. Ma and A. R. Dinner, “Automatic Method for Identifying Reaction Co-ordinates in Complex Systems,” The Journal of Physical Chemistry B 109 ,6769–6779 (2005). 
+
+> 12
+
+B. Peters and B. L. Trout, “Obtaining reaction coordinates by likelihood maximization,” The Journal of Chemical Physics 125 , 054108 (2006). 
+
+> 13
+
+H. Jung, R. Covino, A. Arjun, C. Leitold, C. Dellago, P. G. Bolhuis, and G. Hummer, “Machine-guided path sampling to discover mechanisms of molecular self-organization,” Nature Computational Science 3, 334–345 (2023). 
+
+> 14
+
+P. Kang, E. Trizio, and M. Parrinello, “Computing the committor with the committor to study the transition state ensemble,” Nature Computational Science 4, 451–460 (2024). 
+
+> 15
+
+A. Megías, S. Contreras Arredondo, C. G. Chen, C. Tang, B. Roux, and C. Chipot, “Iterative variational learning of committor-consistent transition pathways using artificial neural networks,” Nature Computational Science 5,592–602 (2025). 
+
+> 16
+
+S. Falkner, A. Coretti, S. Romano, P. L. Geissler, and C. Dellago, “Condi-tioning Boltzmann generators for rare event sampling,” Machine Learning: Science and Technology 4, 035050 (2023). 
+
+> 17
+
+S. Asghar, Q.-X. Pei, G. Volpe, and R. Ni, “Efficient rare event sam-pling with unsupervised normalizing flows,” Nature Machine Intelligence 
+
+6, 1370–1381 (2024). 
+
+> 18
+
+S.-H. Li, C. Chen, Y.-W. Zhang, and D. Pan, “Differentiable free energy surface: a variational approach to directly observing rare events using gener-ative deep-learning models,” (2026), arXiv:2604.09769 [physics.comp-ph]. 
+
+> 19
+
+C. Tang, M. P. Pandey, C. G. Chen, A. Megías, F. Dehez, and C. Chipot, “Breaking timescales with generative sampling of conformational transi-tions,” Nature (2026), 10.1038/s41586-026-11025-1. 
+
+> 20
+
+C. Dellago, P. G. Bolhuis, F. S. Csajka, and D. Chandler, “Transition path sampling and the calculation of rate constants,” The Journal of Chemical Physics 108 , 1964–1977 (1998). 
+
+> 21
+
+P. G. Bolhuis, D. Chandler, C. Dellago, and P. L. Geissler, “Transition Path Sampling: Throwing Ropes Over Rough Mountain Passes, in the Dark,” Annual Review of Physical Chemistry 53 , 291–318 (2002). 
+
+> 22
+
+C. Dellago, P. G. Bolhuis, and D. Chandler, “Efficient transition path sam-pling: Application to Lennard-Jones cluster rearrangements,” The Journal of Chemical Physics 108 , 9236–9245 (1998). 
+
+> 23
+
+H. Jung, K.-i. Okazaki, and G. Hummer, “Transition path sampling of rare events by shooting from the top,” The Journal of Chemical Physics 147 ,152716 (2017). 
+
+> 24
+
+P. G. Bolhuis, “Transition path sampling on diffusive barriers,” Journal of Physics: Condensed Matter 15 , S113–S120 (2003). 
+
+> 25
+
+P. G. Bolhuis, “Transition-path sampling of β -hairpin folding,” Proceedings of the National Academy of Sciences 100 , 12129–12134 (2003). 
+
+> 26
+
+G. Menzl, A. Singraber, and C. Dellago, “S-shooting: a Bennett–Chandler-like method for the computation of rate constants from committor trajecto-ries,” Faraday Discussions 195 , 345–364 (2016). 
+
+> 27
+
+P. G. Bolhuis and D. W. H. Swenson, “Transition Path Sampling as Markov Chain Monte Carlo of Trajectories: Recent Algorithms, Software, Applica-tions, and Future Outlook,” Advanced Theory and Simulations 4, 2000237 (2021). 
+
+> 28
+
+L. Onsager, “Initial Recombination of Ions,” Physical Review 54 , 554–557 (1938). 
+
+> 29
+
+R. Du, V. S. Pande, A. Y. Grosberg, T. Tanaka, and E. S. Shakhnovich, “On the transition coordinate for protein folding,” The Journal of Chemical Physics 108 , 334–350 (1998). 
+
+> 30
+
+G. Hummer, “From transition paths to transition states and rate coeffi-cients,” The Journal of Chemical Physics 120 , 516–523 (2004). 11 
+
+> 31
+
+W. E and E. Vanden-Eijnden, “Transition-Path Theory and Path-Finding Al-gorithms for the Study of Rare Events,” Annual Review of Physical Chem-istry 61 , 391–420 (2010). 
+
+> 32
+
+F. Noé, S. Olsson, J. Köhler, and H. Wu, “Boltzmann generators: Sampling equilibrium states of many-body systems with deep learning,” Science 365 ,eaaw1147 (2019). 
+
+> 33
+
+E. G. Tabak and E. Vanden-Eijnden, “Density estimation by dual ascent of the log-likelihood,” Communications in Mathematical Sciences 8, 217–233 (2010). 
+
+> 34
+
+E. G. Tabak and C. V. Turner, “A Family of Nonparametric Density Es-timation Algorithms,” Communications on Pure and Applied Mathematics 
+
+66 , 145–164 (2013). 
+
+> 35
+
+L. Dinh, J. Sohl-Dickstein, and S. Bengio, “Density estimation using Real NVP,” (2017), arXiv:1605.08803. 
+
+> 36
+
+A. Coretti, S. Falkner, J. Weinreich, C. Dellago, and O. A. von Lilienfeld, “Boltzmann Generators and the New Frontier of Computational Sampling in Many-Body Systems,” KIM REVIEW 2 (2024), 10.25950/bfa99422. 
+
+> 37
+
+P. Wirnsberger, A. J. Ballard, G. Papamakarios, S. Abercrombie, S. Racanière, A. Pritzel, D. Jimenez Rezende, and C. Blundell, “Targeted free energy estimation via learned mappings,” The Journal of Chemical Physics 153 , 144112 (2020). 
+
+> 38
+
+R. Ahmad and W. Cai, “Free energy calculation of crystalline solids us-ing normalizing flows,” Modelling and Simulation in Materials Science and Engineering 30 , 065007 (2022). 
+
+> 39
+
+M. Schebek, M. Invernizzi, F. Noé, and J. Rogal, “Efficient mapping of phase diagrams with conditional Boltzmann Generators,” Machine Learn-ing: Science and Technology 5, 045045 (2024). 
+
+> 40
+
+P. Wirnsberger, G. Papamakarios, B. Ibarz, S. Racanière, A. J. Ballard, A. Pritzel, and C. Blundell, “Normalizing flows for atomic solids,” Machine Learning: Science and Technology 3, 025009 (2022). 
+
+> 41
+
+G. Jung, G. Biroli, and L. Berthier, “Normalizing flows as an enhanced sampling method for atomistic supercooled liquids,” Machine Learning: Sci-ence and Technology 5, 035053 (2024). 
+
+> 42
+
+A. Coretti, S. Falkner, P. L. Geissler, and C. Dellago, “Learning mappings between equilibrium states of liquid systems using normalizing flows,” The Journal of Chemical Physics 162 , 184102 (2025). 
+
+> 43
+
+K. A. Nicoli, C. J. Anders, T. Hartung, K. Jansen, P. Kessel, and S. Naka-jima, “Detecting and mitigating mode-collapse for flow-based sampling of lattice field theories,” Physical Review D 108 , 114501 (2023). 
+
+> 44
+
+L. Kish, Survey Sampling (John Wiley & Sons, New York, 1965). 
+
+> 45
+
+I. Shumailov, Z. Shumaylov, Y. Zhao, N. Papernot, R. Anderson, and Y. Gal, “AI models collapse when trained on recursively generated data,” Nature 631 , 755–759 (2024). 
+
+> 46
+
+A. Vehtari, D. Simpson, A. Gelman, Y. Yao, and J. Gabry, “Pareto Smoothed Importance Sampling,” (2024), arXiv:1507.02646 [stat.CO]. 
+
+> 47
+
+S. Wolfe, H. B. Schlegel, I. G. Csizmadia, and F. Bernardi, “Chemical dynamics of symmetric and asymmetric reaction coordinates,” Journal of the American Chemical Society 97 , 2020–2024 (1975). 
+
+> 48
+
+W. Quapp, “A growing string method for the reaction pathway defined by a Newton trajectory,” The Journal of Chemical Physics 122 , 174106 (2005). 
+
+> 49
+
+L. I. Midgley, V. Stimper, G. N. C. Simm, B. Schölkopf, and J. M. Hernández-Lobato, “Flow Annealed Importance Sampling Bootstrap,” in 
+
+The Eleventh International Conference on Learning Representations (2023). 
+
+> 50
+
+M. Schebek, F. Noé, and J. Rogal, “Scalable Boltzmann generators for equilibrium sampling of large-scale materials,” Nature Communications 17 ,5010 (2026). 
+
+> 51
+
+C. Durkan, A. Bekasov, I. Murray, and G. Papamakarios, “Neural Spline Flows,” (2019), arXiv:1906.04032 [stat.ML]. 
+
+> 52
+
+D. J. Rezende, G. Papamakarios, S. Racaniere, M. Albergo, G. Kanwar, P. Shanahan, and K. Cranmer, “Normalizing Flows on Tori and Spheres,” in Proceedings of the 37th International Conference on Machine Learning ,Proceedings of Machine Learning Research, Vol. 119, edited by H. D. III and A. Singh (PMLR, 2020) pp. 8083–8092. 
+
+> 53
+
+J. Köhler, A. Krämer, and F. Noe, “Smooth Normalizing Flows,” in 
+
+Advances in Neural Information Processing Systems , Vol. 34, edited by M. Ranzato, A. Beygelzimer, Y. Dauphin, P. S. Liang, and J. W. Vaughan (Curran Associates, Inc., 2021) pp. 2796–2809. 
+
+> 54
+
+C. B. Tan, A. J. Bose, C. Lin, L. Klein, M. M. Bronstein, and A. Tong, “Scalable equilibrium sampling with sequential boltzmann generators,” (2025), arXiv:2502.18462 [cs.LG]. 12 
+
+# Supplementary material for “Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning” 
+
+Maximilian Negedly 1, 2 , Sebastian Falkner 1, 3 , Alessandro Coretti 1 and Christoph Dellago 1, a) 
+
+> 1
+
+Faculty of Physics, University of Vienna, 1090 Vienna, Austria 
+
+> 2
+
+Vienna Doctoral School in Physics, University of Vienna, 1090 Vienna, Austria 
+
+> 3
+
+Institute of Physics, University of Augsburg, 86159 Augsburg, Germany 
+
+a) Electronic mail: christoph.dellago@univie.ac.at 
+
+S1. TWO-DIMENSIONAL MODEL 
+
+This section contains general information about the two-dimensional system used to test the GenAIMMD algorithm, as well as reference data for some of the figures in the main text and the hyperparameters used in training. 
+
+S1.1. System definition 
+
+Supplementary Figure S1. The two-dimensional system definition and transformation. (A) shows the original form of the Wolfe-Quapp potential 1,2 . (B) depicts the rotated, shifted and scaled form used in this work, which aligns the centers of states A and B with the red line defined by y = x.
+
+The functional form of the two-dimensional model is based on the Wolfe-Quapp potential energy function 1,2 
+
+UWQ (x, y) = x4 + y4 − 2x2 − 4y2 + xy + 0.3x + 0.1y (S1) depicted in Supplementary Figure S1A. We choose to rotate this potential energy function such that its minima — the center points of the circles with radii r = 0.5 defining states A and B (Fig. 2A in the main text) — lie on the artificially constructed reaction coordinate defined by the line y(x) = x, which we later use to distinguish the two reaction channels of the system. In addition to rotating the potential, we make the barrier height h variable by multiplying Eq. (S1) by the appropriate normalization 13 factor, yielding 
+
+U′
+
+> WQ
+
+(x, y) = hc11 
+
+·
+
+h
+
+c1 · x4 + c2 · x3y + c3 · x2 + c4 · x2y2 + c5 · x
+
++ c6 · xy + c7 · xy 3 + c8 · y + c9 · y2 + c10 · y4 + c11 
+
+i (S2) with coefficients c1 = 0.969233, c2 = −0.480614, c3 = −2.155285, c4 = 0.184602, c5 = −0.285146, c6 = −1.46487, c7 =
+
+0.480614, c8 = 0.136719, c9 = −3.84471 and c10 = 0.969233, as well as c11 = 6.76245, which shifts the global minimum to zero. In this work, we set h = 4 kBT . The resulting potential energy function (Eq. (S2)) is shown in Supplementary Figure S1B.        
+
+> S1.2. Reference data
+> Supplementary Figure S2. Two-dimensional system reference plots. (A) contains the reference committor pB(x,y)on an evenly spaced grid on xand y, obtained by initiating 1000 fleeting trajectories from each point on the grid and observing which state they enter first. (B) shows system configurations equilibrated in the Wolfe-Quapp potential biased by the reference committor at different committor bias centers listed on the right.
+
+To obtain a reference for the committor pB(x, y) in the two-dimensional system, we initiate 1000 fleeting trajectories from points on a uniform grid in x and y spaced by a = 0.01 in each direction in the range −2.3 ≤ x, y ≤ 2.3. We then record the number of trajectories per lattice point that enter state B before state A and divide this by the total number of trajectories to obtain an estimate for the committor at that point. The results are depicted in Supplementary Figure S2A. Linearly interpolating this numerically estimated committor between grid points, we construct the harmonic bias potential (Eq. (10) in the main text) and use it to obtain equilibrium samples from various committor bias windows. These serve as reference for the samples produced by the Boltzmann Generator in the same bias windows (Fig. 2B in the main text). The equilibrated samples are depicted in Supplementary Figure S2B.  
+
+> S1.3. Training parameters
+
+The hyperparameters used to define and train the Boltzmann Generator and the committor model as well as to run the GenAIMMD algorithm are listed in Supplementary Table S1. We use overdamped Langevin (Brownian) dynamics integrated via the Euler-Maruyama method, the parameters of which are listed in the same table. 14 
+
+Supplementary Table S1. Parameters used for testing GenAIMMD in the two-dimensional system. 
+
+Boltzmann Generator Committor model GenAIMMD 
+
+Hidden layers 3 2Nodes per layer 100 20, 10 Learning rate 10 −4 10 −4
+
+Batch size 100 100 Epochs per cycle 200 200 RealNVP blocks 3
+
+λKL 1
+
+λML 1Cycles 50 Diffusion coefficient 1.0 Timestep 10 −2
+
+Relaxation MD steps 500 
+
+kbias 1500 FIFO queue size 2 · Ninitial samples 
+
+Ninitial samples 300 
+
+S2. POLYMER MODEL 
+
+This section details how the polymer model is defined in terms of the contributions to the potential energy function and the internal coordinate transformation. We also list the hyperparameters used for running GenAIMMD. 
+
+S2.1. System definition 
+
+The potential energy function of the polymer model 3 has three contributions: a Lennard-Jones term 
+
+ULJ = 4ε
+
+> N
+
+# ∑
+
+> i=1
+> N
+
+# ∑
+
+> j>i
+
+" σ
+
+ri j 
+
+12 
+
+−
+
+ σ
+
+ri j 
+
+6#
+
+(S3) with distance ri j = |⃗x i −⃗x j| between monomers i and j modeling the non-bonded interactions, a harmonic bond-stretching potential 
+
+Ubond = kbond 
+
+2
+
+> N−1
+
+# ∑
+
+> i=1
+
+(ri,i+1 − rref )2 (S4) for the N − 1 bonds with preferred length rref = 6
+
+√2σ between monomers and a cosine-based angle potential 
+
+Uangle = kangle 
+
+2
+
+> N−2
+
+# ∑
+
+> i=1
+
+[1 − cos (ϕi,i+1,i+2 − ϕref )] (S5) for the N − 2 angles ϕi,i+1,i+2 between three consecutive monomers in the chain, where ϕref = π rad. For the force constants of the two bonded terms, we use kbond = 5 εσ −2 and kangle = 1.4 ε, respectively. The three contributions then combine to form the total potential energy 
+
+Upolymer = ULJ +Ubond +Uangle (S6) of the system. The stable states of the polymer model are defined using the radius of gyration 
+
+RG(x) = 
+
+s
+
+1
+
+N
+
+> N
+
+# ∑
+
+> i=1
+
+|⃗x i − ⟨ x⟩| 2, (S7) where |⃗x i − ⟨ x⟩| is the distance between the i-th monomer ⃗x i and the polymer’s center of mass ⟨x⟩. State A is then defined as 
+
+RG < 1.05 σ and state B as RG > 1.2 σ .15 xy
+
+δ1
+
+δ1
+
+δ2
+
+φ1
+
+φ2
+
+δ3
+
+(0, 0) ( , 0) 
+
+Supplementary Figure S3. The internal coordinates used in the polymer model 3 to account for the system’s translational and rotational invariance. These coordinates include bond lengths δi and bond angles ϕi. The first and second monomers are placed on the x-axis when transforming back to Cartesian coordinates, with the first monomer being placed at the origin of the coordinate system. 
+
+S2.2. Internal coordinates 
+
+As described in the main text, to account for the system’s invariance under translation and rotation, we transform system con-figurations from Cartesian to internal coordinates 3 before passing them to the Boltzmann Generator or the committor model. These internal coordinates are the N − 1 bond lengths and the N − 2 angles between three consecutive monomers — a total of 2 N − 3 = 11 degrees of freedom for the 7 monomers considered in this work. Internally, these coordinates are represented as vectors of the form (δ1, δ2, . . . , δN−1, ϕ1, ϕ2, . . . , ϕN−2)T with δi := ri,i+1 and ϕi := ϕi,i+1,i+2 (see Supplementary Figure S3). When transforming back to Cartesian coordinates, we fix the position of the first monomer to (x1, y1) = ( 0, 0) and that of the second monomer to (x2, y2) = ( δ1, 0). The determinant of the resulting Jacobian is det J =
+
+> N−1
+
+# ∏
+
+> i=2
+
+δi, (S8) and we refer to Sec. SVII of the Supplementary Information of Ref. 3 for a full derivation. 
+
+S2.3. Normalization layer 
+
+To assist with training, we normalize the internal coordinates by subtracting the mean μi and dividing by the standard deviation σi
+
+of each coordinate computed from the initial training set. So, for each internal coordinate zi ∈ (δ1, δ2, . . . , δN−1, ϕ1, ϕ2, . . . , ϕN−2)
+
+with i = 1, . . . , 2N − 3, ˆzi = zi − μi
+
+σi
+
+. (S9) The resulting log Jacobian determinant is log det J =
+
+> 2N−3
+
+# ∑
+
+> i=1
+
+log det Ji (S10) with log det Ji = log ∂ ˆzi
+
+∂ zi
+
+= log σ −1 
+
+> i
+
+= − log σi. (S11) In the reverse direction, 
+
+zi = ˆzi · σi + μi (S12) 16 and log det J−1 
+
+> i
+
+= log σi. (S13) 
+
+S2.4. Energy regularization 
+
+Following the approach suggested in Ref. 4, we regularize the potential energy of the system using the transformation 
+
+U′ 
+
+> polymer
+
+=
+
+
+
+Upolymer if Upolymer < Uhigh ,
+
+Uhigh + log (Upolymer −Uhigh + 1) if Uhigh ≤ Upolymer < Umax ,
+
+Uhigh + log (Umax −Uhigh + 1) if Upolymer ≥ Umax ,
+
+(S14) where Uhigh defines the onset of the energy regularization and Umax the location of the function’s plateau. If necessary, the value of Uhigh can be varied as the training progresses. 
+
+S2.5. Training parameters 
+
+Supplementary Table S2. Parameters used for testing GenAIMMD in the polymer model. In the case of the Boltzmann Generator, multiple values separated by commas indicate different parameters used inside a training scheduler. 
+
+Boltzmann Generator Committor model GenAIMMD 
+
+Hidden layers 3 3Nodes per layer 200 64, 32, 16 Epochs per cycle 100, 50, 25 50 Learning rate 5 · 10 −4, 10 −4, 10 −4 10 −3
+
+Batch size 250 150 RealNVP blocks 8
+
+λKL 0, 10 −4, 10 −3
+
+λML 1
+
+Uhigh 1
+
+Umax 10 20 
+
+Cycles 40 Diffusion coefficient 1.0 Timestep 10 −4
+
+Relaxation MD steps 3000 
+
+kbias 2.5 FIFO queue size 2 · Ninitial samples 
+
+Ninitial samples 6000 
+
+The hyperparameters used for testing GenAIMMD in the polymer model and to define the Boltzmann Generator and the com-mittor model are listed in Supplementary Table S2. We use the same integration scheme as for the two-dimensional model, and its parameters are listed in Supplementary Table S2. 
+
+S3. BENCHMARKING GENAIMMD AGAINST STANDARD TPS 
+
+In this section, we describe the steps taken to produce Fig. 4 in the main text, benchmarking conventional TPS against our method of obtaining transition paths. All dynamics were performed using the same integrator and parameters as described in each test system’s section above. 17 1 2034xx^ [ 1 2 2 2 2 ]      
+
+> Supplementary Figure S4. Details about the benchmarking of our method against conventional TPS. (A) Regions contributing to the two possible values of the reaction channel indicator function g(X)in the two-dimensional system, which is 1 for paths passing through the upper (red) channel and 0 for those using the lower channel (blue). (B) Reference p(x|TP )histogram in the two-dimensional model, obtained from many de-correlated TPS trajectories. (C) Discretization of polymer configurations based on bond angles. Each bond angle is assigned a number (0 – 4) based on the closest multiple of 60° (dashed lines), resulting in a 5-digit class for each configuration.
+> S3.1. Reference and path sampling
+
+The presented benchmark data are based on different path sampling strategies. As reference for all metrics, we use 25 000 de-correlated transition paths from standard TPS (2D model) and a long-running TPS simulation split across 30 workers, each one producing 30 000 paths with an output frequency of 15, resulting in a total of 13 .5 million shooting trials and 900 000 transition paths (polymer model). For the performance analysis of standard TPS, we use 30 individual TPS runs with a path output frequency of 1 that produce 10 000 transition paths each for the two-dimensional model and the same number of workers and shooting trials as for the reference data in the case of the polymer model. All standard TPS simulations use a uniform shooting point selection probability. On the other hand, for the same analysis of the generated shooting point paths, we produce 30 · 10 000 shooting points in both systems and divide them into 30 blocks to facilitate comparison to the 30 individual TPS runs.  
+
+> S3.2. Path histograms and polymer discretization
+
+Configurations along transition paths are distributed according to the distribution p(x|TP ), which is related to the committor via 5,6 
+
+p(x|TP ) ∝ ρ(x) · pB(x) · (1 − pB(x)) . (S15) In our benchmark, we test the convergence of the two methods towards this distribution by comparing the L1 distances between the p(x|TP ) histograms they produce after ntrials shooting attempts and the reference’s converged histogram (Fig. 4, first row). For the two-dimensional model, this reference histogram is depicted in Supplementary Figure S4B. It uses a grid of 40 × 40 square bins between −2.3 and 2 .3, resulting in a lattice constant of a = 0.115. In the higher-dimensional polymer model, configuration space is discretized by assigning each polymer a class ˆ x based on its bond angles, following the approach of Ref. 3. These classes then serve as bins for the histogram. A class is defined as a 5-digit number, where each digit can range from 0 to 4, resulting in a theoretical total of 5 5 = 3125 polymer classes. Of those, many are impossible to populate because of particle overlap. Each digit in a class corresponds to one of the 5 bond angles of the polymer, and its value (0–4) is chosen based on the closest multiple of 60° (see Supplementary Figure S4C). The histogram is symmetrized with respect to mirroring of polymer configurations, since the model is invariant under this transformation. This is achieved by mirroring each polymer if its first bond angle satisfies sin ϕ1 < 0. 18 
+
+S3.3. Reaction channel indicator function 
+
+The two-dimensional model has two distinct reaction channels connecting the two stable states. To identify the channel followed by a path X = {(x1, y1), . . . , (xL(X), yL(X))}, we use a path indicator function defined by 
+
+g(X) = H
+
+"
+
+∑L(X) 
+
+> i=1
+
+1|yi| < 0.5 (yi − xi)
+
+∑L(X) 
+
+> i=1
+
+1|yi| < 0.5
+
+#
+
+=
+
+(
+
+1 upper channel chosen, 0 lower channel chosen, (S16) where H(x) is the Heaviside step function and 1condition is the indicator function, which is 1 if the condition is met and 0 otherwise. In practice, g(X) selects the channel in which a path X spends most of its time when close to the barrier region. The two channels are defined by the colored regions in Supplementary Figure S4A. 
+
+REFERENCES 
+
+> 1
+
+Saul Wolfe, H. Bernhard Schlegel, Imre G. Csizmadia, and Fernando Bernardi. Chemical dynamics of symmetric and asymmetric reaction coordinates. Journal of the American Chemical Society , 97(8):2020–2024, April 1975. 
+
+> 2
+
+Wolfgang Quapp. A growing string method for the reaction pathway defined by a Newton trajectory. The Journal of Chemical Physics , 122(17):174106, May 2005. 
+
+> 3
+
+Sebastian Falkner, Alessandro Coretti, Salvatore Romano, Phillip L Geissler, and Christoph Dellago. Conditioning Boltzmann generators for rare event sampling. Machine Learning: Science and Technology , 4(3):035050, September 2023. 
+
+> 4
+
+Frank Noé, Simon Olsson, Jonas Köhler, and Hao Wu. Boltzmann generators: Sampling equilibrium states of many-body systems with deep learning. Science ,365(6457):eaaw1147, September 2019. 
+
+> 5
+
+Gerhard Hummer. From transition paths to transition states and rate coefficients. The Journal of Chemical Physics , 120(2):516–523, January 2004. 
+
+> 6
+
+Weinan E and Eric Vanden-Eijnden. Transition-Path Theory and Path-Finding Algorithms for the Study of Rare Events. Annual Review of Physical Chemistry ,61(1):391–420, March 2010.

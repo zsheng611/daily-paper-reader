@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-19</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-20</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 19 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 12 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>7</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>12</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-19 17:41:19 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-20 17:12:15 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日从19篇中精读7篇、速读12篇，主线落在LLM智能体与量子化学、DFT的交叉。</p>
-<p>最值得看：自主LLM代理能否执行多参考量子化学计算（8.0），以及预测密度/哈密顿量/密度矩阵作为周期性SCF初始化（8.0）；速读中Agentic AI用于r2SCAN开发也值得关注。</p>
-<p>普通读者可先读这两篇精读摘要，再沿“智能体+电子结构”方向扫速读，判断AI能否真正接手计算流程。</p>
+<p>2026-09-20 日报共筛出 12 篇速读论文，精读为 0 篇。最值得关注的是最高分 7.0 的《Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning》，以及智能体深度搜索与科学判断元认知两个 6.0 方向。普通读者可优先从这三篇的摘要入手，判断是否需要深入跟进。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -80,12 +78,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">7 篇</strong>
+    <strong class="dpr-home-dashboard-count">0 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Can Autonomous LLM Agents Execute Multireference Quantum Chemistry Calculations?">Can Autonomous LLM Agents Execute Multireference Quantum Chemistry Calculations?</span></li><li><span class="dpr-home-dashboard-paper-title" title="Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers">Evaluating Predicted Densities, Hamiltonians, and Density Matrices as Periodic SCF Initializers</span></li><li><span class="dpr-home-dashboard-paper-title" title="An Open-Source Hardware and Software Toolkit to Enable Agentic RHEED-Guided Thin-Film Synthesis">An Open-Source Hardware and Software Toolkit to Enable Agentic RHEED-Guided Thin-Film Synthesis</span></li></ul>
+<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>4</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
+
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -96,9 +94,9 @@
     <strong class="dpr-home-dashboard-count">12 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Agentic AI for Density-Functional Development: Revisiting r2SCAN">Agentic AI for Density-Functional Development: Revisiting r2SCAN</span></li><li><span class="dpr-home-dashboard-paper-title" title="Multi-View Molecular Representation Learning with Hierarchical Graphs and Contextualized Fingerprints">Multi-View Molecular Representation Learning with Hierarchical Graphs and Contextualized Fingerprints</span></li><li><span class="dpr-home-dashboard-paper-title" title="Atria Dawn: The Dawn of Agentic Superintelligence">Atria Dawn: The Dawn of Agentic Superintelligence</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning">Correlation-Free Transition Path Sampling through Shooting Point Generation Guided by Committor Learning</span></li><li><span class="dpr-home-dashboard-paper-title" title="Question&#x27;s Gambit: The First Move Matters in Agentic Deep Search">Question&#x27;s Gambit: The First Move Matters in Agentic Deep Search</span></li><li><span class="dpr-home-dashboard-paper-title" title="Metacognitive Steering: Learning the Structure of Scientific Judgment">Metacognitive Steering: Learning the Structure of Scientific Judgment</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>7</strong></span><span class="dpr-home-dashboard-tag">ar <strong>5</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>8</strong></span><span class="dpr-home-dashboard-tag">ar <strong>4</strong></span></div>
 </section>
 </div>
 
