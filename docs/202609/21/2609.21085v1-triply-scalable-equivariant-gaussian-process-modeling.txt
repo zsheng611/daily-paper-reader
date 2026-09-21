@@ -1,0 +1,2303 @@
+Triply-Scalable Equivariant Gaussian Process Modeling
+Tim Steinert∗and David Ginsbourger
+Institute of Mathematical Statistics and Actuarial Science, University of Bern, Bern, Switzerland
+∗Corresponding author: tim.steinert@unibe.ch
+Figure 1: SO(2)-equivariant GP regression with the integration-free equivariant kernel KΠ; see Exper-
+iment 3.3.2. Left: a stochastically equivariant GP realization serving as ground truth, split into 40%
+training and 60% test data. Middle and right: posterior means from a full GP and a sparse variational
+GP (SVGP). The SVGP uses inducing points in the fundamental region and achieves substantial speedups
+while preserving equivariance.
+Abstract
+Gaussian processes (GPs) provide principled probabilistic predictions while encoding prior
+knowledge, including equivariances. Yet, their use in large-scale scientific problems is limited
+by computational cost. Equivariant neural networks are common but typically lack the
+uncertainty quantification offered by GPs, which is valuable in applications such as molecular
+research. High-dimensional inputs and large symmetry groups further demand scalability. We
+establish results pertaining to the interplay of GP equivariance and conditioning and leverage
+them to obtain equivariant sparse GPs through suitable mean functions and covariance
+kernels. We instantiate this framework with a flexible class of integration-free equivariant
+kernels, yielding scalable and data-efficient GP inference. In particular, we introduce triply
+scalable equivariant Gaussian processes.
+We employ equivariant sparse variational Gaussian processes for SO(2)-equivariant vector
+fields and molecular property prediction. Alongside the SVGP, we develop a matrix-free
+equivariant full-GP implementation that combines an exact Kronecker reduction with pre-
+conditioned conjugate-gradient solves, enabling fast and scalable evaluation of the full joint
+predictive density. We further compare different approaches for selecting inducing points in
+the equivariant sparse GP models. Our test cases include synthetic SO(2)-equivariant fields
+as well as the prediction of electric dipole moments of N-methylformamide based on quantum
+chemistry simulations, achieving accurate, uncertainty-aware predictions at a fraction of the
+computational cost of classical GP inference.
+Keywords: equivariance, sparse Gaussian processes, matrix-valued kernels, uncertainty quan-
+tification, molecular machine learning
+1
+arXiv:2609.21085v1  [stat.ML]  17 Sep 2026
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+1
+Introduction
+The incorporation of structural knowledge such as physical laws into machine learning models
+has gained significant attention as a means of improving predictive accuracy while maintaining
+physical realism.
+Among the most important forms of structure are equivariances, where
+transformations of the inputs induce predictable transformations of the outputs. In molecular
+quantum chemistry, for instance, applying a simultaneous rigid motion to all atom positions
+rotates vector-valued properties such as electric dipole moments accordingly. The value of such
+equivariances is well established in deep learning, where group-equivariant architectures exploit
+information across entire orbits of a group action from a single data point and thereby achieve
+powerful large-scale symmetry-aware models [4, 7, 9, 19, 28, 30, 38, 42]. Despite their empirical
+success, however, such models typically do not yield probabilistically closed posteriors with exact
+equivariance guarantees, which limits their direct use in settings where calibrated uncertainty
+quantification is required.
+Kernel methods provide a complementary perspective by encoding equivariance directly in the
+covariance structure of a stochastic process. Classical constructions achieve this through group
+averaging or symmetry-adapted representations [13, 15, 18], while derivative-based approaches
+model vector fields as gradients of invariant scalar potentials [5, 29, 37]. The latter is highly
+effective when a potential-based description is appropriate, but it imposes a specific structural
+assumption that does not apply to all equivariant vector-valued targets. Within Gaussian process
+(GP) modelling, incorporating equivariances is particularly appealing because GPs provide
+an explicit probabilistic framework that naturally supports uncertainty quantification, active
+learning, and decision-making under uncertainty [14, 22, 25]. At the same time, it is technically
+demanding: enforcing equivariance for vector-valued targets requires matrix-valued covariance
+kernels that satisfy positive definiteness under structural constraints, which significantly restricts
+admissible constructions. This has led to a growing literature on structured GPs, including
+curl- or divergence-free models [29] and invariant or equivariant kernels derived from physical
+symmetries [11, 12, 16, 18, 40]. A persistent obstacle in this line of work is computational.
+Many principled equivariant kernels rely on explicit group integration or Haar averaging [27], or
+on representation-theoretic basis expansions [15], which are mathematically elegant but often
+computationally demanding. This burden becomes particularly pronounced for vector-valued
+outputs and molecular systems, where kernel evaluation itself can dominate the overall cost,
+leading to a trade-off between expressiveness and efficiency. Recent work [36] addressed this issue
+by characterizing stochastic equivariance for centred second-order vector-valued random fields and
+introducing integration-free equivariant kernel matrix functions constructed via projections onto
+fundamental regions [2, 11]. These constructions avoid explicit group integration while retaining
+the flexibility of a chosen base kernel, thereby enabling lightweight and stable equivariant GPs
+for vector fields and molecular dipole moments.
+Fast equivariant kernels alone, however, do not yet make equivariant GP modelling scien-
+tifically useful at scale. For practical probabilistic modelling, equivariance must hold at the
+level of full posterior distributions and remain valid under the scalable GP approximations
+required by modern datasets. Understanding whether and how equivariance interacts with
+conditioning and approximation is therefore essential for connecting equivariant kernel design
+with large-scale inference. Our main contributions revolve around the interplay between stochas-
+tic equivariance of GPs and of their conditional distributions. In particular, broad classes of
+sparse and approximate GP constructions inherit stochastic equivariance both a priori and
+a posteriori, which in turn bridges the gap between integration-free equivariant kernels and
+scalable probabilistic GP modelling. We instantiate this using sparse variational Gaussian
+processes and PCG-based matrix-free full-GP inference, and demonstrate the resulting models on
+SO(2)-equivariant examples and on emulating dipole moments of N-methylformamide resulting
+from quantum chemistry computations.
+2
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Contributions
+The main contributions of this work are threefold:
+1. We prove that stochastic equivariance is preserved under GP conditioning (Theorem 3.1), so
+conditional GPs inherit stochastic equivariance whenever the unconditional mean function
+and matrix-valued covariance kernel are equivariant. We also prove in Theorem 3.4 and the
+subsequent corollary that conditional equivariance for a finite number of realized responses
+is sufficient to conclude that equivariance holds unconditionally.
+2. We show that common scalable (sparse) GP constructions, including inducing-point and
+related approximations, preserve stochastic equivariance when built on such kernels.
+3. Building on integration-free equivariant kernel matrix functions [36], we provide large-scale
+stochastically equivariant GP models via equivariant sparse variational inference and
+PCG-based matrix-free full-GP inference, demonstrated on SO(2)-equivariant fields and
+molecular dipole moment prediction.
+Outline.
+Section 1.1 reviews vector-valued GPs, followed by an introduction to stochastic
+equivariance in Section 1.2. Section 2 reviews scalable inference paradigms. Section 3 then
+establishes propagation of stochastic equivariance under conditioning and its consequences for
+scalable GPs. Section 4 presents the numerical experiments, followed by the conclusion in
+Section 5.
+1.1
+Background
+1.1.1
+Basics of vector-valued Gaussian processes
+All random quantities are defined on a common probability space (Ω, A, P).
+We consider
+mappings from a set D to Rp, and while our constructs and results hold in more generality, we
+often assume for simplicity that D ⊂Rd. Throughout the paper, vector-valued quantities are
+written in boldface and matrix-valued quantities in uppercase (In the scalar-output review of
+Section 2, we retain standard scalar GP notation). For f(x) ∈Rp, we write
+f(x) =
+ f(1)(x), . . . , f(p)(x)
+,
+and use superscripts in parentheses for output coordinates, reserving subscripts i, j for input
+locations. While the notation
+ f(x)
+
+x∈D is used for Rp-valued Gaussian processes indexed
+by D, we liberally use the notation f(x) to also speak of the unknown fixed mapping to be
+approximated, as often done in the machine-learning literature (from a Bayesian perspective, f
+is a fixed but unknown mapping with a GP prior).
+A vector-valued GP is characterized in distribution by its mean function (throughout assumed
+zero unless specified otherwise) and a matrix-valued covariance kernel K : D × D →Rp×p,
+defined componentwise by
+K(x, x′)
+
+rs = Cov
+
+f(r)(x), f(s)(x′)
+
+.
+For any finite collection of inputs in D, X = (x1, . . . , xn), we define the stacked vector
+f(X) :=
+ f(x1); . . . ; f(xn)
+ ∈Rpn.
+Under the centred GP assumption on f, f(X) is a multivariate Gaussian vector,
+f(X) ∼N
+ 0, K(X, X)
+,
+where K(X, X) ∈Rpn×pn is made of n × n blocks of dimension p × p with (i, j)-block K(xi, xj).
+Observed data are modeled by y assumed to be a realization from
+Y = f(X) + ε,
+3
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Table 1: Main notation used throughout the paper.
+Symbol
+Meaning
+D ⊂Rd
+input domain
+x, x′
+input locations in D
+f = (f(x))x∈D
+Rp-valued Gaussian process
+f(x) ∈Rp
+(GP) response vector at input x
+f (r)(x)
+rth component of f(x)
+K(x, x′) ∈Rp×p
+matrix-valued covariance kernel
+[K(x, x′)]ij
+(i, j) entry of the kernel matrix
+X = (x1, . . . , xn)
+training inputs
+f(X)
+stacked training vector
+yi ∈Rp
+observation at input xi
+y
+stacked observed training vector
+θ
+hyperparameter vector
+K = K(X, X)
+block Gram matrix on the training inputs
+where ε ∼N(0, σ2Ipn) is independent of f. For test inputs x∗, x′
+∗, the posterior GP is obtained
+by Gaussian conditioning. Throughout the paper, we use the shorthand notation
+( · | Y = y) ≡( · | y),
+that is, probabilistic quantities conditional on the observation events such as Y = y are written
+simply as conditional on the realization y. Writing K := K(X, X), the posterior mean and
+covariance are given by
+E[f(x∗) | y] := E[f(x∗) | f(X) + ε = y] = K(x∗, X) (K + σ2I)−1y,
+Cov
+ f(x∗), f(x′
+∗) | y
+ := Cov
+ f(x∗), f(x′
+∗) | f(X) + ε = y
+
+= K(x∗, x′
+∗) −K(x∗, X) (K + σ2I)−1K(X, x′
+∗).
+Kernel and likelihood hyperparameters may be selected by maximizing the marginal likelihood,
+by MAP estimation under priors on the hyperparameters, by predictive criteria such as cross-
+validation, or, in sparse variational settings, by maximizing an evidence lower bound [26,
+Chapter 5]. See also [17, 39] for the variational case. In the experiments below we focus on
+likelihood- and ELBO-based estimation. For a fixed prior GP, marginal likelihood estimation
+takes the form
+l(θ) = log p(y | θ) = −1
+2y⊤(K + σ2I)−1y −1
+2 log det(K + σ2I) −pn
+2 log(2π).
+(1)
+In the vector-valued equivariant setting, the central modelling object is therefore a matrix-
+valued covariance kernel subject to symmetry constraints. The next subsection makes these
+constraints explicit and studies the corresponding notions of invariance and equivariance.
+1.2
+Invariances and equivariances in GP models
+To describe invariances and equivariances, we follow the equivariant kernel-based modelling
+setup from [27, 36]. Let (G, ◦) be a group acting on D via a left group action ⋆: G × D →D
+(thus satisfying e ⋆x = x and g ⋆(h ⋆x) = (g ◦h) ⋆x). We further assume G to be a linear
+group with a finite-dimensional representation ρ : G →Rp×p (thus satisfying ρg◦h = ρgρh). In
+this context, a deterministic mapping φ : D →Rp is said equivariant if for any x ∈D, g ∈G
+holds φ(g ⋆x) = ρgφ(x). Let us note that this property can be cast as being in the null space
+of combination of matrix-weighted composition operators. Indeed, revisiting the composition-
+operator viewpoint of [12] in the present vector-valued setting, any mapping v : D →D induces
+a composition operator
+Tv : φ 7→φ ◦v.
+4
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+More generally, for mappings v1, . . . , vq : D →D and matrix weights A1, . . . , Aq ∈Rp×p, we call
+T =
+q
+X
+i=1
+AiTvi
+a combination of matrix-weighted composition operators. Invariance is obtained as the special
+case of the trivial representation, i.e. when ρg = Ip for all g ∈G, in which case equivariance
+reduces to φ(g ⋆x) = φ(x). For fixed g ∈G, letting vg(x) = g ⋆x, equivariance can be rewritten
+as invariance under the particular operator
+Tg = Tvg −ρgTid,
+that is
+(Tgφ)(x) := φ(g ⋆x) −ρgφ(x),
+so that φ is equivariant if and only if Tgφ = 0 for all g ∈G. Thus equivariance appears as
+a degeneracy condition under a combination of matrix-weighted composition operators, while
+invariance corresponds to the same construction with ρg = Ip. Analogously, when we consider
+an Rp-valued random field Z = (Zx)x∈D, stochastic equivariance is defined by
+∀x ∈D, g ∈G,
+P (Tg (Z)x = 0) = 1.
+As proven in [36], in the second-order, zero mean case this is equivalent to
+∀x, x′ ∈D, ∀g, h ∈G,
+K(g ⋆x, h ⋆x′) = ρgK(x, x′)ρ⊤
+h .
+(2)
+In the same operator language, for each fixed x′ ∈D the kernel feature map x 7→K(x, x′) is
+Rp×p-valued, and equivariance in the first argument can be written as
+(Tg(K(·, x′)))(x) := K(g ⋆x, x′) −ρgK(x, x′),
+so that Tg(K(·, x′)) = 0 for all g ∈G and x′ ∈D. Applying the analogous condition in the second
+argument yields the full kernel identity (2). This condition is standard in kernel-based equivariant
+learning [27] and is stronger than the diagonal constraint K(g⋆x, g⋆x′) = ρgK(x, x′)ρ⊤
+g commonly
+used in the literature (see e.g. [18]), which provides a weaker sufficient condition of equivariant
+posterior means.
+Invariant kernels correspond to the same condition under the trivial representation and
+therefore satisfy
+K(g ⋆x, h ⋆x′) = K(x, x′)
+∀g, h ∈G.
+In practice, invariance is typically enforced either by constructing invariant descriptors or
+distances, or by symmetrizing a base kernel with respect to the group action. Invariant kernel
+constructions and their use in Gaussian process modelling are discussed, for example, in [11]
+and [40].
+1.2.1
+Reynolds operators for invariance and equivariance
+For finite groups, invariance and equivariance can be enforced by explicit group averaging. Let
+G be a finite group acting on D via ⋆, and let ρ : G →Rp×p be a representation. Given a
+matrix-valued base kernel Ko, the equivariant Reynolds operator produces a new kernel
+KR(x, x′) =
+1
+|G|2
+X
+g,h∈G
+ρ⊤
+g Ko(g ⋆x, h ⋆x′) ρh.
+(3)
+The kernel KR is equivariant with respect to ⋆and ρ, and remains positive definite whenever
+Ko is. In the special case where ρ is the trivial representation, Eq. (3) reduces to the standard
+Reynolds operator enforcing invariance. Reynolds operators provide a discrete analogue of
+Haar integration and are particularly useful for permutation, reflection, or discrete rotational
+symmetries.
+5
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+1.2.2
+Equivariant matrix-valued kernels via group integration
+Following the general framework of [27], assume further that G is compact and unimodular and
+that ρ : G →Rp×p is a continuous unitary representation. Under these assumptions, equivariant
+matrix-valued kernels can be constructed by Haar integration.
+Given a base matrix-valued kernel Ko : D × D →Rp×p, one obtains an equivariant kernel
+satisfying (2) by
+KR (x, x′) =
+Z
+G2 ρ⊤
+g Ko(g ⋆x, h ⋆x′) ρh dg dh,
+(4)
+where dg denotes the normalized Haar measure on G. Equivariance of KR follows from the
+translation invariance of the Haar measure and unimodularity of the representation. If Ko
+already satisfies the equivariance condition Ko(g ⋆x, h ⋆x′) = ρgKo(x, x′)ρ⊤
+h , normalization
+implies KR = Ko. While this approach provides a canonical construction of equivariant kernels,
+the double integration over G2 can make equivariant Gaussian process modelling computationally
+demanding. By giving up expressiveness of the base kernel by taking a scalar-valued ko which is
+invariant, one can reduce the double integration in (4) to a single, more tractable integral to
+obtain
+KR (x, x′) =
+Z
+G
+ko(x, g ⋆x′)ρg dg,
+which has also been used in [13].
+1.2.3
+Integration-free equivariant kernels via fundamental regions
+Exact GP inference scales as O(n3) time and O(n2) memory. There exist well established
+approaches to scalable GP approximations which we will recall in Section 2. Scalable inference
+in the vector-valued equivariant case is however meaningless when the computational complexity
+is dominated by cost of evaluating the kernel. If we wish to have a flexible equivariant kernel,
+we therefore must resort to an integration-free approach that allows for general base kernels
+but circumvents the need for numerical quadrature that would be required to evaluate (4). An
+alternative approach to explicit group integration, proposed in [36], exploits the geometry of
+group actions. A subset A ⊂D is called a fundamental region of the action if G ⋆A = D and
+(g ⋆A) ∩A = ∅for all g ∈G \ {e}. For such an A and any x ∈D, there exists at least one g ∈G
+such that g ⋆x ∈A, with g being unique whenever x lies in the interior G ⋆A.
+A section is any mapping s : D →G satisfying
+s(x) ⋆x ∈A,
+and we denote by Πs : D →A the associated projection. Given any matrix-valued kernel KA
+on A × A, the kernel
+KΠ(x, x′) = ρ⊤
+s(x)KA
+ Πs(x), Πs(x′)
+ρs(x′)
+(5)
+defines an equivariant matrix-valued kernel on (G⋆A)×(G⋆A). This construction avoids explicit
+group integration while retaining the full flexibility of the base kernel. Stochastic equivariance
+holds globally for free group actions and holds up to boundary effects otherwise.
+1.2.4
+Gradient-based equivariance and derivative kernels.
+A further mechanism for equivariance exploits additional physical structure of the target quantity.
+For molecular dipole moments, [37] model the dipole as the gradient of an invariant scalar
+potential. In Gaussian process models, this leads to covariance kernels obtained as mixed
+derivatives of a base kernel, schematically of the form
+Kµ(x, x′) = ∇x∇x′k(x, x′).
+Such derivative kernels yield equivariance by construction but rely on the assumption that the
+vector-valued target arises as a gradient field.
+6
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+2
+Sparse and approximate GPs
+The training cost of O(n3) time and O(n2) memory required for GP regression comes from
+solving linear systems with K + σ2I. When n is large, one therefore resorts either
+• to approximations that reduce the effective rank of K,
+• or to introduce inducing variables and optimize a tractable variational objective,
+• or to replace the kernel by structured or feature-based surrogates,
+• or to keep the exact kernel but approximate the linear solves via iterative methods.
+For clarity we present the scalar-output case. The vector-valued case follows by block-matrix
+notation as in Section 1.1.1. Although the GP is scalar-valued in this section, finite-dimensional
+observation, inducing, and weight vectors are written in bold to remain consistent with the global
+notation. We consider the scalar-valued regression model f ∼GP(0, k) with yi realization of
+f(xi) + εi where εi ∼N(0, σ2). Let y := (y1, . . . , yn), f := (f(x1), . . . , f(xn)), X = (x1, . . . , xn),
+K = K(X, X), and for a test point x∗write k∗= k(x∗, X) and k∗∗= k(x∗, x∗). The exact
+posterior predictive distribution is
+p(f∗| y) = N
+ k∗(K + σ2I)−1y, k∗∗−k∗(K + σ2I)−1k⊤
+∗
+.
+2.1
+Subset-of-data and Nyström-type approximations
+Early approaches reduce computation by restricting attention to a subset of the training data.
+In the subset-of-data (SoD) approach, one selects Xs ⊂X with |Xs| = m ≪n and forms the
+exact GP posterior using only (Xs, ys), where ys denotes the subvector of y corresponding to Xs.
+The predictive distribution is then the exact GP formula with K(X, X) replaced by K(Xs, Xs).
+A related low-rank approximation is the Nyström method [43]. Given an inducing subset U ⊂X
+with |U| = m, one approximates K(X, X) by ˜K(X, X) = K(X, U)K(U, U)−1K(U, X). This
+yields a reduced-rank GP obtained by replacing K with ˜K in the exact posterior formulas.
+2.2
+Inducing-point prior approximations
+A major step was to introduce the inducing vector u := f(Z) = (f(z1), . . . , f(zm)) at pseudo-
+inputs Z = (z1, . . . , zm) and the low-rank matrix Q(a, b) = K(a, Z)K(Z, Z)−1K(Z, b). The
+subset-of-regressors (SoR) approximation [6, 32, 33] replaces K(X, X) by Q(X, X). The deter-
+ministic training conditional (DTC) [6, 8, 31] uses Q(X, X) in the data-fit term but retains
+k∗∗at test points. To correct the overly confident training variances of these low-rank priors,
+the fully independent training conditional (FITC) [6, 34, 35] introduces a diagonal correction
+Λ = diag(K(X, X) −Q(X, X)) + σ2I. The related PITC approximation replaces the diagonal
+correction by a block-diagonal one.
+2.3
+Variational inducing-point methods
+Variational inducing-point methods differ fundamentally from earlier sparse GP constructions
+in that they do not approximate the prior covariance directly. Instead, they approximate the
+posterior distribution of the function by restricting it to a tractable family of Gaussian processes.
+The central idea is to introduce a small set of inducing variables that summarize the information
+in the data and to choose the best approximate posterior, within this restricted family, by
+minimizing a Kullback–Leibler divergence to the exact posterior.
+7
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+2.3.1
+Variational free energy (VFE)
+The variational free energy framework of [39] provides a principled inducing-point approximation
+whose objective minimizes the KL divergence to the exact GP posterior and becomes exact
+when the inducing variables provide a complete representation of the training covariance. Using
+the inducing vector u = f(Z) introduced above, consider a Gaussian variational posterior
+q(u) = N(µ, A) approximating p(u | y). Crucially, the conditional GP p(f | u) induced by the
+prior is kept exact. The approximate posterior process is then defined as
+q(f) =
+Z
+p(f | u)q(u) du,
+which is itself a Gaussian process. This equality holds by assuming u is sufficient, i.e. p(f |
+u, y) = p(f | u). Its mean and covariance are given by mq(x) = k(x, Z)K(Z, Z)−1µ and
+kq(x, x′) = k(x, x′) −k(x, Z)K(Z, Z)−1 K(Z, Z) −A
+K(Z, Z)−1k(Z, x′).
+The variational parameters (µ, A) and hyperparameter vector θ are learned by maximizing the
+evidence lower bound (ELBO)
+L(µ, A, θ) = Eq(f)[log p(y | f)] −KL[q(u) ∥pθ(u)] ,
+pθ(u) = N(0, K(Z, Z)).
+For a Gaussian likelihood p(y | f) = N(y; f, σ2I), the ELBO admits a closed-form expression
+and the optimal variational parameters (µ⋆, A⋆) can be computed analytically. Writing Σ =
+(K(Z, Z) + σ−2K(Z, X)K(X, Z))−1, one obtains
+µ⋆= σ−2K(Z, Z)ΣK(Z, X)y
+and
+A⋆= K(Z, Z)ΣK(Z, Z).
+Substituting these expressions yields a collapsed variational objective depending only on inducing
+locations Z and hyperparameters θ:
+L⋆(θ, Z) = log N
+ y; 0, Q(X, X) + σ2I
+ −
+1
+2σ2 tr
+ K(X, X) −Q(X, X)
+,
+Q(X, X) = K(X, Z)K(Z, Z)−1K(Z, X).
+(6)
+The trace term penalizes inducing-point configurations that fail to capture the full covariance
+structure, preventing the approximate posterior from becoming overconfident away from the
+inducing locations. This collapsed bound can be optimized with respect to (θ, Z) using gradient-
+based methods at cost O(nm2).
+2.3.2
+Stochastic variational GP (SVGP)
+The stochastic variational GP of [17] extends the VFE framework to large datasets by enabling
+stochastic optimization. The same variational family q(u) = N(m, S) is retained, meaning we do
+not plug in the ELBO-optimal m⋆, S⋆. The ELBO is rewritten in a form that decomposes over
+data points, allowing unbiased minibatch estimates of its gradient. The approximate posterior
+process has predictive mean and covariance
+Eq[f(x∗)] = k(x∗, Z)K(Z, Z)−1m,
+Covq[f(x∗)] = k∗∗−k(x∗, Z)K(Z, Z)−1 K(Z, Z) −S
+K(Z, Z)−1k(Z, x∗).
+For Gaussian likelihoods, the ELBO decomposes as
+L(m, S, θ) =
+n
+X
+i=1
+ℓi(m, S, θ) −KL[q(u) ∥pθ(u)] ,
+ℓi = Eq(fi)[log p(yi | fi)].
+(7)
+8
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+For the Gaussian likelihood p(yi | fi) = N(yi; fi, σ2), each term admits the closed form
+ℓi = −1
+2
+
+log(2πσ2) + σ−2(yi −µi)2 + σ2
+i
+
+,
+where µi = Eq[fi] and σ2
+i = Varq(fi).
+Let B ⊂{1, . . . , n} be a minibatch of size B = |B| sampled uniformly (with or without
+replacement). An unbiased estimator of the ELBO is
+bL(m, S, θ) = n
+B
+X
+i∈B
+ℓi(m, S, θ) −KL[q(u) ∥pθ(u)] ,
+(8)
+i.e. the likelihood contribution is reweighted by n/B, while the KL term is kept exact since it does
+not depend on the data. The corresponding stochastic gradients are unbiased, i.e. ∇L = EB
+∇bL
+.
+In practice, one repeatedly samples minibatches B and performs updates based on ∇bL. The
+computational cost per iteration is reduced from O(nm2) to O(Bm2). For numerical stability,
+S is typically parameterized via its Cholesky factor S = LL⊤, and natural gradients are used for
+(m, S), yielding closed-form updates in the variational parameter space. Hyperparameters θ
+and optionally also inducing locations Z are updated with standard stochastic optimizers (e.g.
+Adam), using the same minibatch estimator.
+2.4
+Fourier features and spectral (inter-domain) approximations
+A different approximation route replaces the kernel by an explicit finite-dimensional feature map.
+Random Fourier features (RFF) [24] approximate a stationary kernel by k(x, x′) ≈ϕ(x)⊤ϕ(x′)
+with ϕ : X →RD, yielding the Bayesian linear model f(x) = ϕ(x)⊤w with w ∼N(0, ID).
+Letting Φ = [ϕ(x1); . . . ; ϕ(xn)], the posterior is p(w | y) = N(mw, Sw) with Sw = (I +
+σ−2Φ⊤Φ)−1 and mw = σ−2SwΦ⊤y, and hence p(f∗| y) = N(ϕ(x∗)⊤mw, ϕ(x∗)⊤Swϕ(x∗)).
+The sparse spectrum GP of [20] similarly uses a finite spectral expansion, and can be viewed as
+an inter-domain inducing-variable method in the Fourier domain.
+2.5
+Structured kernel interpolation and matrix inversion-free solvers
+A distinct line of work addresses GP scalability not by modifying the probabilistic model or
+introducing inducing variables, but by exploiting algebraic structure in the kernel matrix and by
+replacing direct matrix factorizations with iterative linear-algebra solves.
+Structured kernel interpolation (SKI)
+Structured kernel interpolation (SKI), also known
+as KISS-GP [44], approximates the covariance matrix by interpolating kernel evaluations from a
+set of inducing points arranged on a regular grid. Let G = {g1, . . . , gM} denote grid locations
+and let W ∈Rn×M be a sparse interpolation matrix such that each row of W contains only a
+small number of nonzero entries. The kernel matrix is approximated as
+K(X, X) ≈˜K(X, X) := WK(G, G)W ⊤,
+where K(G, G) is the kernel evaluated on the grid. This approximation defines an exact GP with
+approximate kernel ˜K, whose covariance admits fast matrix–vector products. When the grid
+G has Cartesian product structure and the kernel is separable, K(G, G) exhibits Kronecker or
+Toeplitz structure, allowing matrix–vector products with K(G, G) to be computed in near-linear
+time. Even when such structure is not fully present, the sparsity of W ensures that products
+with ˜K(X, X) can be evaluated as
+v 7→W
+ K(G, G)(W ⊤v)
+,
+with cost dominated by sparse interpolation and dense grid-level kernel operations. From a
+computational perspective, SKI is well suited to modern hardware as both sparse interpolation
+matrices and dense grid-level kernel products can be implemented efficiently on GPUs, enabling
+scalable GP inference when an accurate interpolation structure exists.
+9
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Matrix inversion-free exact GP inference
+This method introduced by [10] and scaled
+to GPs of millions of data points by [41] keeps the exact kernel K(X, X) and replaces matrix
+factorizations by iterative, matrix-free linear algebra. Exact GP training and prediction involve
+quantities of the form (K(X, X) + σ2I)−1y and log det(K(X, X) + σ2I), where y denotes the
+vector of observations. Rather than forming or factorizing the matrix K(X, X) + σ2I, these
+quantities are computed using conjugate gradient (CG) methods, which solve linear systems
+(K(X, X) + σ2I)α = y
+using only repeated matrix–vector products v 7→(K(X, X) + σ2I)v. If such products can be
+evaluated efficiently, CG yields accurate approximate solutions in a small number of iterations
+without materializing the kernel matrix. This matrix-free formulation enables exact GP inference
+at dataset sizes far beyond the limits of Cholesky-based approaches and is particularly well suited
+to GPU implementations, where kernel evaluations can be parallelized over data points [10]. To
+accelerate convergence, one typically employs preconditioned conjugate gradients (PCG), where
+the system is transformed using a symmetric positive definite preconditioner P ≈K(X, X)+σ2I
+that is cheap to apply, yielding
+P −1(K(X, X) + σ2I)α = P −1y.
+Common choices include diagonal Jacobi, low-rank, or Nyström-based approximations. Both
+kernel matrix–vector products and preconditioner applications can be implemented in a matrix-
+free manner and are compatible with GPU acceleration.
+Exact GP training requires evaluation of log det(K(X, X) + σ2I) and its gradients. Writing
+log det(A) = tr(log A) with A = K(X, X) + σ2I, the log-determinant is approximated using
+stochastic trace estimation combined with Lanczos methods,
+log det(A) ≈1
+S
+S
+X
+s=1
+g⊤
+s (log A) gs,
+where gs are independent normal probe vectors and each bilinear form is evaluated via a Lanczos
+expansion driven solely by matrix–vector products with A. Gradients of the log marginal
+likelihood with respect to the hyperparameter vector θ are computed componentwise. For the
+jth component, one has
+∂
+∂θj
+log p(y | θ) = −1
+2α⊤(∂θjKθ)α +
+1
+2tr
+
+K−1
+θ ∂θjKθ
+
+,
+α = (Kθ + σ2I)−1y,
+where the quadratic form is evaluated using the PCG solution α and the trace term is approxi-
+mated by a Hutchinson estimator, tr(K−1
+θ ∂θjKθ) ≈1
+S
+PS
+s=1 g⊤
+s K−1
+θ (∂θjKθgs), and each product
+K−1
+θ gs is again realized by a PCG solve. Thus all terms required for exact GP training and
+prediction are approximated using only matrix–vector products with Kθ and ∂θjKθ.
+3
+Equivariant Sparse GPs
+This section establishes the central theoretical observation of the paper, claiming that stochastic
+equivariance of a Gaussian process is preserved under conditioning. As a consequence, we will
+see that predictive posterior distributions, sparse and scalable GP inference schemes inherit
+equivariance automatically whenever they correspond to exact or approximate conditioning of an
+equivariant prior GP. This result provides the theoretical foundation for constructing large-scale
+stochastically equivariant GP models.
+10
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+3.1
+Conditional stochastic equivariance of GPs
+We begin by formalizing the relationship between stochastic equivariance of a Gaussian process
+and stochastic equivariance of its conditional distributions.
+Theorem 3.1 (Equivalences between unconditional and conditional stochastic equivariance of
+GPs). Let f be a centred Rp-valued Gaussian process on (Ω, A, P) indexed by D with kernel
+K : D × D →Rp×p. Let a linear group G act on D via ⋆and on Rp by a representation
+ρ: g 7→ρg ∈Rp×p. Then the following are equivalent:
+(i) For all x ∈D and g ∈G,
+P
+ f(g ⋆x) = ρgf(x)
+ = 1.
+(ii) For any finite collection of inputs in D, X = (x1, . . . , xn) and Rpn-valued random vector
+ε on (Ω, A, P), for all x ∈D and g ∈G,
+P
+ f(g ⋆x) = ρgf(x)
+ f(X) + ε
+ = 1
+almost surely.
+(iii) For some finite collection of inputs in D, X = (x1, . . . , xn) , and Rpn-valued random
+vector ε on (Ω, A, P), for all x ∈D and g ∈G,
+P
+ f(g ⋆x) = ρgf(x)
+ f(X) + ε
+ = 1
+almost surely.
+Proof. Fix x ∈D and g ∈G, and define the event E := {f(g ⋆x) −ρgf(x) = 0}.
+By
+assumption (i), P(E) = 1. Now take any finite collection X = (x1, . . . , xn) in D and any
+Rpn-valued random vector ε on (Ω, A, P). Then P(E | f(X) + ε) = 1 almost surely since
+E[P(E | f(X) + ε)] = P(E) = 1 by the law of total probability, and thus P(E | f(X) + ε) < 1
+with positive probability would result in a contradiction. This implies (ii) and in turn (iii). Now,
+assuming (iii), we again obtain by the law of total probability that
+P(E) = E
+P(E | f(X) + ε)
+ = 1.
+(9)
+While the previous result would remain valid for a broader class of conditioning random
+elements, the requirements are quite demanding as they involve almost sure statements. The
+specific form of Gaussian distributions and their associated conditionals makes it actually possible
+to establish much stronger results. For a start, assuming that ε is Gaussian and independent of
+f, the explicit GP conditioning formulas yield
+P
+ f(g ⋆x) = ρgf(x) | y
+ = 1
+(10)
+for any prescribed choice of y ∈Rpn.
+One may then wonder if a sufficient condition of
+unconditional stochastic equivariance does exist that requires less than almost sure conditional
+stochastic equivariance. The next results give a positive answer: in particular, for X consisting of
+one point in Rq, conditional stochastic equivariance for q + 1 well-chosen conditioning responses
+is sufficient.
+Lemma 3.2. Let A be a Rp-valued Gaussian vector. If there exists q ≥1, a Rq-valued Gaussian
+vector B with full-rank covariance matrix ΣB and b1, . . . , bq+1 ∈Rq satisfying
+
+
+
+
+
+(A, B) jointly Gaussian,
+b1 −bq+1, . . . , bq −bq+1 linearly independent,
+P(A = 0 | B = bi) = 1 for i = 1, . . . , q + 1,
+then P(A = 0) = 1.
+11
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Proof. For any i ∈{1, . . . , q + 1}, P(A = 0 | B = bi) = 1 implies E[A | B = bi] = 0 and
+Var[A | B = bi] = 0. Since (A, B) is jointly Gaussian, this gives
+E[A | B = bi] = E[A] + ΣABΣ−1
+B (bi −E[B]) = 0,
+(11)
+Var[A | B = bi] = ΣA −ΣABΣ−1
+B ΣBA = 0.
+(12)
+Equating (11) for i = j ∈{1, . . . , q} and i = q + 1 yields ΣABvj = 0 with vj = Σ−1
+B (bj −bq+1).
+As the vectors bj −bq+1 are linearly independent, so are the vj. Hence ΣABvj = 0 for j = 1, . . . , q
+implies ΣAB = 0. Looking back at (11) and (12), this implies E[A] = 0 and ΣA = 0.
+The previous lemma extends to non-invertible covariance matrices as follows.
+Lemma 3.3. Let A be a Rp-valued Gaussian vector. If there exists q ≥1, a Rq-valued Gaussian
+vector B possessing a covariance matrix ΣB with rank r ≤q, and b1, . . . , br+1 ∈Rq satisfying
+
+
+
+
+
+(A, B) jointly Gaussian,
+Σ†
+B(b1 −br+1), . . . , Σ†
+B(br −br+1) linearly independent,
+P(A = 0 | B = bi) = 1 for i = 1, . . . , r + 1,
+then P(A = 0) = 1.
+Proof. For any i ∈{1, . . . , r + 1}, P(A = 0 | B = bi) = 1 implies E[A | B = bi] = 0 and
+Var[A | B = bi] = 0. Since (A, B) is jointly Gaussian, this gives
+E[A | B = bi] = E[A] + ΣABΣ†
+B(bi −E[B]) = 0,
+(13)
+Var[A | B = bi] = ΣA −ΣABΣ†
+BΣBA = 0.
+(14)
+Equating (13) for i = j ∈{1, . . . , r} and i = r + 1 yields ΣABvj = 0 with vj = Σ†
+B(bj −br+1).
+As the vectors Σ†
+B(bj −br+1) are linearly independent, ΣABvj = 0 for j = 1, . . . , r implies
+ΣABΣ†
+B = 0. Looking back at (13) and (14), this implies E[A] = 0 and ΣA = 0.
+Theorem 3.4. Let (f(x))x∈D be a Rp-valued GP indexed by a set D, and let (G, ◦) be a linear
+group acting on D via ⋆and possessing a representation g ∈G 7→ρg ∈Rp×p. If there exists
+x0 ∈D and y1, . . . , yr+1 ∈Rp, where r = rk
+ K(x0, x0)
+, such that
+(
+K(x0, x0)†(y1 −yr+1), . . . , K(x0, x0)†(yr −yr+1) linearly independent,
+and P
+ f(g ⋆x) −ρgf(x) = 0 | f(x0) = yi
+ = 1 for i = 1, . . . , r + 1,
+then P
+ f(g ⋆x) −ρgf(x) = 0
+ = 1.
+Thus, if P
+ f(g ⋆x) −ρgf(x) = 0 | f(x0) = yi
+ = 1 for any g ∈G, x ∈D, and for
+i = 1, . . . , r + 1, then P
+ f(g ⋆x) −ρgf(x) = 0
+ = 1 for any g ∈G, x ∈D.
+Proof. Set Agx = f(g ⋆x) −ρgf(x) and B = f(x0), and apply Lemma 3.3.
+Corollary 3.5. Let the assumptions of Theorem 3.4 hold, and let ε0 ∼N(0, σ2Ip) be independent
+of f, with σ2 > 0. If there exists x0 ∈D and y1, . . . , yp+1 ∈Rp such that
+(
+y1 −yp+1, . . . , yp −yp+1 linearly independent,
+and P
+ f(g ⋆x) −ρgf(x) = 0 | f(x0) + ε0 = yi
+ = 1 for i = 1, . . . , p + 1,
+then P
+ f(g ⋆x) −ρgf(x) = 0
+ = 1.
+Thus, if P
+ f(g ⋆x) −ρgf(x) = 0 | f(x0) + ε0 = yi
+ = 1 for any g ∈G, x ∈D, and for
+i = 1, . . . , p + 1, then P
+ f(g ⋆x) −ρgf(x) = 0
+ = 1 for any g ∈G, x ∈D.
+Proof. Set Agx = f(g ⋆x) −ρgf(x) and B = f(x0) + ε0. Then (Agx, B) is jointly Gaussian
+and
+Cov(B) = K(x0, x0) + σ2Ip.
+(15)
+Since σ2 > 0, the matrix K(x0, x0) + σ2Ip has rank p. The claim therefore follows from Lemma
+3.2.
+12
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+3.2
+Consequences for sparse and scalable GP inference
+Theorem 3.1 allows a unified assessment of equivariance for scalable GP methods. If a method
+produces posterior predictions by conditioning a stochastically equivariant GP, then the resulting
+posterior predictive distributions are stochastically equivariant. In particular, we will demonstrate
+that equivariance is a property of the resulting conditional distribution (and thus of the kernel)
+and does not depend on how the conditioning set (subset points, inducing points, ELBO, etc.)
+was selected. Throughout, assume a centred Rp-valued GP f ∼GP(0, K) on D and a linear
+group action ⋆on D with representation ρ on Rp.
+3.2.1
+Subset-of-data and Nyström-type approximations
+SoD performs exact GP regression on a subset Xs ⊂X with |Xs| = m and the corresponding
+observation subvector ys. Equivalently, it uses the conditional GP f | ys and predicts with its
+posterior distribution. Therefore, if the prior GP f is stochastically equivariant, then the SoD
+posterior process is stochastically equivariant by Theorem 3.1. Nyström approximations replace
+K(X, X) by ˜K(X, X) = K(X, Z)K(Z, Z)−1K(Z, X) for some Z ⊂D with |Z| = m. This can
+be viewed as defining an approximate kernel ˜K and hence an exact GP model ˜f ∼GP(0, ˜K).
+Posterior predictions are then those of exact GP regression under the kernel ˜K. Consequently,
+Nyström posterior distributions are stochastically equivariant whenever the approximate kernel
+˜K satisfies the same kernel equivariance condition (2) (with K replaced by ˜K). In particular,
+equivariance holds if ˜K is constructed from an equivariant base kernel in a way that preserves
+(2). In the next subsection we see that this is equivalent to K satisfying (2).
+3.2.2
+Inducing-point prior approximations
+These methods use inducing locations Z, the corresponding inducing vector u, and the Nyström
+term Q(x, x′) := K(x, Z)K(Z, Z)−1K(Z, x′). It is straightforward to see that Q is an equivariant
+kernel in the sense of (2) if and only if K is equivariant as for any g, h, x, x′ it holds
+K(g ⋆x, Z) = ρgK(x, Z),
+K(Z, h ⋆x′) = K(Z, x′)ρ⊤
+h .
+Both SoR and DTC can be interpreted as exact GP regression under an approximate prior
+covariance obtained by replacing parts of K with Q. SoR performs exact conditioning under
+the GP ˜f ∼GP(0, Q). Hence, by Theorem 3.1, the SoR posterior distribution is stochastically
+equivariant whenever the exact prior kernel K is equivariant. DTC uses the same Q(X, X) and
+Q(x∗, X) as SoR in the data-fit and cross-covariance, but retains the exact test prior K(x∗, x∗),
+yielding a posterior distribution p
+  ˜f(x∗) | y
+ = N
+ Q(x∗, X)(Q(X, X) + σ2I)−1y, K(x∗, x∗) −
+Q(x∗, X)(Q(X, X) + σ2I)−1Q(X, x∗)
+. Analogously the DTC covariance blocks transform equiv-
+ariantly, and the DTC posterior predictive distribution is stochastically equivariant if and only
+if K satisfies (2).
+FITC and PITC
+FITC and PITC modify the Nyström covariance Q by re-inserting the
+missing marginal (or block-marginal) variances of the exact kernel K. In FITC, one replaces
+the exact conditional covariance K(X, X) −Q(X, X) by its (block-)diagonal part, yielding the
+FITC condition
+f(xi) ⊥f(xj) | u
+(i̸ = j),
+equivalently
+Cov(f(X) | u) ≈diag(K(X, X) −Q(X, X)),
+where in the vector-valued case diag(·) denotes n blocks of size p × p. This can be encoded by
+the diagonal-corrected Nyström kernel
+KFITC(x, x′) := Q(x, x′) + 1{x = x′}
+ K(x, x) −Q(x, x)
+,
+13
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+On a training set X this satisfies KFITC(X, X) = Q(X, X) + diag(K(X, X) −Q(X, X)). Hence
+FITC is exact GP regression under the prior ˜f ∼GP(0, KFITC). Again, if KFITC is built
+upon an equivariant kernel K satisfying (2), it follows that KFITC satisfies (2) as well, yielding
+stochastically equivariant prior and posterior distribtuion by Theorem 3.1. PITC is analogous,
+with the FITC block-diagonal correction replaced by a block-diagonal correction associated with
+a partition X = F
+b Xb, corresponding to a partial conditional independence assumption within
+blocks. The resulting model can be written with an analogous block-corrected Nyström kernel
+obtained by adding 1{x, x′ in same block}
+ K(x, x′) −Q(x, x′)
+ to Q(x, x′).
+3.2.3
+Variational inducing-point method
+Variational inducing-point methods approximate the exact posterior process by a tractable
+Gaussian process obtained from a variational marginal over inducing variables. Fix inducing
+inputs Z = (z1, . . . , zm) and the corresponding inducing vector u, and consider the variational
+family
+q(f) =
+Z
+p(f | u) q(u) du,
+q(u) = N(m, S).
+Here p(f | u) is the exact conditional GP under the prior f ∼GP(0, K), and the approximation
+enters only through q(u). For any x ∈D, the conditional distribution is
+p(f(x) | u) = N
+ K(x, Z)K(Z, Z)−1u, K(x, x) −Q(x, x)
+.
+Integrating u ∼q(u) yields an induced Gaussian process q(f) = GP(µq, Kq) with
+µq(x) = K(x, Z)K(Z, Z)−1m,
+and
+Kq(x, x′) = K(x, x′) + K(x, Z)K(Z, Z)−1 S −K(Z, Z)
+K(Z, Z)−1K(Z, x′).
+With the prior kernel satisfying (2), and the Nyström term Q thus inheriting the same equivariance
+property, the above expressions conjugate as
+µq(g ⋆x) = ρg µq(x),
+Kq(g ⋆x, h ⋆x′) = ρg Kq(x, x′) ρ⊤
+h .
+since the middle factor K(Z, Z)−1(S −K(Z, Z))K(Z, Z)−1 is independent of x, x′. Thus for an
+equivariant prior kernel K, the variational posterior process q(f) is stochastically equivariant,
+and so are its predictive marginals.
+VFE and SVGP differ in how (m, S) are optimized, but they share the same variational
+family and induced posterior process. Hence both methods preserve stochastic equivariance
+under the above condition.
+3.2.4
+Fourier features and spectral (inter-domain) approximations
+Random-feature and spectral (inter-domain) approximations replace the matrix-valued ker-
+nel K by a finite-dimensional feature surrogate. In the vector-valued setting, a convenient
+parametrization is
+˜K(x, x′) = Φ(x) Φ(x′)⊤,
+Φ : D →Rp×M,
+which corresponds to the Bayesian linear model
+˜f(x) = Φ(x) w,
+w ∼N(0, IM).
+Hence ˜f ∼GP(0, ˜K) is an exact Gaussian process, and posterior predictions are obtained by
+standard GP conditioning with ˜K. By Theorem 3.1, the posterior is stochastically equivariant
+14
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+whenever the approximate kernel ˜K satisfies the equivariance property (2). A sufficient condition
+is that the feature map Φ satisfies
+Φ(g ⋆x) = ρg Φ(x)
+∀g ∈G, x ∈D.
+Indeed, then for all g, h ∈G,
+˜K(g ⋆x, h ⋆x′) = Φ(g ⋆x)Φ(h ⋆x′)⊤= ρg Φ(x)Φ(x′)⊤ρ⊤
+h = ρg ˜K(x, x′) ρ⊤
+h ,
+so ˜f has a stochastically equivariant prior and therefore a stochastically equivariant posterior by
+Theorem 3.1.
+3.2.5
+Structured kernel interpolation and matrix-free solvers
+SKI [44] and PCG [41] mainly exploit computationally convenient structure of the training
+covariance K(X, X) and GPU-parallelized fast solves of (K(X, X) + σ2I)α = y to approximate
+the posterior mean by
+µ(x∗) = K(x∗, X)α,
+resulting in an equivaraint posterior mean whenever K satsifies (2). With the posterior covariance
+equivalent to the full GP covariance, the SKI and PCG GPs retain equivariant posterior
+distributions.
+3.3
+Example: SO(2)-Equivariant Sparse Variational GP
+This section provides an end-to-end example of stochastically equivariant sparse variational
+inference. We consider an R2-valued Gaussian process f = (f(x))x∈D, with group G = SO(2)
+acting on inputs by x 7→Rx and on outputs by the standard representation ρR = R (i.e. vectors
+rotate as vectors). The prior is f ∼GP(0, KΠ), where KΠ is the fundamental-region kernel (5)
+built from a projection Πs(x) of each input onto a fundamental region A of the action and a
+section s(x) ∈SO(2) that rotates x onto A. For SO(2) on R2, a canonical fundamental region is
+the positive x-axis
+A = {(r, 0) : r > 0},
+so that every x̸ = 0 is mapped to Πs(x) = (∥x∥, 0) by rotating x by its polar angle (and we
+fix s(0) = I). A key operational consequence is that conditioning the full field on values along
+A already pins down the entire field. Under perfect equivariance of f, this motivates placing
+inducing inputs on A, because they form a sufficient (in the Titsias sense) set for reconstructing
+the structure of f over the whole orbit space. We hence place inducing inputs on A:
+Z = {(rj, 0)}m
+j=1,
+rj ∈(0, rmax],
+using a uniform grid in radius (rj linearly spaced between 0.01 and rmax = maxi ∥xi∥). In the
+experiments below, we use m ≈1% of the training set size, i.e. aggressive sparsification.
+3.3.1
+Evaluation metrics considered
+To assess predictive performance of our GPs, we report both a pointwise error metric and
+a distributional scoring rule, reflecting the dual role of Gaussian processes as predictors and
+probabilistic models.
+15
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Root mean squared error (RMSE)
+Let {(x∗
+i , y∗
+i )}n′
+i=1 denote a test set, and let mi =
+E[f(x∗
+i ) | y] ∈Rp be the posterior mean prediction. The RMSE is defined as
+RMSE =
+v
+u
+u
+t 1
+n′
+n′
+X
+i=1
+∥y∗
+i −mi∥2
+2.
+(16)
+RMSE measures the average Euclidean deviation between posterior mean predictions and
+observed test targets. It therefore assesses the quality of point predictions and is insensitive to
+the posterior uncertainty.
+Log score (LogS)
+To assess the quality of the full predictive distribution, we additionally
+report the log score. Let
+y∗=
+ y∗
+1; . . . ; y∗
+n′
+ ∈Rpn′
+denote the joint test output vector, and let
+p(y∗| y) = N(m∗, Σ∗)
+be the joint GP posterior predictive distribution at the test inputs. The LogS is defined as the
+negative twice log conditional density evaluated at the observed test outcome,
+LogS = −2 log p(y∗| y)
+(17)
+Unlike the RMSE, which evaluates point predictions through the posterior mean, the LogS
+assesses the entire joint posterior distribution. It measures how concentrated the conditional
+density is around the realized, unseen test outcome and therefore depends on both the posterior
+mean and covariance, including correlations across output components and test locations. Low
+LogS values indicate predictive distributions that are simultaneously accurate and well calibrated.
+3.3.2
+Experiment 1
+We sample n = 10000 inputs uniformly on the square [−100, 100]2 and simulate a single
+draw from the equivariant GP prior f ∼GP(0, KΠ) by forming the full covariance matrix
+KΠ(X, X) ∈R2n×2n and multiplying a standard Gaussian vector by a matrix square root
+obtained from a singular value decomposition. The kernel KΠ is built from the base kernel
+K ¯
+A(x, x′, θ) =
+
+σ1 exp
+
+−∥x−x′∥2
+2ℓ2
+1
+
+0
+0
+σ2 exp
+
+−∥x−x′∥2
+2ℓ2
+2
+
+
+,
+with θ = (σ1, σ2, ℓ1, ℓ2) sampled uniformly from [0.01, 20]4. The realized field y ∈R2n is treated
+as noise-free ground truth. A random subset of 40% of points is used as the training set and the
+remainder as the test set. Training a full vector-valued GP on the resulting 4000 training points
+is already computationally demanding.
+We compare:
+1. a full GP trained by maximum likelihood with Adam for 100 iterations,
+2. the SVGP trained for 20 epochs with minibatches of size B = 0.05 ntrain, using 5 natural-
+gradient steps per epoch and 100 Adam steps on hyperparameters per epoch,
+3. point predictions by the difference of the GP posterior means to the ground truth,
+4. a measure of uncertainty at the test points, given at each test point x∗by u(x∗) =
+1
+2 log det Σ(x∗), where Σ(x∗) is the posterior covariance matrix, and
+16
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 2: Synthetic SO(2) experiment with n = 10000. Top row: realized equivariant field, full GP
+posterior mean error with respect to the realization, and SVGP posterior mean error. Bottom row:
+predictive uncertainty of the full GP and SVGP models.
+5. RMSE, Log scores and the estimated hyperparameters θ.
+The initial values of θ used for the optimization are sampled in the smaller hypercube
+[0.5, 2]4 and are the same for both SVGP and the full GP. Figure 1 in the introduction (using a
+different seed and comparing only the posterior means (also, see Figure 9 in the appendix for
+more prior samples)), and Figure 2 show that the SVGP posterior distribution preserves the
+global structure of the full GP posterior mean and covariance despite extreme sparsification.
+Quantitatively, the full GP achieves essentially perfect reconstruction in terms of RMSE on
+this synthetic draw, whereas the SVGP is less accurate but still competitive in absolute terms
+(1.23 × 10−5 vs. 5.49 × 10−4). The probabilistic gap is stronger, as commonly observed for
+SVGP. The full GP log score is substantially better than the SVGP log score (−23.49 vs.
+−10.31), reflecting that the SVGP covariance is only an approximation. The wall-clock times
+highlight the computational motivation, with the full GP requiring 2720.5s and the SVGP
+111.6s for training and inference, which corresponds to about a 24x speedup in this run. This
+computational advantage allows for more thorough optimization of the kernel parameter vector
+θ. We observe that the optimized values θSVGP = (3.99, 9.11, 9.89, 10.03) are much closer to
+the actual GP parameters θ = (3.77, 9.22, 9.92, 9.77) than the full GP optimized parameters
+θFull = (1.72, 1.45, 2.15, 2.20). The latter would eventually move closer to the true parameters,
+but only at a higher computational cost.
+3.3.3
+Experiment 2
+The second experiment is designed to directly test stochastic equivariance of the posterior
+distributions and to compare uncertainty structure between full GP and SVGP in a controlled
+17
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 3: Wedge equivariance check. Top left: training observations in S and rotated copy S′. Top
+right: visualizes 1
+2 log det(ΣSVGP) −1
+2 log det(ΣFull) on test points in S and S′. Bottom: full GP posterior
+mean on S and S′ (left) and SVGP posterior mean on S and S′ with inducing points in the fundamental
+region indicated by green triangles.
+geometry. We follow the same framework as in Experiment 3.3.2 and sample the ground truth
+from the SO(2)-equivariant GP at n = 6000 inputs drawn uniformly on the same domain. We
+define a wedge sector S of opening angle π/6 in the first quadrant, consisting of points satisfying
+x(1) ≥0, x(2) ≥0, with polar angle in [0, π/6]. We then rotate this wedge by Rπ/3 to create a
+rotated copy S′ = Rπ/3S. Let XS ⊂S denote the training inputs sampled inside the wedge, and
+let y denote the corresponding observed values. The evaluation set consists of additional holdout
+points inside S whose rotated counterparts lie in S′. Posterior equivariance then demands that,
+for each evaluation location x ∈S,
+f(Rx) | y d= R f(x) | y,
+R = Rπ/3,
+and thus
+E
+f(Rx) | y
+ = R E
+f(x) | y
+.
+By Theorem 3.1, the full GP posterior is stochastically equivariant because it is a conditional
+GP derived from an equivariant kernel. The key point of this experiment is to show that the
+SVGP posterior remains equivariant, with the equivariance encoded in the posterior mean and
+covariance despite the approximation. We use the same full GP and SVGP training loop as in
+Experiment 3.3.2, but with 8 fixed inducing points in A. Figure 3 shows posterior mean vectors
+for both models on S and S′. The SVGP posterior mean approximates the full GP posterior
+18
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+mean on both wedges with less structure and, crucially, the rotated wedge mean field is the
+rotated version of the original wedge field. In this sense, the SVGP retains the equivariance
+constraint in the posterior mean, although the approximation is visibly imperfect. To compare
+distributional behavior, we visualize the log-uncertainty ratio
+uSVGP(x∗) −uFull(x∗) = 1
+2 log det ΣSVGP(x∗) −1
+2 log det ΣFull(x∗),
+over the test points x∗in S and S′. In the shown run, the ratio map indicates that the full GP
+is typically less uncertain (positive values) in regions well-supported by data, while the SVGP
+shows the classical overconfidence in extrapolation regimes (negative values). A particularly
+interpretable pattern is that uncertainty differences vary across orbits as a function of proximity
+to inducing support. Locations whose orbit representatives project near inducing radii on A
+exhibit systematically smaller discrepancy. In those regions, the SVGP tracks the full GP
+uncertainty more closely. The main message of the two experiments is therefore that aggressive
+sparsification affects distributional calibration and uncertainty, but not the structural constraint
+itself, which is an important guarantee.
+4
+Triply-scalable equivariant GPs for large molecular datasets
+We now apply the integration-free equivariant GP constructions recalled above to large-scale
+molecular regression. Our target is the electric dipole moment, a R3-valued quantity representing
+the imbalance of electron distribution of a molecule, which allows quantum chemists to infer
+about the interaction of different molecules. Precise techniques exist in chemical laboratories
+to determine the exact dipole moment of a given molecular configuration. Due to cost and
+time limitations, quantum chemists are interested in using GP regression as an emulator for
+the dipole moment. It is known that the dipole moment of a molecule transforms equivariantly
+under rigid rotations and is invariant to translations of the molecular configuration. Previous
+work [36] established the framework for modeling the dipole moment of water molecules with
+the equivariant kernel in (5). Building upon this approach, we now move from exact equivariant
+GP modeling of the water dipole moment to equivariant sparse GPs scalable to larger datasets
+of dipole moments of arbitrary molecules of fixed type. In our application, we consider a dataset
+of 21000 N-methylformamide molecules, each consisting of 9 atoms, C2H5NO.
+This application requires scalability of equivariant GP regression in three complementary
+aspects. First, equivariant kernel evaluation must remain computationally feasible without
+numerical group integration. Second, the kernel construction must naturally extend to molecules
+with arbitrary numbers of atoms. Third, inference and hyperparameter learning must scale to
+large datasets. We refer to the simultaneous satisfaction of these three requirements as triple
+scalability.
+The following subsections proceed as follows. We first specify the equivariance and invariance
+constraints arising in molecular dipole prediction and instantiate the fundamental-region kernel
+construction for general molecular configurations. Next, we describe several inducing-point
+allocation strategies and the resulting SVGP and PCG inference schemes. Finally, we compare
+these scalable equivariant GP approximations on the N-methylformamide dataset, reporting
+learning curves evaluated on test sets of size 1000.
+4.1
+Fundamental regions for arbitrary numbers of atoms
+We first describe the construction of a molecule with na ≥3 atoms. A molecular configuration
+is represented by
+x = (a1; . . . ; ana) ∈(R3)na =: D,
+where ai ∈R3 denotes the position of the molecule’s ith atom in Euclidean space. We assume
+that all configurations have the same molecular composition and follow a common atom-indexing
+19
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+convention, so that the chemical element associated with each coordinate block is fixed across
+the data set. For example, a water configuration is written as
+x = (aO; aH1; aH2),
+where the first block represents oxygen and the remaining two blocks represent the hydrogen
+atoms. Permutations of atoms of the same type are not included in the present group action
+and would have to be treated separately if required (see Section 1.2.1). The rigid-motion group
+SE(3) = SO(3) ⋉R3 acts on D according to
+(R, t) ⋆x := (Ra1 + t; . . . ; Rana + t),
+R ∈SO(3),
+t ∈R3.
+(18)
+The dipole moment is regarded as an unknown nonlinear map µ : D −→R3. Physically, it is
+invariant under translations and equivariant under rotations. Writing
+t ⋆1 x := (a1 + t; . . . ; ana + t),
+(19)
+R ⋆2 x := (Ra1; . . . ; Rana),
+(20)
+these properties are
+µ(t ⋆1 x) = µ(x),
+µ(R ⋆2 x) = Rµ(x).
+(21)
+After removing translations, the remaining symmetry group is G := SO(3), acting on the
+translation-reduced configurations through ⋆2. The corresponding output representation is the
+standard representation ρ : G −→O(3), with ρR = R. To remove the translational degree of
+freedom, we fix an anchor index δ ∈{1, . . . , na} and define
+¯ai := ai −aδ,
+¯x := (¯a1; . . . ; ¯ana),
+¯aδ = 0.
+(22)
+The reduced configuration ¯x is invariant under ⋆1, while the G acts according to
+R ⋆2 ¯x := (R¯a1; . . . ; R¯ana),
+R ∈G.
+(23)
+Following the construction for the water molecule in [36], we extend the same idea to molecules
+with arbitrary numbers of atoms by deterministically selecting two distinguished, displacement
+vectors v1(¯x) and v2(¯x) from the translation-reduced configuration. The associated fundamental
+region is defined by requiring the first selected vector to point along a fixed reference axis and
+the second selected vector to lie in the half-plane:
+A := {¯x : v1(¯x) = re2, r > 0,
+v2(¯x) = (a, b, 0), a > 0, b ∈R} .
+(24)
+This is a fundamental region for the set of non-collinear molecules in D, while collinear molecules
+have non-trivial stabilizers. Since G acts on each atom of the molecule with the same rotation,
+for x̸ = y ∈A, it can then be seen that there exists no R ∈G such that R ⋆2 x = y. It is
+straightforward to show that for each non-collinear translation-reduced configuration x there
+exist R ∈G such that x ∈R ⋆2 ¯A. That is because a projection onto A can be constructed
+explicitly as a product of three elementary rotations. Two rotations align the first vector with the
+reference axis, and a third rotation fixes the remaining freedom around that axis by placing the
+second vector in the prescribed half-plane. Applying the resulting rotation to every atom-position
+block gives a representative Π(¯x) := s(¯x) ⋆2 ¯x ∈A, where s(¯x) ∈G is the corresponding section
+represented by the afore mentioned rotation. As A is a fundamental region, the section and
+projection satisfy Π(R ⋆2 ¯x) = Π(¯x) and ρs(R⋆2 ¯x) = ρs(x)ρ⊤
+R. Consequently, any matrix-valued
+base kernel on the fundamental region can be lifted to a translation-invariant and G-equivariant
+kernel according to
+KΠ(x, x′) = ρ⊤
+s(¯x)K ¯
+A
+ Π(¯x), Π(¯x′)
+ρs(¯x′).
+(25)
+20
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+In our experiments we take as K ¯
+A the diagonal matrix-valued squared exponential kernel
+defined for configurations x, x′ ∈A :
+K ¯
+A
+ x, x′; θ
+ := σ2 exp
+ 
+−∥x −x′∥2
+2
+2ℓ2
+!
+I3,
+(26)
+with θ = (ℓ, σ2). We use a single length scale and variance because the three dipole components
+transform jointly under rotations and we do not assume different marginal variances across
+components. Using three different lengthscales and variances did not significantly improve
+predictive performance in the experiments.
+4.2
+Inducing point methods
+The practical performance of SVGP depends strongly on where inducing points are placed. It is
+typical to learn the inducing locations Z together with the kernel hyperparameters by minimizing
+the ELBO (6). It is a drawback of the fundamental region kernel KΠ for this application that
+it is discontinuous on D. In our experiments we thus fix an inducing budget as a ratio of the
+training size and compare several allocation strategies under the same training pipeline.
+We choose inducing set sizes as a ratio
+M = ⌊rn⌋,
+r ∈{0.1, 0.2, 0.3},
+corresponding to the two SVGP regimes reported in the learning curves. The inducing allocation
+methods evaluated in our learning curves are:
+• random: uniform sampling from the training inputs.
+• greedy: maxi-min sequential greedy selection heuristics based on kernel-induced distances.
+• DPP (M-DPP): an MCMC swap sampler targeting a fixed-size determinantal point
+process objective [21].
+• kmeans++: k-means++ seeding using distances in the fundamental region [1].
+• kmeans++ Lloyd: k-means++ initialisation followed by Lloyd refinement [3].
+• recursive RLS: Nyström dictionary construction via approximate ridge leverage scores
+[23].
+• MMD: refinement by decreasing the empirical maximum mean discrepancy (kernel herding
+style).
+4.2.1
+Greedy selection
+Greedy selection aims to build an inducing set that covers the dataset under a distance adapted to
+the kernel. In our implementation the distance is derived from the RKHS geometry of the kernel,
+using a Hilbert–Schmidt norm. Let K : X × X →R3×3 be a positive definite matrix-valued
+kernel (here, K = KΠ). Let HK be the corresponding vector-valued RKHS. For each input
+x ∈X, the kernel defines the kernel feature operator Kx : R3 →HK by
+Kxv := K(·, x) v.
+The reproducing property gives, for all v, w ∈R3,
+⟨Kxv, Kx′w⟩HK = v⊤K(x, x′)w.
+21
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+We define a point-to-point distance by the Hilbert–Schmidt norm of the difference of these
+operators:
+d(x, x′)2 := ∥Kx −Kx′∥2
+HS =
+3
+X
+i=1
+∥Kxei −Kx′ei∥2
+HK,
+where (ei)3
+i=1 is the standard basis of R3. Expanding and using the reproducing identity yields
+d(x, x′)2 =
+3
+X
+i=1
+
+⟨Kxei, Kxei⟩+ ⟨Kx′ei, Kx′ei⟩−2⟨Kxei, Kx′ei⟩
+
+=
+3
+X
+i=1
+
+e⊤
+i K(x, x)ei + e⊤
+i K(x′, x′)ei −2e⊤
+i K(x, x′)ei
+
+= tr
+ K(x, x)
+ + tr
+ K(x′, x′)
+ −2 tr
+ K(x, x′)
+.
+This is the distance used in the greedy procedure. We start from a uniformly sampled seed set
+containing 5% of the training set, estimate kernel hyperparameters on that subset, and then
+add points whose distance from the current set exceeds an adaptive threshold based on a high
+quantile of within-set distances (here the 0.9 quantile). See Algorithm 1 for the exact procedure.
+Algorithm 1 Greedy inducing point selection
+1: Input: training inputs X, target inducing size M
+2: Initialise: sample a seed set Xm ⊂X with m0 = 0.05n
+3: Optimise kernel hyperparameters θ on Xm by maximising the ELBO (Adam initialisation
+as θ0 = (1, 1, 0.1))
+4: Compute pairwise kernel-induced distances on Xm using
+d(x, x′)2 = tr
+ K(x, x)
+ + tr
+ K(x′, x′)
+ −2 tr
+ K(x, x′)
+,
+and store the within-set distance matrix Dm
+5: while |Xm| < M do
+6:
+for x ∈X \ Xm do
+7:
+dmin(x) ←minz∈Xm d(x, z)
+8:
+if dmin(x) > q0.9(Dm) then
+9:
+Xm ←Xm ∪{x}
+10:
+Recompute/update Dm
+11:
+end if
+12:
+end for
+13: end while
+14: Output: inducing set Xm
+4.2.2
+M-DPP
+Determinantal point process (DPP) objectives encourage diverse subsets by favouring sets with
+large Gram determinant. The M-DPP sampler used here (2) is an MCMC swap chain that
+maintains a fixed-size subset and accepts swaps according to the determinant ratio [21]. In
+practice this yields strong diversity at a moderate computational cost for the inducing sizes
+considered.
+4.2.3
+Recursive RLS Nyström
+Recursive ridge leverage score (RLS) sampling [23] constructs a Nyström dictionary by approxi-
+mating ridge leverage scores that quantify the diagonal of the residual kernel K(X, X) relative
+22
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Algorithm 2 M-DPP inducing point selection [21]
+1: Input: training set X, target inducing size M, iterations T
+2: Initialise Xm ⊂X with M random points
+3: Optimise kernel hyperparameters θ by Adam on the ELBO (as in SVGP training)
+4: for t = 1: T do
+5:
+Sample x1 ∈X \ Xm, x0 ∈Xm
+6:
+Z1 ←(Xm \ {x0}) ∪{x1},
+Z0 ←Xm
+7:
+Compute det1 = det(K(Z1, Z1)),
+det0 = det(K(Z0, Z0))
+8:
+p ←min{1, det1 / det0}
+9:
+if Bernoulli(p) = 1 then
+10:
+Xm ←Z1
+11:
+end if
+12: end for
+13: Output: Xm
+to its current Nyström approximation, and sampling candidate inducing points proportionally to
+these scores. Intuitively, a large score indicates that the current Nyström approximation explains
+the kernel variance at this point poorly, so including it in the inducing set is expected to yield
+the greatest improvement. The recursive formulation enables these scores to be estimated on
+progressively smaller reference sets, making the approach computationally attractive for large n.
+Algorithm 3 Recursive RLS Nyström inducing point selection
+1: Input: training set X, target number M
+2: Sample initial subset Xm ⊂X (at least 3 points)
+3: Optimise kernel hyperparameters θ via ELBO
+4: function ApproxRidgeLeverage(X′, S)
+5:
+Compute C = K(X′, S) and W = K(S, S)
+6:
+For each x ∈X′, compute τ(x) = tr
+
+K(x, x) −CxW −1C⊤
+x
+
+7:
+return normalised scores τ/ P
+x∈X′ τ(x)
+8: end function
+9: function RLSRecursive(X′, M)
+10:
+if |X′| ≤⌈4M log(max(2, M))⌉then
+11:
+Sample subset of X′ proportional to approximate leverage scores
+12:
+return subset
+13:
+end if
+14:
+Randomly select half of X′: Xref ⊂X′
+15:
+S ←RLSRecursive(Xref, M)
+16:
+Compute leverage scores τ = ApproxRidgeLeverage(X′, S)
+17:
+Sample subset of X′ proportional to τ
+18:
+return sampled subset
+19: end function
+20: Xover ←RLSRecursive(X, M)
+21: Select final M points from Xover (e.g. by column norms)
+22: Output: inducing set Xm
+4.2.4
+k-means++ and Lloyd refinement
+k-means++ [1] places representatives by biased seeding, i.e. points far from existing centroids
+are sampled with higher probability. In our setting we compute distances in the fundamental
+23
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+region (i.e. on Π(¯x)), so that clustering is performed in a translation- and rotation-normalised
+geometry. Lloyd refinement [3] then iteratively updates centroids to local minimisers of the
+within-cluster squared distance objective.
+Algorithm 4 k-means++ inducing point selection
+1: Input: training set X, target number of centroids M
+2: Sample one random point x from X as the first centroid
+3: for m = 2 : M do
+4:
+Compute squared distances from all points in X to the nearest centroid using Euclidean
+distance on Π(¯x)
+5:
+Set sampling probabilities proportional to these squared distances
+6:
+Sample a new centroid from X according to these probabilities
+7:
+Add the new centroid to the centroid set
+8: end for
+9: Output: centroids (used as inducing locations)
+4.2.5
+MMD based refinement
+The maximum mean discrepancy (MMD) based method explicitly targets distribution matching.
+It refines an inducing set Z so that the empirical distribution on Z approximates that of the
+full dataset X in the kernel mean embedding induced by KΠ. The procedure below is a simple
+stochastic swap heuristic that accepts replacements with a probability proportional to the
+reduction of MMD2
+K(X, Z). A fast computation of this reduction is given in Appendix B.
+Algorithm 5 MMD-based randomised inducing point refinement
+1: Input: dataset X, initial inducing set Z with |Z| = M, kernel K, parameter λ > 0, iterations
+T
+2: for t = 1 to T do
+3:
+Sample x ∼Unif(X) and z ∼Unif(Z)
+4:
+Set Z′ = (Z \ {z}) ∪{x}
+5:
+Compute ∆= MMD2
+K(X, Z) −MMD2
+K(X, Z′)
+6:
+if ∆> 0 then
+7:
+Accept with probability p = 1 −exp(−λ∆)
+8:
+if accepted then Z ←Z′
+9:
+end if
+10:
+end if
+11: end for
+12: Output: refined inducing set Z
+Notice that the acceptance probability depends on the parameter λ ≥0. Larger values of λ
+correspond to higher acceptance probabilities. In our experiments we set the default to λ = 1.
+4.3
+Implementation
+We compare the full equivariant GP, the equivariant SVGP, and PCG-based matrix-free inference
+under the kernel KΠ in (25). The full GP and PCG use the same covariance model, with PCG
+replacing the dense linear-algebra operations by iterative matrix-free solves. The SVGP uses the
+variational approximation introduced in Section 2 with inducing inputs selected by the methods
+of Section 4.2. The hyperparameters of the three approaches are estimated separately using
+the procedures specified below. The data set contains 21000 N-methylformamide configurations
+24
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+with three-dimensional dipole responses. For each replicate, we sample a test set of n′ = 1000
+configurations without replacement. From the remaining observations, we construct 13 nested
+training sets of sizes between 100 and 20000. The first training set contains 100 observations,
+and each subsequent set is obtained by augmenting the preceding set with previously unused
+observations. This produces a genuine learning curve within each replicate, since observations
+are added rather than resampled independently at every training size. The complete procedure
+is repeated for 50 independently seeded train–test splits (replicates). At every training size,
+predictive accuracy and distributional quality are measured using the RMSE and joint LogS
+defined in (16) and (17), respectively.
+The base kernel K ¯
+A is parameterized as in (26). All dense kernel matrices used during
+optimization and prediction receive a diagonal regularization of 10−8. For the small-data (n ≤
+2000) comparison with the non-equivariant base GP, the same optimization and prediction
+procedures are used after replacing KΠ by the diagonal squared exponential kernel on the original
+molecular coordinates.
+4.3.1
+Full GP implementation
+The full GP estimates the parameter vector
+θfull = (ℓ, σ)
+by minimizing the negative log marginal likelihood (1).
+We use Adam with initialization
+(ℓ0, σ0) = (1, 1) and learning rate 0.01. Separate fits are performed with optimization budgets in
+form of Adam iterations in {10, 250, 1000}. For n ≤1000, the likelihood and its gradient are
+evaluated on the complete training set. For n > 1000, parameter estimation uses a reproducible
+subset of 1000 training configurations at each iteration. The resulting parameters are subsequently
+used to evaluate the full-GP posterior using all n training observations.
+4.3.2
+SVGP implementation
+To compute the learning curves for the SVGP, for each inducing ratio r, we set the size of the
+inducing set
+M = ⌊rn⌋,
+r ∈{0.1, 0.2, 0.3}.
+The main learning-curve comparison among all inducing-point methods uses r = 0.1. The
+ratios r = 0.2 and r = 0.3 are additionally considered in the small-data and computational-
+resource comparisons. Once selected, the inducing inputs are kept fixed throughout variational
+training. The SVGP parameter vector is θSVGP = (ℓ, σ, σn), where σn is the additional standard
+deviation of the required noise of the variational distribution. The variational distribution
+q(u) = N(m, S) is initialized with m = 0 and S = K(Z, Z). Equivalently, in the natural-
+parameter implementation, the initial natural mean is zero and the initial precision is K(Z, Z)−1.
+Training consists of ten epochs. Within each epoch, we first perform ten natural-gradient updates
+of (m, S) with step size ρ = 0.2. These are followed by ten Adam updates of (ℓ, σ, σn) based on
+the minibatch ELBO (8). Adam uses learning rate 0.01. The kernel and likelihood parameters
+are initialized at (ℓ0, σ0, σn,0) = (1, 1, 0.1).
+The likelihood minibatches are sampled from the non-inducing training observations. Their
+size is
+B = max {10, ⌊b(n −M)⌋} ,
+b = 0.2,
+and their likelihood contribution is rescaled by (n −M)/B. The additional minibatch study
+reported in the appendix uses b ∈{0.025, 0.05, 0.2} with all remaining SVGP settings unchanged.
+The inducing inputs are selected according to the random, greedy, M-DPP, recursive-RLS,
+k-means++, k-means++ with Lloyd refinement, and MMD methods specified in Section 4.2.
+Each method returns exactly M distinct training configurations. For the four kernel-dependent
+25
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+methods greedy, M-DPP, recursive RLS, and MMD, the kernel parameters entering the selection
+criterion are obtained from a selector-specific preliminary SVGP fit. The preliminary inducing
+sets are initialized as specified by the corresponding algorithms. Greedy uses a uniformly sampled
+seed set of size ⌊0.05n⌋, M-DPP uses its initial uniformly sampled size-M subset, recursive
+RLS uses three initial configurations and MMD uses a separate uniformly sampled set of size
+⌊0.05n⌋for parameter estimation and an independently initialized size-M set for the MMD
+refinement. For n ≤1000, this preliminary fit uses the complete partition into preliminary
+inducing and remaining training observations. For n > 1000, it uses at most 1000 configurations,
+of which at most 200 are preliminary inducing inputs. The retained configurations are selected
+deterministically from the ordered training set. The preliminary SVGP is initialized at (1, 1, 0.1)
+and trained for ten epochs, each containing ten natural-gradient updates followed by ten Adam
+updates with learning rate 0.01. Its fitted values of (ℓ, σ) parameterize the corresponding
+selection criterion and initialize the main SVGP fit.
+The numerical settings of the allocation methods are as follows. Greedy selection uses the
+0.9 quantile threshold specified in Algorithm 1. M-DPP performs T = 1000 swap proposals
+in Algorithm 2. Recursive RLS uses oversampling factor 3 in Algorithm 3. MMD uses T =
+1000 proposals and λ = 1 in Algorithm 5.
+Random selection samples uniformly without
+replacement. For KΠ, k-means++ seeding and Lloyd refinement operate on the fundamental-
+region coordinates Π(¯x). For the standard base-kernel comparison, they operate on the original
+input coordinates. Lloyd refinement uses at most 1000 iterations and terminates when the
+maximum absolute centroid displacement is below 10−6. Empty clusters are reinitialized with
+the configurations having the largest current assignment error. Since the SVGP implementation
+represents inducing inputs by training-set indices, each final centroid is associated with a distinct
+training configuration from its cluster.
+4.3.3
+Equivariant PCG-GP implementation
+For the PCG implementation, we exploit the scalar-diagonal structure of the base kernel (26).
+Define
+kθ(u, v) := σ2 exp
+ 
+−∥u −v∥2
+2
+2ℓ2
+!
+,
+K ¯
+A(u, v; θ) = kθ(u, v)I3.
+For each training configuration, let ρi := ρs(¯xi). The (i, j) block of the equivariant covariance
+matrix is then
+[KΠ(X, X; θ)]ij = kθ(Πs(¯xi), Πs(¯xj)) ρ⊤
+i ρj.
+Let
+K(0)
+XX := [kθ(Πs(¯xi), Πs(¯xj))]n
+i,j=1 ,
+Bθ := K(0)
+XX + δIn,
+where δ > 0 is a numerical diagonal regularisation, and define U := blockdiag(ρ1, . . . , ρn). Since
+every ρi is orthogonal, we can write
+KΠ(X, X; θ) + δI3n = U⊤(Bθ ⊗I3) U.
+Let eY ∈Rn×3 contain the locally rotated training responses, with ith row ρiyi. The original
+3n-dimensional linear system is then equivalent to
+Bθ eA = eY ,
+eA ∈Rn×3.
+(27)
+Hence, only one scalar n × n kernel operator is required, with the three output coordinates
+treated as simultaneous right-hand sides. The kernel parameters (ℓ, σ) are estimated using at
+most 2000 observations from the corresponding nested training set. On this subset H, the exact
+negative log marginal likelihood in the rotated frame is
+eLH(θ) = 1
+2
+hD
+eYH, B−1
+θ,H eYH
+E
+F + 3 log |Bθ,H| + 3|H| log(2π)
+i
+,
+26
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+where ⟨A, B⟩F := tr(A⊤B). Because |H| ≤2000, this objective is evaluated using a dense
+Cholesky factorisation of the scalar matrix Bθ,H. Optimisation is initialized at (ℓ, σ) = (1, 1),
+using at most 200 iterations. The resulting parameters are subsequently used for inference on
+the complete training set. For n ≤2000, Equation (27) is solved directly by dense Cholesky
+factorisation. For larger training sets, products with Bθ are evaluated in double precision using
+PCG on an NVIDIA H100 GPU. The PCG uses a pivoted-Cholesky as preconditioner improving
+convergence of the iterative solver. The final posterior mean solve uses relative residual tolerance
+10−7 and at most 4000 iterations. For test configurations X∗= (x∗
+1, . . . , x∗
+n∗), define
+K(0)
+∗X := [kθ(Πs(¯x∗
+i ), Πs(¯xj))]i=1,...,n∗
+j=1,...,n
+.
+The posterior mean in the local test frames is
+f
+M∗= K(0)
+∗X eA.
+Writing ρ∗
+i := ρs(¯x∗
+i ), the prediction in the original Cartesian frame is recovered as
+m∗
+i = (ρ∗
+i )⊤( f
+M∗)⊤
+i,:,
+i = 1, . . . , n∗.
+The same frame reduction is used to evaluate the complete joint posterior covariance required
+by the LogS in (17). Define
+K(0)
+X∗:=
+
+K(0)
+∗X
+⊤,
+K(0)
+∗∗:=
+h
+kθ
+
+Πs(¯x∗
+i ), Πs(¯x∗
+j)
+in∗
+i,j=1 .
+The scalar conditional covariance at all test configurations is then
+S∗= K(0)
+∗∗+ δIn∗−K(0)
+∗XB−1
+θ K(0)
+X∗.
+(28)
+We use δ = 10−6 for numerical stability in the score computation.
+Let
+U∗:= blockdiag
+ ρ∗
+1, . . . , ρ∗
+n∗
+ .
+The covariance of the complete stacked test vector in the original Cartesian frames is
+Σ∗= U⊤
+∗(S∗⊗I3) U∗.
+(29)
+Thus, S∗retains all posterior correlations among the test configurations, while U∗recovers the
+corresponding covariance between Cartesian output components. In particular, Equation (29)
+represents the same joint 3n∗-dimensional posterior covariance as direct conditioning with the
+vector-valued kernel KΠ.
+To compute (28), we solve
+BθV = K(0)
+X∗
+(30)
+and form
+S∗= K(0)
+∗∗+ δIn∗−K(0)
+∗XV.
+For n ≤2000, Equation (30) is evaluated by dense scalar Cholesky solves. For larger n, its n∗
+right-hand sides are processed in blocks of 25 using the same matrix-free kernel operator and
+pivoted-Cholesky preconditioner as above. These covariance solves use relative residual tolerance
+10−8 and at most 6000 iterations. With n∗= 1000, this requires 40 blocks of PCG solves.
+Neither the 3n × 3n training covariance nor the 3n∗× 3n∗posterior covariance is constructed
+and only the final scalar matrix S∗∈R1000×1000 is stored and factorised.
+27
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Let eE∗∈Rn∗×3 contain the posterior residuals in the local test frames, with rows
+( eE∗)i,: = ρ∗
+i (y∗
+i −m∗
+i ) .
+Orthogonality of U∗and the Kronecker structure in (29) imply
+q∗:= (y∗−m∗)⊤Σ−1
+∗(y∗−m∗) =
+D
+eE∗, S−1
+∗
+eE∗
+E
+F ,
+log |Σ∗| = 3 log |S∗|.
+After computing the Cholesky factorisation S∗= L∗L⊤
+∗, the Mahalanobis and log-determinant
+terms are then
+q∗= ∥L−1
+∗
+eE∗∥2
+F ,
+log |Σ∗| = 6
+n∗
+X
+i=1
+log(L∗,ii).
+We thus obtain a fast and memory-efficient evaluation of the LogS as
+LogS = q∗+ log |Σ∗| + 3n∗log(2π).
+(31)
+Remark 4.1 (Posterior equivariance under approximate covariance solves). Since Equation (30)
+is solved numerically, posterior stochastic equivariance could in principle be violated if test
+configurations related by a group transformation received different approximate solutions. This
+could occur, for example, if the corresponding PCG solves used independent random initial values,
+different preconditioners, or different stopping rules.
+In our implementation, the jth column of V is obtained from
+BθV:,j =
+
+K(0)
+X∗
+
+:,j .
+For a transformed test configuration g ⋆¯x∗
+j, invariance of the projection gives
+Πs(g ⋆¯x∗
+j) = Πs(¯x∗
+j).
+The transformed configuration therefore produces exactly the same scalar right-hand side. More-
+over, Bθ and its pivoted-Cholesky preconditioner depend only on the projected training configura-
+tions and are unchanged by transformations of the test inputs. Every covariance solve is initialized
+at zero and uses the same deterministic preconditioner and stopping rule. Consequently, the
+finite PCG iterates for a test configuration and any of its transformed versions coincide in exact
+arithmetic. Processing the right-hand sides in blocks of 25 only evaluates several independent
+PCG recurrences simultaneously and does not couple or alter them.
+4.3.4
+Computational environment and recorded times
+The full-GP and SVGP experiments are run in R 4.4.2 on one CPU core, with R-level par-
+allelization disabled. PCG inference is run in double precision on one NVIDIA H100 GPU
+using CUDA 12.2 and PyKeOps, together with four CPU cores. For each method, elapsed
+wall-clock time is recorded separately for model fitting, posterior-mean prediction, and predictive-
+covariance and LogS evaluation. For PCG, model-fitting time comprises parameter estimation,
+preconditioner construction, and the final training solve. Peak memory is measured by Slurm’s
+maximum resident set size, MaxRSS, and reported in GB.
+All code used to generate the experiments is available at GitHub.
+28
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 4: RMSE and LogS learning curves comparing SVGP variants, PCG-based matrix-free full-GP
+inference, and dense full-GP baselines across increasing training-set sizes.
+29
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 5: Learning curves for training sizes n ≤2000. Shaded areas represent the range of the mean score
+plus or minus one standard deviation over all inducing-point allocation schemes for SVGP inducing-set
+ratios r ∈{0.1, 0.2, 0.3}.
+4.4
+Results
+Figure 4 presents the learning curves for training-set sizes between 100 and 20000, comparing the
+equivariant full GP, PCG-based matrix-free inference, and the SVGP with inducing-size ratio
+r := |Z|/n = 0.1 across the different inducing-point allocation schemes. The PCG posterior mean
+closely tracks that of the full GP trained with the largest hyperparameter-optimization budget,
+and the two methods attain similar RMSE values over most training sizes. The difference is more
+pronounced for the LogS, which is more sensitive to errors in both the posterior mean and the
+complete joint posterior covariance. Nevertheless, PCG consistently achieves substantially lower
+LogS values than the SVGP variants. This indicates that the frame-reduced PCG implementation
+retains much of the distributional accuracy of the dense full GP, in addition to providing accurate
+point predictions. The remaining differences between the dense and PCG curves can arise from
+their separately estimated hyperparameters and from the finite tolerances of the iterative training
+and covariance solves. Tightening these tolerances may further reduce the discrepancy, at the cost
+of additional computation. The full-GP curves also demonstrate the importance of sufficiently
+optimizing the kernel hyperparameters. Increasing the Adam budget from 10 to 250 or 1000
+iterations generally improves both RMSE and LogS. Capping the hyperparameter-estimation set
+at 1000 configurations makes these longer optimization runs feasible throughout the learning
+curve, after which the resulting parameters are used for prediction with all n training observations.
+The comparison with the ten-iteration fit using the complete training set shows that increasing
+the amount of data used in each likelihood evaluation does not compensate consistently for an
+insufficient optimization budget. We therefore interpret the optimizer budget as an important
+component of the full-GP baseline, without concluding that predictive performance is independent
+of the training-set size. Regarding the SVGP, the kernel-dependent inducing-point allocation
+schemes generally provide better predictive distributions than the kernel-free schemes in the
+small and intermediate training regimes. MMD in Algorithm 5 and M-DPP in Algorithm 2
+attain particularly strong scores below n = 2000, whereas the greedy method in Algorithm 1
+becomes competitive and often gives the best SVGP scores for larger training sets. At the largest
+training sizes, the differences among the allocation schemes become smaller, and k-means++
+30
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+and random selection become increasingly competitive. This suggests that the data contain
+increasing redundancy relative to the inducing-set size, so that the benefit of the more involved
+kernel-dependent allocation criteria eventually diminishes. Figure 5 summarizes the effect of
+increasing the inducing-size ratio from r = 0.1 to r ∈{0.2, 0.3}. Larger inducing sets improve
+both RMSE and LogS, but the improvement is concentrated mainly in the smallest training
+regimes, particularly for n ≤500. Beyond this regime the envelopes largely overlap, indicating
+diminishing predictive returns from increasing M, while the computational cost continues to
+grow. Figure 8 reports the individual learning curves for these ratios and also illustrates the
+importance of encoding the structural constraint directly in the kernel. The models using the
+standard base kernel fail to improve meaningfully with increasing n, for both the full GP and
+the SVGP, whereas the fundamental-region kernel KΠ yields steadily improving predictions.
+This provides direct empirical evidence that scalability alone is insufficient when the rotational
+structure of the dipole response is not represented in the covariance model. The minibatch
+comparison in Figure 7 further shows that the variational training configuration affects the final
+SVGP accuracy. At n = 20000, increasing the minibatch size from 500 to 1000 or 4000 generally
+improves RMSE and LogS, although the magnitude of this effect depends on the inducing-point
+allocation method. The improvement comes at the expected increase in computational cost. We
+consequently use a minibatch containing 20% of the non-inducing training observations for the
+main learning-curve comparison.
+The computational results in Figure 6 are consistent with the theoretical scaling of the
+three approaches. With the output dimension fixed at three, dense full-GP inference requires
+O(n3) operations and O(n2) memory. An SVGP update with minibatch size B and inducing-set
+size M requires O(BM2 + M3) operations and O(BM + M2) memory. Since the experiments
+use M = ⌊rn⌋and B = 0.2(n −M), fixed inducing ratios retain cubic time and quadratic
+memory scaling asymptotically, but with constants that depend strongly on r, which explains
+the increasing separation between the 10%, 20%, and 30% SVGP curves. For the large-n PCG
+branch, let TCG denote the number of iterations and R the pivoted-Cholesky preconditioner
+rank. Matrix-free training requires O(TCGn2 + nR2 + R3) operations and O(nR + R2) memory,
+in addition to the bounded dense hyperparameter fit on at most 2000 observations. For fixed R
+and bounded iteration count, this is quadratic in time and linear in memory with respect to n.
+Posterior-mean evaluation after the training solve requires O(nn∗) operations. Evaluation of
+the full joint LogS is more expensive because the n∗right-hand sides in (30) must additionally
+be solved, even though they are processed in memory-efficient blocks.
+Accordingly, PCG
+requires the least time for model fitting and posterior-mean evaluation and exhibits the smallest,
+nearly constant peak-memory footprint in Figure 6. Its full predictive-covariance and LogS
+computation grows more strongly and, for the largest training sets, is slower than predictive
+inference with the 10% SVGP. The dense full GP shows the steepest increase in predictive-
+inference time and memory, whereas increasing the SVGP inducing ratio improves accuracy at a
+substantial computational cost. These wall-clock comparisons reflect both the algorithms and
+the computational environments specified in Section 4.3, as the full GP and SVGP are evaluated
+on one CPU core, while PCG uses an NVIDIA H100 GPU. The operation and memory trends
+nevertheless agree with the theoretical scaling and demonstrate the complementary benefits
+of SVGP and PCG. The SVGP provides inexpensive approximate uncertainty quantification,
+while PCG provides full-GP-quality posterior means and joint predictive distributions with
+substantially reduced memory requirements.
+31
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 6: Wall-clock computation times and peak resident memory for the different GP models.
+5
+Conclusion and Outlook
+This work is guided by three main requirements for scalable equivariant GP modeling. Equivariant
+kernels must be fast to evaluate, equivariance must be preserved under scalable inference,
+and molecular kernel constructions must remain applicable as the dimension and number of
+atoms increase. Theorem 3.1 addresses the second requirement by establishing that stochastic
+equivariance is preserved under conditioning. The structure is therefore inherited by the full
+posterior distribution, including its mean, covariance, and dependencies between predictions.
+Theorem 3.4 further establishes that equivariance of the conditional GP at a single input for
+finitely many sufficiently informative response values implies stochastic equivariance of the
+GP throughout its domain, thereby connecting finitely many local conditional statements to
+a global distributional property of the GP. Together, these results provide the theoretical
+basis for preserving stochastic equivariance in sparse and scalable GP inference. While the
+theoretical results apply to general equivariant kernels, in our experiments, integration-free
+fundamental-region kernels provide a computationally efficient realization of this framework.
+They avoid numerical group integration while preserving positive definiteness and equivariance
+and can be constructed for any fixed molecular type and number of atoms. Their particular
+32
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+structure also enables an additional simplification in the NMF application. Combining PCG
+with the scalar diagonal base kernel and orthogonal output transformations yields an exact frame
+reduction of the vector-valued kernel system to a scalar kernel system with three right-hand
+sides. This retains the posterior of the equivariant full GP while providing the computational
+and memory requirements of matrix-free PCG with the underlying base kernel, up to the
+three output coordinates. The frame reduction also makes the full joint posterior covariance
+feasible to evaluate through scalar-frame solves, although this remains substantially more
+expensive than posterior-mean prediction. This reduction is specific to the algebraic structure
+of the kernel used in this application, whereas the stochastic equivariance results hold for
+equivariant kernels more generally. PCG and SVGP provide complementary approaches to
+scalable inference. PCG replaces dense matrix factorization by matrix-free iterative solves
+and converges to the posterior of the full GP as the numerical tolerance is tightened. The
+equivariant SVGP provides a general sparse approximation that also can be combined with
+different equivariant kernels. Its inducing-set size and variational representation allow predictive
+accuracy and computational cost to be balanced while preserving stochastic equivariance of the
+resulting approximate posterior. The SVGP provides its full approximate predictive distribution,
+including the joint posterior covariance, in closed form through the inducing representation.
+This makes uncertainty quantification feasible at scale while preserving stochastic equivariance
+of the complete approximate posterior distribution. Its variational approximation can be less
+faithful to the full GP than a sufficiently converged PCG solve. The SO(2) experiments illustrate
+that equivariant SVGP posteriors respect the required transformation law even under strong
+sparsification. The approximation primarily affects predictive accuracy and the calibration
+and magnitude of posterior uncertainty, while the structural constraint is retained. The NMF
+experiments show that PCG and SVGP substantially reduce the computational requirements of
+equivariant GP inference. The PCG closely approximates the full GP with considerably lower
+memory usage, while the SVGP offers additional control through the inducing budget and the
+inducing-point allocation scheme. The two approaches consequently provide complementary
+routes to full equivariant predictive distributions. PCG retains high fidelity to the full GP
+and supports full uncertainty quantification through additional iterative solves, while SVGP
+gives direct access to approximate joint posterior uncertainty at lower computational cost. The
+observed saturation of the SVGP LogS indicates that the variational family and the inducing
+representation of the posterior covariance remain important bottlenecks. A limitation of the
+fundamental-region kernel used in the experiments is its potential discontinuity at the boundaries
+of the fundamental region. This complicates the usual joint optimization of inducing locations
+through the ELBO and motivates the discrete allocation schemes considered in this work,
+which provide better accuracy when combined with kernel-induced distances reflecting the
+equivariant structure. Future research could combine the general equivariant SVGP framework
+with smoother equivariant kernels, including potential-based constructions such as MOB-GP
+[37]. More expressive invariant base kernels and learned invariant or equivariant representations
+could further improve predictive accuracy.
+Another important direction is the extension from datasets containing configurations of one
+fixed molecular type to chemically heterogeneous datasets such as QM9. Such data require a
+common representation for molecules with different numbers and types of atoms together with
+the corresponding permutation and rigid-motion symmetries. Equivariant neural networks could
+be used to learn suitable representations for equivariant GPs, combining flexible representation
+learning with probabilistic predictions and calibrated uncertainty. Equivariance also suggests
+applications in active learning and experimental design. Since observations related by group
+actions share structural information, symmetry-aware acquisition strategies may reduce the
+number of expensive evaluations required to learn a physical system. Vector-valued and operator-
+valued kernels arise naturally in PDE-constrained and multi-physics problems, where equivariant
+GP constructions could provide symmetry-consistent probabilistic surrogate models. Overall,
+33
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+the results indicate that equivariant Gaussian processes can provide symmetry-consistent and
+uncertainty-aware predictions at scales that were previously difficult to reach with GPs. Encoding
+symmetry through equivariant kernels and preserving it throughout conditioning and scalable
+inference provides a principled way to propagate physical structure through the full Bayesian
+pipeline. The resulting frameworks make full equivariant predictive distributions and feasible
+uncertainty quantification available in computationally demanding regimes.
+Acknowledgments
+We acknowledge the support of the Digitization Commission (DigiK) of the University of Bern
+through the project “Perception in Statistics, Econometrics and Probability.” Calculations were
+performed on UBELIX (https://www.id.unibe.ch/hpc), the HPC cluster at the University of Bern.
+We thank August Lykke Møller and Ove Christiansen for providing the N-methylformamide
+data, and Oliver Warth for suggesting the MMD-based inducing-point selection scheme.
+OpenAI GPT-5.6 Sol was used as a language and LATEX editing aid, for brainstorming
+possible formulations and implementation strategies, and for refactoring and debugging R and
+Slurm code for the HPC environment. The model was not used to conduct experiments, generate
+data, perform analysis, or originate the core scientific ideas underlying the work. All suggestions
+were critically reviewed, independently implemented where relevant, and verified by the authors,
+who retain full responsibility for the algorithms, experimental design, results, interpretations,
+and final manuscript.
+References
+[1] D. Arthur and S. Vassilvitskii. K-means++: The advantages of careful seeding. volume 8,
+2007.
+[2] B. Aslan, D. Platt, and D. Sheard. Group invariant machine learning by fundamental domain
+projections. In Proceedings of the 1st NeurIPS Workshop on Symmetry and Geometry in
+Neural Representations, volume 197 of Proceedings of Machine Learning Research, pages
+181–218. PMLR, 2023.
+[3] O. Bachem, M. Lucic, S. H. Hassani, and A. Krause. Fast and provably good seedings for
+k-means. In Proc. Neural Information Processing Systems (NeurIPS), December 2016.
+[4] S. Batzner, A. Musaelian, L. Sun, M. Geiger, J. P. Mailoa, M. Kornbluth, N. Molinari, T. E.
+Smidt, and B. Kozinsky. E (3)-equivariant graph neural networks for data-efficient and
+accurate interatomic potentials. Nature communications, 13(1):2453, 2022.
+[5] R. Berlinghieri, B. L. Trippe, D. R. Burt, R. Giordano, K. Srinivasan, T. Özgökmen,
+J. Xia, and T. Broderick. Gaussian processes at the helm(holtz): a more fluid model for
+ocean currents. In Proceedings of the 40th International Conference on Machine Learning.
+JMLR.org, 2023.
+[6] J. Q. Candela and C. E. Rasmussen. A unifying view of sparse approximate gaussian process
+regression. J. Mach. Learn. Res., 6:1939–1959, 2005.
+[7] T. Cohen and M. Welling. Group equivariant convolutional networks. In International
+conference on machine learning, pages 2990–2999. PMLR, 2016.
+[8] L. Csató and M. Opper. Sparse on-line gaussian processes. Neural computation, 14(3):
+641–668, 2002.
+34
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+[9] F. Fuchs, D. Worrall, V. Fischer, and M. Welling. Se (3)-transformers: 3d roto-translation
+equivariant attention networks. Advances in neural information processing systems, 33:
+1970–1981, 2020.
+[10] J. R. Gardner, G. Pleiss, D. S. Bindel, K. Q. Weinberger, and A. G. Wilson. Gpytorch: Black-
+box matrix-matrix gaussian process inference with gpu acceleration. ArXiv, abs/1809.11165,
+2018.
+[11] D. Ginsbourger, X. Bay, O. Roustant, and L. Carraro. Argumentwise invariant kernels for
+the approximation of invariant functions. Annales de la Faculté des sciences de Toulouse :
+Mathématiques, Ser. 6, 21(3):501–527, 2012.
+[12] D. Ginsbourger, O. Roustant, and N. Durrande. On degeneracy and invariances of random
+fields paths with applications in gaussian process modelling. Journal of Statistical Planning
+and Inference, 170:117–128, 2016.
+[13] A. Glielmo, P. Sollich, and A. De Vita. Accurate interatomic force fields via machine
+learning with covariant kernels. Phys. Rev. B, 95:214302, Jun 2017.
+[14] R.-R. Griffiths, J. L. Greenfield, A. R. Thawani, A. R. Jamasb, H. B. Moss, A. Bourached,
+P. Jones, W. McCorkindale, A. A. Aldrick, M. J. Fuchter, et al. Data-driven discovery of
+molecular photoswitches with multioutput gaussian processes. Chemical Science, 13(45):
+13541–13551, 2022.
+[15] A. Grisafi, D. M. Wilkins, G. Csányi, and M. Ceriotti. Symmetry-adapted machine learning
+for tensorial properties of atomistic systems. Phys. Rev. Lett., 120:036002, Jan 2018.
+[16] I. Henderson. PDE constrained kernel regression methods. PhD thesis, INSA Toulouse;
+Université de Toulouse-Toulouse III-UPS, 2023.
+[17] J. Hensman, N. Fusi, and N. D. Lawrence. Gaussian processes for big data. In Proceedings
+of the Twenty-Ninth Conference on Uncertainty in Artificial Intelligence, UAI’13, page
+282–290, 2013.
+[18] P. Holderrieth, M. J. Hutchinson, and Y. W. Teh. Equivariant learning of stochastic fields:
+Gaussian processes and steerable conditional neural processes. In International Conference
+on Machine Learning, pages 4297–4307. PMLR, 2021.
+[19] D. P. Kovács, I. Batatia, E. S. Arany, and G. Csanyi. Evaluation of the mace force field
+architecture: From medicinal chemistry to materials science. The Journal of Chemical
+Physics, 159(4), 2023.
+[20] M. Lázaro-Gredilla, J. Quiñnero-Candela, C. E. Rasmussen, and A. R. Figueiras-Vidal.
+Sparse spectrum gaussian process regression. Journal of Machine Learning Research, 11
+(63):1865–1881, 2010. URL http://jmlr.org/papers/v11/lazaro-gredilla10a.html.
+[21] C. Li, S. Jegelka, and S. Sra. Fast dpp sampling for nystrom with application to kernel
+methods. ArXiv, abs/1603.06052, 2016.
+[22] H. B. Moss and R.-R. Griffiths. Gaussian process molecule property prediction with flowmo.
+arXiv preprint arXiv:2010.01118, 2020.
+[23] C. Musco and C. Musco. Recursive sampling for the nystrom method. In I. Guyon, U. V.
+Luxburg, S. Bengio, H. Wallach, R. Fergus, S. Vishwanathan, and R. Garnett, editors,
+Advances in Neural Information Processing Systems, volume 30. Curran Associates, Inc.,
+2017.
+35
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+[24] A. Rahimi and B. Recht. Random features for large-scale kernel machines. In Neural
+Information Processing Systems, 2007.
+[25] B. Ranković, R.-R. Griffiths, H. B. Moss, and P. Schwaller. Bayesian optimisation for
+additive screening and yield improvements–beyond one-hot encoding. Digital Discovery, 3
+(4):654–666, 2024.
+[26] C. Rasmussen and C. Williams. Gaussian Processes for Machine Learning. 11 2005. ISBN
+9780262256834. doi: 10.7551/mitpress/3206.001.0001.
+[27] M. Reisert and H. Burkhardt. Learning equivariant functions with matrix valued kernels.
+Journal of Machine Learning Research, 8(15):385–408, 2007.
+[28] V. G. Satorras, E. Hoogeboom, and M. Welling. E (n) equivariant graph neural networks.
+In International conference on machine learning, pages 9323–9332. PMLR, 2021.
+[29] M. Scheuerer and M. Schlather. Covariance models for divergence-free and curl-free random
+vector fields. Stochastic Models, 28:433–451, 07 2012.
+[30] K. Schütt, O. Unke, and M. Gastegger. Equivariant message passing for the prediction of
+tensorial properties and molecular spectra. In M. Meila and T. Zhang, editors, Proceedings
+of the 38th International Conference on Machine Learning, volume 139 of Proceedings of
+Machine Learning Research, pages 9377–9388. PMLR, 18–24 Jul 2021.
+[31] M. W. Seeger, C. K. I. Williams, and N. D. Lawrence. Fast forward selection to speed up
+sparse gaussian process regression. In C. M. Bishop and B. J. Frey, editors, Proceedings of
+the Ninth International Workshop on Artificial Intelligence and Statistics, volume R4 of
+Proceedings of Machine Learning Research, pages 254–261. PMLR, 03–06 Jan 2003.
+[32] B. W. Silverman.
+Some aspects of the spline smoothing approach to non-parametric
+regression curve fitting. Journal of the Royal Statistical Society: Series B (Methodological),
+47(1):1–21, 1985.
+[33] A. Smola and P. Bartlett. Sparse greedy gaussian process regression. Advances in neural
+information processing systems, 13, 2000.
+[34] E. Snelson and Z. Ghahramani. Sparse gaussian processes using pseudo-inputs. In Neural
+Information Processing Systems, 2005.
+[35] E. Snelson and Z. Ghahramani. Local and global sparse gaussian process approximations.
+In M. Meila and X. Shen, editors, Proceedings of the Eleventh International Conference
+on Artificial Intelligence and Statistics, volume 2 of Proceedings of Machine Learning
+Research, pages 524–531, San Juan, Puerto Rico, 21–24 Mar 2007. PMLR. URL https:
+//proceedings.mlr.press/v2/snelson07a.html.
+[36] T. Steinert, D. Ginsbourger, A. Lykke-Møller, O. Christiansen, and H. Moss. Integration-free
+kernels for equivariant gaussian process modelling. In Proceedings of the 42nd International
+Conference on Machine Learning, volume 267 of Proceedings of Machine Learning Research,
+pages 56874–56898. PMLR, 2025.
+[37] J. Sun, L. Cheng, and T. F. Miller. Molecular dipole moment learning via rotationally
+equivariant derivative kernels in molecular-orbital-based machine learning. The Journal
+of Chemical Physics, 157(10), Sept. 2022. ISSN 1089-7690. doi: 10.1063/5.0101280. URL
+http://dx.doi.org/10.1063/5.0101280.
+36
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+[38] N. Thomas, T. Smidt, S. Kearnes, L. Yang, L. Li, K. Kohlhoff, and P. Riley. Tensor field
+networks: Rotation-and translation-equivariant neural networks for 3d point clouds. arXiv
+preprint arXiv:1802.08219, 2018.
+[39] M. K. Titsias. Variational learning of inducing variables in sparse gaussian processes. In
+International Conference on Artificial Intelligence and Statistics, 2009.
+[40] M. van der Wilk, M. Bauer, S. John, and J. Hensman. Learning invariances using the
+marginal likelihood. Advances in Neural Information Processing Systems, 31, 2018.
+[41] K. Wang, G. Pleiss, J. Gardner, S. Tyree, K. Weinberger, and A. Wilson. Exact gaussian
+processes on a million data points. Neurips, 03 2019. doi: 10.48550/arXiv.1903.08114.
+[42] M. Weiler, M. Geiger, M. Welling, W. Boomsma, and T. S. Cohen. 3d steerable cnns: Learn-
+ing rotationally equivariant features in volumetric data. Advances in Neural information
+processing systems, 31, 2018.
+[43] C. K. I. Williams and M. W. Seeger. Using the nyström method to speed up kernel machines.
+In Neural Information Processing Systems, 2000. URL https://api.semanticscholar.org/
+CorpusID:42041158.
+[44] A. G. Wilson and H. Nickisch. Kernel interpolation for scalable structured gaussian processes
+(kiss-gp). In International Conference on Machine Learning, 2015.
+A
+Effect of Different SVGP Batch Sizes
+Figure 7: Boxplots comparing SVGP predictive performance at training size n = 20000 for several
+minibatch ratios and inducing-point selection strategies.
+37
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+B
+MMD-Based Inducing-Point Allocation
+Let K : D × D →Rp×p be a positive-definite (PD) matrix-valued kernel. By vector-valued
+RKHS theory, there exists a separable Hilbert space U and a Hilbert–Schmidt feature operator
+Ψ : D →HS(Rp, U) such that
+K(x, x′) = Ψ(x)∗Ψ(x′),
+⟨Ψ(x), Ψ(x′)⟩HS = tr
+ Ψ(x)∗Ψ(x′)
+ = tr K(x, x′).
+(32)
+For empirical input measures ˆPX = 1
+n
+Pn
+i=1 δxi and ˆPZ = 1
+m
+Pm
+j=1 δzj, define the vector-valued
+RKHS mean operators
+µX := 1
+n
+n
+X
+i=1
+Ψ(xi) ∈HS(Rp, U),
+µZ := 1
+m
+m
+X
+j=1
+Ψ(zj) ∈HS(Rp, U).
+We define the matrix-valued MMD as the squared Hilbert–Schmidt distance
+MMD2
+K(X, Z) := ∥µX −µZ∥2
+HS.
+(33)
+Expanding (33) with (32) yields
+MMD2
+K(X, Z) = 1
+n2
+X
+i,i′
+⟨Ψ(xi), Ψ(xi′)⟩HS + 1
+m2
+X
+j,j′
+⟨Ψ(zj), Ψ(zj′)⟩HS −
+2
+nm
+X
+i,j
+⟨Ψ(xi), Ψ(zj)⟩HS
+= 1
+n2
+X
+i,i′
+tr K(xi, xi′) + 1
+m2
+X
+j,j′
+tr K(zj, zj′) −
+2
+nm
+X
+i,j
+tr K(xi, zj).
+(34)
+Thus the scalar contraction that enters the MMD is tr K(·, ·) by construction.
+You can
+equivalently view (34) as a scalar MMD computed with the (automatically PD) trace ker-
+nel kT (x, x′) := tr K(x, x′).
+MMD2
+K(X, Z) =
+1
+n(n −1)
+n
+X
+i,i′=1
+i̸=i′
+tr K(xi, xi′)
++
+1
+m(m −1)
+m
+X
+j,j′=1
+j̸=j′
+tr K(zj, zj′)
+−
+2
+nm
+n
+X
+i=1
+m
+X
+j=1
+tr K(xi, zj).
+When replacing one inducing point zr by a new point znew, only the second and third sums
+change. We can write the updated MMD as
+MMD2
+K(X, Z′) = CX +
+1
+m(m −1)
+
+
+m
+X
+j,j′=1
+j,j′̸=r
+tr
+K(zj, zj′)
+ + 2
+m
+X
+j=1
+j̸=r
+tr
+K(zj, znew)
+
+
+
+−
+2
+nm
+
+
+n
+X
+i=1
+m
+X
+j=1
+j̸=r
+tr
+K(xi, zj)
+ +
+n
+X
+i=1
+tr
+K(xi, znew)
+
+
+,
+38
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+where CX collects all constant terms that depend only on X and thus cancel in the MMD
+difference. Define
+ar(z) :=
+1
+m −1
+X
+j̸=r
+tr K(zj, z) −1
+n
+n
+X
+i=1
+tr K(xi, z).
+The incremental change can then be computed compactly as
+∆:= MMD2
+K(X, Z′) −MMD2
+K(X, Z) = 2
+m [ar(znew) −ar(zr)] .
+This form allows efficient local updates: only O(m + n) kernel evaluations are required to test
+the effect of swapping zr with znew, instead of recomputing all pairwise terms.
+39
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 8: Extended SVGP learning curves in the small-data regime, showing three rows of metrics
+across inducing-point allocation methods and inducing-set ratios.
+40
+
+
+Triply-Scalable Equivariant GPs
+Steinert and Ginsbourger
+Figure 9: Further prior samples of GP(0, KΠ), with hyperparameters sampled uniformly over [0, 20]4.
+41

@@ -1,0 +1,169 @@
+{
+  "date": "20260921",
+  "date_label": "",
+  "generated_at": "2026-09-21 19:07:58 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.22022v1",
+      "route": "202609/21/2609.22022v1-cboamd-a-machine-learning-molecular-dynamics-framework-for-vibrational-strong-coupling",
+      "title": "cboamd: A Machine Learning Molecular Dynamics Framework for Vibrational Strong Coupling",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "基于机器学习原子间势的振动强耦合分子动力学框架",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.14928v1",
+      "route": "202609/21/2609.14928v1-quantitative-control-and-recording-of-materials-synthesis-processes-using-an-automated-experimentation-platform",
+      "title": "Quantitative control and recording of materials-synthesis processes using an automated experimentation platform",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "用于材料合成定量控制的自动化实验平台",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21085v1",
+      "route": "202609/21/2609.21085v1-triply-scalable-equivariant-gaussian-process-modeling",
+      "title": "Triply-Scalable Equivariant Gaussian Process Modeling",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向分子等科学建模的等变高斯过程",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21536v1",
+      "route": "202609/21/2609.21536v1-from-sparse-quantum-computing-data-to-atomistic-simulation-with-universal-machine-learning-interatomic-potentials",
+      "title": "From sparse quantum-computing data to atomistic simulation with universal machine-learning interatomic potentials",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "用量子计算数据微调通用机器学习原子间势以做原子模拟",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21759v1",
+      "route": "202609/21/2609.21759v1-complete-neural-electronic-initialization-accelerates-materials-dft",
+      "title": "Complete Neural Electronic Initialization Accelerates Materials DFT",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "机器学习方法在PAW形式下加速材料的平面波DFT计算",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21863v1",
+      "route": "202609/21/2609.21863v1-autoreclab-describe-the-experiment-get-the-code",
+      "title": "AutoRecLab: Describe the Experiment, Get the Code!",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "从自然语言提示自动完成实验的自主实验室",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21882v1",
+      "route": "202609/21/2609.21882v1-orbital-free-surrogate-functionals-yield-transferable-interatomic-potentials-and-electron-densities",
+      "title": "Orbital-Free Surrogate Functionals Yield Transferable Interatomic Potentials and Electron Densities",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "机器学习代理泛函产生可迁移原子间势",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.16940v1",
+      "route": "202609/21/2609.16940v1-probabilistic-deep-learning-framework-for-phase-transformation-forecasting-aided-by-in-situ-high-temperature-microscopy",
+      "title": "Probabilistic Deep Learning Framework for Phase Transformation Forecasting aided by In Situ High temperature Microscopy",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用概率深度学习框架预测材料相变与微观组织演化",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21151v1",
+      "route": "202609/21/2609.21151v1-ensol-an-environment-aware-graph-neural-network-for-molecular-solubility-prediction",
+      "title": "EnSol: an environment-aware graph neural network for molecular solubility prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用于分子性质预测的图神经网络",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    },
+    {
+      "paper_id": "2609.21984v1",
+      "route": "202609/21/2609.21984v1-paoflow-an-automated-suite-for-ab-initio-electronic-transport-and-topological-properties-of-materials",
+      "title": "PAOFLOW: an automated suite for ab initio electronic, transport, and topological properties of materials",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "支持AI就绪材料数据的自动化第一性原理性质套件",
+      "first_seen_at": "2026-09-21 19:07:58 UTC",
+      "updated_at": "2026-09-21 19:07:58 UTC"
+    }
+  ]
+}

@@ -1,0 +1,428 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-21T19:03:37.325388+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 7,
+    "deep_cap": 7,
+    "deep_selected": 7,
+    "quick_candidates": 3,
+    "quick_skim_target": 12,
+    "quick_selected": 3
+  },
+  "deep_dive": [
+    {
+      "id": "2609.22022v1",
+      "source": "arxiv",
+      "title": "cboamd: A Machine Learning Molecular Dynamics Framework for Vibrational Strong Coupling",
+      "abstract": "Under vibrational strong coupling (VSC), molecular vibrations hybridize with an optical cavity mode to form polaritons, offering a route to modify chemical and material properties without external driving. In this work, we develop a machine-learning interatomic potential (MLIP) based framework to study VSC inside optical cavities. By using the cavity Born-Oppenheimer approximation and treating the photonic degrees of freedom as an effective electric field, we provide a framework that can describe VSC solely based on the electronic ground-state potential energy surfaces (PES), electronic dipole moment, and polarizability, all quantities obtained outside the cavity. We train PES, polarization, and polarizability models to drive the molecular dynamics (MD) simulations of systems under VSC. We demonstrate the approach for both a single CO$_2$ molecule and liquid CO$_2$, showing that the polarizability renormalizes the effective cavity resonance: at fixed cavity frequency this renormalization renders the Rabi splitting strongly asymmetric, while with renormalized cavity frequency the symmetric splitting is capped by polarizability screening. The collective Rabi splitting of the liquid is connected quantitatively to the single-molecule splitting involving the $\\sqrt{N/3}$ orientational enhancement and the local-field enhanced effective charges of the coupled vibration, while the equilibrium pair structure of the CO$_2$ liquid remains unchanged. These simulations are the first MLIP-driven simulations of collective VSC in the condensed phase and open further pathways to the exploration of chemical effects under VSC.",
+      "authors": [
+        "Yifan Li",
+        "Roberto Car",
+        "Johannes Flick"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-18T17:16:51+00:00",
+      "link": "https://arxiv.org/pdf/2609.22022v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "MLIP-based molecular dynamics framework for vibrational strong coupling",
+      "llm_evidence_cn": "基于机器学习原子间势的振动强耦合分子动力学框架",
+      "llm_evidence": "基于机器学习原子间势的振动强耦合分子动力学框架",
+      "canonical_evidence": "基于机器学习原子间势的振动强耦合分子动力学框架",
+      "llm_tldr_en": "cboamd: an MLIP-based molecular dynamics framework for vibrational strong coupling that treats photonic modes as an effective field and trains PES, polarization, and polarizability models from cavity-free ground-state data.",
+      "llm_tldr_cn": "振动强耦合下分子振动与光腔模式杂化形成极化激元，但直接模拟腔内动力学代价高昂。本文提出cboamd框架，基于腔玻恩-奥本海默近似把光子自由度当作有效电场，用机器学习原子间势拟合腔外的势能面、偶极矩与极化率。训练得到的势能面与极化模型可驱动分子动力学模拟并再现强耦合效应。结果表明仅用腔外基态量即可高效研究极化激元化学与材料性质调控。",
+      "llm_tldr": "振动强耦合下分子振动与光腔模式杂化形成极化激元，但直接模拟腔内动力学代价高昂。本文提出cboamd框架，基于腔玻恩-奥本海默近似把光子自由度当作有效电场，用机器学习原子间势拟合腔外的势能面、偶极矩与极化率。训练得到的势能面与极化模型可驱动分子动力学模拟并再现强耦合效应。结果表明仅用腔外基态量即可高效研究极化激元化学与材料性质调控。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.21085v1",
+      "source": "arxiv",
+      "title": "Triply-Scalable Equivariant Gaussian Process Modeling",
+      "abstract": "Gaussian processes (GPs) provide principled probabilistic predictions while encoding prior knowledge, including equivariances. Yet, their use in large-scale scientific problems is limited by computational cost. Equivariant neural networks are common but typically lack the uncertainty quantification offered by GPs, which is valuable in applications such as molecular research. High-dimensional inputs and large symmetry groups further demand scalability. We establish results pertaining to the interplay of GP equivariance and conditioning and leverage them to obtain equivariant sparse GPs through suitable mean functions and covariance kernels. We instantiate this framework with a flexible class of integration-free equivariant kernels, yielding scalable and data-efficient GP inference. In particular, we introduce triply scalable equivariant Gaussian processes.   We employ equivariant sparse variational Gaussian processes for $\\mathrm{SO}(2)$-equivariant vector fields and molecular property prediction. Alongside the SVGP, we develop a matrix-free equivariant full-GP implementation that combines an exact Kronecker reduction with preconditioned conjugate-gradient solves, enabling fast and scalable evaluation of the full joint predictive density. We further compare different approaches for selecting inducing points in the equivariant sparse GP models. Our test cases include synthetic $\\mathrm{SO}(2)$-equivariant fields as well as the prediction of electric dipole moments of N-methylformamide based on quantum chemistry simulations, achieving accurate, uncertainty-aware predictions at a fraction of the computational cost of classical GP inference.",
+      "authors": [
+        "Tim Steinert",
+        "David Ginsbourger"
+      ],
+      "primary_category": "stat.ML",
+      "categories": [
+        "stat.ML",
+        "cs.LG",
+        "math.ST",
+        "stat.AP",
+        "stat.CO"
+      ],
+      "published": "2026-09-17T21:01:13+00:00",
+      "link": "https://arxiv.org/pdf/2609.21085v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "equivariant Gaussian processes for molecular and scientific modeling",
+      "llm_evidence_cn": "面向分子等科学建模的等变高斯过程",
+      "llm_evidence": "面向分子等科学建模的等变高斯过程",
+      "canonical_evidence": "面向分子等科学建模的等变高斯过程",
+      "llm_tldr_en": "This work develops triply-scalable equivariant sparse Gaussian processes via suitable mean functions and integration-free equivariant kernels, combining the symmetry encoding of equivariant networks with GP uncertainty quantification for molecular research.",
+      "llm_tldr_cn": "高斯过程能给出带不确定性量化的预测并可编码等变性，但计算代价限制其在大规模科学问题中的应用，而常见等变神经网络又缺乏不确定性量化。本文研究高斯过程等变性与条件化的关系，通过合适的均值函数与协方差核构造等变稀疏高斯过程，并实例化一类免积分的等变核。所得框架可扩展且数据高效，兼顾等变性与概率不确定性。该工作为分子等科学任务提供了可扩展的等变概率建模途径。",
+      "llm_tldr": "高斯过程能给出带不确定性量化的预测并可编码等变性，但计算代价限制其在大规模科学问题中的应用，而常见等变神经网络又缺乏不确定性量化。本文研究高斯过程等变性与条件化的关系，通过合适的均值函数与协方差核构造等变稀疏高斯过程，并实例化一类免积分的等变核。所得框架可扩展且数据高效，兼顾等变性与概率不确定性。该工作为分子等科学任务提供了可扩展的等变概率建模途径。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "equivariant graph neural networks for materials modeling, energy prediction, and force prediction",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.14928v1",
+      "source": "arxiv",
+      "title": "Quantitative control and recording of materials-synthesis processes using an automated experimentation platform",
+      "abstract": "Data-driven materials development requires the collection of large amounts of high-quality materials data. Full autonomy of materials experiments is anticipated, but its technical hurdles are high and its adoption remains limited. In this study, we constructed a simple, easy-to-deploy automated experimentation platform that focuses not on full autonomy but on the reliable automation and quantitative recording of experimental processes. Specifically, commercially available instruments such as robot arms, electric pipettes, web cameras, and an electronic balance are combined, components such as fixtures are fabricated with a 3D printer, and the instruments are operated by control code generated by an AI agent based on a large language model. As a demonstration, we applied the platform to a two-solution mixing experimental system and synthesized ZIF-8, a metal-organic framework. A white suspension phase was observed in the product, and X-ray diffraction measurements confirmed that it was ZIF-8. We also found that its particle size distribution depends strongly on the solution dispensing speed of the electric pipette, which is a parameter that is difficult to control or record in manual operation. This dependence was reproduced in repeated runs, confirming the repeatability of the automated synthesis. This result is a good example showing that the control and recording of process parameters that are rarely quantified in manual work can govern the quality of materials data. All control code, CAD models, and documentation are made publicly available to encourage the spread of laboratory-scale automation of experiments.",
+      "authors": [
+        "Yusuke Hashimoto",
+        "Takaya Muramoto",
+        "Hikari Terada",
+        "Harim Song",
+        "Yuan Wang",
+        "Takaaki Tomai"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "physics.app-ph",
+        "physics.ins-det"
+      ],
+      "published": "2026-09-14T02:20:37+00:00",
+      "link": "https://arxiv.org/pdf/2609.14928v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "automated experimentation platform for quantitative materials synthesis control",
+      "llm_evidence_cn": "用于材料合成定量控制的自动化实验平台",
+      "llm_evidence": "用于材料合成定量控制的自动化实验平台",
+      "canonical_evidence": "用于材料合成定量控制的自动化实验平台",
+      "llm_tldr_en": "The study builds a low-cost automated experimentation platform combining robot arms, pipettes, cameras, and balances, driven by AI-agent-generated control code, to reliably automate and quantitatively record materials synthesis.",
+      "llm_tldr_cn": "数据驱动材料开发需要大量高质量实验数据，但完全自主实验门槛高、推广有限。本文构建易于部署的自动化实验平台，组合机械臂、电动移液器、摄像头与电子天平，并用AI智能体生成的控制代码操作仪器。平台侧重实验流程的可靠自动化与定量记录，而非完全自主。该工作为材料合成的可复现自动化与数据积累提供了务实方案。",
+      "llm_tldr": "数据驱动材料开发需要大量高质量实验数据，但完全自主实验门槛高、推广有限。本文构建易于部署的自动化实验平台，组合机械臂、电动移液器、摄像头与电子天平，并用AI智能体生成的控制代码操作仪器。平台侧重实验流程的可靠自动化与定量记录，而非完全自主。该工作为材料合成的可复现自动化与数据积累提供了务实方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "self-driving laboratory",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.21536v1",
+      "source": "arxiv",
+      "title": "From sparse quantum-computing data to atomistic simulation with universal machine-learning interatomic potentials",
+      "abstract": "We propose a framework for incorporating quantum-computing-based electronic-structure calculations into universal machine-learning interatomic potentials (uMLIPs). Rather than constructing an interatomic potential from scratch, we refine a pretrained DFT-based uMLIP using a small set of accurate reference energies obtained from quantum computing. We demonstrate the approach for three chemically distinct applications: the Menshutkin reaction, water adsorption in the metal-organic framework HKUST-1, and CO hopping on a high-entropy-alloy nanoparticle. For the Menshutkin reaction, fine-tuning on gas-phase configurations improves the transition-state energy inside a carbon nanotube but not the product energy. For water adsorption in HKUST-1, fine-tuning with only 14 reference configurations brings adsorption thermodynamics obtained from millions of configurations sampled by Widom insertion into closer agreement with reference values. For CO hopping on an IrPdPtRhRu nanoparticle, the preference for on-top over bridge adsorption is recovered in the finite-temperature free-energy profile obtained from enhanced-sampling molecular dynamics, even though the reference data contain only energies. These results demonstrate that the proposed framework provides a practical route for incorporating quantum-computing calculations into realistic atomistic simulations and that quantum-computing reference data can improve pretrained uMLIPs.",
+      "authors": [
+        "Tuan Minh Do",
+        "Yuichiro Yoshida",
+        "Kenji Ishihara",
+        "Wataru Mizukami"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "quant-ph"
+      ],
+      "published": "2026-09-18T09:27:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.21536v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "refining universal machine-learning interatomic potentials with quantum-computing data for atomistic simulation",
+      "llm_evidence_cn": "用量子计算数据微调通用机器学习原子间势以做原子模拟",
+      "llm_evidence": "用量子计算数据微调通用机器学习原子间势以做原子模拟",
+      "canonical_evidence": "用量子计算数据微调通用机器学习原子间势以做原子模拟",
+      "llm_tldr_en": "Rather than building potentials from scratch, this work fine-tunes a pretrained DFT-based universal MLIP with sparse accurate quantum-computing energies, enabling atomistic simulations for reactions, MOF adsorption and alloy catalysis.",
+      "llm_tldr_cn": "从头构建原子间势成本高昂，而量子计算可提供少量高精度电子结构能量。本文提出把基于量子计算的参考能量注入预训练的DFT通用机器学习原子间势（uMLIP），通过微调而非重建势函数。作者在Menshutkin反应、HKUST-1中水吸附和高熵合金纳米颗粒上CO迁移三个体系验证，显示微调可改善部分能量预测。该框架把量子计算与通用势结合，拓展了原子模拟的精度来源。",
+      "llm_tldr": "从头构建原子间势成本高昂，而量子计算可提供少量高精度电子结构能量。本文提出把基于量子计算的参考能量注入预训练的DFT通用机器学习原子间势（uMLIP），通过微调而非重建势函数。作者在Menshutkin反应、HKUST-1中水吸附和高熵合金纳米颗粒上CO迁移三个体系验证，显示微调可改善部分能量预测。该框架把量子计算与通用势结合，拓展了原子模拟的精度来源。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.21759v1",
+      "source": "arxiv",
+      "title": "Complete Neural Electronic Initialization Accelerates Materials DFT",
+      "abstract": "We present the first complete machine learning method for accelerating plane-wave density functional theory (DFT) in materials under the projector augmented wave (PAW) formalism. We formalize seven criteria that a \\textit{Complete Neural Electronic Initializer} must satisfy for practical end-to-end PAW DFT acceleration. Applying these criteria to prior work reveals two missing structure-dependent components, augmentation occupancies and spin initialization, that prevent existing methods from providing complete reference-free initialization. Controlled ablations show that omitting these components can eliminate or reverse the acceleration obtained via models that only predict the smooth valence density. We satisfy these missing requirements by introducing AugNet, the first general equivariant model for PAW augmentation occupancies, and the first general spin density model for materials, which predicts the smooth spin-difference density and spin-difference PAW augmentation occupancies using predicted magnetic moments to constrain the global magnetic state. Combined with existing valence density models, these components satisfy all seven criteria and form a fully reference-free electronic initializer for materials DFT, requiring no electronic quantities from a converged target calculation. Our method reduces end-to-end DFT wall time by up to ~25% on unseen structures while preserving converged energies.",
+      "authors": [
+        "Felix Ærtebjerg",
+        "Jonas Elsborg",
+        "Arghya Bhowmik"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.LG",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-18T13:30:29+00:00",
+      "link": "https://arxiv.org/pdf/2609.21759v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "machine learning method accelerating plane-wave DFT in materials under PAW formalism",
+      "llm_evidence_cn": "机器学习方法在PAW形式下加速材料的平面波DFT计算",
+      "llm_evidence": "机器学习方法在PAW形式下加速材料的平面波DFT计算",
+      "canonical_evidence": "机器学习方法在PAW形式下加速材料的平面波DFT计算",
+      "llm_tldr_en": "This work presents the first complete machine learning method for accelerating plane-wave DFT in materials under the PAW formalism, formalizing seven criteria for a complete neural electronic initializer and adding missing augmentation-occupancy and spin components.",
+      "llm_tldr_cn": "平面波DFT是材料模拟的主力，但电子初始化往往需要昂贵参考计算，现有神经网络初始化方法在PAW形式下并不完整。本文提出首个完整的机器学习电子初始化方法，形式化七项完整初始化判据，并补足先前缺失的增广占据数与自旋初始化两个结构相关组分。消融实验表明遗漏这些组分会使加速效果消失甚至反转，从而实现了参考无关的端到端PAW DFT加速，显著推进AI加速第一性原理材料模拟。",
+      "llm_tldr": "平面波DFT是材料模拟的主力，但电子初始化往往需要昂贵参考计算，现有神经网络初始化方法在PAW形式下并不完整。本文提出首个完整的机器学习电子初始化方法，形式化七项完整初始化判据，并补足先前缺失的增广占据数与自旋初始化两个结构相关组分。消融实验表明遗漏这些组分会使加速效果消失甚至反转，从而实现了参考无关的端到端PAW DFT加速，显著推进AI加速第一性原理材料模拟。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.21863v1",
+      "source": "arxiv",
+      "title": "AutoRecLab: Describe the Experiment, Get the Code!",
+      "abstract": "Empirical evaluation is central to recommender-systems (RecSys) research, but turning experimental designs into executable code remains a manual and error-prone task. We present AutoRecLab, a Python-based autonomous RecSys lab that automates RecSys experiments from natural-language prompts. Given a research idea, AutoRecLab derives explicit experiment requirements, builds and validates a prototype, and iteratively expands it into the requested full experiment. The workflow combines retrieval-augmented generation (RAG) for documentation lookup, static type verification, and execution-steered tree search. In our demonstration, AutoRecLab autonomously implements an explicit-to-implicit feedback conversion study. In a baseline comparison across six algorithms and three datasets, 8 of 9 runs succeed at an average cost of approx- imately $1 per run with GPT-5.4-mini.",
+      "authors": [
+        "Moritz Baumgart",
+        "Philipp Meister",
+        "Justus Krell",
+        "Michael Schmidt",
+        "Bela Gipp",
+        "Joeran Beel"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.IR",
+        "cs.LG"
+      ],
+      "published": "2026-09-18T14:54:44+00:00",
+      "link": "https://arxiv.org/pdf/2609.21863v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "autonomous lab automating experiments from natural-language prompts",
+      "llm_evidence_cn": "从自然语言提示自动完成实验的自主实验室",
+      "llm_evidence": "从自然语言提示自动完成实验的自主实验室",
+      "canonical_evidence": "从自然语言提示自动完成实验的自主实验室",
+      "llm_tldr_en": "AutoRecLab is a Python-based autonomous recommender-systems lab that turns natural-language research ideas into executable experiments via RAG, type verification and execution-steered tree search, iteratively expanding a validated prototype into a full study.",
+      "llm_tldr_cn": "推荐系统研究依赖大量人工实验，将实验设计转化为可执行代码既繁琐又易出错。作者提出AutoRecLab，一个基于Python的自主推荐系统实验室，可从自然语言提示推导实验需求、构建并验证原型，再借助检索增强生成、静态类型校验与执行引导树搜索迭代扩展为完整实验。演示中它自主实现了显式到隐式反馈转换研究，并在六种算法与三个数据集的基线比较中运行。该工作展示了端到端自动生成与执行实验代码的可行性。",
+      "llm_tldr": "推荐系统研究依赖大量人工实验，将实验设计转化为可执行代码既繁琐又易出错。作者提出AutoRecLab，一个基于Python的自主推荐系统实验室，可从自然语言提示推导实验需求、构建并验证原型，再借助检索增强生成、静态类型校验与执行引导树搜索迭代扩展为完整实验。演示中它自主实现了显式到隐式反馈转换研究，并在六种算法与三个数据集的基线比较中运行。该工作展示了端到端自动生成与执行实验代码的可行性。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
+      "matched_requirement_id": "req-18",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.21882v1",
+      "source": "arxiv",
+      "title": "Orbital-Free Surrogate Functionals Yield Transferable Interatomic Potentials and Electron Densities",
+      "abstract": "Orbital-free density functional theory seeks to compute the energy of an electronic system directly from its electron density, avoiding one-electron wave functions and thereby offering a route to scalable electronic structure calculations. Machine-learned orbital-free density functionals have recently achieved promising results on small organic molecules, predicting energies with sub-millihartree accuracy. However, their convergence in density optimization remains sensitive to hyperparameter tuning and architectural choices. Here, we extend the recently introduced (weak) surrogate functional framework - designed to predict ground-state electron densities only - to also yield their energy, resulting in \"strong\" surrogate functionals. We find that these learned functionals enable stable convergence across all tested neural network backbones, reducing electron density errors relative to the Kohn-Sham reference by an order of magnitude compared to previous OF-DFT methods. More importantly, the predicted energies are competitive with state-of-the-art machine-learned interatomic potentials (MLIPs) trained only on energies, while exhibiting superior generalization to larger, unseen systems.",
+      "authors": [
+        "Simon Wagner",
+        "Marc K. Ickler",
+        "Manuel V. Klockow",
+        "Fred A. Hamprecht",
+        "Roman Remme"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-18T15:10:48+00:00",
+      "link": "https://arxiv.org/pdf/2609.21882v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "machine-learned surrogate functional yields transferable interatomic potentials",
+      "llm_evidence_cn": "机器学习代理泛函产生可迁移原子间势",
+      "llm_evidence": "机器学习代理泛函产生可迁移原子间势",
+      "canonical_evidence": "机器学习代理泛函产生可迁移原子间势",
+      "llm_tldr_en": "Extending a weak surrogate functional framework to also yield energy, this work produces transferable machine-learned interatomic potentials and electron densities from orbital-free DFT.",
+      "llm_tldr_cn": "轨道自由密度泛函理论直接从电子密度计算能量，避免单电子波函数，但机器学习轨道自由泛函在密度优化中收敛对超参和架构敏感。本文将仅预测基态密度的弱代理泛函框架扩展为同时给出能量的强代理泛函，从而获得可迁移的原子间势与电子密度。该方法在小分子上达到亚毫哈特里精度，为可扩展电子结构计算提供新路径。",
+      "llm_tldr": "轨道自由密度泛函理论直接从电子密度计算能量，避免单电子波函数，但机器学习轨道自由泛函在密度优化中收敛对超参和架构敏感。本文将仅预测基态密度的弱代理泛函框架扩展为同时给出能量的强代理泛函，从而获得可迁移的原子间势与电子密度。该方法在小分子上达到亚毫哈特里精度，为可扩展电子结构计算提供新路径。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.16940v1",
+      "source": "arxiv",
+      "title": "Probabilistic Deep Learning Framework for Phase Transformation Forecasting aided by In Situ High temperature Microscopy",
+      "abstract": "The mechanical performance of structural materials is governed by their microstructure, which is itself set by the thermal history imposed during processing. Predicting how that microstructure evolves along an arbitrary thermal trajectory, however, remains a challenging problem. Conventional continuous-cooling-transformation diagrams, for instance, provide only a static description, and they do not exist for all materials, especially emerging and novel ones. Deep-learning approaches address this issue, but they treat image-based characterization, temporal prediction, and microstructure forecasting as separate tasks. Here, we introduce a probabilistic deep-learning framework that unifies these tasks for in situ high-temperature confocal laser scanning microscopy data. The initial surface image is compressed with a beta-variational autoencoder into a low-dimensional latent representation, which, together with the cooling rate and the full temperature history, is passed to a temporal fusion transformer that produces a quantile forecast of the Widmanstatten ferrite ratio. In parallel, a Gaussian process predicts the end-state Widmanstatten ferrite ratio and corrects the forecast equilibrium level, yielding probabilistic prediction intervals. We demonstrate the efficacy of our method on Widmanstatten ferrite evolution in S235 steel across five cooling regimes and showcase significant accuracy. This verifies the relevance of our framework and paves the way for a streamlined and highly accelerated investigation of material evolution under thermal treatment.",
+      "authors": [
+        "Ioannis Kouroudis",
+        "Niki Balestrieri",
+        "Stefan Rotzsche",
+        "Niccolo Radice",
+        "Peter Mayr",
+        "Alessio Gagliardi"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-15T10:15:30+00:00",
+      "link": "https://arxiv.org/pdf/2609.16940v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "probabilistic deep learning framework for forecasting microstructure phase transformation in materials",
+      "llm_evidence_cn": "用概率深度学习框架预测材料相变与微观组织演化",
+      "llm_evidence": "用概率深度学习框架预测材料相变与微观组织演化",
+      "canonical_evidence": "用概率深度学习框架预测材料相变与微观组织演化",
+      "llm_tldr_en": "This work addresses the difficulty of predicting microstructure evolution along arbitrary thermal trajectories when transformation diagrams are static or unavailable, proposing a probabilistic deep-learning framework that unifies in-situ imaging, temporal prediction, and microstructure forecasting.",
+      "llm_tldr_cn": "传统连续冷却转变图只能静态描述相变，且新兴材料往往缺乏此类图，图像表征、时序预测与组织预报通常又被割裂处理。本文提出一个概率深度学习框架，借助原位高温显微数据将上述任务统一起来，实现沿任意热历程的微观组织演化预测。该工作为结构材料热处理工艺的设计与优化提供了可迁移的AI预测工具，拓展了数据驱动材料模拟的适用范围。",
+      "llm_tldr": "传统连续冷却转变图只能静态描述相变，且新兴材料往往缺乏此类图，图像表征、时序预测与组织预报通常又被割裂处理。本文提出一个概率深度学习框架，借助原位高温显微数据将上述任务统一起来，实现沿任意热历程的微观组织演化预测。该工作为结构材料热处理工艺的设计与优化提供了可迁移的AI预测工具，拓展了数据驱动材料模拟的适用范围。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.21151v1",
+      "source": "arxiv",
+      "title": "EnSol: an environment-aware graph neural network for molecular solubility prediction",
+      "abstract": "Molecular solubility directly affects key aspects of molecular development such as reaction feasibility, formulation performance, separation efficiency, and solvent selection. However, experimental measurement across solutes, solvents, and temperatures remains costly and sparsely sampled. Existing computational models often rely on fixed-solvent assumptions, deterministic formulations, or simplified representations of solute-solvent interactions, limiting their ability to capture complex molecular interactions, continuous temperature effects, and experimental uncertainty. Here, we introduce EnSol, an environment-aware probabilistic framework for molecular solubility prediction. EnSol represents the solute and solvent as molecular graphs and learns separate representations for each before bringing them together through cross-attention to capture solute-solvent interactions. Temperature is incorporated directly into the solvent environment through feature-wise modulation, and a mixture density network predicts full solubility distributions to capture both temperature-dependent behavior and experimental uncertainty. On the independent SolProp and Leeds benchmark datasets, EnSol achieved Spearman correlations of 0.876 and 0.601, respectively, outperforming state-of-the-art solubility prediction models across both benchmarks. Beyond computational benchmarking, experimental validation across chemically diverse solute-solvent pairs showed that EnSol maintained strong predictive performance and supported reliable solvent ranking, achieving a Spearman correlation of 0.715. These results show that EnSol can support reliable solubility prediction and solvent selection across diverse chemical systems while accounting for predictive uncertainty.",
+      "authors": [
+        "Thao Nguyen",
+        "Saman Shafaei",
+        "Zhengyi Zhang",
+        "Huimin Zhao",
+        "Heng Ji"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI"
+      ],
+      "published": "2026-09-17T23:35:33+00:00",
+      "link": "https://arxiv.org/pdf/2609.21151v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "graph neural network for molecular property prediction",
+      "llm_evidence_cn": "用于分子性质预测的图神经网络",
+      "llm_evidence": "用于分子性质预测的图神经网络",
+      "canonical_evidence": "用于分子性质预测的图神经网络",
+      "llm_tldr_en": "EnSol is an environment-aware probabilistic graph neural network for molecular solubility prediction that represents solute and solvent as molecular graphs, capturing solute-solvent interactions, continuous temperature effects and uncertainty.",
+      "llm_tldr_cn": "分子溶解度对反应可行性、配方与溶剂选择至关重要，但实验测量昂贵稀疏，现有计算模型多依赖固定溶剂假设与简化表示，难以刻画复杂溶质-溶剂相互作用与温度效应。作者提出EnSol，一个环境感知的概率框架，将溶质与溶剂表示为分子图，结合图神经网络建模相互作用并给出不确定性。模型面向多溶质、多溶剂与连续温度场景。该工作体现了图神经网络在分子性质预测中的建模思路。",
+      "llm_tldr": "分子溶解度对反应可行性、配方与溶剂选择至关重要，但实验测量昂贵稀疏，现有计算模型多依赖固定溶剂假设与简化表示，难以刻画复杂溶质-溶剂相互作用与温度效应。作者提出EnSol，一个环境感知的概率框架，将溶质与溶剂表示为分子图，结合图神经网络建模相互作用并给出不确定性。模型面向多溶质、多溶剂与连续温度场景。该工作体现了图神经网络在分子性质预测中的建模思路。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "geometric deep learning for molecules and materials",
+      "matched_requirement_id": "req-2",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.21984v1",
+      "source": "arxiv",
+      "title": "PAOFLOW: an automated suite for ab initio electronic, transport, and topological properties of materials",
+      "abstract": "High-throughput first-principles property calculations are often constrained by costly post-processing and dense Brillouin-zone sampling, impeding the creation of large, internally consistent materials-property datasets and limiting AI-driven discovery workflows. Pseudo-atomic-orbital (PAO) Hamiltonians provide an exact tight-binding representation of first-principles electronic structure that enables the calculation of a wide range of electronic, optical, topological, and transport properties at negligible cost, thereby supporting scalable generation of training-quality data and AI-ready data infrastructures. In this work, we present PAOFLOW 3.0 -- an open-source Python suite that automates the construction and analysis of PAO Hamiltonians from plane-wave density functional theory calculations performed with either Quantum ESPRESSO or VASP. The resulting Hamiltonians enable efficient electronic structure interpolation, Fermi surface analysis, optical and dielectric response, transport coefficients, Berry phase and topological quantities, quantum transport, and other materials properties. Compared with previous releases, PAOFLOW 3.0 substantially extends the scope of the package through the introduction of internal projections enabling support for VASP calculations, self-consistent Hubbard U and V corrections obtained using ACBN0 and eACBN0 methods, generation of environment-dependent Slater-Koster tight-binding models, Landauer--BÃŒttiker quantum transport, and calculation of quantum oscillations using the integrated PySKEAF module. The theoretical foundations and the software architecture are presented together with representative calculations illustrating the current capabilities of the package.",
+      "authors": [
+        "Anooja Jayaraj",
+        "Sergio Alvarruiz",
+        "Mia Falatko",
+        "Zhiren He",
+        "Jonathan Red",
+        "Caua F. Schuch",
+        "Karma Tenzin",
+        "Chao Chen Ye",
+        "Davide Ceresoli",
+        "Marcio Costa",
+        "Stefano Curtarolo",
+        "Jagoda Slawinska",
+        "Marco Buongiorno Nardelli"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-18T16:44:49+00:00",
+      "link": "https://arxiv.org/pdf/2609.21984v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "automated ab initio property suite supporting AI-ready materials data",
+      "llm_evidence_cn": "支持AI就绪材料数据的自动化第一性原理性质套件",
+      "llm_evidence": "支持AI就绪材料数据的自动化第一性原理性质套件",
+      "canonical_evidence": "支持AI就绪材料数据的自动化第一性原理性质套件",
+      "llm_tldr_en": "PAOFLOW 3.0 is an open-source Python suite that automates ab initio electronic, transport, and topological property calculations using PAO Hamiltonians, enabling scalable generation of AI-ready materials datasets.",
+      "llm_tldr_cn": "高通量第一性原理计算常受制于昂贵的后处理与密集布里渊区采样，限制了大规模一致材料数据集的构建与AI驱动发现。本文提出PAOFLOW 3.0，基于赝原子轨道哈密顿量自动构建并分析电子、光学、拓扑与输运性质。该套件以极低成本生成高质量训练数据，支撑AI就绪的数据基础设施，加速材料发现流程。",
+      "llm_tldr": "高通量第一性原理计算常受制于昂贵的后处理与密集布里渊区采样，限制了大规模一致材料数据集的构建与AI驱动发现。本文提出PAOFLOW 3.0，基于赝原子轨道哈密顿量自动构建并分析电子、光学、拓扑与输运性质。该套件以极低成本生成高质量训练数据，支撑AI就绪的数据基础设施，加速材料发现流程。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

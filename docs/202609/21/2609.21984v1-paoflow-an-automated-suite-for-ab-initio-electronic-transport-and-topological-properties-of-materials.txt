@@ -1,0 +1,1523 @@
+Title: PAOFLOW: an automated suite for ab initio electronic, transport, and topological properties of materials
+
+URL Source: https://arxiv.org/pdf/2609.21984v1
+
+Published Time: Mon, 21 Sep 2026 01:19:21 GMT
+
+Number of Pages: 26
+
+Markdown Content:
+# PAOFLOW: an automated suite for ab initio electronic, transport, and topological properties of materials 
+
+Anooja Jayaraj, 1 Sergio Alvarruiz, 2 Mia Falatko, 2 Zhiren He, 2, 3 Jonathan Red, 3
+
+Caua F. Schuch, 4 Karma Tenzin, 2, 5 Chao Chen Ye, 2 Davide Ceresoli, 6 Marcio Costa, 3, 7 Stefano Curtarolo, 8 Jagoda Sławińska, 2 and Marco Buongiorno Nardelli 3, 9, ∗
+
+> 1
+
+Empa, Swiss Federal Laboratories for Materials Science and Technology, nanotech@surfaces Laboratory, Überlandstrasse 129, CH-8600 Dübendorf, Switzerland 
+
+> 2
+
+Zernike Institute for Advanced Materials, University of Groningen, Nijenborgh 3, 9747 AG Groningen, The Netherlands 
+
+> 3
+
+Department of Physics, University of North Texas, Denton, TX 76203, USA 
+
+> 4
+
+Escola de Engenharia de Lorena - DEMAR, Universidade de São Paulo, 12612-550, Lorena, Brazil 
+
+> 5
+
+Department of Physical Science, Sherubtse College, Royal University of Bhutan, Kanglung, Trashigang, Bhutan 
+
+> 6
+
+Consiglio Nazionale delle Ricerche (CNR) — Istituto di Scienze e Tecnologie Chimiche “Giulio Natta” (SCITEC), via Golgi 19, 20133 Milano, Italy 
+
+> 7
+
+Instituto de Física, Universidade Federal Fluminense, Niterói, Rio de Janeiro, Brazil 
+
+> 8
+
+Department of Mechanical Engineering and Materials Science, Duke University, Durham, NC 27708, USA 
+
+> 9
+
+Santa Fe Institute, Santa Fe, NM 87501, USA 
+
+(Dated: September 21, 2026) High-throughput first-principles property calculations are often constrained by costly post-processing and dense Brillouin-zone sampling, impeding the creation of large, internally consis-tent materials-property datasets and limiting AI-driven discovery workflows. Pseudo-atomic-orbital (PAO) Hamiltonians provide an exact tight-binding representation of first-principles electronic struc-ture that enables the calculation of a wide range of electronic, optical, topological, and transport properties at negligible cost, thereby supporting scalable generation of training-quality data and AI-ready data infrastructures. In this work, we present PAOFLOW 3.0 – an open-source Python suite that automates the construction and analysis of PAO Hamiltonians from plane-wave density functional theory calculations performed with either Quantum ESPRESSO or VASP. The result-ing Hamiltonians enable efficient electronic structure interpolation, Fermi surface analysis, optical and dielectric response, transport coefficients, Berry phase and topological quantities, quantum transport, and other materials properties. Compared with previous releases, PAOFLOW 3.0 sub-stantially extends the scope of the package through the introduction of internal projections en-abling support for VASP calculations, self-consistent Hubbard U and V corrections obtained using ACBN0 and eACBN0 methods, generation of environment-dependent Slater-Koster tight-binding models, Landauer–Büttiker quantum transport, and calculation of quantum oscillations using the integrated PySKEAF module. The theoretical foundations and the software architecture are pre-sented together with representative calculations illustrating the current capabilities of the package. 
+
+CONTENTS 
+
+I. Introduction 2II. The PAOFLOW fundamentals 3A. Projection onto the PAO basis 3B. Hamiltonian construction 3C. DFT interfaces and basis presets 4D. Hamiltonian derivatives 5E. Spin-orbit formalism 6F. Optical and dielectric response 6G. Nonlocal pseudopotential velocity correction 7III. ACBN0: A Pseudohybrid Hubbard density functional 7A. Extended ACBN0: self-consistent on-site U
+
+and intersite V 8IV. Environment-dependent tight-binding from PAO Hamiltonians 9A. Slater-Koster representation 9B. Environment dependence 9C. Parameter determination 10 D. Application to twisted bilayer graphene 10 V. Transport Properties 11 A. Semiclassical Boltzmann transport 11 1. Relaxation time models 11 2. Electrical and thermoelectric transport 11 3. Ordinary Hall effect 12 4. Nernst effect 13 5. Rashba-Edelstein effect 13 B. Kubo formalism 13 C. Projected response functions 14 D. Landauer-Büttiker quantum transport 15 VI. Lattice dynamics and the phonopy workflow 16 A. Finite-displacement force constants 16 B. Polar corrections and derived spectra 17 arXiv:2609.21984v1 [cond-mat.mtrl-sci] 18 Sep 2026 2VII. Electron-phonon coupling from pseudo-atomic-orbital interpolation 17 VIII. Electronic structure and topology 17 A. Fermi surfaces and quantum oscillations 17 B. Z2 topological invariants 18 C. Chern numbers and Chern insulators 19 D. Mirror Chern numbers 19 E. Weyl points 19 F. Band unfolding 19 IX. Computational details 21 X. Software architecture 22 XI. Conclusions 22 Acknowledgments 22 References 23  
+
+> I. INTRODUCTION
+
+The accurate first-principles prediction of materials properties has become an indispensable tool of modern condensed matter physics and materials science. While conventional plane-wave density functional theory (DFT) calculations provide access to the electronic structure of materials [1, 2], the evaluation of many experimen-tally relevant observables often requires computationally demanding post-processing and extensive Brillouin zone (BZ) sampling [3]. This limits the creation of large, internally consis-tent materials property datasets and constrains high-throughput workflows designed to leverage modern arti-ficial intelligence (AI) for accelerated materials discovery and rational design [4, 5]. By contrast, pseudo-atomic-orbital (PAO) Hamiltonians, constructed by projecting first-principles wavefunctions onto a reduced basis of lo-calized atomic orbitals, provide an efficient route for eval-uating a broad range of materials properties at a negligi-ble computational cost while preserving the accuracy of the first-principles electronic structure [6–8]. 
+
+PAOFLOW implements this methodology through an automated construction of PAO Hamiltonians directly from first-principles calculations [9, 10]. Since its initial release in 2016, the code has evolved considerably from a post-processing tool for plane-wave DFT calculations into a comprehensive Python library for electronic struc-ture analysis and materials properties calculations. The current version of PAOFLOW (3.0) substantially broad-ens the scientific scope of the package by enabling the study of emerging physical phenomena and expanding the range of experimentally relevant materials properties accessible from first-principles electronic structure. The capabilities of PAOFLOW span several areas of first-principles materials modeling, including: • Band interpolation along arbitrary k-paths or throughout the full BZ, density of states (total and projected), Fermi surfaces (section II); • Optical and dielectric response : complex dielectric tensor, optical conductivity, joint density of states, electron energy-loss spectra (EELS), and complex refractive index (section II); • Self-consistent Hubbard corrections : the ACBN0 and eACBN0 pseudohybrid density functionals for calculations of U and V parameters in the DFT +U
+
+and DFT +U + V methods (section III); • Environment-dependent tight-binding models :Slater-Koster parameterization with structural transferability (section IV); • Semiclassical transport : electrical and thermal conductivity, Hall and Nernst effects, Rashba-Edelstein effect, as well as user-extensible relax-ation time models (section V); • Kubo-formula response : anomalous Hall, spin Hall, orbital Hall conductivities based on Berry curva-ture integration, and their decomposition as layer-projected properties (section V); • Landauer-Büttiker quantum transport : transmis-sion functions, conductance, and current-voltage characteristics for nanoscale conductor/lead ge-ometries (section V); • Lattice dynamics and thermal properties : phonon dispersions, IR and Raman spectra and thermal properties via an interface with the phonopy pack-age (section VI); • Electron-phonon coupling from pseudo-atomic-orbitals interpolation : electron-phonon coupling, Eliashberg function, superconducting transition temperature (section VII); • Quantum oscillation analysis : de Haas-van Alphen (Shubnikov - de Haas) frequencies and effective masses via the embedded pyskeaf Fermi surface extreme orbit finder (section VIII); • Electronic structure and topological characteriza-tion : Chern numbers, Z2 indices, Weyl points search and chirality, and band unfolding (sec-tion VIII). In parallel, several software packages have been de-veloped for the calculation of materials properties based on the first-principles electronic structure. Wannier90 is widely used for generation of maximally-localized Wan-nier functions (MLWFs) [11, 12]. WannierTools and WannierBerri extend its capabilities to topological prop-erties, surface states, and Berry-curvature-related quan-tities [13–15]. BoltzTraP2 provides semiclassical trans-port calculations [16], while Z2Pack allows the computa-tion of topological invariants [17]. The SKEAF code [18] 3is a widely used tool for extracting de Haas-van Alphen oscillation frequencies from calculated Fermi surfaces. 
+
+PAOFLOW brings together most of these capabilities within a single open-source package for first principles materials modeling and adopts a Hamiltonian construc-tion methodology based on deterministic projection onto pseudo-atomic orbitals. The construction of PAO Hamil-tonians requires no additional information beyond the wavefunctions obtained from the first principles calcu-lation, making the methodology particularly well-suited for automated and high-throughput materials calcula-tions. In addition, PAOFLOW supports both Quantum ESPRESSO [19, 20] and VASP [21, 22], two widely used plane-wave DFT codes. This allows the same PAO-based methodology to be applied across different first-principles workflows while preserving a consistent approach to the subsequent calculation of materials properties. 
+
+PAOFLOW is freely available at https://github. com/marcobn/PAOFLOW under the GNU General Public License v3 and can be installed from the PyPi repository (pip install PAOFLOW ). Documentation, examples and tutorials can be found at https://paoflow.org .In this paper, we give a comprehensive description of the theoretical foundations and software architec-ture (section II), the ACBN0 and eACBN0 pseudohy-brid functionals (section III), the environment-dependent tight-binding module (section IV), transport properties (section V), phonon calculations (section VI), electron-phonon coupling (section VII) and the electronic struc-ture and topological properties (section VIII). Computa-tional details are listed in section IX and technical aspects of software architecture are detailed in section X. The conclusions are presented in section XI.  
+
+> II. THE PAOFLOW FUNDAMENTALS
+
+The PAOFLOW methodology is based on the con-struction of an accurate tight-binding Hamiltonian di-rectly from first principles electronic structure calcula-tions. Rather than fitting empirical parameters, the Kohn-Sham Bloch states obtained from a plane-wave DFT calculation are projected onto a localized basis, yielding a compact Hamiltonian that faithfully repro-duces the selected electronic bands [6–8].  
+
+> A. Projection onto the PAO basis
+
+The construction of the PAO Hamiltonian starts from the self-consistent Kohn-Sham Bloch eigenstates |ψn⟩ ob-tained using a plane-wave DFT code. These states are projected onto a localized basis of M orthonormal or-bitals |ϕα⟩, which can be pseudoatomic orbitals or other localized basis spanning the subspace A. The corre-sponding projection operator is: 
+
+ˆP = ∑
+
+> α
+
+|ϕα⟩⟨ ϕα|, (1) and the projected Bloch states: 
+
+|Bn⟩ = ˆP |ψn⟩ (2) are represented by the coefficients Bαn = ⟨ϕα|ψn⟩.The quality of the PAO representation is quantified by the projectability of the band: 
+
+pn = ⟨ψn| ˆP |ψn⟩ = ∑
+
+> α
+
+|Bαn |2, (3) which measures how accurately a given Bloch state is represented within the chosen basis. A value of pn = 1 
+
+corresponds to an exact representation, whereas low pro-jectability indicates that the basis is insufficient to de-scribe the corresponding state. In practice, only states with sufficiently high projectability (typically pn ≳ 0.9)are retained for the Hamiltonian construction, while poorly represented states are discarded [6].  
+
+> B. Hamiltonian construction
+
+After selecting the N well-represented Bloch states, the normalized projection vectors: 
+
+|An⟩ = |Bn⟩√pn
+
+(4) are assembled into the projection matrix A, from which the PAO Hamiltonian is constructed as [6]: 
+
+¯H = AEA †, (5) where E = diag( ε1, . . . , ε N ) contains the corresponding Kohn-Sham eigenvalues. Because only a subset of the PAO basis is used, the projected Hamiltonian formally contains an artificial null space of dimension M − N . This subspace does not cor-respond to physical electronic states and is removed by introducing a shift projector: 
+
+¯H → ¯H + κQ N , QN = IM − A(A†A)−1A†, (6) which moves the null-space eigenvalues to an energy κ
+
+above the energy window of interest without affecting the physical eigenstates. In practice, QN may be approx-imated as IM − AA † when only very high-projectability states are considered. The resulting PAO Hamiltonian is initially obtained on the DFT k-mesh used in the original first principles calculation. It is then transformed to its real-space rep-resentation: 
+
+Hαβ (R) = 1
+
+Nk
+
+∑
+
+> k
+
+e−ik·RHαβ (k), (7) 4      
+
+> First-principles calculations
+> QE or VASP
+> Tight-binding models
+> Slater-Koster, EDTB, or user-defined →PythTB
+> Force constants
+> →phonopy
+> Project wavefunctions onto PAO basis set Construct PAO Hamiltonian
+> H(k)and H(R)
+> Compute Hubbard U+V parameters
+> PAOFLOW.ACBN0
+> Self-consistent ACBN0 cycle Hamiltonian derivatives (Required for some properties)
+> ∇kH(k)and ∇2
+> kH(k)
+> Electronic structure
+> Band structure and Fermi surface Quantum oscilla-tions →pyskeaf
+> Transport properties
+> Semiclassical Boltzmann Kubo formalism Quantum transport
+> PAOFLOW.Transport
+> Optical properties
+> Dielectric permittivity Optical conductivity ...
+> Topology
+> Topological invariants
+> →Z2Pack
+> Phonon
+> IR, Raman Quasi-harmonic approx.
+> Electron-phonon coupling
+> Eliashberg function ...
+> Plot and visualization
+> PAOFLOW.GPAO
+> Further processing
+> Band unfolding Site-, orbital-projection
+
+1 Inputs 2 Model construction 3 Property calculations 4 Outputs 
+
+FIG. 1. Overview of the PAOFLOW workflow. Starting from first-principles calculations or tight-binding models, the PAO Hamiltonian is constructed and used to compute electronic, transport, optical, topological, and vibrational properties. 
+
+where Nk is the number of k-points in the Brillouin zone. The Hamiltonian at an arbitrary wave vector is then re-constructed by: 
+
+Hαβ (k) = ∑
+
+> R
+
+eik·RHαβ (R), (8) allowing electronic bands and wave functions to be eval-uated on arbitrarily dense k-meshes. These interpolated quantities form the basis of all subsequent electronic, op-tical, transport, and topological properties calculations. 
+
+C. DFT interfaces and basis presets 
+
+PAOFLOW currently interfaces with two plane-wave DFT codes: Quantum ESPRESSO (QE) [19, 20] and VASP [21, 22]. For QE, the projection amplitudes 
+
+Bαn k = ⟨ϕα|ψnk⟩ can be obtained in three ways. 1. 
+
+When projection is already performed by QE, it can be read directly from the output of projwfc.x . 2. 
+
+The wavefunctions produced by pw.x are projected onto pseudo-atomic wavefunctions stored in the pseudopo-tential (PP), giving identical projection amplitudes as Method 1. 3. The wavefunctions are projected onto the all-electron PAO basis distributed with PAOFLOW (lo-cated in the PAOFLOW/BASIS/ folder), or generated on the fly with PAOFLOW.basis_gen from PP files, mak-ing the basis fully specific to the PP used in the sim-ulation. The latter is essential for fully relativistic, j-resolved pseudopotentials. For Method 2 and 3, PAOFLOW introduces a hi-erarchical basis preset system to facilitate the selection process, i.e. projections(configuration=…) where 
+
+configuration can take values of • `minimal' : use Method 2.• `standard' : use Method 3, all-electron PAO ba-5             
+
+> Method Function configuration Basis DFT code
+> 1PAOFLOW. read_atomic_proj_QE() None PP QE 2
+> PAOFLOW.projections() `minimal' PP
+> 3
+> `standard'
+> or `extended' or
+> {user-defined Python dict} PAOFLOW.basis_gen
+> from PP (recommended) or PAOFLOW/BASIS/
+> {user-defined Python dict} PAOFLOW/BASIS/ VASP TABLE I. Summary of the different basis configuration schemes available in PAOFLOW .
+
+sis with ‘minimal’ valence configuration augmented with the next missing angular-momentum channel (e.g. ‘3D’ for Si) and an additional radial function for each occupied shell (e.g. ‘4S’, ‘4P’ for Si). • `extended' : use Method 3, further augmenting the ‘standard’ set with a generous set of rule-based polarization shells. Benchmarks on repre-sentative elements show that the extended preset can triple the number of states with projectability 
+
+pn > 0.95 (Eq. (3)) for conduction bands without degrading the valence description. A suitable basis set should contain enough orbitals to accurately reproduce the states in the desired energy range, while avoiding unnecessary basis functions. Although Methods 1 and 2 reproduce the valence states with high fidelity, the basis set provided in the pseudopotential contains only a limited number of orbitals and therefore often provides an inadequate description of higher-energy conduction states. These states are important for calculating properties such as the dielectric permittivity. In such cases, Method 3 is preferable, as the enlarged basis allows a greater number of conduction states to be accurately reproduced. Addi-tionally, fully user-defined configurations are supported, e.g. configuration={`Si':[`3S',`3P',`3D',`4S'], `O':[`2S',`2P',`3S',`3P']} , as well as amixed scheme allowing a curated preset on some species while hand-picking orbitals on others, e.g., 
+
+configuration={`Ga': `standard', `As': [`4S', `4P', `3D']} .In Fig. 2 we compare the band structures of silicon and platinum obtained with the minimal, standard, and ex-tended PAO presets. As the basis is enlarged, the PAO-projected Hamiltonian not only preserves the low-energy manifold but extends the energy window over which the DFT bands are faithfully reproduced, capturing higher-lying conduction states (Si) and more strongly hybridized states (Pt) with high accuracy. For VASP, the projection should be carried out only with Method 3 with user-defined basis configuration. The wavefunction from WAVECAR are projected onto the all-electron PAO basis distributed with PAOFLOW .The different basis configuration schemes are summarized in Table I.  
+
+> D. Hamiltonian derivatives
+
+Many of the response properties evaluated by 
+
+PAOFLOW – group velocities, the dielectric function, Berry curvatures, anomalous Hall and spin Hall conduc-tivities, Boltzmann transport coefficients – require the momentum derivative ∂H (k)/∂k l of the PAO Hamilto-nian. Because ¯H(R) is known analytically on a uniform real-space grid – it is the inverse Fourier transform of the Bloch Hamiltonian on the DFT k-mesh, Eq. (8) – differentiation reduces to a multiplication by the posi-tion operator in real space: 
+
+∂H αβ (k)
+
+∂k l
+
+= i ∑
+
+> R
+
+Rl eik·R Hαβ (R), (9) where Rl is the l-th Cartesian component of the lattice vector R. In practice the sum in Eq. (9) is carried out via a pair of fast Fourier transforms on the same mesh used to build H(k): an inverse fast Fourier transform (FFT) brings the Hamiltonian to real space, the result is multiplied pointwise by Rl, and a forward FFT returns the gradient on the dense interpolation mesh. The pro-cedure inherits the O(Nk log Nk) scaling of the FFT and is performed in place over the distributed orbital index. The PAO basis is orthonormal by construction, so no overlap-matrix contribution enters the gradient. How-ever, Eq. (9) is written in the so-called periodic (or lat-tice) gauge, in which the Bloch sum carries phase factors 
+
+eik·R tied solely to the Bravais lattice vectors R and the intracell positions τα of the basis orbitals do not appear. Most physical observables, on the other hand, require derivatives evaluated in the atomic (or tight-binding) gauge, where the Bloch phases include the orbital cen-ters, eik·(R+τβ −τα) (see, e.g., the discussion of the two conventions in Refs. [14, 23]). The change of gauge in-troduces an additive correction which, for the first and second derivatives, is given by: 
+
+∂H αβ (k)
+
+∂k l
+
+−→ ∂H αβ (k)
+
+∂k l
+
++ i H αβ (k) Dαβ l , (10) 
+
+∂2Hαβ (k)
+
+∂k l∂k m
+
+−→ ∂2Hαβ (k)
+
+∂k l∂k m
+
++ Hαβ (k) Dαβ l Dαβ m
+
++ i D αβ l
+
+∂H αβ (k)
+
+∂k m
+
++ i D αβ m
+
+∂H αβ (k)
+
+∂k l
+
+(11) 6
+
+> FIG. 2. Band structures obtained with the minimal (blue)/standard (green)/extended (yellow) PAO basis: (left) Si, (right) Pt. The horizontal lines correspond to the null-space eigenvalues, pushed out of the region of high-projectability (see Sec. II B).
+
+where Dαβ l = τβ,l − τα,l is the Cartesian component of the intracell-position difference between the two orbital centers. This term vanishes only for a single-atom basis, where all orbitals share the same center; for any multi-atom unit cell it must be retained, and is precomputed once from the orbital positions. Equations (9) to (11) provide an analytic, finite-difference-free gradient that is consistent with the Hellmann-Feynman theorem and is used throughout the modules described in the following sections.  
+
+> E. Spin-orbit formalism
+
+Spin-orbit coupling (SOC) is a fundamental ingre-dient in condensed-matter physics, and several prop-erties can only be properly described using fully rela-tivistic calculations. However, DFT calculations includ-ing SOC can be computationally extremely demanding. 
+
+PAOFLOW provides the possibility of introducing SOC into a PAO Hamiltonian, offering a computationally effi-cient approach. We start from the scalar-relativistic PAO Hamiltonian, 
+
+H0 = ∑
+
+> ij
+
+∑
+
+> μν
+
+∑
+
+> σ
+
+tμν ij c† 
+
+> iμσ
+
+cjνσ , (12) where c† 
+
+> iμσ
+
+(ciμσ ) denotes the creation (annihilation) op-erator for an electron with spin projection σ at atomic site i and orbital μ. Here, the labels i (j), μ (ν), and 
+
+σ denote atomic sites, orbitals, and spin projections, re-spectively. The quantity tμν ij denotes the corresponding hopping matrix element of the PAO Hamiltonian. The atomic SOC is introduced through the term 
+
+HSOC = ∑
+
+> i
+
+∑
+
+> μν
+
+∑
+
+> σσ ′
+
+ξμν i ⟨iμσ | L · S |iνσ ′⟩ c† 
+
+> iμσ
+
+ciνσ ′ , (13) where L and S are the orbital and spin angular momen-tum operators, respectively. The SOC strength ξμν i can be obtained from a fit to relativistic DFT calculations. This methodology has been successfully applied systems ranging from topological to magnetic materials [24–28].  
+
+> F. Optical and dielectric response
+
+The frequency-dependent dielectric tensor is evaluated in the independent-particle approximation via the Kubo-Greenwood formula [29, 30]. The complex dielectric func-tion ˜ε(ω) = ε1(ω) + iε 2(ω) is calculated via: 
+
+˜εαβ (ω) = δαβ + 4πe 2
+
+ΩNk
+
+∑
+
+> n, k
+
+df (Ek,n )
+
+dE k,n 
+
+ˆMα,β 
+
+ω2 + iηω + 8πe 2
+
+ΩNk
+
+×
+
+∑ 
+
+> m̸=n, k
+
+ˆMα,β 
+
+Ek,m − Ek,n 
+
+f (Ek,n )(ωk,m − ωk,n )2 − ω2 − iΓω .
+
+(14) where Ω is volume of the unit cell, Nk the number of k-points and ˆMα,β = ⟨nk|ˆvα|mk⟩⟨ mk|ˆvβ |nk⟩ for ˆvα being the velocity operator (Eq. (10)). Γ and η, as user inputs, control the broadening of the inter-band and intra-band transition respectively. For the Fermi-Dirac distribution 
+
+f (E) and its derivative, adaptive smearing with the local band velocity [3] is available alongside fixed Gaussian and Methfessel-Paxton smearing. From the dielectric tensor, a few useful quantities can be derived, among which: 7the plasmon frequency estimated from the f -sum rule: 
+
+ω2 
+
+> p
+
+= 2
+
+π
+
+∫ ∞
+
+> 0
+
+ω ε 2(ω) dω, (15) the optical conductivity: 
+
+˜σ(ω) = −i ε 0 ω (˜ε(ω) − 1), (16) the electron energy-loss spectrum (EELS): 
+
+L(ω) = −Im 
+
+( 1˜ε(ω)
+
+)
+
+, (17) and the complex refractive index ˜n = n + iκ which satis-fies ˜n2 = ˜ ε, with 
+
+n = √(|˜ε| + ε1)/2, κ = √(|˜ε| − ε1)/2. (18)  
+
+> G. Nonlocal pseudopotential velocity correction
+
+When utilizing norm-conserving pseudopotentials, cal-culating the electronic velocity via a simple analytical derivative of the Hamiltonian is insufficient. In fact, the PAO-based velocity operator ˆpPAO  
+
+> α
+
+= meℏ−1∂H PAO /∂k α
+
+inherently assumes a local potential energy landscape. However, physical norm-conserving pseudopotentials fre-quently introduce a spatially non-local, separable com-ponent to accurately model core-valence electron inter-actions. This non-local potential is typically expressed in the Kleinman-Bylander form ˆVNL = ∑ 
+
+> ij
+
+|βi⟩Dij ⟨βj |,and the gauge-invariant momentum operator acquires an additional commutator contribution [31–33]: 
+
+ˆpfull = ˆ p + me
+
+iℏ
+
+[ ˆVNL , ˆr]. (19) For a separable Kleinman-Bylander pseudopoten-tial [34], the correction in the PAO-projected basis is 
+
+∆pμν,α (k) = me
+
+iℏ
+
+∑
+
+> ij
+
+Dij 
+
+[
+
+⟨βi|φμk⟩ ⟨ rαβj |φνk⟩∗−⟨rαβi|φμk⟩ ⟨ βj |φνk⟩∗]
+
+,
+
+(20) where ⟨βi|φμk⟩ are the projector overlaps stored in the DFT output and the position-weighted overlaps 
+
+⟨rαβj |φνk⟩ are constructed from the radial integrals of the projector functions. The nonlocal velocity correction alters off-diagonal ma-trix elements, making it crucial for BZ sums in optical absorption. However, it vanishes for diagonal elements and leaves properties derived from the Kubo formalism practically unchanged because the dominant contribu-tions are weighted by energy denominators, and the cor-rection mainly redistributes oscillator strength at higher energies.  
+
+> III. ACBN0: A PSEUDOHYBRID HUBBARD DENSITY FUNCTIONAL
+
+Standard LDA and GGA exchange-correlation func-tionals notoriously underestimate the band gaps of insu-lators and semiconductors and fail to capture the elec-tronic structure of strongly correlated systems such as transition-metal oxides (TMOs). The DFT +U correc-tion of Liechtenstein and Anisimov [37, 38] partially remedies this by augmenting the DFT energy with an explicit on-site Hubbard-like term: 
+
+EDFT+ U = EDFT + EU , (21) where EU depends on the effective on-site Coulomb ( ¯U )and exchange ( ¯J) parameters. In practice these param-eters are treated as empirical inputs, which limits the predictive power and transferability of the method. The pseudohybrid Hubbard density functional ACBN0 introduced by L. Agapito, S. Curtarolo and M. Buon-giorno Nardelli [39] eliminates this empiricism by com-puting ¯U and ¯J self-consistently from first principles. The key idea is to evaluate the on-site Hartree–Fock Coulomb and exchange energies directly from the elec-tron repulsion integrals (ERIs) of the localized atomic-orbital set {m} centered on the Hubbard atom of inter-est: 
+
+E{m} 
+
+> HF
+
+= 12
+
+∑
+
+> {m},σ
+
+¯P σmm ′ ¯P σm′′ m′′′ 
+
+×[2( mm ′|m′′ m′′′ ) − (mm ′′′ |m′′ m′)],
+
+(22) where the ERIs 
+
+(mm ′|m′′ m′′′ ) = 
+
+∫
+
+dr1 dr2 ϕm(r1)ϕm′ (r1) V ϕ m′′ (r2)ϕm′′′ (r2) (23) are evaluated using pseudo-atomic orbitals (PAOs) ex-pressed in a minimal PAO-3G Gaussian basis. The cru-cial ingredient is the renormalized density matrix ¯P σμν , in which the occupation of each Kohn–Sham state ψσi is re-placed by its Mulliken charge projected onto the set { ¯m}
+
+of all orbitals in the unit cell sharing the same angular-momentum quantum numbers as {m}:
+
+¯N σψi = ∑ 
+
+> μ∈{ ¯m},ν
+
+cσμi Sμν cσνi . (24) Replacing the full occupancy N σψi = 1 with ¯N σψi ≤ 1 effec-tively renormalizes the density matrix and introduces an implicit, mean-field screening of the bare Coulomb inter-action without requiring an explicit model for V ee . Com-paring E{m} 
+
+> HF
+
+with the Dudarev form of EU then yields 
+
+¯U and ¯J as explicit density functionals, satisfying the Hohenberg–Kohn requirement. In the context of plane-wave DFT, the PAO-projected Kohn–Sham wave functions needed to construct the renormalized density matrices are obtained via the same 8                       
+
+> FIG. 3. Band structures for silicon (left) and MoS 2(right) comparing the uncorrected DFT calculations with the DFT+U and DFT+U+V from eACBN0. Values for silicon are U(p) = 2 .7, V (s−s) = 1 .39 , V (s−p) = 0 .73 ,and V(p−p) = 1 .96 and
+> Eg= 1 .46 in agreement with [35], and for MoS 2U(S −3p) = 1 .77 , U (Mo −4d) = 3 .09 , V (d−p) = 1 .19 , and Eg= 2 .22 in good agreement with hybrid functionals and experiments [36]. All values are given in eV.
+
+PAO projection scheme that underpins PAOFLOW [6, 9]. The ERIs are computed using a Gaussian-type repre-sentation of the PAO radial functions, making the evalua-tion efficient with standard quantum-chemistry routines. At each cycle of the self-consistent ACBN0 procedure the Kohn–Sham eigenvalues from the current DFT +U
+
+calculation are used to recompute ¯U and ¯J, which then seed the next DFT +U step, until |U (n) − U (n−1) | is smaller than a user-defined threshold. ¯U and ¯J can be computed on an arbitrary number of orbitals on any number of sites simultaneously, making the method ex-tremely versatile. The result is a parameter-free correc-tion that reduces to standard LDA/GGA when localiza-tion is absent, gives accurate band gaps for TMOs at a cost only marginally above plain DFT +U , and satis-fies all five criteria outlined by Pickett for a well-defined Hubbard functional [40].     
+
+> A. Extended ACBN0: self-consistent on-site Uand intersite V
+
+For systems with sizeable hybridization between neigh-bouring Hubbard sites — e.g. transition-metal oxides with significant d–p covalency, or layered chalcogenides where on-site corrections alone are known to bias struc-tural and electronic properties [41] — the on-site U is not sufficient and an intersite Hubbard term V must be added to the energy functional. The DFT +U + V form of Campo and Cococcioni [41], 
+
+EDFT+ U +V = EDFT + EU + EV , (25) augments EU with a pairwise contribution 
+
+EV = − 12
+
+∑ 
+
+> I̸=J,σ
+
+V IJ ∑
+
+> ij
+
+nIJσ ij nJIσ ji , (26) where nIJσ ij is the generalized occupation matrix coupling orbital i on site I to orbital j on site J. Just as for the on-site U , in conventional DFT +U + V the parameters 
+
+V IJ are either fitted empirically or computed via a linear-response procedure, which scales unfavourably with the number of inequivalent pairs. To overcome this limitation we have extended the ACBN0 construction to the intersite case following Lee and Son [35]. The extended-ACBN0 (eACBN0) parame-ter for the pair (I, J ) separated by a Bravais lattice vector 
+
+R reads: 
+
+V IJ (R) = N IJ (R)
+
+DIJ (R) , (27) with numerator: 
+
+N IJ (R) = 12
+
+∑
+
+> ikjl
+
+[
+
+P II ik P JJ jl −
+
+∑
+
+> σ
+
+P IJσ il (R) P JIσ jk (−R)
+
+]
+
+× (ik | jl )R,
+
+(28) and denominator obtained analogously from the bare oc-cupations nII , nJJ , nIJ (R). Here P II ik = ∑ 
+
+> σ
+
+P IIσ ik is the spin-summed on-site renormalized density matrix en-tering the direct (Hartree-like) contribution, while the exchange-like term is intrinsically same-spin. The four-centre integrals (ik | jl )R couple PAO Gaussians centred on site I in the home cell to those centred on site J in 9the image cell labelled by R, and are evaluated with the same minimal PAO-3G basis already used for the on-site Hartree–Fock integrals. The minimum-image convention is applied to keep the support of the basis functions over-lapping the home cell, ensuring rapid decay of V IJ (R)
+
+with |R|.In practice, the user registers the relevant pairs ei-ther by giving an explicit list of (I, J, n a, n b, n c) tuples or by specifying a real-space cutoff together with the species pairs of interest. PAOFLOW then drives a joint U + V self-consistent loop in which, at each iter-ation, the current values of U and V are used to per-form the underlying DFT +U + V calculation and to project the resulting Kohn–Sham states onto the PAO basis. The PAO Hamiltonian is reconstructed and the on-site parameters ¯U and ¯J are recomputed as in or-dinary ACBN0 while the intersite V IJ (R) are evalu-ated for every registered pair through Eq. (27) using the same Coulomb-integral kernel employed for the on-site term. Linear mixing is applied to both U and V ,and convergence is monitored on the largest element of 
+
+{| ∆U |, |∆V |} . Because the renormalized density matri-ces P IJσ (R) that enter Eq. (27) are built directly from the PAOFLOW real-space Hamiltonian H(R), they in-herit all of its gauge-related improvements: in particu-lar, the per-k projectability filter guarantees that low-projectability bands cannot pollute the on-site or in-tersite occupations. The self-consistent eACBN0 thus retains the parameter-free, density-functional character of ACBN0 while extending its applicability to systems where intersite hybridization is non-negligible. In Fig 3 we show a comparison of band structures cal-culated without correction, with U only and U+V for Si and MoS 2.  
+
+> IV. ENVIRONMENT-DEPENDENT TIGHT-BINDING FROM PAO HAMILTONIANS A. Slater-Koster representation
+
+The PAO Hamiltonian constructed by PAOFLOW 
+
+and a Slater-Koster (SK) tight-binding (TB) model oc-cupy the same Hilbert space: both are expressed in a localized basis labeled by identical angular-momentum quantum numbers, and both span a subspace of the same dimension. A PAO Hamiltonian may therefore serve as an exact ab initio reference for the construction of transferable TB models, without the gauge ambiguity that attends parameterizations based on maximally lo-calized Wannier functions. This correspondence under-lies the environment-dependent tight-binding (EDTB) scheme of Ref. [42], in which the formalism, its validation against first-principles band structures, and the origin of its transferability are developed in detail. Here we sum-marize the elements of that scheme as implemented in 
+
+PAOFLOW and illustrate their application to a large moiré superlattice. In the SK framework [43], the hopping matrix element between orbital α on atom i and orbital β on atom j,connected by the bond vector dij , decomposes as 
+
+HSK  
+
+> αβ
+
+(dij ) = ∑
+
+> μ
+
+cαβμ (ˆdij ) V (s) 
+
+> lαlβμ
+
+, (29) where cαβμ are direction-cosine factors determined by 
+
+ˆdij = dij /|dij |, μ ∈ { σ, π, δ } labels the bond symmetry, and the superscript (s) identifies the neighbor shell. Col-lecting the independent bond integrals of Eq. (29) into a single vector {Vλ} and defining the design tensor 
+
+M (s) 
+
+> bλαβ
+
+= cαβμ (λ)
+
+(ˆdb
+
+)
+
+, (30) with b a bond index, the Bloch Hamiltonian becomes 
+
+Hαβ (k) = ∑ 
+
+> λ
+
+Vλ
+
+∑ 
+
+> b
+
+M (s) 
+
+> bλαβ
+
+eik·db . Two consequences follow. First, the geometric factors are independent of the parameters and need be evaluated only once for a given structure, yielding a block-sparse representation that we exploit for computational efficiency. Second, the Hamiltonian is linear in the bond integrals, so the derivatives required for gradient-based optimization are available in closed form (Sec. IV C).  
+
+> B. Environment dependence
+
+Conventional SK models are tied to the equilibrium geometry used to fit them and degrade for surfaces, in-terfaces, and strained configurations in which the local coordination differs from that reference. We therefore adopt the environment-dependent tight-binding (EDTB) formalism of Tang et al. [44], in which each bond integral is modulated by a screening factor, 
+
+˜V (s) 
+
+> λ
+
+(i, j ) = V (s) 
+
+> λ
+
+exp( −γλSij ) , (31) with the screening sum 
+
+Sij = ∑ 
+
+> k̸=i,j
+
+fc(dik ) fc(djk ). (32) Here dik is the interatomic distance and fc is a cosine-tapered cutoff function decreasing monotonically from unity at short range to zero beyond the cutoff. Sij ac-cumulates contributions from atoms k that lie close to both endpoints of the bond, so that a more crowded en-vironment attenuates the hopping exponentially, repro-ducing the reduction of covalent bonding strength un-der increased coordination. The screening strengths γλ
+
+may be specified at three levels of granularity: a single global value, one per angular-momentum pair ll ′, or one per SK bond integral. On-site energies may additionally be shifted by a coordination-dependent term ηαCi, with 
+
+Ci = ∑  
+
+> k̸=i
+
+fc(dik ) the effective coordination number of atom i.10 For systems with continuously varying bond lengths, such as surfaces and superlattices, the discrete-shell in-tegrals are replaced by the Goodwin-Skinner-Pettifor form [45], 
+
+Vλ(r) = V0,λ 
+
+( r0
+
+r
+
+)nλ
+
+exp 
+
+{
+
+nλ
+
+[
+
+−
+
+( rrc
+
+)nc
+
++
+
+( r0
+
+rc
+
+)nc ]} 
+
+,
+
+(33) where r0 is the reference bond length, V0,λ the corre-sponding bond integral, rc the cutoff radius, and nλ and 
+
+nc control the power-law and exponential decay, respec-tively. Equation (33) vanishes smoothly at rc. For mul-tispecies or multienvironment systems, each atom car-ries an environment label; bonds between atoms of the same label draw on independent parameter sets, while cross-environment bonds are assigned by a geometric-mean mixing rule that preserves the sign structure of the SK integrals.  
+
+> C. Parameter determination
+
+All parameters, namely on-site energies, bond inte-grals, screening strengths, and decay exponents, are ob-tained by minimizing the root-mean-square deviation be-tween the EDTB and PAO eigenvalues on a Brillouin-zone mesh. Minimization uses the Levenberg-Marquardt algorithm with an analytic Jacobian supplied by the Hellmann-Feynman theorem, 
+
+∂ε nk
+
+∂p j
+
+=
+
+〈
+
+nk
+
+∣∣∣∣
+
+∂H (k)
+
+∂p j
+
+∣∣∣∣nk
+
+〉
+
+, (34) where pj denotes any fit parameter. Because H(k) is linear in the bond integrals, ∂H/∂V λ is simply the cor-responding design tensor of Eq. (30); the derivatives with respect to the screening strengths and decay expo-nents follow analytically from Eqs. (31) and (33). Finite-difference approximations are thus avoided entirely, and convergence is typically reached within O(10 2) iterations. Tikhonov regularization suppresses unphysical oscilla-tions in the fitted parameters, and multistart optimiza-tion guards against convergence to local minima. Transferability rests on multigeometry training. The residual is assembled from band structures com-puted for Ng configurations with distinct coordination environments–for example, several isotropically strained bulk cells, or a slab together with its bulk reference–and a single parameter set is fitted to all of them simulta-neously. This is necessary rather than merely advanta-geous: in a uniform crystal every symmetry-equivalent bond shares the same Sij , so the exponential in Eq. (31) reduces to a constant prefactor that is degenerate with 
+
+V (s) 
+
+> λ
+
+and cannot be determined from a single geometry. Training across geometries that differ in coordination lifts this degeneracy and yields screening parameters with in-dependent physical content. The resulting models re-main accurate for configurations outside the training set - slabs, interfaces, superlattices, and large supercells -without further DFT input.  
+
+> D. Application to twisted bilayer graphene
+
+The (20 , 19) twisted bilayer graphene (TBG) moiré su-perlattice, containing 4324 atoms (Fig. 4), illustrates the method at scale. Mapping the local atomic relaxations onto SK integrals through the PAO eigenvalue reference yields a transferable Hamiltonian for a system well be-yond the reach of direct DFT calculation. At this size, dense eigensolvers are impractical, and we instead exploit the intrinsic sparsity of the EDTB Hamil-tonian. Matrix elements are constructed on the fly by bond enumeration, using the fitted distance-dependent and screening parameters without reparametrization. At each k point along the moiré Brillouin-zone path we com-pute the 40 eigenvalues nearest the shift-invert target 
+
+σ = 0 eV, corresponding to the Dirac point, by the im-plicitly restarted Lanczos algorithm [46, 47]. For the largest calculation reported here this reduces the mem-ory requirement from approximately 11 GB to 250 MB, placing systems of 10 5 orbitals within reach of a single workstation [42].           
+
+> FIG. 4. Sparse Lanczos band structure along K-Γ-M-K′for the (20 ,19) twisted bilayer graphene moiré superlattice. The lower-left inset shows the TBG geometry; the upper-right in-set magnifies the low-energy region about E= 0 eV, resolv-ing the nearly flat band manifold of ∼10-20 meV bandwidth. Adapted from Ref. [42] using the original data, under CC BY.
+
+11   
+
+> V. TRANSPORT PROPERTIES A. Semiclassical Boltzmann transport
+
+PAOFLOW implements the semiclassical Boltzmann transport formalism for calculating the electrical con-ductivity, Seebeck coefficient, electronic contribution to thermal conductivity, as well as the Hall and Nernst co-efficients. The implementation is based on the linearized Boltzmann transport equation within the relaxation time approximation (RTA), in which the transport coefficients are conveniently expressed in terms of the transport dis-tribution function (TDF) [48, 49]: 
+
+Ξij (ε) = 1
+
+VBZ 
+
+∑
+
+> n
+
+∫
+
+> BZ
+
+d3k v inkv jnk τnk δ(ε − εnk) (35) where v ink = ℏ−1∂ε nk/∂k i is the i-th component of the group velocity, and τnk is the relaxation time, which may be taken as a constant or specified as a function of en-ergy. To improve the convergence of the TDF, we imple-ment an adaptive broadening of the δ(ε−εnk) term which permits the calculation of transport properties at low temperatures ( T ), without requiring excessively dense 
+
+k-meshes. The examples of convergence improvement thanks to the adaptive broadening are shown in Fig. 5.  
+
+> 1. Relaxation time models
+
+The constant relaxation time approximation (CRTA), in which τ is treated as a single adjustable parameter, is commonly used because it can be factored out of the transport integrals based on Eq. (35), leaving the trans-port coefficients parameter-free. However, it neglects the energy and temperature dependence of scattering, which is essential to reproduce experimental trends even in simple semiconductors. PAOFLOW therefore imple-ments a hierarchy of analytical relaxation-time models built on semiclassical scattering theory [51], following the strategy of Ref. [52] and described in detail in Ref. [50]. These models capture the dominant intrinsic and extrin-sic scattering mechanisms at negligible computational cost, making them suitable for high-throughput calcula-tions, where calculations of electron-phonon self-energies are prohibitively expensive. Each scattering mechanism contributes a relaxation time τ (E, T ) that depends on the band energy E, and on the temperature T . Acoustic-phonon scattering, treated in the elastic deformation-potential limit, is representa-tive of the family: 
+
+τac (E, T ) = 2πℏ4ρv 2
+
+(2 m∗)3/2 kB T D 2ac 
+
+√E (36) where ρ is the mass density, v the acoustic velocity, m∗
+
+the effective-mass ratio and Dac the acoustic deformation potential. The remaining mechanisms, including nonpo-lar optical, polar optical, ionized impurity and piezoelec-tric scattering share the same structure and are collected in Table II together with their characteristic energy and temperature dependence and the required input param-eters. Explicit expressions are given in Ref. [50]. The models are evaluated on the interpolated PAO band structure and enter the transport integrals in a band- and k-resolved form, τnk = τ (ϵn(k), T ), so that the full anisotropy and non-parabolicity of ϵn(k) are re-tained in Eq. (35) even though the analytical τ (E, T )
+
+expressions are themselves derived within a parabolic-band, long-wavelength phonon approximation. This is the standard assumption for semiconductors, where car-riers occupy narrow energy windows around the band extrema, but it should be applied with care to systems in which short-wavelength phonon scattering or strongly non-parabolic dispersion dominates the transport. The individual channels are combined according to Matthiessen’s rule, τ −1total = ∑ 
+
+> i
+
+τ −1 
+
+> i
+
+. The material-specific parameters ( ρ, v, m∗, Dac , Dop , ℏωop , ϵ0, ϵ∞,
+
+nI , ZI , p) may be determined from experiment or from independent first-principles calculations. Alternatively, 
+
+PAOFLOW provides a self-consistent fitting mode in which these parameters are held fixed and a set of di-mensionless, temperature-dependent correction functions 
+
+ai(T ) is introduced through a modified Matthiessen rule: 
+
+1
+
+τtotal (E, T ) = aimp (T )
+
+τimp (E, T ) + aac (T )
+
+τac (E, T ) + aop (T )
+
+τop (E, T )+ apop (T )
+
+τpop (E, T ) + apac (T )
+
+τpac (E, T ) .
+
+(37) The correction functions ai(T ) are optimized by se-quential least-squares programming [53] so that the cal-culated electrical conductivity reproduces the measured 
+
+σ(T ) of a given sample. Because each scattering chan-nel carries its own correcting function, the fit yields more than agreement with the data: the magnitude of ai(T )
+
+quantifies how far each base model departs from the behaviour of that particular sample. Correcting func-tions close to unity indicate that the analytical models already provide a faithful description of the scattering, whereas a large ai(T ) identifies a channel whose strength the base model underestimates [50]. This approach pro-vides a flexible route to sample-specific scattering infor-mation, including extrinsic contributions from dopants, grain boundaries or disorder, without recourse to full electron-phonon calculations.  
+
+> 2. Electrical and thermoelectric transport
+
+Within the semiclassical Boltzmann formalism, the charge current density may be expressed as a linear re-sponse to an external electric field, magnetic field, and temperature gradient according to: 12 
+
+Mechanism E, T dependence Parameters Acoustic phonon T −1E−1/2 ρ, v, m∗, Dac 
+
+Optical phonon T 1/2 [Nop 
+
+√x + xo + ( Nop +1)Θ( x − xo)√x − xo
+
+]−1 ρ, m∗, Dop , ℏωop 
+
+Polar optical E3/2, summed over LO branches ϵ0, ϵ∞, m∗, ℏωLO 
+
+Ionized impurity E3/2 [ln (1 + x−1) − (1 + x)−1]−1 ε, m∗, nI , ZI
+
+Piezoelectric T −1E1/2 p, ε, ρ, v, m∗
+
+TABLE II. Relaxation time models implemented in PAOFLOW [50]. The reduced variables are x = E/k B T and xo =
+
+ℏωop /k B T , Nop = [exp( xo) − 1] −1 is the Bose-Einstein population of the optical mode, and ε = ϵ0 + ϵ∞. Doc and Dop are the acoustic and optical deformation potentials, respectively, and ωoc and ωLO denote the optical phonon and longitudinal-optical phonon frequencies. ϵ0 and ϵ∞ are the static and high-frequency dielectric constants, nI is the impurity concentration, ZI is the impurity charge state and p is the piezoelectric constant. 
+
+ji = σij Ej + σijk H Ej Bk + νij ∇j T + νijk N ∇j T B k + ... (38) where σij and σijk H denote the electrical conductivity and Hall conductivity tensors, respectively, while νij and νijk N
+
+are the corresponding thermoelectric and Nernst conduc-tivity tensors. These response functions are conveniently expressed in terms of the generating transport tensors 
+
+Lij α , with α = 0 , 1, 2, defined as [54]: 
+
+Lij α = 1
+
+VBZ 
+
+∑
+
+> n
+
+∫
+
+> BZ
+
+d3k v inkv jnk τnk(εnk − μ)α
+
+(
+
+− ∂f ∂ε 
+
+)
+
+(39) where f (ε; μ, T ) is the Fermi–Dirac distribution and μ
+
+is the chemical potential. If an adaptive broadening is used, first the TDF is computed and then the generating tensors are obtained integrating over ε [49]: 
+
+Lij α =
+
+∫
+
+dε (ε − μ)α Ξij (ε)
+
+(
+
+− ∂f ∂ε 
+
+)
+
+, (40) The electrical conductivity and thermoelectric conduc-tivity tensors are obtained directly from the generating transport tensors as [55] 
+
+σij (T, μ ) = e2Lij  
+
+> 0
+
+, (41) 
+
+νij (T, μ ) = eT Lij  
+
+> 1
+
+. (42) The experimentally measured Seebeck coefficient and electronic contribution to the thermal conductivity at zero electrical current are then given by [55]: 
+
+Sij (T, μ ) = − (σ−1ν)ij = − 1
+
+eT 
+
+(L−10 L1
+
+)ij , (43) 
+
+κij e (T, μ ) = 1
+
+T
+
+(L2 − L 1L−10 L1
+
+)ij . (44) 
+
+3. Ordinary Hall effect 
+
+Within the relaxation time approximation and assum-ing an isotropic relaxation time, the Hall conductivity is obtained in the low field limit from [49]: 
+
+Ξijk H (ε) = 1
+
+VBZ 
+
+∑
+
+> n
+
+∫
+
+> BZ
+
+d3k τ 2 
+
+> nk
+
+δ(ε − εnk) (45) 
+
+× ∑
+
+> lm
+
+ϵklm vink vmnk M −1 
+
+> jl,n k
+
+(46) where ϵklm is the Levi-Civita tensor and 
+
+M −1 
+
+> ij,n k
+
+= 1
+
+ℏ2
+
+∂2εnk
+
+∂k i ∂k j
+
+(47) is the inverse effective mass tensor. The Hall conductivity tensor σH is then obtained by integrating over energy: 
+
+σijk H (T, μ ) = e3
+
+∫
+
+dε Ξijk H (ε)
+
+(
+
+− ∂f ∂ε 
+
+)
+
+. (48) In the low field limit, the Hall voltage follows a linear dependence with magnetic field 
+
+Ei = Rijk H Jj Bk, (49) with a slope equal to the Hall coefficient RH [49]. RH is a constant independent of magnetic field and relaxation time, and it can be obtained by inverting the magneto-conductivity tensor: 
+
+ρ(B) = ( σ(B)) −1 = ( σ0 + Bσ H + O(B2)) −1 (50) where σ0 = σ(B = 0) . The RH coefficient corresponds to the linear term in expansion series around B = 0 :
+
+RH = −σ−10 σH σ−10 (51) 13  
+
+> 4. Nernst effect
+
+Within the isotropic RTA, the Nernst thermoelectric conductivity tensor νijk N is obtained analogously to the Hall conductivity tensor as: 
+
+νijk N (T, μ ) = e2
+
+T
+
+∫
+
+dε (ε − μ)Ξ ijk H (ε)
+
+(
+
+− ∂f ∂ε 
+
+)
+
+(52) The field independent Nernst coefficient is obtained by linearizing the thermopower tensor θ with respect to the applied magnetic field [56]: 
+
+θ(B) = ρ(B)ν(B) = ρ(B) (ν + Bν N + O(B2)) , (53) where ρ(B) = σ(B)−1 and ν = −σS is the zero-field ther-moelectric conductivity tensor. The field-independent Nernst coefficient is then given by: 
+
+N = σ−10 νN + RH ν. (54) In the low field limit, the Nernst coefficient, which is the analogue of the Seebeck coefficient in the presence of a magnetic field, relates the electric field to the temper-ature gradient and magnetic field according to: 
+
+Ei = N ijk ∇j T B k. (55)  
+
+> 5. Rashba-Edelstein effect
+
+In gyrotropic materials, an applied electric field in-duces not only a charge current but also a net spin ac-cumulation, which is known as the Rashba-Edelstein ef-fect [57, 58]. In analogy to Eq. (35), the spin accumula-tion can be expressed in terms of: 
+
+Ξij S (ε) = eVBZ 
+
+∑
+
+> n
+
+∫
+
+> BZ
+
+d3k τ nk ⟨Si⟩nk vjnk δ(ε − εnk) (56) where ⟨Si⟩nk denotes the expectation value of the spin operator. The nonequilibrium spin accumulation per unit volume is then obtained as: 
+
+δs i = Ej
+
+∫
+
+dε Ξij S (ε)
+
+(
+
+− ∂f ∂ε 
+
+)
+
+(57) which has the same structure as the transport coeffi-cients. As in the case of electrical transport, only elec-tronic states in the vicinity of the Fermi level contribute through the derivative of the Fermi-Dirac distribution. To eliminate the explicit dependence on the relaxation time, the current-induced spin accumulation is expressed in terms of the REE susceptibility tensor as [59, 60]: 
+
+δs i = χij jj , (58) where jj is the applied charge current, and χij is: 
+
+χij = −
+
+∑
+
+> n
+
+∫
+
+> BZ
+
+d3k ⟨Si⟩nk vjnk
+
+(
+
+− ∂f ∂ε 
+
+)
+
+e ∑
+
+> n
+
+∫
+
+> BZ
+
+d3k
+
+(
+
+vjnk
+
+)2 (
+
+− ∂f ∂ε 
+
+) (59)   
+
+> FIG. 5. Effect of adaptive broadening for the calculation of the Seebeck effect in silicon. Top: Seebeck effect at 300K for different mesh densities. Bottom: Seebeck effect at different temperatures for a fine mesh of 100 3. Solid (dotted) lines cor-respond to calculations with (without) adaptive broadening.
+> B. Kubo formalism
+
+In addition to the semiclassical transport, PAOFLOW 
+
+implements the Kubo linear response formalism for calculating the electrical conductivity, anomalous Hall conductivity (AHC) [61, 62], spin Hall conductivity (SHC) [63, 64], and Rashba-Edelstein effects [65, 66]. While the electrical conductivity can also be evaluated within the semiclassical formalism, the Kubo implemen-tation additionally provides access to the intrinsic AHC and SHC, which are not commonly treated within the semiclassical approach [67]. In the constant relaxation time approximation, the response of an observable δA
+
+induced by an external electric field E is expressed as: 14 
+
+δA i = ( χIij + χII ij )Ej (60) with the two contributions χI and χII defined as: 
+
+χIij = − eℏ
+
+π
+
+∑
+
+> k,n,m
+
+Γ2 Re 
+
+[
+
+⟨ψkn| ˆAi |ψkm⟩ ⟨ ψkm| ˆvj |ψkn⟩
+
+]((EF − Ekn)2 + Γ 2) ( (EF − Ekm)2 + Γ 2)
+
+(61) 
+
+χII ij ≈ − 2eℏ
+
+> n occ. m unocc.
+
+∑ 
+
+> k,n ̸=m
+
+Im 
+
+[
+
+⟨ψkn | ˆAi |ψkm ⟩ ⟨ ψkm | ˆvj |ψkn ⟩
+
+]
+
+(Ekn − Ekm )2 (62) 
+
+In the above equations, e is the elementary (positive) charge, k is the Bloch wave vector, n and m are the band indices, Ekn is the band energy, EF is the Fermi energy, ˆv is the velocity operator, and Γ is the disor-der broadening related to the relaxation time τ through 
+
+Γ = ℏ/(2 τ ). The expression for χII corresponds to the low-disorder limit of the Kubo formalism, obtained by neglecting terms of order Γ2, and represents the intrinsic contribution implemented in PAOFLOW .The response tensor is evaluated for different choices of the operator ˆA. Choosing the velocity operator, ˆA = ˆ v,yields the electrical conductivity through χI and, in mag-netic materials, the intrinsic anomalous Hall conductivity through χII . Choosing the spin operator, ˆA = ˆ s, yields the Rashba-Edelstein effect, for which the contributions 
+
+χI and χII correspond to the T -even and T -odd compo-nents, respectively [68]. Replacing the spin operator by the spin current operator constructed as: 
+
+ˆJil = 12 {ˆsi, ˆvl} (63) yields the spin Hall conductivity. In this case, χII corre-sponds to the conventional T -even intrinsic SHC present in nonmagnetic materials, whereas χI describes the mag-netic ( T -odd) spin Hall effect that can emerge in mate-rials without time-reversal symmetry [68, 69]. In addition, PAOFLOW supports calculations in which the spin operators are replaced by orbital angular momentum operators within the atom-centered approxi-mation, following the previous studies [70, 71]. 
+
+C. Projected response functions 
+
+Each PAO basis function carries an unambiguous atomic and orbital label. Therefore, any partition of the basis into disjoint sets induces a corresponding decompo-sition of the electronic Hilbert space. For a set τ , where 
+
+τ may represent a group of orbitals from an atomic layer 
+
+FIG. 6. Spin Hall conductivity in nonmagnetic (dashed lines) and altermagnetic (solid lines) NiTa 3S6 calculated as a func-tion of chemical potential. In the antiferromagnetic phase, the Néel vector is oriented along the out-of-plane direction. Only T -even components are present, as T -odd components are forbidden by crystal symmetries in both phases. Adapted from Ref. [68] using the original data, under CC BY. 
+
+or a single atomic site, we define the corresponding pro-jector as 
+
+Pτ = ∑
+
+> i∈τ
+
+|i⟩ ⟨ i| , ∑
+
+> τ
+
+Pτ = 1, (64) which in this basis is a diagonal matrix carrying unit entries on the selected orbitals and zeros elsewhere. The decomposition is applied to the operator rather than to the electronic states. For example, the portion of the spin current ˆJil (Eq. (63)) carried by a set τ is defined by the symmetrized projection 
+
+ˆJil (τ ) = 12
+
+{Pτ , ˆJil
+
+}. (65) The symmetrized form is necessary because Pτ and ˆJij do not commute, which is generally true for all operators: only the anti-commutator remains Hermitian and yields a real response. In block form, each set retains its own intra-set block in full and exactly one half of each inter-set block, so that 
+
+∑
+
+> τ
+
+ˆJij (τ ) = ˆJij , (66) and the resolved contributions are additive, free of double counting, and with no residual term remaining. Because Pτ acts on the operator, and not on the Hamil-tonian, the eigenvalues and eigenvectors entering the lin-ear response expression remain those of the complete sys-tem. Hybridization between the set of orbitals is, there-fore, fully retained. The sum rule (Eq. (66)) is inherited by the linear response, i.e. the projected spin Hall con-ductivity ∑ 
+
+> τ
+
+σ(τ ) = σ. This construction is independent of the operator being resolved: for instance, replacing the spin operator in ˆJij with the orbital angular momentum operator, or replacing the current operator in ˆJij with a 15 density operator, yields correspondingly set-resolved or-bital Hall conductivity or spin density. The unprojected result is recovered exactly by choosing Pτ = 1.An example is shown in Fig. 7, where the layer-projected spin Hall conductivity is calculated for a slab of NbIrTe 4 consisting of four van der Waals layers.   
+
+> FIG. 7. Individual layer contributions to spin Hall conductiv-ity ( σzyx ) of 4-layer NbIrTe 4thin film. The dashed lines show the contributions of the inner layers, revealing their different behavior compared with the surface layers (solid lines).
+> D. Landauer-Büttiker quantum transport
+
+PAOFLOW implements coherent quantum transport in the Landauer-Büttiker formalism [72–74], comple-menting the semiclassical Boltzmann module of Sec. V A with a fully quantum-mechanical description suited to nanoscale conductors, heterostructures and interfaces. The implementation follows the Green’s-function scheme of Ref. [75], previously realized on a maximally-localized Wannier basis [76]. The method applies to any Hamilto-nian that is short-ranged in a localized-orbital represen-tation; the PAO Hamiltonian satisfies this by construc-tion, being minimal and atom-centered, so that the same 
+
+H(R) used for band interpolation feeds directly into the transport calculation. The system is partitioned into a finite conductor C
+
+connected to semi-infinite left ( L) and right ( R) leads, as shown in the inset of Fig. 8 (a) for an Al monoatomic wire hosting a single H impurity. Each lead is treated as a stack of principal layers [77], defined so that only adjacent layers interact; the semi-infinite region is then completely specified by one on-site and one hopping block and can be folded exactly into a finite, energy-dependent self-energy. For each Bloch vector k∥ transverse to the transport axis, the retarded Green’s function of the conductor reads 
+
+Gr (k∥, E ) = [(E + iη ) I − HC (k∥) − ΣrL − ΣrR
+
+]−1, (67) where HC is the conductor Hamiltonian, η is a small positive value that smooths the spectral features, and the identity replaces the overlap matrix since the PAO projection yields an orthogonal representation. The lead self-energies follow from the surface Green’s functions 
+
+grL/R of the isolated semi-infinite leads, 
+
+ΣrL = h† 
+
+> LC
+
+grL hLC , ΣrR = hCR grR h†
+
+> CR
+
+, (68) with hLC and hCR the coupling matrices between the conductor and the adjacent lead layers. These terms act as effective, non-Hermitian Hamiltonians that encode the openness of the system. The surface Green’s func-tions are evaluated through the transfer matrices of the semi-infinite stacks, obtained by the iterative recursion of López Sancho et al. [78, 79]. The transmission function is given by the Fisher-Lee relation [80], 
+
+T (k∥, E ) = Tr [ΓL Gr ΓR Ga],
+
+ΓL/R = i[ΣrL/R − (Σ rL/R )†]. (69) where Ga = (Gr )† is the advanced Green’s function and the coupling matrices ΓL/R describe the broaden-ing of the conductor levels induced by the leads. Be-cause the principal layer construction reduces the three-dimensional problem to a set of independent linear chains, one for each k∥, the total transmission is recov-ered by summation over the transverse Brillouin zone, 
+
+T (E) = ∑
+
+> k∥
+
+wk∥ T (k∥, E ), (70) with wk∥ the appropriate weights. Fig. 8(a) illustrates the transmission for two cases: for the pristine Al wire the transmission is an integer stair-case where T (E) merely counts the number of bands crossing that energy. The steps consequently coincide with the band edges and their heights reflect the band de-generacies. Inserting the H atom breaks the translational symmetry and backscattering at the junction causes the plateaus to collapse into a smooth non-integer curve, and 16         
+
+> FIG. 8. Transport through an Al monoatomic wire with a single H impurity. (a) Transmission of the pristine wire (blue quantized plateaus) versus the junction (orange). The inset shows the L/C/R partition of the device where the blue and orange atoms represent Al and H respectively. The leads are semi-infinite and enter through ΣL,R . (b) I(V)of the junction (left axis) and dI/dV (right axis).
+
+sharp Fano-type dips appear where the hydrogen reso-nance interferes with the continuum of the wire. The finite-bias current follows as 
+
+I(V ) = 2eh
+
+∫ ∞−∞ 
+
+T (E)[f (E − μL) − f (E − μR)] dE, μL/R = EF ± eV / 2,
+
+(71) evaluated with the zero-bias transmission, that is, ne-glecting the self-consistent rearrangement of the poten-tial under applied bias. Fig. 8 (b) shows the current I(V )
+
+and the differential conductance dI/dV which maps the transmission features onto the bias window. The con-ductor Green’s function additionally yields the spectral density of states projected on the conductor region, 
+
+N (E) = − 1
+
+π
+
+∑
+
+> k∥
+
+wk∥ Im Tr Gr (k∥, E ), (72) which is useful in assigning transmission features to spe-cific conductor states.  
+
+> VI. LATTICE DYNAMICS AND THE PHONOPY WORKFLOW
+
+Vibrational properties are computed within 
+
+PAOFLOW through a tight integration with the 
+
+phonopy package [81, 82], exposed by the phonon_setup 
+
+and phonons drivers. The design mirrors the rest of the ecosystem: the same unit cell that defines the PAO Hamiltonian is bridged to a phonopy.Phonopy 
+
+object ( calculator='qe' ), so the electronic and the vibrational descriptions of a material are generated from a single, consistent structural input.  
+
+> A. Finite-displacement force constants
+
+Harmonic phonons are obtained by the finite-displacement (frozen-phonon) method. Given auser-specified supercell matrix, phonopy enumerates the symmetry-inequivalent atomic displacements; 
+
+PAOFLOW then writes a complete, ready-to-run pw.x SCF input for each displaced supercell (supercell-NNN.in ). After the DFT runs, the Hellmann-Feynman forces are harvested and the second-order (interatomic) force constants are assembled from finite differences, 
+
+Φiα, jβ = ∂2E∂u iα ∂u jβ 
+
+≃ − ∂F jβ 
+
+∂u iα 
+
+, (73) where uiα is the displacement of atom i along Cartesian direction α and Fjβ the force on atom j. The dynamical matrix and the phonon dispersion follow from the mass-weighted lattice Fourier transform, 
+
+Diα, jβ (q) = 1
+
+√MiMj
+
+∑
+
+> R
+
+Φiα, jβ (R) e iq·R,D(q) eqν = ω2 
+
+> qν
+
+eqν , (74) yielding the frequencies ωqν , the density of states, and the harmonic thermodynamic functions (free energy, en-tropy, heat capacity). The workflow operates in two phases – generate (write the displaced inputs) and anal-yse (ingest the forces) – and is fully compatible with the DFT+U(+V) electronic structure produced by ACBN0: an on-site HUBBARD card is propagated to every displaced supercell so that the forces, and hence the force con-stants, are consistent with the corrected ground state. 17  
+
+> B. Polar corrections and derived spectra
+
+For polar insulators the non-analytical correction (NAC) restores the LO-TO splitting near Γ through the long-range dipole term 
+
+DNA  
+
+> iα, jβ
+
+(q → 0) ∝
+
+(q · Z∗
+
+> i
+
+)
+
+> α
+
+(q · Z∗
+
+> j
+
+)
+
+> β
+
+q · ε∞ · q , (75) built from Born effective charges Z∗ 
+
+> i
+
+and the high-frequency dielectric tensor ε∞, either imported from a density functional perturbation theory calculation or computed from a central difference of forces and polar-ization under an electric field perturbation. From the zone-centre eigenvectors and Z∗ the code evaluates the mode effective charges and infrared oscillator strengths, the (non-resonant) Raman activities, and the ionic con-tribution to the dielectric function, 
+
+εαβ (ω) = ε∞ 
+
+> αβ
+
++ ∑
+
+> ν
+
+Sν,αβ 
+
+ω2 
+
+> ν
+
+− ω2 − i ω γ ν
+
+, (76) with Sν the mode oscillator-strength tensor. Anhar-monic thermal expansion and the temperature depen-dence of the elastic and thermodynamic response are accessible through the quasi-harmonic approximation (QHA), in which the Helmholtz free energy is expressed as F (V, T ) = E(V ) + Fvib (V, T ). 
+
+> VII. ELECTRON-PHONON COUPLING FROM PSEUDO-ATOMIC-ORBITAL INTERPOLATION
+
+Accurate first-principles electron-phonon coupling (EPC) demands dense Brillouin-zone sampling to resolve the strongly momentum-dependent scattering phase space in the vicinity of the Fermi surface. As a re-sult, quantities such as the pairing interaction strength 
+
+λ can be acutely sensitive to the underlying k- and 
+
+q-mesh densities. State-of-the-art workflows, including EPW [83] and Perturbo [84], address this bottleneck through Wannier interpolation, enabling efficient evalu-ation of electron-phonon matrix elements on ultra-dense grids. Here we instead implement, following Agapito and Bernardi [85], an interpolation of the density-functional perturbation theory (DFPT) electron-phonon vertex in the pseudo-atomic-orbital (PAO) gauge to compute the isotropic Eliashberg function α2F (ω) and derived EPC metrics. Unlike Wannier-based schemes, the PAO gauge is fixed and smooth by construction, eliminating the need for band disentanglement or gauge fixing. Starting from a non-self-consistent calculation on the full (unreduced) Monkhorst-Pack grid and the DFPT coupling dmn,κα (k, q) on the same coarse mesh, we rotate each matrix element into the PAO basis, 
+
+gPAO 
+
+> ij,κα
+
+(k, q) = [A† 
+
+> k+q
+
+dκα (k) Ak
+
+]
+
+> ij
+
+, (77) where Ak are the PAOFLOW projection operators as defined in Sec. II B. Fourier transforming the electron momentum k → Re and the phonon momentum q → Rp
+
+yields the double real-space vertex gij,κα (Re, Rp), from which the coupling at an arbitrary pair (k, q) is recovered by Wigner-Seitz back-transformation. The PAO Hamil-tonian H(k) is interpolated onto a dense k grid by the same generalized Fourier procedure, while the dynami-cal matrices are interpolated to a dense q grid with the enforced acoustic sum rule, giving the mode frequencies 
+
+ωqν and polarization vectors. The mode-resolved coupling is obtained from the Fermi-surface double delta, 
+
+λqν = 1
+
+N (EF ) ω2
+
+> qν
+
+1
+
+Nk
+
+∑
+
+> k
+
+∣∣gqν (k)∣∣2 δ(εk) δ(εk+q), (78) where energies are measured relative to EF , so both elec-tronic states lie on the Fermi surface. Brillouin-zone av-eraging of λqν over phonon branches and irreducible q
+
+points, weighted by the corresponding star weights wq,yields the Eliashberg spectral function α2F (ω), the total electron-phonon coupling λ, and the logarithmic average frequency ⟨ωlog ⟩ that sets the characteristic phonon scale for pairing: 
+
+α2F (ω) = 12
+
+∑
+
+> qν
+
+wq λqν ωqν δ(ω − ωqν
+
+),λ = 2 
+
+∫ ∞
+
+> 0
+
+α2F (ω)
+
+ω dω, 
+
+⟨ωlog ⟩ = exp 
+
+( 2
+
+λ
+
+∫ ∞
+
+> 0
+
+α2F (ω) ln ωω dω 
+
+)
+
+(79) Because λqν is invariant under the crystal point group, the dense q integration is restricted to the irreducible wedge (with time reversal), reducing the number of eval-uated points by up to the order of the point group. The per-q work is distributed over MPI ranks, and the large real-space vertex is held in a single node-shared copy. Table III benchmarks the convergence of λ and ⟨ωlog ⟩
+
+for non-relativistic fcc Pb (see Sec. IX for computational details); reproducing prior DFPT results obtained with-out SOC [86] requires fully converged values from at least 
+
+36 3 points in both the k and q meshes. Notably, the PAO interpolation greatly simplifies the EPC workflow, makes these ultra-dense-mesh calculations computationally very inexpensive, and enables the evaluation of a plethora of properties derived from the knowledge of the EPC [87].   
+
+> VIII. ELECTRONIC STRUCTURE AND TOPOLOGY A. Fermi surfaces and quantum oscillations
+
+PAOFLOW provides tools for the analysis of Fermi surfaces and quantum oscillatory phenomena. In the presence of a strong magnetic field, electronic states are quantized into Landau levels, corresponding to closed or-bits defined by the intersections of the Fermi surface with 18                                  
+
+> NkNqλ⟨ωlog ⟩(K) 12 62.0404 61 .3
+> 18 61.4857 60 .3
+> 18 18 1.2562 61 .3
+> 24 12 1.1779 62 .0
+> 24 24 1.1384 60 .5
+> 36 18 1.0758 61 .2
+> 36 36 1.0829 59 .4
+> 42 42 1.0832 59 .0
+> TABLE III. Convergence of the electron-phonon coupling con-stant λand the logarithmic average frequency for FCC Pb starting from a DFPT calculation with a 93k-grid and 63
+> q-grid.
+
+planes perpendicular to the magnetic field direction. The Landau quantization gives rise to quantum oscillatory phenomena, such as de Haas-van Alphen and Shubnikov-de Haas effects, whose oscillation frequencies are deter-mined by the extremal cross-sectional areas of the Fermi surface. Determining these extremal areas provides a di-rect connection between electronic structure calculations and experimentally measurable quantities [88–90]. To enable automated quantum-oscillation calculations, the PySKEAF module of PAOFLOW implements the widely adopted SKEAF (Supercell k-space Extremal Area Finder) algorithm of Rourke and Julian [18]. The PAO Hamiltonians interpolated on dense k-meshes pro-vide high-resolution Fermi surfaces that are analyzed di-rectly by PySKEAF . This integrated workflow identifies extremal Fermi-surface orbits and computes the associ-ated oscillation frequencies and cyclotron effective masses without additional post-processing. For a selected Fermi energy and direction of magnetic field B, the PySKEAF algorithm: 1. constructs planes perpendicular to the magnetic field, determines their intersections with the Fermi surface to generate two-dimensional Fermi con-tours, and tracks corresponding contours across ad-jacent planes to identify extremal closed orbits; 2. computes the quantum oscillation frequency F in 
+
+1/B space from the Onsager relation [90]: 
+
+F = ℏ
+
+2πe Aext (80) where Aext is the extremal cross-sectional area of the Fermi surface; 3. calculates the cyclotron effective mass according to 
+
+m∗ 
+
+> c
+
+= ℏ2
+
+2πm e
+
+∣∣∣∣
+
+∂A ext 
+
+∂E 
+
+∣∣∣∣E=EF
+
+(81) and determines the electron- or hole-like character of each extremal orbit from the geometry of the Fermi surface contour. The analysis is repeated automatically for different po-lar and azimuthal angles of the magnetic field, providing the angular dependence of the quantum oscillation fre-quencies. An example of using the workflow is shown in Fig. 9, where the Fermi surface of ZrTe 5 and the quantum oscillations are calculated in PAOFLOW [91].                      
+
+> FIG. 9. Example of Fermi surface and Shubnikov-de Haas fre-quencies in bulk ZrTe 5calculated using PAOFLOW . Original data taken from Ref. [91], specifically the case of weak topo-logical insulator at hole doping level E−EVBM =−11 .5 meV .(a) Calculated Fermi surface with an extremal cross-sectional area perpendicular to the magnetic field B(orange). (b) The corresponding Shubnikov-de Haas oscillation frequencies when rotating the magnetic field Bin the kx−kyplane.
+> B. Z2topological invariants
+
+The Z2 number of a time-reversal-invariant insulator can be computed in two complementary ways, both act-ing on the same PAO Hamiltonian. The first is the Pfaf-fian construction of Fu, Kane, and Mele [92, 93]. In this approach, one constructs the sewing matrix wmn (k) = 
+
+um(−k)Θ un(k), with Θ denoting the antiunitary time-reversal operator. At each time-reversal-invariant mo-mentum (TRIM) Γi, four in two dimensions and eight in three dimensions, this matrix is antisymmetric. When restricted to the occupied manifold, it yields the sign en-tering the Z2 invariant, 
+
+δi = Pf [w(Γ i)]√det w(Γ i) = ±1, (−1) ν0 = ∏
+
+> i
+
+δi, (82) where the product runs over all TRIMs for the strong index ν0 and over the four TRIMs of each kj = π plane for the weak indices ν1, ν 2, ν 3. This procedure is com-putationally efficient because it requires only the wave functions at the TRIMs. However, it must be applied with care, since the result depends on a consistent gauge choice for the occupied subspace. In the second approach, the PAO Hamiltonian is ex-ported to Z2Pack [17, 94], which tracks the evolution of the hybrid PAO charge centers, equivalent to the Wan-nier charge centers, along a family of loops spanning half 19 of the Brillouin zone. The invariant is then determined from the parity of the number of times the largest gap between the charge centers is crossed. This criterion is explicitly gauge invariant and requires no symmetry be-yond time reversal, at the cost of many diagonalizations over adaptively refined loops.  
+
+> C. Chern numbers and Chern insulators
+
+The Chern number C is an integer-valued topological invariant for systems that break time-reversal symmetry. It is defined as the Brillouin-zone integral of the Berry curvature summed over the occupied Bloch bands, which encodes the global geometry of the corresponding band manifold [95–97] 
+
+C = 12π
+
+∑
+
+> n∈occ
+
+∫
+
+> BZ
+
+Ωn(k) d2k. (83) A nonzero C, which requires broken time-reversal symmetry, identifies a Chern-insulating phase in which the anomalous Hall conductivity is quantized as σxy =
+
+Ce 2/h and |C| chiral edge modes traverse the bulk gap. A vanishing Chern number, however, does not im-ply topological triviality: time-reversal-invariant systems have C = 0 by construction, yet may host nontrivial phases protected by time-reversal or crystalline symme-tries, whose characterization requires other invariants.  
+
+> D. Mirror Chern numbers
+
+Among additional invariants, the mirror Chern num-ber plays a central role in crystals possessing a mirror reflection symmetry [98, 99]. On the planes in the recip-rocal space that are invariant to mirror operation M, the Hamiltonian satisfies [H(k), M] = 0 , and since M2 = −1
+
+for spin- 12 electrons, the Bloch states may be labelled by the mirror eigenvalues ±i. The occupied manifold thus separates into two independent sectors, each carrying an ordinary Chern number C±i, from which the total and mirror Chern numbers are defined as C = C+i + C−i and 
+
+CM = ( C+i − C−i)/2, respectively. In the presence of time-reversal symmetry C+i = −C−i, forcing C to van-ish while allowing CM to remain finite; the mirror Chern number therefore captures topological information inac-cessible to the ordinary Chern invariant. A nonzero CM
+
+identifies a mirror-protected topological crystalline phase and gives rise to symmetry-protected gapless boundary states on surfaces or edges that preserve the correspond-ing mirror symmetry [99, 100]. For a two-dimensional crystal the horizontal mirror 
+
+Mz : z → − z is of particular relevance, since its invari-ant plane coincides with the entire Brillouin zone. When 
+
+Mz commutes with H(k), the sector decomposition ap-plies throughout the zone, providing a direct route to the evaluation of CM [98]. In the present calculations CM is obtained from the PAO Hamiltonian, with the sector-resolved Chern numbers computed using Z2Pack [17].  
+
+> E. Weyl points
+
+Weyl points are topologically protected linear cross-ings of two bands in three-dimensional reciprocal space, characterized by an integer topological charge χ =
+
+±1 [23, 101]. PAOFLOW identifies the locations of Weyl points by searching for vanishing band gaps throughout the Brillouin zone. The Brillouin zone is first divided into a coarse grid of rectangular boxes, within which the energy gap between the two bands of interest is locally minimized using the L-BFGS-B optimization algorithm implemented in SciPy. The chirality of the resulting can-didate band crossings is subsequently verified using the external Python library Z2Pack [17], which determines the Chern number of a spherical surface enclosing each candidate point. As an additional consistency check, the total chiral charge in the BZ must vanish, ensuring that Weyl points always occur in pairs of opposite chirality. An example of the calculation is shown in Fig. 10, illus-trating the Weyl points identified in MoP 2. 
+
+> F. Band unfolding
+
+Band unfolding restores a primitive-cell (PC) repre-sentation of electronic bands from a supercell (SC) cal-culation. This is particularly useful for defects, surfaces, heterostructures, and moiré superlattices, where the en-larged real-space periodicity folds the SC bands into a reduced Brillouin zone and obscures direct comparison with PC dispersions. 
+
+PAOFLOW performs unfolding using the spectral-weight formalism [102–104]. Given an integer, invert-ible transformation matrix M relating the lattice vec-tors, ASC = M APC , its determinant gives the number of PC translations in the SC, N = | det M |. Denoting by {Rℓ}Nℓ=1 the corresponding translation vectors, the spectral weight associated with PC wavevector k for SC eigenstate (n, K) is 
+
+wn(k) = 1
+
+N
+
+∑
+
+> α
+
+∑
+
+> m
+
+∣∣∣∣∣
+
+> N
+
+∑
+
+> ℓ=1
+
+e−2πi k·Rℓ Cnα,m,ℓ (K)
+
+∣∣∣∣∣
+
+> 2
+
+, (84) where Cnα,m,ℓ (K) is the SC eigenvector coefficient on or-bital m of the atom obtained by translating the PC atom 
+
+α by Rℓ. The SC wavevector K maps onto the PC wavevector k through folding, K = kM −1 (mod GPC ).The unfolded spectral function follows as 
+
+A(k, E ) = ∑
+
+> n
+
+wn(k) δ(E − εnK), (85) so that wn(k) directly controls the intensity of the un-folded bands along a chosen PC path. 20 
+
+FIG. 10. Example of Weyl point identification in MoP 2 using PAOFLOW . Left: Calculated Weyl points in the Brillouin zone. The green and purple colors correspond to opposite chiralities. Right: Electronic band structure E(kx, k y ) around two neighboring Weyl points, demonstrating the linear crossing of the bands (The the kx, k y plane spans an area of 0.00562 1/Å 2
+
+and an energy range from -0.622 eV to -0.196 eV). 
+
+FIG. 11. Folded (SC, left) and unfolded (PC, right) band structures for twisted bilayer graphene in the (3 , 2) moiré supercell. In the unfolded plot, the color intensity is proportional to the spectral weight wn(k) [Eq. (84)], highlighting the contribution of SC eigenstates to effective PC bands. 
+
+Figure 11 illustrates the procedure for twisted bilayer graphene in the (3 , 2) moiré cell (76 atoms), comparing the folded SC bands with the unfolded PC representa-tion. The unfolded weights emphasize the PC-like com-ponents of the SC eigenstates and reproduce the low-energy features reported in Ref. [104]. Here we use the same EDTB model of Fig. 4 (see also Ref. [42]). 21  
+
+> IX. COMPUTATIONAL DETAILS
+
+Silicon and platinum calculations (Fig. 2 and 3(left)) have been carried out using Quantum ESPRESSO, with input files generated using paoflow-gen-qe ,a command line generator that builds a Quantum ESPRESSO scf input from an AFLOW database en-try (https://aflow.org ) [105] and is shipped with the PAOFLOW distribution. The generated in-put file inherits the geometry and k-meshes from the database entries (Si AUID: aflow:08ab41c5f54850db, Pt AUID: aflow:0498f57236cee872) while pseudopotentials are chosen from the Pseudo Dojo repository ( https: //www.pseudo-dojo.org/ ) [106]. For convenience, 
+
+PAOFLOW ships a PSEUDOS/ folder that contains Perdew-Burke-Ernzerhof (PBE) scalar-relativistic and fully-relativistic pseudopotentials with the corresponding optimal energy cutoffs to automate the input file gener-ation. Input for the MoS 2 system (Fig. 3) has been gen-erated using paoflow-gen-qe on the corresponding en-try in the C2DB database ( https://c2db.fysik.dtu. dk/material/1MoS2-1 ) [107, 108] with a 18 × 18 × 1 k-grid and scalar relativistic pseudopotentials from Pseudo Dojo. The DFT calculations shown in Fig. 5 were per-formed for bulk silicon, using a fcc unit cell with a =5.609 Å. Calculations were carried out using Quan-tum ESPRESSO with the PBE functional [109], using scalar relativistic projector-augmented wave pseudopo-tential from the PSLIBRARY database. Plane wave cut-off energy was set to 70 Ry and the energy conver-gence threshold to 10 −9 Ry. A Monkhorst-Pack k-mesh of 16 ×16 ×16 and 32 ×32 ×32 was used for self-consistent and non-self-consistent steps, respectively [110]. Calculations for NiTa 3S6 (Fig. 6) were carried out us-ing the Vienna Ab initio Simulation Package (VASP) [21, 22]. Exchange and correlation were described using the PBE functional. A plane-wave energy cutoff of 350 eV was used, with the total energy converged to 10 −7 eV. BZ integrations were performed on a 16 × 16 × 8 Monkhorst-Pack k-point mesh with a Gaussian smearing of 0.05 eV. SOC was included self-consistently in the DFT calcula-tions. We used a hexagonal unit cell, containing two Ni atoms, six Ta atoms, and twelve S atoms, with lattice constants a = b = 5 .77 Å and c = 12 .03 Å. The ionic po-sitions were relaxed until the residual forces were below 
+
+10 −3 eV/Å. In PAOFLOW , we used the basis set: Ni [4s, 4p, 3d]; Ta [6s, 5p, 6p, 5d]; Nb [5s, 3p, 4p, 5p, 3d, 4d, 4f]; and S [3s, 3p, 3d] and k-mesh of 60 × 60 × 40 for the interpolation of the Hamiltonian. Further details of the calculation are provided in Ref. [68]. The DFT calculations for the NbIrTe 4 tetralayer sys-tem were performed with Quantum ESPRESSO. The PBE functional, along with fully relativistic PAW pseu-dopotentials [22], was employed. A plane-wave energy cutoff of 80 Ry was used, and the energy convergence threshold was set to 10 −9 Ry. The lattice parameters of the orthorhombic cell were set to a = 5 .77 Å and 
+
+b = 12 .03 Å based on experimental findings [111], along with a vacuum layer of 60 Å. We used a Monkhorst-Pack mesh of 16 × 10 × 1 in DFT, and in order to ensure con-vergence, the k-mesh was increased to 80 × 40 × 1 via interpolation for the spin Hall conductivity calculations. The DFT calculations for quantum transport were per-formed on a monatomic Al wire hosting a single H im-purity, using Quantum ESPRESSO with the PBE func-tional. Al was described by a norm-conserving RRKJ pseudopotential and H by an ultrasoft Vanderbilt pseu-dopotential, with a plane-wave cutoff of 18 Ry for the wavefunctions and a self-consistency threshold of 10 −8
+
+Ry. BZ integrations used a 1 × 1 × 4 Monkhorst-Pack mesh [110] shifted along the transport direction. Transport quantities were evaluated within PAOFLOW 
+
+on an energy grid of 9001 points spanning [−7, 2] eV with respect to the Fermi level, using a broadening of 
+
+η = 0 .5 meV. The pristine wire was treated as a pe-riodic (bulk) conductor, while the H-decorated junction was partitioned into a left-conductor-right geometry with three principal layers on each side acting as leads along 
+
+z. The current was obtained by integrating the transmis-sion over the bias window for V ∈ [−1, 1] V sampled on 1500 points. The Fermi surface and SdH oscillation frequencies of ZrTe 5 shown in Fig. 9 were derived from DFT calcula-tions using Quantum ESPRESSO with the PBE func-tional. The ion-electron interactions were treated us-ing fully relativistic projector-augmented wave pseudopo-tentials taken from the PSLIBRARY database [112]. The plane-wave cutoff energy was set to 80 Ry, and the Monkhorst-Pack mesh was 16 × 16 × 8 for the self-consistent and 30 × 30 × 10 for the non-self-consistent calculations. We used a primitive cell of the base-centered orthorhombic crystal; the lattice vectors are 
+
+a = (7 .73422 , 0, 0) , b = ( −6.6711 , 3.91337 , 0) and c =(0 , 0, 13 .709) (Å units). SOC was taken into account in all the calculations, except during atomic structural op-timizations. In PAOFLOW , the Hamiltonian was in-terpolated on denser k grids of 100 × 100 × 18 to gener-ate an accurate and smooth Fermi surface. The calcu-lation of SdH oscillation frequencies in the PySKEAF 
+
+module of PAOFLOW was performed using a Fermi en-ergy tag of −0.2 eV to achieve the doping energy level 
+
+E − EVBM = −11 .5 meV, and 350 interpolated points per single side were considered. PySKEAF uses the con-ventional orthogonal k coordinate for the direction of B-field, but the coordinate of a Fermi surface is written in reciprocal basis inside a BXSF file. Therefore, one must be careful about setting the angles of the B-field. The result illustrated in Fig. 9(b) was achieved by fixing the polar angle to 90 ◦ and rotating the azimuthal angle from 
+
+164 .802 ◦ til 254 .802 ◦ in PySKEAF , followed by a trans-formed reference frame in Fig. 9(a) for better illustration. The DFT calculations for MoP 2 were performed us-ing Quantum ESPRESSO with the PBE functional. Fully relativistic norm-conserving pseudopotentials were employed. The plane wave cut-off energy was set to 22 50 Ry, and the energy convergence threshold to 10 −8
+
+Ry. A Monkhorst-pack k-mesh of 18 × 18 × 16 was used. An orthorhombic base-centered cell was used, with the lattice vectors set to a = (1 .572100 , 5.590044 , 0) ,
+
+b = ( −1.572100 , 5.590044 , 0) and c = (0 , 0, 4.981609) (Å units). For the calculation of the band structure, in order to differentiate the two neighboring Weyl points, a small area of 0.00562 1/Å 2, centered on the Weyl point, was densely interpolated on a grid of 500 × 500 k-points. For the EPC workflow in Pb we ran Quantum ESPRESSO with a norm-conserving PBE pseudopoten-tial from the PSLIBRARY with a kinetic energy cutoff of 30 Ry. A 93 k-grid was used for the initial DFT cal-culation and a 63 q-grid for the DFPT calculation prior to interpolation. While SOC is essential for a quanti-tatively faithful description of Pb[86], we intentionally adopt the nonrelativistic limit here to enable a stringent benchmark against established DFPT reference data.  
+
+> X. SOFTWARE ARCHITECTURE
+
+PAOFLOW is organized as a layered, performance-portable software stack: an MPI-parallel Python layer (NumPy/SciPy) provides the high-level API, data flow, and workflow orchestration, while performance-critical kernels can be transparently offloaded to an optional Rust backend. This separation of concerns keeps the user-facing interface stable, improves testability and maintainability, and enables targeted optimization with-out constraining downstream workflows. To address memory and scaling bottlenecks, 
+
+PAOFLOW includes a dedicated sparse-algebra execution path designed for large supercells or moiré systems constructed with the environment-dependent tight-binding scheme. In the standard PAO workflow dense matrices scale quadratically with the number of atomic orbitals and quickly become the dominant resource constraint. The sparse backend mitigates this by storing the real-space Hamiltonian as a thresholded list of interacting orbital pairs (with approximately linear growth in storage) and by avoiding construction of the full k-space Hamiltonian across the entire mesh: instead, it assembles and diagonalizes each k point on demand. Currently, band structures, densities of states, and Boltzmann transport coefficients are supported in this mode, with additional properties being integrated through the same backend-agnostic interfaces. Further details on the implementation, optimization, validation and verification are provided in the docu-mentation section of the PAOFLOW website ( https: //paoflow.org ) and in the Wiki of our GitHub reposi-tory ( https://github.com/marcobn/PAOFLOW/wiki ). Portions of the code development, debugging, and gen-eration of the software documentation were carried out with the assistance of GitHub Copilot (Claude Opus 4.6-8, Anthropic [113]), an AI-powered programming assis-tant integrated into the Visual Studio Code development environment. In these cases, all scientific decisions, in-cluding model design, choice of physical approximations, parameter selection, and interpretation of results, were made by the authors.  
+
+> XI. CONCLUSIONS
+
+The developments presented in this work reflect the continuous evolution of PAOFLOW from a Hamiltonian interpolation package into a comprehensive ecosystem for first principles materials characterization. The recent de-velopment of the code has substantially expanded the accessible physical properties while maintaining a work-flow based on compact PAO Hamiltonians. As demon-strated throughout this paper, the same PAO Hamilto-nian can serve as the starting point for calculations of electronic structure, optical response, transport phenom-ena, and topological properties, allowing for direct com-parison with an increasingly broad range of experimental techniques, and enabling the design of high-throughput workflows for scalable generation of training-quality data and AI-ready property datasets for materials discovery. Beyond the methodological developments presented here, the modular architecture of PAOFLOW provides a flexible framework for adding new theoretical approaches as they emerge. Recent years have witnessed rapid progress in areas such as nonlinear transport, quantum geometry, spin-orbit phenomena, orbitronics, and topo-logical materials, many of which rely on fundamental quantities already available in PAOFLOW . Extending the package towards these emerging directions there-fore represents a natural continuation of its development. At the same time, extending PAOFLOW to additional DFT codes will remain an important direction for future development. In particular, extending support to all-electron and localized basis codes, such as WIEN2k and SIESTA, would broaden its applicability and facilitate its integration into diverse computational workflows. 
+
+> ACKNOWLEDGMENTS
+
+The authors wish to acknowledge the contributions of past developers who made this project possible: Franklin Cerasoli, who built the core architecture of the code and made it a modern modular software application; Luis Agapito, whose work laid the foundation for the projectability criterion and contributed to the develop-ment of the ACBN0 functional; Marco Fornari and Ar-rigo Calzolari, for support, encouragement and invalu-able scientific discussions; Andrew Supka, for his deep understanding of computational structures and his con-tributions to the symmetry modules of PAOFLOW ; and Haihang Wang, Laalitha Liyanage, Priya Gopal, Ilaria Siloi, Homayoun Jafari and Przemysław Przybysz for bearing with the barrage of testing new functions in the early stages of development and their scientific contribu-23 tions stemming from the application of PAOFLOW to real life problems. M.B.N. has been supported, in part, by the US Department of Energy (DOE, Office of Ba-sic Energy Sciences) under Grant No. DE-SC0024554, and the National Science Foundation under Grant No. 2523217. J.S., S.A., M.F., Z.H., and K.T. acknowledge the funding from the European Research Council – ERC Consolidator Grant FERRERO. J.S. and C.C.Y. have been supported by the research program “Materials for the Quantum Age” (QuMat). This program (registra-tion number 024.005.006) is part of the Gravitation pro-gram financed by the Dutch Ministry of Education, Cul-ture and Science (OCW). J.S. acknowledges the Rosalind Franklin Fellowship from the University of Groningen. A.J. acknowledges funding from the NCCR MARVEL project funded by the Swiss National Science Founda-tion Grant No. 205602. M.C. acknowledges the finan-cial support of CNPq Grant 317320/2021-1, FAPERJ Grant E26/200.240/2023, and INCT Materials Infor-matics. S.C. acknowledges partial support from DoD-ONR (N00014-21-1-2515 and N00014-24-12768). The au-thors acknowledge the Texas Advanced Computing Cen-ter (TACC) at The University of Texas at Austin, the Ex-treme Science and Engineering Discovery Environment (XSEDE), the SURF Cooperative (The Netherlands) and Center for Information Technology of the University of Groningen for their support and for providing access to computational resources. Finally the authors acknowl-edge the support of the Santa Fe Institute for hosting the working group ”Computational Frontiers in Quan-tum Materials” in May 2026, where many of the ideas and methods discussed in this paper took final shape.  
+
+> ∗
+
+mbn@unt.edu [1] P. Hohenberg and W. Kohn, Inhomogeneous electron gas, Phys. Rev. 136 , B864 (1964). [2] W. Kohn and L. J. Sham, Self-consistent equations in-cluding exchange and correlation effects, Phys. Rev. 
+
+140 , A1133 (1965). [3] J. R. Yates, X. Wang, D. Vanderbilt, and I. Souza, Spec-tral and Fermi surface properties from Wannier interpo-lation, Phys. Rev. B 75 , 195121 (2007). [4] K. Alberi, M. Buongiorno Nardelli, A. Zakutayev, L. Mitas, S. Curtarolo, A. Jain, M. Fornari, N. Marzari, I. Takeuchi, M. L. Green, M. Kanatzidis, M. F. Toney, S. Butenko, B. Meredig, S. Lany, U. Kattner, A. Davy-dov, E. S. Toberer, V. Stevanovic, A. Walsh, N.-G. Park, A. Aspuru-Guzik, D. P. Tabor, J. Nelson, J. Murphy, A. Setlur, J. Gregoire, H. Li, R. Xiao, A. Ludwig, L. W. Martin, A. M. Rappe, S.-H. Wei, and J. Perkins, The 2019 materials by design roadmap, J. Phys. D: Appl. Phys. 52 , 013001 (2018). [5] C. Malica, K. S. Novoselov, S. Kim, Y. Jung, S. Botti, M. A. L. Marques, T. Zarrouk, M. A. Caro, S. Chong, M. Ceriotti, M. Fernandez-Serra, S. Navarro-Rodriguez, A. A. Naik, J. George, Ö. H. Omar, V. Trinquet, G.-M. Rignanese, A. Ustyuzhanin, S. Conesa-Boj, J. Rojo, M.-T. Dau, S. M.-M. Dubois, J.-C. Charlier, J. H. Garcia, R. Gautier, R. Laref, J. Qiao, G. Pizzi, N. Marzari, C. Coletti, A. Rossi, J.-L. Uslu, C. Zanardi, V. Palermo, W. Hogenhout, N. Konchakova, P. Klein, T. Vegge, and S. Roche, Artificial intelligence for advanced functional materials: Progress and emerging frontiers, Adv. Intell. Syst. , e70496 (2026). [6] L. A. Agapito, S. Ismail-Beigi, S. Curtarolo, M. Fornari, and M. Buongiorno Nardelli, Accurate tight-binding Hamiltonian matrices from ab initio calculations: Min-imal basis sets, Phys. Rev. B 93 , 035104 (2016). [7] L. A. Agapito, M. Fornari, D. Ceresoli, A. Ferretti, S. Curtarolo, and M. Buongiorno Nardelli, Accurate tight-binding Hamiltonians for two-dimensional and lay-ered materials, Phys. Rev. B 93 , 125137 (2016). [8] P. D’Amico, L. Agapito, A. Catellani, A. Ruini, S. Cur-tarolo, M. Fornari, M. Buongiorno Nardelli, and A. Cal-zolari, Accurate ab initio tight-binding Hamiltonians: Effective tools for electronic transport and optical spec-troscopy from first principles, Phys. Rev. B 94 , 165166 (2016). [9] M. Buongiorno Nardelli, F. T. Cerasoli, M. Costa, S. Curtarolo, R. De Gennaro, M. Fornari, L. Liyanage, A. R. Supka, and H. Wang, PAOFLOW: A utility to construct and operate on ab initio Hamiltonians from the projections of electronic wavefunctions on atomic orbital bases, including characterization of topological materials, Comput. Mater. Sci. 143 , 462 (2018). [10] F. T. Cerasoli, A. R. Supka, A. Jayaraj, M. Costa, I. Siloi, J. Sławińska, S. Curtarolo, M. Fornari, D. Ceresoli, and M. Buongiorno Nardelli, Advanced modeling of materials with PAOFLOW 2.0: New fea-tures and software design, Comput. Mater. Sci. 200 ,110828 (2021). [11] N. Marzari, A. A. Mostofi, J. R. Yates, I. Souza, and D. Vanderbilt, Maximally localized Wannier functions: Theory and applications, Rev. Mod. Phys. 84 , 1419 (2012). [12] G. Pizzi, V. Vitale, R. Arita, S. Blügel, F. Freimuth, G. Géranton, M. Gibertini, D. Gresch, C. Johnson, T. Koretsune, et al. , Wannier90 as a community code: new features and applications, J. Phys. Condens. Mat-ter 32 , 165902 (2020). [13] Q. Wu, S. Zhang, H.-F. Song, M. Troyer, and A. A. Soluyanov, WannierTools: An open-source software package for novel topological materials, Comput. Phys. Commun. 224 , 405 (2018). [14] S. S. Tsirkin, High performance Wannier interpolation of Berry curvature and related quantities with Wannier-Berri code, npj Comput. Mater. 7, 33 (2021). [15] G.-X. Zhi, C. Xu, S.-Q. Wu, F. Ning, and C. Cao, WannSymm: A symmetry analysis code for Wannier orbitals, Comput. Phys. Commun. 271 , 108196 (2022). [16] G. K. Madsen, J. Carrete, and M. J. Verstraete, Boltz-TraP2, a program for interpolating band structures and calculating semi-classical transport coefficients, Com-put. Phys. Commun. 231 , 140 (2018). [17] D. Gresch, G. Autes, O. V. Yazyev, M. Troyer, D. Van-derbilt, B. A. Bernevig, and A. A. Soluyanov, Z2Pack: Numerical implementation of hybrid Wannier centers 24 
+
+for identifying topological materials, Phys. Rev. B 95 ,075146 (2017). [18] P. M. C. Rourke and S. R. Julian, Numerical extraction of de Haas–van Alphen frequencies from calculated band energies, Comput. Phys. Commun. 183 , 324 (2012). [19] P. Giannozzi, S. Baroni, N. Bonini, M. Calan-dra, R. Car, C. Cavazzoni, D. Ceresoli, G. L. Chiarotti, M. Cococcioni, I. Dabo, et al. , QUAN-TUM ESPRESSO: a modular and open-source software project for quantum simulations of materials, J. Phys. Condens. Matter 21 , 395502 (2009). [20] P. Giannozzi, O. Andreussi, T. Brumme, O. Bunau, M. Buongiorno Nardelli, M. Calandra, R. Car, C. Cavazzoni, D. Ceresoli, M. Cococcioni, et al. , Ad-vanced capabilities for materials modelling with Quan-tum ESPRESSO, J. Phys. Condens. Matter 29 , 465901 (2017). [21] G. Kresse and J. Furthmüller, Efficient iterative schemes for ab initio total-energy calculations using a plane-wave basis set, Phys. Rev. B 54 , 11169 (1996). [22] G. Kresse and D. Joubert, From ultrasoft pseudopoten-tials to the projector augmented-wave method, Phys. Rev. B 59 , 1758 (1999). [23] D. Vanderbilt, Berry Phases in Electronic Structure Theory: Electric Polarization, Orbital Magnetization and Topological Insulators (Cambridge University Press, 2018). [24] M. Costa, A. T. Costa, W. A. Freitas, T. M. Schmidt, M. Buongiorno Nardelli, and A. Fazzio, Controlling topological states in topological/normal insulator het-erostructures, ACS Omega 3, 15900 (2018). [25] M. Costa, G. R. Schleder, M. Buongiorno Nardelli, C. Lewenkopf, and A. Fazzio, Toward realistic amor-phous topological insulators, Nano Lett. 19 , 8941 (2019). [26] M. Costa, N. M. R. Peres, J. Fernández-Rossier, and A. T. Costa, Nonreciprocal magnons in a two-dimensional crystal with out-of-plane magnetization, Phys. Rev. B 102 , 014450 (2020). [27] R. Cardias, A. Bergman, H. U. R. Strand, R. B. Muniz, and M. Costa, Noncollinear edge magnetism in nanorib-bons of Fe 3GeTe 2 and Fe 3GaTe 2, Nano Lett. 25 , 11797 (2025). [28] D. A. Dugato, W. B. F. Jalil, R. Cardias, M. Albu-querque, M. Costa, T. P. Almeida, K. Fallon, A. Kovács, S. McVitie, R. E. Dunin-Borkowski, and F. Garcia, Curved nanomagnets: An archetype for the skyrmionic states at ambient conditions, Nano Lett. 25 , 8901 (2025). [29] R. Kubo, Statistical-mechanical theory of irreversible processes. I. General theory and simple applications to magnetic and conduction problems, J. Phys. Soc. Jpn. 
+
+12 , 570 (1957). [30] D. Greenwood, The Boltzmann equation in the theory of electrical conduction in metals, Proc. Phys. Soc. 71 ,585 (1958). [31] A. Read and R. Needs, Calculation of optical matrix elements with nonlocal pseudopotentials, Phys. Rev. B 
+
+44 , 13071 (1991). [32] M. S. Hybertsen and S. G. Louie, Ab initio static di-electric matrices from the density-functional approach. I. Formulation and application to semiconductors and insulators, Phys. Rev. B 35 , 5585 (1987). [33] B. Adolph, V. I. Gavrilenko, K. Tenelsen, F. Bechstedt, and R. Del Sole, Nonlocality and many-body effects in the optical properties of semiconductors, Phys. Rev. B 
+
+53 , 9797 (1996). [34] L. Kleinman and D. Bylander, Efficacious form for model pseudopotentials, Phys. Rev. Lett. 48 , 1425 (1982). [35] S.-H. Lee and Y.-W. Son, First-principles approach with a pseudohybrid density functional for extended Hubbard interactions, Phys. Rev. Research 2, 043410 (2020). [36] R. K. Sah, H. Tang, C. Shahi, A. Ruzsinszky, and J. P. Perdew, Effect of strain on the band gap of monolayer 
+
+mos 2, Phys. Rev. B 110 , 144109 (2024). [37] A. Liechtenstein, V. I. Anisimov, and J. Zaanen, Density-functional theory and strong interactions: Or-bital ordering in Mott-Hubbard insulators, Phys. Rev. B 52 , R5467 (1995). [38] S. L. Dudarev, G. A. Botton, S. Y. Savrasov, C. Humphreys, and A. P. Sutton, Electron-energy-loss spectra and the structural stability of nickel oxide: An LSDA+U study, Phys. Rev. B 57 , 1505 (1998). [39] L. A. Agapito, S. Curtarolo, and M. Buongiorno Nardelli, Reformulation of DFT+U as a pseudohybrid Hubbard density functional for accelerated materials discovery, Phys. Rev. X 5, 011006 (2015). [40] W. Pickett, S. Erwin, and E. Ethridge, Reformulation of the LDA+U method for a local-orbital basis, Phys. Rev. B 58 , 1201 (1998). [41] V. L. Campo Jr and M. Cococcioni, Extended DFT+U+V method with on-site and inter-site elec-tronic interactions, J. Phys. Condens. Matter 22 ,055602 (2010). [42] M. Buongiorno Nardelli, Environment-dependent tight-binding models from ab initio pseudoatomic orbital Hamiltonians, Phys. Rev. B 114 , 045125 (2026). [43] J. C. Slater and G. F. Koster, Simplified LCAO method for the periodic potential problem, Phys. Rev. 94 , 1498 (1954). [44] M. Tang, C. Wang, C. Chan, and K. Ho, Environment-dependent tight-binding potential model, Phys. Rev. B 
+
+53 , 979 (1996). [45] L. Goodwin, A. Skinner, and D. Pettifor, Generating transferable tight-binding parameters: application to silicon, Europhys. Lett. 9, 701 (1989). [46] C. Lanczos, An iteration method for the solution of the eigenvalue problem of linear differential and integral op-erators, J. Res. Nat. Bur. Standards 45 , 255 (1950). [47] D. C. Sorensen, Implicit application of polynomial filters in a k-step Arnoldi method, SIAM J. Matrix Anal. Appl. 
+
+13 , 357 (1992). [48] J. M. Ziman, Electrons and Phonons: The Theory of Transport Phenomena in Solids (Oxford University Press, 1960). [49] G. K. Madsen and D. J. Singh, BoltzTraP. A code for calculating band-structure dependent quantities, Com-put. Phys. Commun. 175 , 67 (2006). [50] A. Jayaraj, I. Siloi, M. Fornari, and M. Buon-giorno Nardelli, Relaxation time approximations in PAOFLOW 2.0, Sci. Rep. 12 , 4993 (2022). [51] C. Jacoboni, Theory of Electron Transport in Semi-conductors: A Pathway from Elementary Physics to Nonequilibrium Green Functions , Vol. 165 (Springer Sci-ence & Business Media, 2010). [52] R. Farris, M. B. Maccioni, A. Filippetti, and V. Fioren-25 
+
+tini, Theory of thermoelectricity in Mg 3Sb 2 with an energy- and temperature-dependent relaxation time, J. Phys. Condens. Matter 31 , 065702 (2018). [53] J. Nocedal and S. J. Wright, Sequential quadratic pro-gramming, in Numerical Optimization (Springer, 2006) Chap. 18. [54] N. A. Mecholsky, L. Resca, I. L. Pegg, and M. Fornari, Theory of band warping and its effects on thermoelec-tronic transport properties, Phys. Rev. B 89 , 155131 (2014). [55] W. E. Bies, R. J. Radtke, H. Ehrenreich, and E. Runge, Thermoelectric properties of anisotropic semiconduc-tors, Phys. Rev. B 65 , 085208 (2002). [56] D. I. Pikulin, C.-Y. Hou, and C. W. J. Beenakker, Nernst effect beyond the relaxation-time approxima-tion, Phys. Rev. B 84 , 035133 (2011). [57] S. D. Ganichev, E. Ivchenko, V. Bel’Kov, S. Tarasenko, M. Sollinger, D. Weiss, W. Wegscheider, and W. Prettl, Spin-galvanic effect, Nature 417 , 153 (2002). [58] A. Roy, F. T. Cerasoli, A. Jayaraj, K. Tenzin, M. Buon-giorno Nardelli, and J. Sławińska, Long-range current-induced spin accumulation in chiral crystals, npj Com-put. Mater. 8, 243 (2022). [59] K. Tenzin, A. Roy, H. Jafari, B. Banas, F. T. Cera-soli, M. Date, A. Jayaraj, M. Buongiorno Nardelli, and J. Sławińska, Analogs of Rashba-Edelstein effect from density functional theory, Phys. Rev. B 107 , 165140 (2023). [60] K. Tenzin, A. Roy, F. T. Cerasoli, A. Jayaraj, M. Buon-giorno Nardelli, and J. Sławińska, Collinear Rashba-Edelstein effect in nonmagnetic chiral materials, Phys. Rev. B 108 , 245203 (2023). [61] T. Jungwirth, Q. Niu, and A. H. MacDonald, Anoma-lous Hall effect in ferromagnetic semiconductors, Phys. Rev. Lett. 88 , 207208 (2002). [62] Y. Yao, L. Kleinman, A. H. MacDonald, J. Sinova, T. Jungwirth, D.-s. Wang, E. Wang, and Q. Niu, First principles calculation of anomalous Hall conductivity in ferromagnetic bcc Fe, Phys. Rev. Lett. 92 , 037204 (2004). [63] J. Sinova, D. Culcer, Q. Niu, N. A. Sinitsyn, T. Jung-wirth, and A. H. MacDonald, Universal intrinsic spin Hall effect, Phys. Rev. Lett. 92 , 126603 (2004). [64] G. Y. Guo, S. Murakami, T.-W. Chen, and N. Nagaosa, Intrinsic spin Hall effect in platinum: First-principles calculations, Phys. Rev. Lett. 100 , 096401 (2008). [65] H. Li, H. Gao, L. P. Zârbo, K. Výborný, X. Wang, I. Garate, F. Doǧan, A. Čejchan, J. Sinova, T. Jung-wirth, et al. , Intraband and interband spin-orbit torques in noncentrosymmetric ferromagnets, Phys. Rev. B 91 ,134402 (2015). [66] R. González-Hernández, P. Ritzinger, K. Výborný, J. Železný, and A. Manchon, Non-relativistic torque and Edelstein effect in non-collinear magnets, Nat. Com-mun. 15 , 7663 (2024). [67] N. A. Sinitsyn, Semiclassical theories of the anomalous Hall effect, J. Phys. Condens. Matter 20 , 023201 (2008). [68] K. Tenzin, B. Kilic, R. M. Sattigeri, Z. He, C. Chen Ye, M. Costa, M. Buongiorno Nardelli, C. Autieri, and J. Sławińska, Persistent spin textures, altermagnetism and charge-to-spin conversion in metallic chiral crystals TM 3X6, npj Spintronics 3, 46 (2025). [69] R. Hirakida, K. Tenzin, C. Chen Ye, B. Kilic, C. Autieri, and J. Sławińska, Multipole analysis of spin currents in altermagnetic MnTe, Phys. Rev. B 113 , 155104 (2026). [70] D. Go, D. Jo, C. Kim, and H.-W. Lee, Intrinsic spin and orbital Hall effects from orbital texture, Phys. Rev. Lett. 121 , 086602 (2018). [71] T. P. Cysne, M. Costa, L. M. Canonico, M. Buon-giorno Nardelli, R. B. Muniz, and T. G. Rappoport, Disentangling orbital and valley Hall effects in bilay-ers of transition metal dichalcogenides, Phys. Rev. Lett. 
+
+126 , 056601 (2021). [72] R. Landauer, Spatial variation of currents and fields due to localized scatterers in metallic conduction, IBM J. Res. Dev. 1, 223 (1957). [73] M. Büttiker, Four-terminal phase-coherent conduc-tance, Phys. Rev. Lett. 57 , 1761 (1986). [74] S. Datta, Electronic Transport in Mesoscopic Systems ,Cambridge Studies in Semiconductor Physics and Mi-croelectronic Engineering (Cambridge University Press, 1995). [75] M. Buongiorno Nardelli, Electronic transport in ex-tended systems: Application to carbon nanotubes, Phys. Rev. B 60 , 7828 (1999). [76] A. Calzolari, N. Marzari, I. Souza, and M. Buon-giorno Nardelli, Ab initio transport properties of nanos-tructures from maximally localized Wannier functions, Phys. Rev. B 69 , 035108 (2004). [77] D. H. Lee and J. D. Joannopoulos, Simple scheme for surface-band calculations. I, Phys. Rev. B 23 , 4988 (1981). [78] M. P. López Sancho, J. M. López Sancho, and J. Ru-bio, Quick iterative scheme for the calculation of trans-fer matrices: application to Mo(100), J. Phys. F: Met. Phys. 14 , 1205 (1984). [79] M. P. López Sancho, J. M. López Sancho, and J. Rubio, Highly convergent schemes for the calculation of bulk and surface Green functions, J. Phys. F: Met. Phys. 15 ,851 (1985). [80] D. S. Fisher and P. A. Lee, Relation between conductiv-ity and transmission matrix, Phys. Rev. B 23 , 6851(R) (1981). [81] A. Togo and I. Tanaka, First principles phonon calcu-lations in materials science, Scr. Mater. 108 , 1 (2015). [82] A. Togo, First-principles phonon calculations with phonopy and phono3py, J. Phys. Soc. Jpn. 92 , 012001 (2023). [83] F. Giustino, Electron-phonon interactions from first principles, Rev. Mod. Phys. 89 , 015003 (2017). [84] J.-J. Zhou, J. Park, I.-T. Lu, I. Maliyov, X. Tong, and M. Bernardi, Perturbo: A software package for ab initio electron–phonon interactions, charge transport and ul-trafast dynamics, Comput. Phys. Commun. 264 , 107970 (2021). [85] L. A. Agapito and M. Bernardi, Ab initio electron-phonon interactions using atomic orbital wave func-tions, Phys. Rev. B 97 , 235146 (2018). [86] I. Y. Sklyadneva, R. Heid, P. M. Echenique, K.-B. Bohnen, and E. V. Chulkov, Electron-phonon interac-tion in bulk Pb: Beyond the Fermi surface, Phys. Rev. B 85 , 155115 (2012). [87] M. Buongiorno Nardelli (2026), manuscript in prepara-tion. [88] D. Shoenberg, Magnetic Oscillations in Metals (Cam-bridge University Press, 1984). [89] I. M. Lifshitz and A. M. Kosevich, Theory of magnetic susceptibility in metals at low temperatures, Sov. Phys. 26 
+
+JETP 2, 636 (1956). [90] L. Onsager, Interpretation of the de Haas-van Alphen effect, Lond. Edinb. Dublin Philos. Mag. J. Sci. 43 , 1006 (1952). [91] C. Chen Ye, Y. Kreminska, J. Ye, and J. Sław-ińska, First-principles studies of fermiology in topologi-cal phases of bulk ZrTe 5, Phys. Rev. Materials 9, 054204 (2025). [92] L. Fu and C. L. Kane, Topological insulators with in-version symmetry, Phys. Rev. B 76 , 045302 (2007). [93] L. Fu, C. L. Kane, and E. J. Mele, Topological insulators in three dimensions, Phys. Rev. Lett. 98 , 106803 (2007). [94] A. A. Soluyanov and D. Vanderbilt, Computing topolog-ical invariants without inversion symmetry, Phys. Rev. B 83 , 235401 (2011). [95] D. J. Thouless, M. Kohmoto, M. P. Nightingale, and M. den Nijs, Quantized Hall conductance in a two-dimensional periodic potential, Phys. Rev. Lett. 49 , 405 (1982). [96] F. D. M. Haldane, Model for a quantum Hall effect with-out Landau levels: Condensed-matter realization of the “parity anomaly”, Phys. Rev. Lett. 61 , 2015 (1988). [97] D. Xiao, M.-C. Chang, and Q. Niu, Berry phase ef-fects on electronic properties, Rev. Mod. Phys. 82 , 1959 (2010). [98] J. C. Y. Teo, L. Fu, and C. L. Kane, Surface states and topological invariants in three-dimensional topological insulators: Application to Bi 1−xSb x, Phys. Rev. B 78 ,045426 (2008). [99] L. Fu, Topological crystalline insulators, Phys. Rev. Lett. 106 , 106802 (2011). [100] T. H. Hsieh, H. Lin, J. Liu, W. Duan, A. Bansil, and L. Fu, Topological crystalline insulators in the SnTe ma-terial class, Nat. Commun. 3, 982 (2012). [101] X. Wan, A. M. Turner, A. Vishwanath, and S. Y. Savrasov, Topological semimetal and Fermi-arc surface states in the electronic structure of pyrochlore iridates, Phys. Rev. B 83 , 205101 (2011). [102] T. B. Boykin and G. Klimeck, Practical application of zone-folding concepts in tight-binding calculations, Phys. Rev. B 71 , 115215 (2005). [103] V. Popescu and A. Zunger, Extracting E versus ⃗ k effec-tive band structure from supercell calculations on alloys and impurities, Phys. Rev. B 85 , 085201 (2012). [104] H. Nishi, Y.-i. Matsushita, and A. Oshiyama, Band-unfolding approach to moiré-induced band-gap open-ing and Fermi level velocity reduction in twisted bilayer graphene, Phys. Rev. B 95 , 085420 (2017). [105] S. Curtarolo, W. Setyawan, S. Wang, J. Xue, K. Yang, R. H. Taylor, L. J. Nelson, G. L. W. Hart, S. San-vito, M. Buongiorno Nardelli, N. Mingo, and O. Levy, AFLOWLIB.ORG: A distributed materials properties repository from high-throughput ab initio calculations, Comput. Mater. Sci. 58 , 227 (2012). [106] M. van Setten, M. Giantomassi, E. Bousquet, M. Ver-straete, D. Hamann, X. Gonze, and G.-M. Rignanese, The PseudoDojo: Training and grading a 85 element op-timized norm-conserving pseudopotential table, Com-put. Phys. Commun. 226 , 39 (2018). [107] S. Haastrup, M. Strange, M. Pandey, T. Deilmann, P. S. Schmidt, N. F. Hinsche, M. N. Gjerding, D. Torelli, P. M. Larsen, A. C. Riis-Jensen, J. J. Mortensen, T. Olsen, and K. S. Thygesen, The Computational 2D Materials Database: high-throughput modeling and dis-covery of atomically thin crystals, 2D Mater. 5, 042002 (2018). [108] M. N. Gjerding, A. Taghizadeh, A. Rasmussen, S. Ali, F. Bertoldo, T. Deilmann, N. R. Knøsgaard, M. Kruse, A. H. Larsen, S. Manti, T. G. Pedersen, U. Petralanda, T. Skovhus, M. K. Svendsen, J. J. Mortensen, T. Olsen, and K. S. Thygesen, Recent progress of the Computa-tional 2D Materials Database (C2DB), 2D Mater. 8,044002 (2021). [109] J. P. Perdew, K. Burke, and M. Ernzerhof, Generalized gradient approximation made simple, Phys. Rev. Lett. 
+
+77 , 3865 (1996). [110] H. J. Monkhorst and J. D. Pack, Special points for Brillouin-zone integrations, Phys. Rev. B 13 , 5188 (1976). [111] J.-E. Lee, A. Wang, S. Chen, M. Kwon, J. Hwang, M. Cho, K.-H. Son, D.-S. Han, J. W. Choi, Y. D. Kim, S.-K. Mo, C. Petrovic, C. Hwang, S. Y. Park, C. Jang, and H. Ryu, Spin-orbit-splitting-driven nonlinear Hall effect in NbIrTe 4, Nat. Commun. 15 , 3971 (2024). [112] A. D. Corso, Pseudopotentials periodic table: From H to Pu, Comput. Mater. Sci. 95 , 337 (2014). [113] Anthropic, Introducing Claude 4 (2025), accessed: 2026-04-04.

@@ -1,0 +1,332 @@
+Title: EnSol: an environment-aware graph neural network for molecular solubility prediction
+
+URL Source: https://arxiv.org/pdf/2609.21151v1
+
+Published Time: Mon, 21 Sep 2026 00:19:38 GMT
+
+Number of Pages: 15
+
+Markdown Content:
+Preprint 
+
+# EnSol: an environment-aware graph neural network for molecular solubility prediction 
+
+Thao Nguyen 1,2,4 †, Saman Shafaei 2,3,5 †, Zhengyi Zhang 2,3,5 †,Huimin Zhao 2,3,4,5* , Heng Ji 1,2,4,5* 
+
+> 1Siebel School of Computing and Data Science, University of Illinois Urbana-Champaign, Urbana, IL, 61801, USA.
+> 2Carl R. Woese Institute for Genomic Biology, University of Illinois Urbana-Champaign, Urbana, IL, 61801, USA.
+> 3Department of Chemical and Biomolecular Engineering, University of Illinois Urbana-Champaign, Urbana, IL, 61801, USA.
+> 4NSF Molecule Maker Lab Institute, University of Illinois Urbana-Champaign, Urbana, IL, 61801, USA.
+> 5DOE Center for Advanced Bioenergy and Bioproducts Innovation, University of Illinois Urbana-Champaign, Urbana, IL, 61801, USA.
+> †These authors contributed equally to this work.
+
+Abstract 
+
+Molecular solubility directly affects key aspects of molecular devel-opment such as reaction feasibility, formulation performance, sep-aration efficiency, and solvent selection. However, experimental measurement across solutes, solvents, and temperatures remains costly and sparsely sampled. Existing computational models often rely on fixed-solvent assumptions, deterministic formulations, or sim-plified representations of solute–solvent interactions, limiting their ability to capture complex molecular interactions, continuous tem-perature effects, and experimental uncertainty. Here, we introduce EnSol, an environment-aware probabilistic framework for molecu-lar solubility prediction. EnSol represents the solute and solvent as molecular graphs and learns separate representations for each before bringing them together through cross-attention to capture solute– solvent interactions. Temperature is incorporated directly into the solvent environment through feature-wise modulation, and a mix-ture density network predicts full solubility distributions to capture both temperature-dependent behavior and experimental uncertainty. On the independent SolProp and Leeds benchmark datasets, EnSol achieved Spearman correlations of 0.876 and 0.601, respectively, outperforming state-of-the-art solubility prediction models across both benchmarks. Beyond computational benchmarking, experimen-tal validation across chemically diverse solute–solvent pairs showed that EnSol maintained strong predictive performance and supported reliable solvent ranking, achieving a Spearman correlation of 0.715. These results show that EnSol can support reliable solubility pre-diction and solvent selection across diverse chemical systems while accounting for predictive uncertainty.  
+
+> Keywords: deep learning, mixture density network, solubility prediction, solvent screening
+
+1arXiv:2609.21151v1 [cs.LG] 17 Sep 2026 Preprint 
+
+# 1 Main 
+
+Molecular solubility is an important physicochemical property that influ-ences the behavior and utility of small molecules across different solvents and environments.[1–3] In practice, insufficient or poorly characterized molecular solubility constrains formulation stability, mass transfer efficiency, and reac-tion performance, often increasing experimental iteration and development timelines.[4–6] In industrial and laboratory settings, suboptimal solubility can necessitate additional burden such as phase management, and downstream pro-cessing steps, increasing both operational complexity and cost.[7, 8] Despite its key role, systematic experimental characterization of molecular solubility across diverse solvent systems and temperature conditions remains labor-intensive, time-consuming, and costly, making large-scale screening difficult during early molecular development and process design.[9–11] Consequently, reliable predictive models for molecular solubility offer a practical way to accel-erate decision-making, reduce experimental bottlenecks, and support rational solvent and process selection.[12, 13] Recently, machine learning (ML) has been increasingly applied to pre-dict molecular solubility and prioritize solvents before extensive laboratory testing.[14], [15],[16] However, existing models often oversimplify this problem in ways that limit their ability for realistic solvent selection. Many approaches focus on aqueous solubility or fixed-solvent settings, whereas practical chem-ical workflows require comparison across many solvent environments.[3],[17] Other models incorporate solvent information but treat solute and solvent rep-resentations as static features, limiting their ability to learn specific interaction patterns among solvent and solutes.[18],[19] Furthermore, despite the direct influence of temperature on molecular dissolution and solvent behavior, it is often treated as a simple input variable rather than as a continuous environ-mental factor that modulates the solvation environment and solute–solvent interactions. Lastly, most solubility predictors return a single deterministic point as prediction, even though experimental measurements can vary across protocols, datasets, and thermodynamic conditions. As a result, these models provide little information about prediction uncertainty, making it harder to judge which predictions are reliable enough to guide experiments.[6],[20] To address these limitations, we developed EnSol, an environment-aware probabilistic ML-based model for molecular solubility prediction. EnSol is designed around the idea that accurate solubility prediction requires modeling the full experimental context, including the solute, solvent, and temperature. The model represents solute and solvent molecules as molecular graphs and encodes them using graph neural network (GNN). Their learned representa-tions are then coupled through cross-attention, allowing the model to construct interaction-aware features that depend on the specific solute–solvent pair. Tem-perature is introduced through modulation of the solvent representation, so changes in temperature can directly influence how the solvent environment is represented by the model. EnSol also moves beyond a single-point prediction to model a full distribution of possible solubility values, allowing the model 
+
+> *To whom correspondence should be addressed. Tel: (217) 244-0862, Email: hengji@illinois.edu (H.J.); (217) 333-2631, Email: zhao5@illinois.edu (H.Z.).
+
+2Preprint 
+
+to both account for heterogeneous or multimodal behavior and provide uncer-tainty estimates that help distinguish more confident predictions from those that may require additional experimental testing. EnSol was designed to reflect the experimental setting as closely as possi-ble by explicitly modeling the solubility task. We evaluate EnSol through two separate computational benchmarks and an independent experimental solvent-screening validation. Across all settings, EnSol consistently outperformed the comparison models, supporting its use for practical solubility prediction and solvent selection, showing how the model can move beyond retrospective pre-diction toward practical use in solvent screening by directly incorporating molecular context and environmental conditions into data-driven molecular solubility prediction. 
+
+# 2 Results 
+
+2.1 Overview of the EnSol architecture 
+
+EnSol is an environment-aware molecular solubility prediction framework that jointly models solute structure, solvent structure, and temperature within a unified deep learning architecture ( Fig. 1 ). Solute and solvent molecules are represented as molecular graphs and encoded using GNN modules, after which their node-level representations are coupled through cross-attention to learn context-dependent solute–solvent interaction features. Temperature is incor-porated as a continuous environmental variable that modulates the solvent embedding through feature-wise linear modulation (FiLM)[21], producing a unified solute–solvent–temperature representation of the experimental con-dition. This joint representation parameterizes a Mixture Density Network 
+
+( MDN)[22], letting EnSol to predict full conditional solubility distributions rather than a point estimates. With integrating molecular interaction, con-tinuous temperature conditioning, and probabilistic inference, EnSol captures heterogeneous solubility behavior across solvent and temperature regimes and provides uncertainty estimates for downstream screening and decision-making.     
+
+> Fig. 1 a) Conceptual illustration of the solubility landscape, showing how a single solute exhibits condition-dependent solubility across different solvents and temperatures, motivating environment-aware modeling. b) Overview of the EnSol architecture. Solute and solvent molecules are encoded as graphs, coupled via cross-attention, and conditioned on temperature to form an environment embedding. A mixture density network predicts a full solubility distribution, enabling uncertainty-aware predictions.
+
+2.2 Training and comparative evaluation of EnSol 
+
+EnSol was trained on BigSolDB[23], one of the largest and most complete databases of experimentally measured molecular solubility values across diverse 3Preprint 
+
+organic solvents and temperatures ( Fig. S1 ). Solute-level splitting was used for training and validation to avoid leakage, and performance was evaluated on two independent external benchmark datasets, SolProp[24], and Leeds[6], after removing solutes overlapping with the training set ( Fig. S2 and Fig. S3 ). We benchmarked EnSol against two state-of-the-art solubility prediction models, FASTSOLV[19] and Vermeire[24], using identical filtered test sets. EnSol performance is across three random seeds, whereas both baseline models are pretrained and deterministic. On the SolProp benchmark, EnSol showed a substantial improvement in solubility ranking, achieving a Spearman correla-tion of 0.876 ± 0.005 compared with 0.509 for FASTSOLV and 0.569 for the Vermeire model ( Fig. 2a ), while reducing RMSE to 0.824 ± 0.032 from 1.303 and 1.700, respectively ( Fig. 2b, Table S1 and Fig. S4a ). On the Leeds benchmark, which is more distant from the training distribu-tion, EnSol clearly outperformed the Vermeire model while closely matching FASTSOLV. EnSol achieved a Spearman correlation of 0.602 ± 0.013, com-pared with 0.593 for FASTSOLV and 0.245 for the Vermeire model ( Fig. 2a ). A similar pattern was observed for prediction error, as EnSol achieved a Root Mean Square Error (RMSE) of 0.944 ± 0.017, which was comparable to 0.922 for FASTSOLV and substantially lower than 2.026 for the Vermeire model (Fig. 2b, Table S1 and Fig. S4b ).      
+
+> Fig. 2 Predictive accuracy and ranking performance across two independent benchmark datasets SolProp and Leeds. Model performance is compared on two external test sets, SolProp and Leeds. Values above bars are mean values. EnSol error bars are standard deviation across three random seeds (n = 3) and FASTSOLV and the Vermeire model are pretrained and deterministic. a) Spearman rank correlation b) RMSE values.
+
+Because practical solvent selection often requires ranking candidate solvents for a fixed solute under defined experimental conditions, we further evaluated EnSol in a solvent-ranking setting using the SolProp database.[25] Candidate solvents were prioritized for each solute–temperature pair according to the pre-dicted solubility. Compared to FASTSOLV[19], EnSol identified high-solubility solvents among the top-ranked candidates more consistently and better main-tained the relative ordering of solvent performance, reaching top 1 recall of 0.61 and top 3 recall of 0.85 versus 0.35 and 0.56 respectively ( Fig. S5 ). This suggests EnSol can support solvent screening as a decision-making tool, rather than only serving as a point predictor of individual solubility measurements. 4Preprint 
+
+2.3 Transferability and expert model fine-tuning 
+
+Solubility models are often adapted to settings in which the relevant chemical space of solutes or solvent are narrow and only a limited number of mea-surements are available, such as a new compound series or a single solvent of interest. We therefore examined whether the representations learned by EnSol from the chemically diverse, multi-solvent BigSolDB dataset could transfer to aqueous solubility prediction, and whether the value of this pretraining corre-lates with the number and composition of the target data. To this objective, transfer learning capability of EnSol was evaluated on two complementary aqueous datasets. We first incorporated AqSolDB[26], a large curated collection of experimentally measured aqueous solubilities. After removing compounds that overlapped with the aqueous subset of BigSolDB, 9,748 unique compounds remained. We also included ESOL[12], a widely used aqueous solubility dataset containing 1,082 compounds. For each dataset, we trained EnSol in two ways. For each dataset, we compared fine-tuning EnSol from a BigSolDB-pretrained checkpoint with training the same architecture from random initialization using identical Murcko-scaffold splits and optimization settings across five seeds. Because the target datasets do not report temperature, both approaches used a temperature-independent version of EnSol. We additionally evaluated fixed subsets of 1,000 AqSolDB compounds to examine how transfer changed with target data availability. Across both datasets, the benefit of pretraining was more apparent in RMSE than in Spearman correlation, suggesting that pretraining mainly helped EnSol predict solubility values more accurately, while having a more modest effect on the relative ranking of compounds. On ESOL, pretraining increased the Spearman correlation from 0.922 ± 0.029 to 0.942 ± 0.016 (Fig. 3a ) while it had larger effect on the RMSE and reduced the RMSE from 0.874 ± 0.066 to 0.759 ± 0.065 ( Fig. 3b ). The benefit was also followed the same pattern in the data-limited AqSolDB setting. With 1,000 fine-tuning compounds, pretraining reduced the RMSE from 1.383 ± 0.181 to 1.292 ±
+
+0.139 and increased the Spearman correlation from 0.783 ± 0.039 to 0.804 ±
+
+0.038. Also, as more target-domain data were introduced, the contribution of pretraining gradually shrank. On the full AqSolDB dataset, pretraining pro-duced only a small reduction in RMSE, from 1.146 ± 0.070 to 1.102 ± 0.143, while the Spearman correlation changed little, from 0.864 ± 0.028 to 0.869 ±
+
+0.032 ( Table S2 ). None of these differences reached statistically significant, indicating that the observed gains were modest relative to variation arising from initialization and scaffold partitioning and relationship between target dataset size and transfer benefit was not strictly monotonic. The contrast between ESOL and AqSolDB further indicates that trans-fer depends on the composition and internal consistency of the target dataset rather than on sample size alone. Despite containing approximately nine-fold fewer compounds, ESOL supported substantially lower prediction error and higher rank correlation than the full AqSolDB dataset. This difference is consistent with the narrower and more uniformly curated chemical space of ESOL, whereas AqSolDB aggregates measurements from multiple sources and covers a broader and more heterogeneous distribution. Overall, the results indicate that BigSolDB pretraining provides a slight transferable initialization for aqueous solubility prediction, with the clearest gains observed when target measurements are limited. The benefit is more consistent for reducing abso-lute prediction error than for improving compound ranking and becomes less pronounced as sufficient task-specific data become available. 5Preprint  
+
+> Fig. 3 Transfer learning and generalization of EnSol. Fine-tuning from a BigSolDB-pretrained check-point compared with training the identical architecture from random initialization, across three random seeds (n = 3) of the two deduplicated AqSolDB set (n = 1,000 and n= 9,748) probe the effect of target dataset size and ESOL (n = 1,082) is an independent aqueous dataset shown for compari-son. Values above bars are means. a) Spearman rank correlation b) RMSE values.
+
+2.4 Ablation studies and model component contributions 
+
+To quantify the contribution of each individual architectural component within EnSol, we performed a systematic ablation study on SolProp test set, in which key modules of the model were selectively removed or replaced while keeping the rest of the parameters including training splits, optimization set-tings, and evaluation protocol fixed over three different seeds. This comparison allowed us to isolate the functional contribution of molecular encoding, solute– solvent interaction modeling via cross-attention, temperature conditioning, and probabilistic prediction to overall model performance. The results indicated that molecular encoder and solute–solvent inter-action mechanism made large contributions to performance. Replacing AttentiveFP[26] with a conventional MPNN[27], corresponded to an average decrease of 0.088 in Spearman correlation and an increase of 0.187 in RMSE, which showcases the importance of the way the solvents and solute molecules are represented. Removing solute–solvent cross-attention also decreased Spear-man correlation by 0.088 and increased RMSE by 0.104, showing that explicitly modeling interactions between the two molecular representations improves performance. Replacing FiLM-based temperature conditioning with direct temperature concatenation decreased Spearman correlation by 0.042 and increased RMSE by 0.092, further supporting our hypothesis of temperature-dependent modulation of the solvent representation. Similarly, replacing the mixture-density network with a deterministic mean squared error (MSE) regression head decreased Spearman correlation by 0.043 and increased RMSE by 0.100 ( Fig. 4a, Fig. 4b and Table S3 ). The combination of the abla-tion study results suggest that each major component contributes to EnSol performance, with the molecular encoder and solute–solvent cross-attention producing the largest improvements in ranking performance. 
+
+2.5 Experimental validation and solvent recommendation 
+
+Although computational benchmarks establish comparative predictive perfor-mance, molecular solubility remains an experimentally measured property, and practical utility requires that model predictions translate into reliable solvent 6Preprint  
+
+> Fig. 4 Component-wise ablation of the EnSol architecture on the SolProp benchmark. Each variant modifies exactly one design choice relative to full EnSol, holding training splits, optimization settings, and evaluation protocol fixed. K = 5 components, the Gaussian mixture is increased from three to five components; No cross-attention, the solute–solvent cross-attention layer is removed; MSE head, the mixture-density head is replaced by a deterministic regression head trained with mean-squared error; Concat. temperature, FiLM temperature conditioning is replaced by a normalized temperature scalar concatenated onto the solute–solvent embedding; MPNN encoder, the AttentiveFP graph encoder is replaced by a message-passing neural network. Performance is shown as a) Spearman rank correlation. b) RMSE values.
+
+selection under fixed laboratory conditions. To evaluate this capability, we performed targeted experimental validation, testing whether EnSol could pri-oritize suitable solvents beyond in silico benchmarking across a diverse set of solutes ( Fig. 5a ). We experimentally measured solubility across 100 chemi-cally diverse solute–solvent pairs, comprising 10 solutes and 10 commonly used solvents selected to reflect realistic solvent-selection scenarios ( Fig. S6, Table S4 ). Out of these, 78 yielded quantitative solubility values while the remain-ing 22 fell below the 1 mg mL −1 detection limit of the visual assay and are therefore excluded from the quantitative metrics reported while being retained in the deposited dataset ( Fig. 5b ). Compared with the computational benchmarks, this experimental dataset provides a more controlled test of model performance, as all solubility mea-surements were generated under a consistent experimental protocol and within a fixed experimental setting. Under these conditions, EnSol showed stronger agreement with measured solubilities than the comparison models ( Table S5, Fig. S7 ). EnSol achieved a Spearman correlation of 0.715 ± 0.035, compared with 0.31 for FASTSOLV and 0.595 for the Vermeire model ( Fig. 5c ). The same trend was observed for prediction error, with EnSol reaching an RMSE of 0.699 ± 0.062, compared with 1.038 for FASTSOLV and 0.841 for the Vermeire model ( Fig. 5d ). Furthermore, EnSol more reliably prioritized experimentally favorable solvents compared with the baseline model. For solutes measured across multiple solvents, EnSol recovered the experimental solvent ranking with high fidelity for the majority of compounds, achieving per-solute Spearman correlations above 0.7 for six of the ten solutes and reaching 1.00 for threonine, 0.98 for thiourea, and 0.88 for 8-hydroxyquinoline ( Fig. S8 ). However, this performance was not uniform across all compounds, and some solutes remained challenging for the model. Performance was weaker for a small number of solutes, most notably the phosphorane (Wittig ylide) and chlorothioxanthone. This is likely because both compounds are structurally unusual relative to typ-ical solubility training data, with the phosphorane in particular representing a reactive organophosphorus chemistry that is poorly represented in existing 7Preprint 
+
+datasets, leading to less reliable extrapolation. Such cases highlight an impor-tant limitation of the current model and the need for broader prospective validation across more diverse chemistries and experimental conditions.        
+
+> Fig. 5 Experimental validation set design and model performance. a) Structural diversity of the 10 solutes used for experimental validation, spanning a range of functional groups, sizes, and scaffolds. b) The validation set spans 10 solutes and 10 solvents, all evaluated at 298.15 K, filled circles mark the solute–solvent pairs included in the set and crossed-out circles mark pairs that were not due to the measurements below the 1 mg mL −1detection limit of the visual assay.
+> c) Model performance is compared on the experimental validation set. Values above bars are mean values. EnSol error bars are standard deviation across three random seeds (n = 3) and FASTSOLV and the Vermeire model are pretrained and deterministic across Spearman rank correlation d) Model performance is compared on the experimental validation set. Values above bars are mean values. EnSol error bars are standard deviation across three random seeds (n = 3) and FASTSOLV and the Vermeire model are pretrained and deterministic across RMSE values.
+
+# 3 Conclusions 
+
+Solubility is one of the fundamental properties of molecules which directly affects how compounds behave under specific solvent and temperature condi-tions. In this work, we developed EnSol, an environment-aware probabilistic framework for molecular solubility prediction, by jointly modeling solute struc-ture, solvent structure, and temperature-dependent environmental context. Through systematic computational evaluation on two independent external benchmarks, we showed that EnSol improves solubility ranking on the SolProp benchmark and matches the strongest available baseline under greater distri-bution shift. Furthermore, experimental validation across chemically diverse solutes and candidate solvents confirmed that EnSol predictions translate into practical solvent-ranking capability, to reduce experimental screening burden and improve the efficiency of early-stage molecular and process development. We anticipate that EnSol will serve as a useful platform for data-driven solubility prediction tool in pharmaceutical development, synthetic chemistry, formulation design, and sustainable process engineering. By predicting solu-bility distributions, EnSol enables users to prioritize solvent candidates for experimental testing, thereby reducing screening burden, material consump-tion, and iteration time. Moreover, the transferability of EnSol representations 8Preprint 
+
+provides a practical route for building expert solubility models when additional scars private or domain-specific measurements are available for a particular solute class, solvent family, or application regime. However, despite EnSol’s capabilities, several limitations remain, including limited mechanistic interpretability, dependence on the quality and coverage of available solubility measurements, and reduced confidence in sparsely sam-pled regimes such as uncommon solutes, extreme temperatures, and solvent mixtures. Looking ahead, integrating EnSol with automated experimentation, active learning, and closed-loop solvent optimization could enable continu-ously improving solubility models that directly connect predictive uncertainty, experimental feasibility, and sustainability-aware chemical design. 
+
+# 4 Methods 
+
+4.1 Train and test databases 
+
+EnSol was trained on BigSolDB[23], a well-curated database of experimentally measured solubility values for organic compounds across a broad range of sol-vents and temperatures. Solubility values were standardized as log values of the solubility measurements. The final training dataset contained 100,570 mea-surements covering 1,375 solutes and 70 solvents over a temperature range of 243.15–425.77 K, following the filtering and deduplication procedures described below. Generalization was assessed using two independent external benchmarks, SolProp[24] covering 6,236 measurements and Leeds[6] with 1,469 measure-ments. Before model training, all solutes present in either benchmark were removed from BigSolDB. The resulting benchmark evaluations therefore mea-sure performance on compounds that were not encountered during training. Transfer learning was evaluated using two aqueous solubility datasets with distinct sizes and chemical compositions. AqSolDB[26] which included 9,982 compounds compiled from nine curated sources and spans a broad, heteroge-neous region of drug-like and industrial chemical space. MoleculeNet ESOL[12] contains 1,128 compounds and represents a smaller, chemically narrower and more uniformly curated benchmark. To prevent overlap with the pretraining data, compounds present in the aqueous subset of BigSolDB were removed from each target dataset using InChIKey matching. This approach captures equiva-lent molecular representations that may differ in their raw SMILES encoding. Deduplication removed 232 compounds from AqSolDB, leaving 9,748, and 46 compounds from ESOL, leaving 1,082. To examine how transfer perfor-mance depends on the amount of target data, fixed random subsets of 1,000 compounds were also sampled from the deduplicated AqSolDB dataset. 
+
+4.2 Model architecture 
+
+EnSol is an environment-aware molecular solubility prediction framework that jointly encodes solute and solvent molecules and explicitly conditions predic-tions on temperature. The model consists of graph-based molecular encoders, interaction-aware coupling between solute and solvent representations, contin-uous temperature conditioning via feature-wise modulation, and a probabilistic regression head for solubility prediction. 9Preprint 
+
+4.2.1 Solute and solvent molecular encoders 
+
+Both solute and solvent molecules are represented as molecular graphs 
+
+G = ( V, E ), where nodes correspond to atoms and are featurized using 12-dimensional atom features encoding atomic number, electronegativity, van der Waals radius, formal charge, aromaticity, hydrogen count, valence, hydrogen donor/acceptor status, and SP/SP 2/SP 3 hybridization and edges correspond to their intramolecular interactions using a 6-dimensional encoding bond type (single, double, triple, aromatic), conjugation, and ring membership.[28, 29] Each molecule is encoded using an AttentiveFP[26] graph neural network, performing iterative message passing to update atom-level embeddings while learning attention weights over neighboring atoms.[30] Given initial node fea-tures xv, the AttentiveFP encoder produces a set of node embeddings hv and a graph-level embedding hsolute or hsolvent via pooling. The solute is encoded by a deeper AttentiveFP network (2 layers, 2 timesteps, 256 dimension) to cap-ture more complex intramolecular interactions, while the solvent is encoded by a shallower network (1 layer, 1 timestep, 256 dimension), reflecting the asymmetric role of solvent in determining solubility context. 
+
+4.2.2 Solute–solvent interaction modeling via cross-attention 
+
+To model interaction-relevant context between solute and solvent molecules, EnSol employs a 4-head cross-attention to couple their learned representations.[31] Given solute node embeddings Hs ∈ RNs×256 and solvent node embeddings Hv ∈ RNv ×256 , cross-attention computes context-dependent representations by allowing solute features to attend to solvent features and vice versa. Attention scores are computed as: Attention( Q, K, V ) = softmax 
+
+ QK T
+
+√dk
+
+
+
+V
+
+where Qs = HsWQ and Kv = HvWK . The resulting attended repre-sentations capture interaction-relevant features conditioned on the specific solute–solvent pair. These node-level representations are pooled to produce context-aware graph embeddings. 
+
+4.2.3 Temperature encoding and continuous conditioning 
+
+Temperature is incorporated as an explicit continuous conditioning variable. Raw temperature values T are first standardized using training-set statistics ˆT = T − μT
+
+σT
+
+The standardized temperature is expanded using a 10-center radial basis function (RBF) expansion, 
+
+ϕi(T ) = exp 
+
+
+
+−γrbf 
+
+ ˆT − ci
+
+2
+
+, i = 1 , . . . , 10 where the centers c1, . . . , c 10 are placed at the 0.05–0.95 quantiles of the standardized training-temperature distribution, rather than on a fixed sym-metric grid, so that RBF resolution matches the density of the training data. The bandwidth is set adaptively from the resulting center spacing as 10 Preprint 
+
+γrbf = 12 [median(diff(sort( c)))] 2
+
+As RBF features decay to zero outside the region spanned by the centers, temperatures beyond the training range would otherwise be indistinguishable. We therefore create two monotonic extrapolation features that grow without saturating, preserving rank order into the tails overflow( ˆT ) = log 
+
+h
+
+1 + ReLU 
+
+ ˆT − max  
+
+> i
+
+(ci)
+
+i 
+
+underflow( ˆT ) = log 
+
+h
+
+1 + ReLU 
+
+
+
+min  
+
+> i
+
+(ci) − ˆT
+
+i 
+
+By appending the overflow and underflow features we end up with the temperature feature vector of 
+
+φ(T ) = 
+
+h
+
+ϕ1(T ), . . . , ϕ 10 (T ), overflow( ˆT ), underflow( ˆT )
+
+i
+
+∈ R12 
+
+4.2.4 Environment embedding via feature-wise linear modulation 
+
+The temperature feature vector is projected through a two-layer perceptron that emits both scale and shift parameters for feature-wise linear modulation (FiLM): [γraw , β ] = W2 ReLU( W1φ(T )) ∈ R2d
+
+γ = 1 + tanh( γraw )Given a solvent graph-level embedding hsolvent ∈ Rd, the environment embedding is computed as 
+
+henv = hsolvent ⊙ γ + β
+
+where ⊙ denotes element-wise multiplication. Parameterizing the scale as 
+
+γ = 1 + tanh( γraw ) centers the transformation on the identity at initial-ization and constrains γ ∈ (0 , 2), so that temperature can both attenuate and amplify individual dimensions of the solvent embedding, while the addi-tive shift β allows temperature to translate the representation. The resulting solvent–temperature context vector henv captures continuous thermodynamic modulation of solvent behavior. This full affine formulation replaces a scale-only variant used in preliminary experiments, in which the temperature embedding was passed through a sigmoid and applied multiplicatively; because that gate was restricted to (0 , 1) it could only attenuate the solvent embedding and could not represent amplification or translation. 
+
+4.2.5 Probabilistic solubility prediction via mixture density network 
+
+The final solute embedding and environment embedding are concatenated and passed to a MDN implemented as a multilayer perceptron. The MDN predicts parameters of a mixture of K = 3 Gaussian components for solubility y
+
+11 Preprint 
+
+p(y | x) = 
+
+> K
+
+X
+
+> k=1
+
+πk(x) N  y | μk(x), σ 2
+
+> k
+
+(x)
+
+where πk are mixture weights satisfying P 
+
+> k
+
+πk = 1, and μk and σ2 
+
+> k
+
+denote component means and variances and N is the number of training samples. The model is trained by minimizing the negative log-likelihood 
+
+L = −
+
+> N
+
+X
+
+> n=1
+
+log 
+
+" KX
+
+> k=1
+
+πk(xn) N  yn | μk(xn), σ 2
+
+> k
+
+(xn)#
+
+The predictive mean is given by ˆy =
+
+> K
+
+X
+
+> k=1
+
+πkμk
+
+and the predictive variance decomposes into aleatoric and mixture-induced uncertainty Var( y) = 
+
+> K
+
+X
+
+> k=1
+
+πkσ2 
+
+> k
+
++
+
+> K
+
+X
+
+> k=1
+
+πk(μk − ˆy)2
+
+This probabilistic formulation allows EnSol to represent heteroscedastic, non-Gaussian predictive distributions and to report predictive uncertainty alongside point predictions. 
+
+4.3 Model training and optimization 
+
+Models were trained using the Adam optimizer with a learning rate of 1 ×
+
+10 −4. Training used a batch size of 32 for a maximum of 10 epochs, with the checkpoint achieving the best validation Spearman correlation retained as the final model. Training was performed on a single NVIDIA A100-SXM4-80GB GPU using PyTorch 2.7.1 and PyTorch Geometric 2.6.0. Data were partitioned at the solute level (grouped by unique solute SMILES, so no solute appeared in more than one fold) into 90:10 train–validation splits. All experiments were run with three random seeds, each controlling both model initialization and split composition, so that reported variability reflects both sources. 
+
+4.4 Experimental workflows 
+
+Solubilities of 10 molecules in 10 solvents were chosen to verify the model. Chemicals and solvents were purchased from Sigma Aldrich, Ambeed, Chem-scene, Thermo Fisher Scientific, Oakwood Chemical and were used without further purification. Solubility measurements were performed by visual inspec-tion of complete dissolution. Compounds exhibiting solubilities ¡1 mg mL −1
+
+were considered fully insoluble. For compounds with intermediate solubilities (1–10 mg mL −1), solvent was titrated into 10 mg of substrate until a clear solution was obtained. For compounds with solubilities ¿10 mg mL −1, sub-strate was added incrementally to 1 mL of solvent until the saturation point was reached, as indicated by the presence of persistent undissolved solid. 12 Preprint 
+
+4.5 Code Availability 
+
+The source code and data for training EnSol is available at https://github. com/thaonguyen217/EnSol. 
+
+# Acknowledgements 
+
+This work was supported by the U.S. National Science Foundation (NSF) (CHE-2505932 (H.J. and H.Z.) and DBI-2400058 (H.Z.)). Any opinions, find-ings, and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect those of the NSF. Our research benefitted from the computing resources at Delta, the National Cen-ter for Supercomputing Applications, enabled by allocation BIO250057 from the Advanced Cyberinfrastructure Coordination Ecosystem: Services & Sup-port (ACCESS) program, funded by NSF grants 2138259, 2138286, 2138307, 2137603, and 2138296. 
+
+# Contributions 
+
+H.J. and H.Z. coordinated the project. T.N and S.S jointly designed the research. T.N, S.S and Z.Z performed the research. T.N and S.S analyzed the data. T.N, S.S and Z.Z wrote the paper. All authors approved the final paper. 
+
+# Declarations 
+
+Competing interests 
+
+The authors declare no competing interests. 
+
+# References 
+
+[1] Barrett, J. A., Yang, W., Skolnik, S. M., Belliveau, L. M. & Patros, K. M. Discovery solubility measurement and assessment of small molecules with drug development in mind. Drug Discov. Today 27 , 1315–1325 (2022). [2] Wu, K. et al. Overcoming Challenges in Small-Molecule Drug Bioavail-ability: A Review of Key Factors and Approaches. Int. J. Mol. Sci. 25 ,13121 (2024). [3] Tayyebi, A. et al. Prediction of organic compound aqueous solubility using machine learning: a comparison study of descriptor-based and fingerprints-based models. J. Cheminformatics 15 , 99 (2023). [4] Pendam, D. et al. Advances in formulation strategies and stability con-siderations of amorphous solid dispersions. J. Drug Deliv. Sci. Technol. 
+
+108 , 106922 (2025). [5] Bloomquist, C. K., Zhang, Z., Aydil, E. S. & Modestino, M. A. Under-standing the effects of multiphase flow properties in transport-limited organic electrosynthesis. Chem. Eng. J. 528 , 172125 (2026). 13 Preprint 
+
+[6] Boobier, S., Hose, D. R. J., Blacker, A. J. & Nguyen, B. N. Machine learn-ing with physicochemical relationships: solubility prediction in organic solvents and water. Nat. Commun. 11 , 5753 (2020). [7] Murdande, S. B., Pikal, M. J., Shanker, R. M. & Bogner, R. H. Aqueous solubility of crystalline and amorphous drugs: Challenges in measurement. 
+
+Pharm. Dev. Technol. 16 , 187–200 (2011). [8] Sharma, V. et al. Toward microfluidic continuous-flow and intelligent downstream processing of biopharmaceuticals. Lab. Chip 24 , 2861–2882 (2024). [9] Rahimpour, E., Alvani-Alamdari, S., Acree, W. E. & Jouyban, A. Drug Solubility Correlation Using the Jouyban–Acree Model: Effects of Concentration Units and Error Criteria. Molecules 27 , 1998 (2022). [10] Lipinski, C. A., Lombardo, F., Dominy, B. W. & Feeney, P. J. Experimen-tal and computational approaches to estimate solubility and permeability in drug discovery and development settings. Adv. Drug Deliv. Rev. 23 ,3–25 (1997). [11] K¨ oncz¨ ol, ´A. & Darg´ o, G. Brief overview of solubility methods: Recent trends in equilibrium solubility measurement and predictive models. Drug Discov. Today Technol. 27 , 3–10 (2018). [12] Delaney, John S. ESOL: estimating aqueous solubility directly from molec-ular structure. Journal of chemical information and computer sciences. 
+
+44 .3 (2004) [13] Llompart, P. et al. Will we ever be able to accurately predict solubility? 
+
+Sci. Data 11 , 303 (2024). [14] Jouyban, A., Rahimpour, E. & Karimzadeh, Z. A new correlative model to simulate the solubility of drugs in mono-solvent systems at various temperatures. J. Mol. Liq. 343 , 117587 (2021). [15] Al Ibrahim, E., Morgan, N., M¨ uller, S., Motati, S. & Green, W. H. Accu-rately Predicting Solubility Curves via a Thermodynamic Cycle, Machine Learning, and Solvent Ensembles. J. Am. Chem. Soc. 147 , 45057–45069 (2025). [16] Panapitiya, G. et al. Evaluation of Deep Learning Architectures for Aqueous Solubility Prediction. ACS Omega 7, 15695–15710 (2022). [17] Francoeur, P. G. & Koes, D. R. SolTranNet–A Machine Learning Tool for Fast Aqueous Solubility Prediction. J. Chem. Inf. Model. 61 , 2530–2536 (2021). [18] Ghanavati, M. A., Ahmadi, S. & Rohani, S. A machine learning approach for the prediction of aqueous solubility of pharmaceuticals: a comparative model and dataset analysis. Digit. Discov. 3, 2085–2104 (2024). [19] Attia, L., Burns, J. W., Doyle, P. S. & Green, W. H. Data-driven organic solubility prediction at the limit of aleatoric uncertainty. Nat. Commun. 
+
+16 , 7497 (2025). 14 Preprint 
+
+[20] Gao, P. et al. Accurate predictions of drugs aqueous solubility via deep learning tools. J. Mol. Struct. 1249 , 131562 (2022). [21] Perez, E., Strub, F., de Vries, H., Dumoulin, V. & Courville, A. FiLM: Visual Reasoning with a General Conditioning Layer. Preprint at https: //doi.org/10.48550/ARXIV.1709.07871 (2017). [22] Bishop, C. M. Mixture Density Networks . (1994). [23] Krasnov, L. et al. BigSolDB 2.0, dataset of solubility values for organic compounds in different solvents at various temperatures. Sci. Data 12 ,1236 (2025). [24] Vermeire, F. H., Chung, Y. & Green, W. H. Predicting Solubility Limits of Organic Solutes for a Wide Range of Solvents and Temperatures. J. Am. Chem. Soc. 144 , 10785–10797 (2022). [25] Ottoboni, S. et al. A Novel Integrated Workflow for Isolation Solvent Selection Using Prediction and Modeling. Org. Process Res. Dev. 25 ,1143–1159 (2021). [26] Sorkun, M.C., Khetan, A. & Er, S. AqSolDB, a curated reference set of aqueous solubility and 2D descriptors for a diverse set of compounds. Sci Data 6, 143 (2019). [27] Wang, Z. et al. Advanced graph and sequence neural networks for molecu-lar property prediction and drug discovery. Bioinformatics 38 , 2579–2586 (2022). [28] Zhao, B., Xu, W., Guan, J. & Zhou, S. Molecular property prediction based on graph structure learning. Bioinformatics 40 , btae304 (2024). [29] Fang, X. et al. Geometry-enhanced molecular representation learning for property prediction. Nat. Mach. Intell. 4, 127–134 (2022). [30] Xiong, Z. et al. Pushing the Boundaries of Molecular Representation for Drug Discovery with the Graph Attention Mechanism. J. Med. Chem. 63 ,8749–8760 (2020). [31] Vaswani, A. et al. Attention Is All You Need. Preprint at https://doi.org/ 10.48550/ARXIV.1706.03762 (2017). 15

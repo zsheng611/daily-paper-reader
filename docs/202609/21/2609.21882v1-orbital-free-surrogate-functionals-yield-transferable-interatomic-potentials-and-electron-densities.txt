@@ -1,0 +1,411 @@
+Title: Orbital-Free Surrogate Functionals Yield Transferable Interatomic Potentials and Electron Densities
+
+URL Source: https://arxiv.org/pdf/2609.21882v1
+
+Published Time: Mon, 21 Sep 2026 01:15:01 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Orbital-Free Surrogate Functionals Yield Transferable Interatomic Potentials and Electron Densities 
+
+Simon Wagner, Marc K. Ickler, Manuel V. Klockow, Fred A. Hamprecht, and Roman Remme ∗
+
+Interdisciplinary Center for Scientific Computing (IWR), Heidelberg University, Heidelberg, Germany 
+
+(Dated: September 21, 2026) Orbital-free density functional theory seeks to compute the energy of an electronic system directly from its electron density, avoiding one-electron wave functions and thereby offering a route to scal-able electronic structure calculations. Machine-learned orbital-free density functionals have recently achieved promising results on small organic molecules, predicting energies with sub-millihartree accuracy. However, their convergence in density optimization remains sensitive to hyperparame-ter tuning and architectural choices. Here, we extend the recently introduced (weak) surrogate functional framework—designed to predict ground-state electron densities only—to also yield their energy, resulting in “strong” surrogate functionals. We find that these learned functionals enable stable convergence across all tested neural network backbones, reducing electron density errors rela-tive to the Kohn–Sham reference by an order of magnitude compared to previous OF-DFT methods. More importantly, the predicted energies are competitive with state-of-the-art machine-learned in-teratomic potentials (MLIPs) trained only on energies, while exhibiting superior generalization to larger, unseen systems. 
+
+I. INTRODUCTION 
+
+Kohn–Sham density functional theory (KS-DFT) [1] is, for good reasons, a mainstay of quantum chemistry, but the cubic scaling of its standard formulation limits the sizes of systems and lengths of dynamics that can be studied at an acceptable computational cost. Orbital-free DFT (OF-DFT) sidesteps the explicit treatment of orbitals and minimizes the electronic energy directly with respect to the density [2, 3], promising a more favor-able scaling. Realizing this promise in practice, however, requires an accurate approximation of the energy func-tional, in particular of its kinetic energy contribution [3]. Machine learning has recently begun to address this challenge [4], with progress accelerating from pioneering work on one-dimensional toy systems [5, 6] through small molecules [7–11] to mid-sized molecules [12, 13]. Among these, M-OFDFT [12] was the first to predict molecular energies with errors on the order of 1 mHa compared to the Kohn–Sham reference across the QM9 dataset [14], though the learned functional did not afford true vari-ational optimization. STRUCTURES25 [13] closed this gap by augmenting the training data with densities ob-tained from perturbed Kohn–Sham potentials, yielding a functional that converges from a cheap initial guess to a meaningful ground-state density. Most recently, weak 
+
+surrogate functionals [15] have shown that such pertur-bations are not even strictly necessary: a learned func-tional that is only required to yield the correct density upon minimization at inference time can be trained from in-vacuo ground-state labels alone. Despite this progress, two limitations persist. First, by design, weak surrogates predict only the ground-state density ; the energy at the converged density is  
+
+> ∗Corresponding author: roman.remme@iwr.uni-heidelberg.de
+
+not constrained and is therefore not physically meaning-ful. A practical OF-DFT functional, however, must de-liver both: a reliable density for downstream electronic structure analysis (e.g., electrostatics, response proper-ties, bonding) and an energy to drive geometry optimiza-tion and molecular dynamics. Second, even existing con-vergent OF-DFT functionals have proven sensitive to ar-chitectural and hyperparameter choices: minor modifica-tions can turn an otherwise well-behaved energy surface into one lacking a usable minimum, or one whose mini-mum lies far from the true ground state. This fragility hampers the systematic exploration of more expressive neural network backbones and slows the transfer of the approach to new chemistries. Here, we introduce strong surrogate functionals , which extend the weak surrogate framework [15] to constrain not only the location of the minimum but also its en-ergy. As illustrated in Figure 1a, a strong surrogate is required to possess a global minimum at the true ground-state density and to match the true ground-state energy at that minimum. Constructing such a functional from ground-state labels alone presents the challenge to pro-vide a training signal for off-equilibrium energies where the ground-truth is not known. We address this by combining two core ingredients: (1) ground-state energy and gradient supervision by injecting a number of ex-plicit ground-state samples per batch to anchor the ab-solute energy scale, and (2) an energy-bound loss derived from empirical parabolic envelopes of the Kohn–Sham en-ergy landscape. Together, these components allow the model to inherit the robust convergence properties of weak surrogates [15] while simultaneously yielding accu-rate ground-state energies. Empirically, strong surrogates deliver the following im-provements over the prior state of the art: 1. Density optimization converges across all neural-network backbones we tested , including eSEN [16] and EquiformerV2 [17]. The fragility that has so arXiv:2609.21882v1 [physics.chem-ph] 18 Sep 2026 2ρ
+
+# Energy 
+
+# E[ρ, M]˜E[ρ, M]¯E[ρ, M]
+
+> Physical functional Strong surrogate functional Weak surrogate functional
+
+# ρ∗
+
+# E∗
+
+> (a)
+
+NN( θ) 
+
+> ×N
+> ˜E
+> ∇p˜E
+
+# LEB 
+
+> +
+
+# LGDI            
+
+> M
+> pM
+> θ←θ−β∇θL
+> model update
+> pM←pM−γ∇p˜E
+> density cache update (b)
+
+FIG. 1: Overview of the strong surrogate pipeline. (a) The strong surrogate functional ˜E is required to have a global minimum at the true ground-state density ρ∗ with energy equal to the true ground-state energy E∗. In contrast, a weak surrogate functional ¯E [15] is only required to have a minimum at ρ∗, while the energy is not constrained. (b) Simplified overview of the train-time density optimization procedure. For each molecule, we cache its current density. In each training step, we update the densities of the involved molecules with a gradient-descent step using the gradients predicted by the model. far limited the choice of architecture in machine-learned OF-DFT is largely removed. 2. Density errors on QM9 drop by an order of mag-nitude relative to STRUCTURES25 and weak surrogates, and similar improvements carry over to QMugs molecules with up to 100 heavy atoms [18]—well beyond the size range seen dur-ing training. 3. The predicted energies are competitive with current state-of-the-art MLIPs [16, 19] that are trained di-rectly on energies, while extrapolating substantially better to larger systems—closing the gap between density-based and geometry-based machine learn-ing models for molecules. 4. The framework naturally accommodates training on partial functional components, such as the ki-netic and exchange-correlation energy ( ETXC ), al-lowing exact analytical computation of nonlocal electrostatic contributions while maintaining stable density optimization.  
+
+> II. RELATED WORK
+
+a. Machine-learned orbital-free DFT. Recent ad-vances in machine-learned OF-DFT [12, 13] have fo-cused on learning a density functional using the densi-ties and energies of intermediate Kohn–Sham iterations as ground-truth labels, allowing the prediction of the electronic ground state through variational optimization. Weak surrogate functionals [15] bypass the requirement of physical off-equilibrium labels by dropping physical constraints and only requiring the learned functional to have a global minimum at the true ground-state density. At the same time, they lose the ability to predict mean-ingful energies, a property that is reintroduced in the strong surrogate functional framework presented here. 
+
+b. Machine-learned interatomic potentials (MLIPs). 
+
+In contrast to density-based methods, standard MLIPs [16, 17, 19–23] bypass the electron density entirely to efficiently predict the potential energy surface directly from the molecular geometry. While modern equivariant graph neural networks achieve outstanding interpolation accuracy, the lack of an explicit interme-diate density restricts their ability to natively describe, e.g., nonlocal electronic responses and charge transfer. 
+
+c. Long-range and self-consistent electrostatic MLIPs. To overcome the limitations of strictly local MLIPs, several approaches augment geometry-based models with coarse-grained electronic degrees of free-dom or explicitly long-ranged descriptors [24]. One family has been systematized as a design space of self-consistent electrostatic MLIPs, interpretable as coarse-grained approximations to DFT [25]. Exam-ples include charge-density or charge-equilibration schemes [26], self-consistent electronic populations [27], long-range polarization models [28], and explicit-electron representations [29]. A complementary line of work captures long-range interactions without imposing electronic self-consistency, e.g., through physics-inspired long-range descriptors [30], directly-predicted Wannier-center representations [31], Ewald-summation-based descriptors and message passing [32, 33], global atten-tion mechanisms [34], or charge-aware potentials and electric-response models with explicit electronic degrees 3of freedom [35, 36]. Common to all these approaches is that the electronic degrees of freedom, where present, need not coincide with the true DFT ground state. Strong surrogate functionals, in contrast, are able to capture the true DFT ground-state density at a much higher level of detail.   
+
+> III. BACKGROUND A. Orbital-free density functional theory
+
+In OF-DFT, the goal is to construct a functional E[ρ], which for a given electronic system maps an electron den-sity ρ to a corresponding energy E. Minimizing E[ρ] over 
+
+ρ then yields the ground-state energy E∗ and density ρ∗
+
+of the system. The density is often expressed as an ex-pansion using atom-centered Gaussian-type basis func-tions. We follow [12, 13] in applying symmetric L¨ owdin orthonormalization, yielding an expansion 
+
+ρ(r) = X
+
+> μ
+
+pμωμ(r) , (1) with density coefficients pμ and orthonormal basis func-tions ωμ(r). The energy functional can be split into different phys-ical contributions: 
+
+Etot (p) = TS(p) + EXC (p) + EH(p) + Eext (p), (2) where TS is the non-interacting kinetic energy, EXC is the exchange-correlation energy, EH is the Hartree en-ergy, and Eext is the interaction energy with an external potential. In machine-learned OF-DFT [12, 13, 15], the energy functional or parts of it are learned by training on la-bels obtained from Kohn–Sham reference data. Those labels correspond to electron densities at the electronic ground state as well as off-equilibrium densities extracted from intermediate self-consistent field iterations. During inference, the electron density is initialized using stan-dard methods such as a superposition of atomic densi-ties (SAD). Afterwards, the density is optimized using a gradient-descent scheme where the required gradients of the functional ∇pEtot are obtained by automated differ-entiation of the neural network.   
+
+> IV. METHODS A. Weak surrogate functionals
+
+Weak surrogate functionals [15] lift the requirement of global fidelity to a physical energy functional and in-stead define a successful functional exclusively through its minimizer in a fixed density optimization procedure. Specifically, a weak surrogate functional ¯E must yield the true ground-state density coefficients p∗ when minimized from a prescribed initial guess. This allows training us-ing only ground-state density labels, avoiding the need for off-equilibrium densities. To guarantee convergence during inference, weak surrogates can be trained with the gradient-descent-improvement (GDI) loss. This loss enforces that ev-ery optimization step with step size λ moves the co-efficients closer to the true ground state by at least a predefined contraction factor 0 < β < 1. With p′ =
+
+p − λ∇p ˜Etot [p; θ] and [ x]+ = max(0 , x ), the loss [15] is 
+
+LGDI = [ ∥p′ − p∗∥ − β∥p − p∗∥]+ . (3) The contraction factor is chosen such that the GDI loss vanishes for most Kohn–Sham labels from off-equilibrium densities as used in [13]. In this sense, the GDI loss is 
+
+compatible with the physical energy landscape as sampled by these training labels. More details on the choice of β
+
+and λ can be found in Appendix C 3. To focus model capacity on the regions actually visited during inference, this loss is combined with an adaptive train-time density optimization scheme (see Figure 1b). For each molecule M, a cached density coefficient vector 
+
+pM is maintained and updated during training each time the molecule appears in a batch via a gradient descent step: 
+
+pM → pM − γ∇p ˜Etot (pM). (4) Note that the step size γ may be different from the step size λ that is used in the GDI loss. In the original frame-work, γ was kept fixed. Here, we introduce a dynamically computed “ideal” learning rate for the cache updates: 
+
+γ∗ =
+
+"
+
+∇p ˜Etot (p) · (p − p∗)
+
+∥∇p ˜Etot (p)∥ 2
+
+#
+
+> +
+
+. (5) This rate γ∗ corresponds to the nonnegative step size that minimizes the Euclidean distance between the up-dated density coefficients and the ground-state target p∗
+
+for the currently predicted gradient direction (see Ap-pendix A for details). Employing this optimal local step size ensures that train-time trajectories progress as effi-ciently as possible toward the ground state. At the same time, samples for which the predicted gradient would lead to a step away from the ground state are not updated at all, creating a natural training dynamic where difficult-to-learn densities are kept in cache until the model learns to improve the gradient predictions at these points.  
+
+> B. Strong surrogate functionals
+
+While weak surrogates only ensure convergence to the correct ground-state electron density, strong surrogate functionals are designed to also accurately model the energy at this ground state. From a machine learning 4perspective, this requires an additional loss term to en-force the true energy at the predicted minimum. How-ever, in the adaptive training scheme described in Sec-tion IV A, the exact ground-state density is never ex-plicitly sampled. The central challenge is therefore how to provide meaningful energy feedback. To address this, we propose a two-step strategy: First, we inject a frac-tion 0 ≤ q < 1 of exact ground-state samples into each training batch. For these molecules, instead of using their cached density coefficients, we evaluate the model strictly at the true ground-state density and ap-ply L1 penalty losses on both the predicted ground-state energy and its gradients, which should be zero at the ground state: LE = P
+
+> M
+
+
+
+| ˜Etot (p∗M) − Etot (p∗M)|
+
+
+
+and 
+
+L∇E = P
+
+> M
+
+
+
+|∇p ˜Etot (p∗M)|
+
+
+
+. Incorporating a fraction of exact ground-state labels also provides the architec-tural flexibility, in principle, to enforce other ground-state properties, such as nuclear gradients. Second, while exact energy labels at arbitrary off-equilibrium densities are not available, we can exploit physical and empirical energy bounds to construct a ro-bust loss function. A natural lower bound is the ground-state energy itself, since it represents the global mini-mum of the exact functional. However, penalizing pre-dictions only when they fall below the exact ground-state energy yields a very weak learning signal. Instead, we derive tighter empirical lower and upper bounds from off-equilibrium energies and densities, which we take from [13]. As illustrated in Figure 2, these labels form a set that, empirically, is bounded above and below by two quadratic forms: 
+
+Emin (p) = amin (p − p∗)T S(p − p∗), (6) 
+
+Emax (p) = amax (p − p∗)T S(p − p∗), (7) where S is the overlap matrix of the basis functions in the molecule. Based on this observation, we introduce the following energy-bound loss: 
+
+LEB =
+
+h
+
+Emin (p) − ˜Etot (p)
+
+i
+
+> +
+
++
+
+h ˜Etot (p) − Emax (p)
+
+i
+
+> +
+
+.
+
+(8) The total loss is then given by a weighted sum of all loss components: 
+
+L = α1LGDI + α2LEB + α3LE + α4L∇E . (9)   
+
+> C. Training surrogate functionals on ETXC
+
+The choice of Etot as energy target is practical, as both the GDI loss and the density cache updates require gradients corresponding to the total energy functional. Nevertheless, there are compelling reasons to use neu-ral networks to model only specific energy components, while computing the remaining contributions using ex-act physical expressions: (1) To facilitate generalization 10 3 10 2 10 1
+
+Density L2 distance ‖∆ρ‖2       
+
+> 10 6
+> 10 5
+> 10 4
+> 10 3
+> 10 2
+> 10 1
+> E[ρ] − E[ρ ∗ ]
+> Samples Upper bound Lower bound
+> 00.1 00.04
+
+FIG. 2: Scatter plot of energy labels from intermediate Kohn–Sham iterations as used in the training set of [13], with logarithmic scaling on both axes (linear scaling in the inset). The labels show a quadratic dependence on the L2 density difference to the ground state and give rise to quadratic lower and upper bounds that can be used to enforce the energy-bound loss in Equation 8. The fine blue lines indicate isocontours of the loss. across diverse chemical systems, it is advantageous to learn only the universal functional components, isolat-ing them from the system-specific external potential. (2) Neural network backbones typically apply a radial spatial cutoff, limiting their ability to model long-range interac-tions. Explicitly evaluating the Hartree energy enables the model to accurately capture the nonlocal electrostatic contributions. Consequently, learning the sum ETXC of the non-interacting kinetic energy TS and the exchange-correlation energy EXC represents a physically motivated objective, consistent with prior methodologies [12, 13]. In practice this means parameterizing the total energy functional as ˜Etot (p) = ˜ETXC (p) + EH(p) + Eext (p), (10) where ˜ETXC is the contribution that is learned by the neural network. 
+
+a. Enhancing computational efficiency The primary computational bottleneck lies in evaluating the remaining gradient contributions—namely ∇pEH and ∇pEext —at each training step, as these gradients are necessary to perform cache updates and compute the GDI loss. With the convention EH(p) = 12 pT Jp , the Hartree gradient is given by ∇pEH = Jp . Computing this term is expen-sive, requiring either the repeated recalculation of the Coulomb matrix J for every sample during each epoch, or precomputing and storing J for the entire dataset, which exhibits poor scaling for large molecular systems. To enhance the efficiency and scalability of the ap-proach, we propose to use an auxiliary functional ˜Eaux (p)in place of the total energy ˜Etot (p) when computing the 5            
+
+> C38 H43 F3N8O3- STRUCTURES25 outlier
+> (a) ∥∆ρ∥2= 1 .209 (b) ∥∆ρ∥2= 0 .013
+> C56 H66 N8O7- Random QMugs molecule
+> (c) ∥∆ρ∥2= 0 .054 (d) ∥∆ρ∥2= 0 .008
+
+FIG. 3: Visual comparison of spatially resolved density errors for two molecules from the QMugs dataset. In each panel, the left subfigure shows the density error from the STRUCTURES25 baseline, while the right subfigure displays the error from a strong surrogate functional (this work). The molecule in the left panel corresponds to an outlier of the STRUCTURES25 model, while the molecule in the right panel is a randomly selected example. All plots use the same colorbar. GDI loss and performing the cache updates. This aux-iliary functional must preserve the ground-state density of the true energy functional in order for the train-time density optimization scheme to converge to the correct density. A choice that fulfills this criterion while remain-ing computationally efficient is given by ˜Eaux (p) = ˜ETXC (p) − ∇pETXC (p∗) · p , (11) where we subtract a linear term parameterized by the gradients of the kinetic and exchange-correlation ener-gies evaluated at the ground state p∗. We must further ensure that the true ground-state density is also a min-imum of ˜Etot (p), which includes the exact Hartree and external energies. Because the gradient of the total en-ergy vanishes at the ground state, we can use Equation 2 to express this gradient contribution as 
+
+∇pETXC (p∗) = −∇pEH(p∗) − ∇pEext (p∗). (12) Furthermore, since the external energy is a linear func-tional of the density, we can write ∇pEext (p∗) · p =
+
+Eext (p). Substituting these relations into Equation 11 yields: ˜Eaux (p) = ˜ETXC (p) + ( ∇pEH(p∗) + ∇pEext (p∗)) · p,
+
+(13) = ˜ETXC (p) + ∇pEH(p∗) · p + Eext (p). (14) Thus, the auxiliary functional corresponds to linearizing the true Hartree energy around the ground-state density. Using this relation, we can express the residual between the total energy functional and the auxiliary functional as ˜Etot (p) − ˜Eaux (p) = EH(p) − ∇pEH(p∗) · p (15) = 12 pT Jp − (p∗)T Jp (16) = 12 (p − p∗)T J(p − p∗) + const. (17) Because the Coulomb matrix J is positive semi-definite, this residual forms a convex functional. Adding this term to ˜Eaux therefore preserves the global minimum at p∗.As explained above, the GDI and energy-bound losses are designed such that most of the available training la-bels for off-equilibrium densities have zero loss, in or-der to impose as few unphysical restrictions as possi-ble. Applying the GDI loss to the auxiliary functional in Equation 11 enforces convexity on the sum of the ki-netic and exchange-correlation energies—a property not guaranteed for the exact physical functional. However, empirical observations suggest that convexity holds for our training data (see Appendix B).  
+
+> D. Network architecture
+
+Prior work in OF-DFT [12, 13, 15], including surrogate functionals for OF-DFT, has modeled the density repre-sentation using Graphormer-style architectures [37], re-lying on local canonicalization [38] to express the density coefficients as scalar graph features. SO(3)-equivariant neural networks operating on irreducible tensor features provide a strong alternative for molecular modeling, es-pecially when the target quantities naturally transform 6TABLE I: Characterizing in-domain accuracy: Results on QM9 test data. Weak surrogates yield no energies and MLIPs do not predict electron densities. Models marked with a star were trained and evaluated on different QM9 splits including ”uncharacterized” molecules, which are usually discarded from the dataset.                                                
+
+> Model Target |∆E|(mHa) |∆E|/N (mHa) ∥∆ρ∥2(10 −2)Prior energy functionals M-OFDFT *[12] ETXC 1.37 0.088 2.7 STRUCTURES25 *[13] ETXC 0.64 0.038 1.4 Weak surrogate *[15] ---1.2 MLIPs eSEN Etot 0.203 0.012 -EquiformerV2 Etot 0.221 0.015 -GotenNet Etot 0.130 0.008 -Surrogate Functionals eSEN-SF ETXC 0.371 0.022 0.29 (this work) eSEN-SF Etot 0.134 0.008 0.17 EquiformerV2-SF Etot 0.125 0.007 0.15
+
+TABLE II: Characterizing out-of-domain accuracy: Results on large molecules from QMugs. All models were trained on a combined QM9 + QMugs split with up to 15 heavy atoms and evaluated on QMugs molecules up to 100 heavy atoms.                                                
+
+> Model Target |∆E|(mHa) |∆E|/N (mHa) ∥∆ρ∥2(10 −2)Prior energy functionals M-OFDFT [12] ETXC 18 0.17 7.0 STRUCTURES25 [13] ETXC 22 0.21 6.8 Weak surrogate [15] ---8.2 MLIPs eSEN Etot 14.2 0.138 -EquiformerV2 Etot 19.2 0.132 -GotenNet Etot 17.5 0.123 -Surrogate Functionals eSEN-SF ETXC 8.6 0.066 1.70 (this work) eSEN-SF Etot 3.7 0.028 1.03
+> EquiformerV2-SF Etot 3.4 0.026 1.08
+
+under rotations. We therefore evaluate eSEN [16] and EquiformerV2 [17], two modern equivariant architec-tures. Both architectures build on the efficient eSCN for-mulation [39], which reduces the cost of equivariant con-volutions and tensor-product-like interactions. The main architectural difference is the edge aggregation mecha-nism: eSEN uses edge-conditioned equivariant message passing with unnormalized sum aggregation, whereas EquiformerV2 uses an SO(3)-equivariant multi-head at-tention block with softmax-normalized edge weights. To feed the density information into these architectures, a new density embedding is created. The coefficients are first rescaled independently in each dimension and sub-sequently scattered into a fixed-size “atom-hot” tensor per atom, as in the Graphormer-style architectures. Asingle equivariant linear layer is then employed to pro-duce the correct structure of irreducible representations that is needed for both eSEN and EquiformerV2. The resulting embedding is added directly onto the respec-tive embeddings employed in the original architectures. Furthermore, an atomic reference module is used to add element-dependent atomic energy biases to the output of the network. In contrast to [12, 13], we do not em-ploy a global energy bias, which we found to degrade the generalization performance to larger molecules.   
+
+> V. EXPERIMENTS A. Density optimization accuracy
+
+We train and evaluate our models on molecules from the QM9 dataset [14]. For ground-truth energies and densities, we rely on the same labels utilized in [13], re-stricted to ground-state labels, which were generated us-ing the PBE functional [40]. Following the methodology established in prior work [12, 13, 15], we test the extrap-olation capabilities of our approach by training models on a combined pool of QM9 and QMugs [18] molecules limited to 15 heavy atoms. We then evaluate the mod-els on a distinct test split of significantly larger QMugs configurations containing up to 100 heavy atoms (refer to Appendix C 1 for full details). We benchmark our accuracy against established machine-learned orbital-free functionals, namely M-OFDFT [12] and STRUCTURES25 [13], as well as weak surrogate functionals from [15]. As additional baselines, we train GotenNet—the current state-of-the-art MLIP on QM9—as well as vanilla eSEN and EquiformerV2 architectures without density embeddings, using only ground-state energy data. Comprehensive model spec-ifications and training hyperparameters are documented in Appendix C 2. Models trained with the strong surro-7gate pipeline are denoted with the suffix -SF. Performance metrics on the QM9 dataset are presented in Table I. Remarkably, all surrogate variants surpass the existing OF-DFT baselines by a wide margin, demon-strating substantial improvements in both energy pre-dictions and density accuracy. Concurrently, models trained with Etot targets display notably lower energy errors compared to baseline models trained exclusively on molecular geometries without auxiliary electron den-sity information. Identical performance trends persist when evaluating the models on the larger QMugs molecules, as summa-rized in Table II. Notably, the relative performance mar-gin between our strong surrogate functionals and the MLIP baselines widens on this out-of-distribution set. While the surrogate functionals trained on ETXC show higher energy and density errors than their Etot counter-parts, they still outperform all previous OF-DFT base-lines trained on the same energy target, demonstrating that the train-time density optimization procedure on the auxiliary functional ˜Eaux is sufficient to learn a converg-ing functional. Compared to the OF-DFT baselines, surrogate func-tionals show density errors that are lower by approxi-mately one order of magnitude. Furthermore, they do not exhibit large outliers as is the case for STRUC-TURES25 [13]. A visual comparison of density errors for example molecules is shown in Figure 3. It should be noted that all previous machine-learned OF-DFT functionals shown in Tables I and II are based on a Graphormer architecture [37], which is less expres-sive than either eSEN or EquiformerV2 and thus ex-plains part of the performance difference to the surrogate functional. However, we found that retraining STRUC-TURES25 with either of the alternative architectures in-stead of a Graphormer yields a functional that does not converge during density optimization. In Figure 4, we visualize the distribution of eigenvalues of the Hessian of an eSEN model trained with the STRUCTURES25 training pipeline and the surrogate pipeline, respectively, evaluated at the ground-state density of a random QM9 molecule. The surrogate functional has only positive eigenvalues that all lie within a narrow interval, confirm-ing that the model has indeed learned a convex func-tional as enforced by the GDI and energy-bound losses. The eSEN-STR25 model, on the other hand, displays a much broader range of Hessian eigenvalues including both much larger and crucially also negative values, lead-ing to a functional that does not converge during density optimization. The fact that we obtain convergence irre-spective of the network architecture thus presents a sig-nificant advantage of the surrogate-style training.  
+
+> B. Ablation experiments
+
+In order to isolate the contribution of newly intro-duced components to the strong surrogate training per-
+
+FIG. 4: Variational density optimization using prior OF-DFT functionals such as STRUCTURES25 with an eSEN backbone (eSEN-STR25) does not reliably converge, whereas training the same backbone with the surrogate functional pipeline (eSEN-SF) leads to convergent models. The figure depicts the distribution of Hessian eigenvalues at the electronic ground state, where eSEN-STR25 shows a number of negative eigenvalues, corresponding to directions in which the functional is locally concave, while eSEN-SF is locally convex in all directions. formance, we conduct targeted ablation experiments. We train an EquiformerV2 surrogate functional under two modified constraints: either disabling the energy-bound loss entirely, or replacing the optimally computed ideal learning rate with a fixed cache update learning rate of 10 −2. The resulting evaluations are detailed in Table III. TABLE III: Ablation study demonstrating the impact of omitting key components of the strong surrogate training pipeline.              
+
+> Energy bound loss Ideal lr (cache update) |∆E|(mHa) ∥∆ρ∥2(10 −2)
+> ✓✗0.168 0.332
+> ✗✓0.158 0.140
+> ✓✓0.125 0.148
+
+Both ablation scenarios show a degradation in pre-dictive performance, validating the effectiveness of these adaptations within the training pipeline.  
+
+> VI. DISCUSSION AND CONCLUSION
+
+In this work, we have introduced strong surrogate func-tionals that achieve state-of-the-art results on PBE ener-gies for both the QM9 and QMugs datasets. These sur-rogate functionals outperform previous machine-learned 8orbital-free density functionals by a wide margin. Fur-thermore, they make the training process more robust, allowing for the use of state-of-the-art neural network backbones while guaranteeing stable convergence during density optimization. When evaluated on direct energy prediction, the strong surrogate functionals demonstrate competitive perfor-mance relative to standard machine-learned interatomic potentials (MLIPs). While MLIPs can be susceptible to overfitting on datasets of this size, the physical induc-tive bias embedded within the surrogate framework pro-vides an effective regularization mechanism. This regu-larization not only improves in-distribution performance but also leads to better generalization on the out-of-distribution QMugs test set. We further showed that training surrogate function-als on the combined kinetic and exchange-correlation en-ergy components, ETXC , yields a convergent optimiza-tion landscape. This modification allows the model to compute long-range electrostatic interactions explicitly through the exact Hartree energy. We attribute the lower accuracy compared to the Etot models to two main fac-tors: first, the ETXC term may be a more difficult learn-ing target, and second, the density fitting errors during data generation are absorbed into the ETXC labels, in-troducing undesirable artifacts. Moving toward more ex-pressive density representations might thus remedy this issue in the future. A current limitation of surrogate functionals, com-pared to MLIP baselines, is increased computational cost during inference, primarily due to the repeated model evaluations required for density optimization. Future work may alleviate this drawback by designing faster op-timizers or using machine-learned direct predictions of the ground-state density coefficients [12]. The proposed approach can straightforwardly be ex-tended to molecular labels generated with more accu-rate XC functionals or even quantum chemistry methods other than Kohn–Sham DFT, as long as both ground-state energies and ground-state densities are available. A promising direction for future work thus lies in train-ing surrogate functionals on larger datasets such as OMol25 [41] with data generated at the ωB 97M-V/def2-TZVPD level of theory, where ground-state electron den-sities are already available. Taken together, these results show that surrogate func-tionals provide a compelling alternative to MLIPs when electron densities or strong extrapolation are needed, but conventional DFT is computationally prohibitive. 
+
+> ACKNOWLEDGMENTS
+
+This work is supported by the German Research Foundation (DFG) under Germany’s Excellence Strategy EXC-2181/1-390900948 (the Heidelberg STRUCTURES Excellence Cluster) as well as by the Carl-Zeiss-Stiftung via its Wildcard program. The authors acknowledge support by the state of Baden-W¨ urttemberg through bwHPC and the German Research Foundation (DFG) through grant INST 35/1597-1 FUGG. 
+
+> DATA AVAILABILITY STATEMENT
+
+The full training and evaluation code is available at https://github.com/sciai-lab/surrogate-functionals. The data used to train the models is available from Ref. [13]. 
+
+> Appendix A: Mathematical details
+
+a. Ideal learning rate In the following, we provide a derivation for the ideal learning rate γ∗. Let p be the current density coefficients, p∗ the ground-state coeffi-cients, and ∇p ˜Etot (p) the model gradients of the total energy. We want to find γ∗ such that 
+
+γ∗ = arg min  
+
+> γ≥0
+
+∥(p − γ∇p ˜Etot (p)) − p∗∥22. (A1) Taking a derivative w.r.t. γ and setting it to zero yields 0 !
+
+= 2 ∇p ˜Etot (p) ·
+
+ 
+
+p − γ∇p ˜Etot (p)
+
+
+
+− p∗
+
+(A2) 
+
+⇐⇒ 0 = ∇p ˜Etot (p) · (p − p∗) − γ∥∇p ˜Etot (p)∥2 (A3) 
+
+⇐⇒ γ∥∇p ˜Etot (p)∥2 = ∇p ˜Etot (p) · (p − p∗) (A4) 
+
+⇐⇒ γ = ∇p ˜Etot (p) · (p − p∗)
+
+∥∇p ˜Etot (p)∥2 (A5) The nonnegativity constraint therefore gives the pro-jected optimum used in the cache update: 
+
+γ∗ =
+
+"
+
+∇p ˜Etot (p) · (p − p∗)
+
+∥∇p ˜Etot (p)∥2
+
+#
+
+> +
+
+. (A6) 
+
+> Appendix B: Empirical convexity of the energy functional
+
+One design philosophy of surrogate functionals and the applied losses is to impose as few unphysical con-straints as possible. As discussed in Section IV C, the GDI loss enforces convexity on the energy target the model is trained on. While this convexity holds for the total energy functional Etot in most cases, it is not strictly guaranteed for the ETXC functional. 1 To investi-gate how much of a problem this is in practice, we evalu-ate the empirical convexity of off-equilibrium ETXC labels        
+
+> 1Training an ˜ETXC surrogate functional with the objective de-scribed in Section IV C technically enforces convexity of ˜Eaux .However, since the difference to ˜ETXC is a functional that is linear in p, this imposes the same convexity constraints also on ˜ETXC .
+
+9from [13] for a random subset of QM9 molecules. For each molecule, we sample two labels ( p1, E txc ,1), (p2, E txc ,2)and compute the residual between ETXC (p1) and the en-ergy at p1 obtained by linearizing ETXC at p2:
+
+ETXC (p1) − [ETXC (p2) + ∇pETXC (p2) · (p1 − p2)] .
+
+(B1) For a convex functional, this residual should be positive for all pairs of labels. We plot the distribution of this residual in Figure 5 and find that indeed all values are positive. This suggests that the convexity we impose on 
+
+ETXC is at least compatible with our PBE training data. 10 2 10 1
+
+# Density L2 distance ‖∆ρ‖2
+
+10 3
+
+10 2
+
+10 1
+
+10 0
+
+> E(p1) − [E(p2) +  ∇pE(p2) · (p1 − p2)]
+
+Samples 
+
+FIG. 5: Energy residuals between ETXC and its linearization at off-equilibrium density labels for a random subset of QM9 molecules. All values are positive, indicating that the ETXC labels from [13] are consistent with a convex functional.  
+
+> Appendix C: Training details 1. Details on datasets
+
+We evaluate our models on the QM9 [14] and QMugs [18] datasets. As ground-truth targets, we rely on ground-state energies and electron densities computed at the PBE level of theory [40], identical to the data used by Remme et al. [13]. For the density labels, an even-tempered basis with β = 2 .5 is fitted to the density in the Kohn–Sham orbital basis. The QM9 dataset comprises small organic molecules consisting of C, H, O, N, and F atoms, containing up to 9 heavy atoms. In contrast to other OF-DFT base-lines [12, 13, 15], which trained and evaluated their mod-els on a split that included molecules typically flagged as uncharacterized, we opt for the more common QM9 splitting strategy where these uncharacterized molecules are discarded. To evaluate out-of-distribution generalization to more expansive molecular structures, we train on a superset of the QM9 dataset as well as molecules from the QMugs dataset with up to 15 heavy atoms. The models are then tested on a separate, distinct test set of 850 large QMugs molecules containing up to 100 heavy atoms.  
+
+> 2. Model hyperparameters
+
+For a fair comparison between the surrogate function-als and the direct energy prediction models, we use the same hyperparameters for the eSEN and EquiformerV2 backbones in both cases. The hyperparameters are listed in Tables IV and V, respectively. The values for lmax 
+
+were chosen as 4 since this corresponds to the highest angular momentum in our density basis. We also found that choosing a higher cutoff radius than 6 Bohr could strongly degrade the performance when looking at the generalization to larger molecules. TABLE IV: Hyperparameters of the eSEN network used for both the direct energy prediction experiments as well as the surrogate functionals.                 
+
+> Hyperparameter Value # sphere channels 32
+> lmax 4
+> mmax 4max neighbors 300 cutoff radius 6 Bohr # edge channels 32 distance function gaussian # distance basis 128 # layers 4# hidden channels 64 normalization type rms norm sh activation type gate ff type spectral
+> # Parameters 2.7 M 3. Surrogate training details
+
+As described in Section IV A, we want to choose the hyperparameters of the GDI loss λ and β such that the loss imposes as few unphysical constraints as possible. To this end, we look at the contraction factors {βi(λ)}Ni=1 of physical gradient labels from intermediate Kohn–Sham iterations for different step sizes λ and choose the pa-10 TABLE V: Hyperparameters of the EquiformerV2 used for both the direct energy prediction experiments as well as the surrogate functionals. 
+
+Hyperparameter Value # sphere channels 64 
+
+lmax 4
+
+mmax 4max neighbors 300 cutoff radius 6 Bohr # edge channels 64 distance function gaussian # distance basis 128 # layers 4# heads 4# attn hidden channels 32 # attn alpha channels 32 # attn value channels 8# ffn hidden channels 64 normalization type layer norm sh 
+
+# Parameters 2.8 M 
+
+rameters as 
+
+λ∗ = arg min  
+
+> λ
+
+max   
+
+> i∈{ 1,...,N }
+
+βi(λ) (C1) 
+
+β∗ = max   
+
+> i∈{ 1,...,N }
+
+βi(λ∗) (C2) The optimization in Equations C1 and C2 is only per-formed in an approximate manner by looking at a dis-crete set of step sizes λ and by ignoring some outliers in the distribution of contraction factors. For the choice of 
+
+λ∗ = 0 .04, the distribution of contraction factors as well as β∗ are visualized in Figure 6. 10 2 10 1  
+
+> Density L2 distance ‖∆ρ‖2
+> 0.725 0.750 0.775 0.800 0.825 0.850 0.875
+> β
+> Samples
+> β∗
+
+FIG. 6: Contraction factors for the gradient labels of 1000 random samples of the QM9 dataset. The value of 
+
+β is chosen as a rough upper bound (ignoring some outliers) and shown as a horizontal line. We list the remaining surrogate-specific hyperparame-ters as well as general training settings for eSEN-SF and EquiformerV2-SF in Table VI. TABLE VI: Hyperparameters for surrogate training. 
+
+Hyperparameter Etot training ETXC training fraction of surrogate labels 0.5 ”cache reset probability 0.02 ”cache step size adaptive ”GDI step size 0.04 adaptive 
+
+β 0.86 0.925 GDI loss weight 20 ”EB loss weight 1 ”energy loss weight 1 ”gradient loss weight 1 ”batch size 128 ”optimizer Adam ”learning rate schedule cosine ”maximum learning rate 1 · 10 −3 ”# epochs 500 ”
+
+4. Direct energy training details 
+
+For training the MLIP models on the task of direct en-ergy prediction, we use the settings reported in Table VII. In contrast to the training of the surrogate functionals, we include an exponential moving average of the model parameters and use weight decay along with the AdamW optimizer to reduce overfitting. We train until conver-gence of the validation loss. TABLE VII: Hyperparameters for training the eSEN and EquiformerV2 model on the task of direct energy prediction. 
+
+Hyperparameter Value batch size 128 optimizer AdamW learning rate schedule cosine maximum learning rate 4 · 10 −4
+
+# epochs 500 weight decay 1 · 10 −3
+
+Model EMA decay 0.999 
+
+5. STRUCTURES25 training without global energy bias 
+
+As mentioned in Section IV D, we do not use a global energy bias for our models. For a fairer comparison with the non-surrogate ML functionals, we retrained STRUC-TURES25 on the combined QM9 and QMugs split with-out a global energy bias and report the inference results on the large test molecules in Table VIII. The energy predictions significantly improve compared to the model containing a global bias, while still being worse than the predictions of the surrogate functionals. 11 TABLE VIII: STRUCTURES25 results on large molecules from QMugs when trained without a global energy bias. 
+
+|∆E| (mHa) |∆E|/N (mHa) ∥∆ρ∥2 (10 −2)8.6 0.09 8.2 [1] W. Kohn and L. J. Sham, Self-Consistent Equations In-cluding Exchange and Correlation Effects, Phys. Rev. 
+
+140 , A1133 (1965). [2] Y. A. Wang, N. Govind, and E. A. Carter, Orbital-free kinetic-energy density functionals with a density-dependent kernel, Phys. Rev. B 60 , 16350 (1999). [3] W. Mi, K. Luo, S. Trickey, and M. Pavanello, Orbital-free density functional theory: An attractive electronic struc-ture method for large-scale first-principles simulations, Chem. Rev. 123 , 12039 (2023). [4] M. Chen, M. Pavanello, W. Mi, M. Ihara, and S. Manzhos, Machine learning-enhanced orbital-free den-sity functional theory, Journal of Chemical Theory and Computation 22 , 3127 (2026). [5] J. C. Snyder, M. Rupp, K. Hansen, L. Blooston, K.-R. M¨ uller, and K. Burke, Orbital-free bond breaking via machine learning, The Journal of chemical physics 139 ,224104 (2013). [6] R. Meyer, M. Weichselbaum, and A. W. Hauser, Ma-chine learning approaches toward orbital-free density functional theory: Simultaneous training on the kinetic energy density functional and its functional derivative, J. Chem. Theory Comput. 16 , 5685 (2020). [7] K. Yao and J. Parkhill, Kinetic energy of hydrocarbons as a function of electron density and convolutional neural networks, J. Chem. Theory Comput. 12 , 1139 (2016). [8] J. Seino, R. Kageyama, M. Fujinami, Y. Ikabata, and H. Nakai, Semi-local machine-learned kinetic energy den-sity functional with third-order gradients of electron den-sity, J. Chem. Phys. 148 , 241705 (2018). [9] M. Fujinami, R. Kageyama, J. Seino, Y. Ikabata, and H. Nakai, Orbital-free density functional theory calcula-tion applying semi-local machine-learned kinetic energy density functional and kinetic potential, Chem. Phys. Lett. 748 , 137358 (2020). [10] P. Golub and S. Manzhos, Kinetic energy densities based on the fourth order gradient expansion: performance in different classes of materials and improvement via ma-chine learning, Physical Chemistry Chemical Physics 21 ,378 (2019). [11] R. Remme, T. Kaczun, M. Scheurer, A. Dreuw, and F. A. Hamprecht, KineticNet: Deep learning a transferable ki-netic energy functional for orbital-free density functional theory, The Journal of Chemical Physics 159 (2023). [12] H. Zhang, S. Liu, J. You, C. Liu, S. Zheng, Z. Lu, T. Wang, N. Zheng, and B. Shao, Overcoming the barrier of orbital-free density functional theory for molecular sys-tems using deep learning, Nature Computational Science 
+
+4, 210 (2024). [13] R. Remme, T. Kaczun, T. Ebert, C. A. Gehrig, D. Geng, G. Gerhartz, M. K. Ickler, M. V. Klockow, P. Lippmann, J. S. Schmidt, et al. , Stable and accurate orbital-free den-sity functional theory powered by machine learning, Jour-nal of the American Chemical Society 147 , 28851 (2025). [14] R. Ramakrishnan, P. O. Dral, M. Rupp, and O. A. von Lilienfeld, Quantum chemistry structures and properties of 134 kilo molecules, Scientific data 1, 1 (2014). [15] R. Remme and F. Hamprecht, Surrogate functionals for machine learned orbital free density functional theory, The Journal of Chemical Physics (2026), in press. [16] X. Fu, B. M. Wood, L. Barroso-Luque, D. S. Levine, M. Gao, M. Dzamba, and C. L. Zitnick, Learning smooth and expressive interatomic potentials for physical prop-erty prediction, in International Conference on Machine Learning (PMLR, 2025) pp. 17875–17893. [17] Y.-L. Liao, B. M. Wood, A. Das, and T. Smidt, EquiformerV2: Improved equivariant transformer for scaling to higher-degree representations, in The Twelfth International Conference on Learning Representations 
+
+(2024). [18] C. Isert, K. Atz, J. Jim´ enez-Luna, and G. Schnei-der, QMugs, quantum mechanical properties of drug-like molecules, Scientific Data 9, 273 (2022). [19] S. Aykent and T. Xia, GotenNet: Rethinking efficient 3D equivariant graph neural networks, in The Thirteenth International Conference on Learning Representations 
+
+(2025). [20] K. T. Sch¨ utt, H. E. Sauceda, P.-J. Kindermans, A. Tkatchenko, and K.-R. M¨ uller, SchNet–a deep learn-ing architecture for molecules and materials, The Journal of chemical physics 148 (2018). [21] S. Batzner, A. Musaelian, L. Sun, M. Geiger, J. P. Mailoa, M. Kornbluth, N. Molinari, T. E. Smidt, and B. Kozinsky, E(3)-equivariant graph neural networks for data-efficient and accurate interatomic potentials, Nature Communications 13 , 2453 (2022). [22] I. Batatia, D. P. Kov´ acs, G. N. C. Simm, C. Ortner, and G. Cs´ anyi, MACE: Higher order equivariant message passing neural networks for fast and accurate force fields, Advances in neural information processing systems 35 ,11423 (2022). [23] A. Musaelian, S. Batzner, A. Johansson, L. Sun, C. J. Owen, M. Kornbluth, and B. Kozinsky, Learning local equivariant representations for large-scale atomistic dy-namics, Nature Communications 14 , 579 (2023). [24] D. M. Anstine and O. Isayev, Machine learning inter-atomic potentials and long-range physics, The Journal of Physical Chemistry A 127 , 2417 (2023). [25] W. J. Baldwin, I. Batatia, M. Vondr´ ak, J. T. Mar-graf, and G. Cs´ anyi, Design space of self–consistent elec-trostatic machine learning interatomic potentials, arXiv preprint arXiv:2603.14700 (2026). [26] T. W. Ko, J. A. Finkler, S. Goedecker, and J. Behler, A fourth-generation high-dimensional neural network po-12 
+
+tential with accurate electrostatics including non-local charge transfer, Nature Communications 12 , 398 (2021). [27] X. Xie, K. A. Persson, and D. W. Small, Incorporating electronic information into machine learning potential en-ergy surfaces via approaching the ground-state electronic energy as a function of atom-based electronic popula-tions, Journal of chemical theory and computation 16 ,4256 (2020). [28] A. Gao and R. C. Remsing, Self-consistent determination of long-range electrostatics in neural network potentials, Nature Communications 13 , 1572 (2022). [29] M. Cools-Ceuppens, J. Dambre, and T. Verstraelen, Modeling electronic response properties with an explicit-electron machine learning potential, Journal of Chemical Theory and Computation 18 , 1672 (2022). [30] A. Grisafi and M. Ceriotti, Incorporating long-range physics in atomic-scale machine learning, The Journal of chemical physics 151 (2019). [31] L. Zhang, H. Wang, M. C. Muniz, A. Z. Panagiotopou-los, R. Car, et al. , A deep potential model with long-range electrostatic interactions, The Journal of Chemical Physics 156 (2022). [32] B. Cheng, Latent Ewald summation for machine learning of long-range interactions, npj Computational Materials 
+
+11 , 80 (2025). [33] A. Kosmala, J. Gasteiger, N. Gao, and S. G¨ unnemann, Ewald-based long-range message passing for molecular graphs, in International Conference on Machine Learning 
+
+(PMLR, 2023) pp. 17544–17563. [34] J. T. Frank, S. Chmiela, K.-R. M¨ uller, and O. T. Unke, Machine learning global atomic representations with Eu-clidean fast attention, Nature Machine Intelligence 8, 388 (2026). [35] D. M. Anstine, R. Zubatyuk, and O. Isayev, AIMNet2: a neural network potential to meet your neutral, charged, organic, and elemental-organic needs, Chemical Science 
+
+16 , 10228 (2025). [36] S. Falletta, A. Cepellotti, A. Johansson, C. W. Tan, M. L. Descoteaux, A. Musaelian, C. J. Owen, and B. Kozinsky, Unified differentiable learning of electric response, Nature Communications 16 , 4031 (2025). [37] C. Ying, T. Cai, S. Luo, S. Zheng, G. Ke, D. He, Y. Shen, and T.-Y. Liu, Do transformers really perform badly for graph representation?, Advances in neural information processing systems 34 , 28877 (2021). [38] P. Lippmann, G. Gerhartz, R. Remme, and F. A. Ham-precht, Beyond canonicalization: How tensorial mes-sages improve equivariant message passing, in Interna-tional Conference on Learning Representations , Vol. 2025 (2025) pp. 88067–88087. [39] S. Passaro and C. L. Zitnick, Reducing SO(3) convolu-tions to SO(2) for efficient equivariant GNNs, in Inter-national conference on machine learning (PMLR, 2023) pp. 27420–27438. [40] J. P. Perdew, K. Burke, and M. Ernzerhof, Generalized gradient approximation made simple, Physical review let-ters 77 , 3865 (1996). [41] D. S. Levine, M. Shuaibi, E. W. C. Spotte-Smith, M. G. Taylor, M. R. Hasyim, K. Michel, I. Batatia, G. Cs´ anyi, M. Dzamba, P. Eastman, et al. , The open molecules 2025 (OMol25) dataset, evaluations, and models, arXiv preprint arXiv:2505.08762 (2025).

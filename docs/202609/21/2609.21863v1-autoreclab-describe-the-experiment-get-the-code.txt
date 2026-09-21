@@ -1,0 +1,165 @@
+Title: AutoRecLab: Describe the Experiment, Get the Code!
+
+URL Source: https://arxiv.org/pdf/2609.21863v1
+
+Published Time: Mon, 21 Sep 2026 01:05:30 GMT
+
+Number of Pages: 4
+
+Markdown Content:
+# AutoRecLab: Describe the Experiment, Get the Code! 
+
+## Moritz Baumgart 
+
+University of Siegen Siegen, Germany moritz.baumgart@uni-siegen.de 
+
+## Philipp Meister 
+
+University of Siegen Siegen, Germany philipp.meister@uni-siegen.de 
+
+## Justus Krell 
+
+University of Siegen Siegen, Germany justus.krell@student.uni-siegen.de 
+
+## Michael Schmidt 
+
+University of Siegen Siegen, Germany michael3.schmidt@student.uni-siegen.de 
+
+## Bela Gipp 
+
+University of Göttingen Göttingen, Germany bela.gipp@uni-goettingen.de 
+
+## Joeran Beel 
+
+University of Siegen Siegen, Germany joeran.beel@uni-siegen.de 
+
+## Abstract 
+
+Empirical evaluation is central to recommender-systems (RecSys) research, but turning experimental designs into executable code remains a manual and error-prone task. We present AutoRecLab, a Python-based autonomous RecSys lab that automates RecSys ex-periments from natural-language prompts. Given a research idea, AutoRecLab derives explicit experiment requirements, builds and validates a prototype, and iteratively expands it into the requested full experiment. The workflow combines retrieval-augmented gen-eration (RAG) for documentation lookup, static type verification, and execution-steered tree search. In our demonstration, AutoRe-cLab autonomously implements an explicit-to-implicit feedback conversion study. In a baseline comparison across six algorithms and three datasets, 8 of 9 runs succeed at an average cost of approx-imately $1 per run with GPT-5.4-mini. 
+
+## CCS Concepts 
+
+• Information systems → Recommender systems ; • Comput-ing methodologies → Natural language generation .
+
+## Keywords 
+
+Recommender Systems, Autonomous Agents, Code Generation, RAG, LLM 
+
+ACM Reference Format: 
+
+Moritz Baumgart, Philipp Meister, Justus Krell, Michael Schmidt, Bela Gipp, and Joeran Beel. 2026. AutoRecLab: Describe the Experiment, Get the Code!. In 20th ACM Conference on Recommender Systems (RecSys ’26), September 27-October 02, 2026, Minneapolis, MN, USA. ACM, New York, NY, USA, 4 pages. https://doi.org/10.1145/3773078.3841273 
+
+## 1 Introduction 
+
+Autonomous science agents based on Large Language Models (LLMs) increasingly automate science and engineering tasks specified through natural-language prompts [15, 22]. Recommender-systems (RecSys) research is a suitable domain for this type of automation because setting up and implementing experiments requires considerable 
+
+> This work is licensed under a Creative Commons Attribution 4.0 International License.
+> RecSys ’26, Minneapolis, MN, USA
+> © 2026 Copyright held by the owner/author(s). ACM ISBN 979-8-4007-2284-4/2026/09 https://doi.org/10.1145/3773078.3841273
+
+manual work. Researchers often need to write custom preprocess-ing code, configure evaluation loops, and adapt implementations to libraries such as LensKit [10], RecBole [23], or meta-frameworks such as OmniRec [20]. Learning these libraries can help researchers understand ex-perimental choices, but it also adds setup work for newcomers. Experienced researchers likewise spend considerable time imple-menting and debugging experiments, and manual implementations remain susceptible to evaluation and reproducibility errors across libraries [7, 11]. Systems that turn high-level research ideas into ex-plicit experiment requirements can reduce routine implementation work and check generated code against those requirements. RecSys adds a methodological reason for such support: choices such as data filtering, splitting, candidate construction, and random seeds can materially affect experimental outcomes and their interpreta-tion [4, 7, 21]. A general code-generation agent can therefore return executable software without reliably preserving the intended eval-uation protocol. AutoRecLab makes the translation from a research request to an executable experiment explicit and inspectable and combines it with RecSys-specific software and validation steps. Standard LLMs can assist researchers, but they frequently hallu-cinate API calls for domain-specific RecSys libraries, and existing general science agents do not include RecSys-specific configuration. We examined several LLM-based science agents, including Sakana’s AI Scientist [15, 22], Agent Laboratory [17], AI-Researcher [18], and Zochi [24], to assess their use for recommender-systems research. The agents we could test required additional context because they focus primarily on machine-learning tasks. Our detailed evaluation of AI Scientist likewise found that its performance on RecSys tasks fell short of expectations [8]. Our work on AutoRecLab builds on our earlier independent evaluation of Sakana’s AI Scientist in recommender-systems re-search [8]. That study found substantial limitations in literature review, experiment execution, and methodological correctness: five of twelve proposed experiments failed because of coding errors, while several executable experiments still produced flawed or mis-leading results. These findings motivated the development of re-search agents that incorporate RecSys-specific software, experi-mental knowledge, and validation procedures. Our group publicly introduced the AutoRecLab concept in Octo-ber 2025 [5], and subsequent work further developed the agenda for automated RecSys research [6]. To the best of our knowledge, AutoRecLab is the first publicly documented open-source research arXiv:2609.21863v1 [cs.AI] 18 Sep 2026 RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Moritz Baumgart, Philipp Meister, Justus Krell, Michael Schmidt, Bela Gipp, and Joeran Beel 
+
+agent developed specifically for recommender-systems experimen-tation. 1 It takes natural-language RecSys research tasks through requirement derivation, code generation, execution, evaluation, and iterative refinement. The implementation described in this paper is an early proof of concept of that vision. Starting from a single natural-language prompt, AutoRecLab derives explicit experiment requirements, builds and validates a small prototype, and then refines it into the requested full experiment. This staged process reduces the cost of detecting implementation errors before the complete experiment is executed and checks each generated implementation against the experiment-specific requirements. 
+
+## 2 Related Work 
+
+AI Scientist systems now automate large parts of computational research workflows. Sakana’s AI Scientist generates ideas, imple-ments and runs experiments, and drafts manuscripts; Agent Lab-oratory starts from a human-provided idea and automates litera-ture review, experimentation, and report writing [15, 17, 22]. AI-Researcher targets end-to-end scientific innovation, Data-to-Paper turns data and analyses into human-verifiable papers, and Code-Scientist links idea generation with code-based experimentation [1, 13, 18]. These systems provide evidence that agentic research work-flows are feasible, although their development and evaluation have focused mainly on general or machine-learning-oriented research instead of the methodological and software conventions of recommender-systems experiments. A second line of work concentrates on autonomous machine-learning engineering and experimentation. MLAgentBench tests language-model agents on iterative ML experiments, MLE-bench evaluates agents across 75 Kaggle competitions, and AIDE treats ML engineering as tree search over executable code [9, 12, 14]. These systems are relevant to AutoRecLab because they use exe-cution feedback, repeated refinement, and search over candidate implementations to automate experimentation. Their benchmarks primarily measure successful ML engineering or performance im-provement and do not cover RecSys-specific choices such as inter-action preprocessing, candidate construction, ranking evaluation, or compatibility across recommendation libraries. Recommender-systems research has its own history of experi-ment infrastructure and partial automation. LensKit, RecBole, Rec-Pack, and Elliot standardize parts of data processing, recommen-dation, and evaluation, while OmniRec supplies a common layer across several libraries [3, 10, 16, 20, 23]. Auto-Surprise and LensKit-Auto also automate algorithm selection and hyperparameter opti-mization inside predefined RecSys pipelines [2, 19]. AutoRecLab adds a research-automation layer above these tools: it translates a research request into explicit requirements, builds and runs the corresponding experiment, and iteratively checks and refines the implementation. Our earlier position work described this transition from AutoRecSys toward autonomous RecSys research [5, 6]. 
+
+## 3 AutoRecLab 
+
+AutoRecLab is an open-source Python command-line tool that con-verts a natural-language research prompt into valid, executable 
+
+> 1https://github.com/ISG-Siegen/AutoRecLab
+
+code. Its workflow has three phases: requirements engineering, prototyping, and refinement from the prototype to the complete experiment. AutoRecLab acts as a research-automation layer above the recommender algorithms and experimentation libraries. The prompt supplies the research specification, which AutoRecLab con-verts into machine-checkable requirements. An LLM then generates candidate implementations, retrieved documentation grounds API use, and static checks and execution feedback guide code improve-ment. OmniRec provides the execution layer that connects the gen-erated experiment to datasets and recommendation libraries. Sepa-rating a small prototype from the complete experiment lets AutoRe-cLab establish an executable implementation before expanding it to the full requested study. During these phases, AutoRecLab check-points intermediate states and stores Python code, generated plots, execution logs, and other artifacts in a dedicated workspace. For experiment execution, it uses the OmniRec [20] meta-framework, which standardizes data loading and training across more than 230 datasets and several RecSys Python libraries: RecPack [16], RecBole [23], LensKit [10], and Elliot [3]. 
+
+## 3.1 Demonstration 
+
+AutoRecLab is distributed as a local tool, so no live-system link is provided. The source code and development history are avail-able in the public GitHub repository 2, from which users can run AutoRecLab on their own machines. We evaluated AutoRecLab in four representative empirical Rec-Sys scenarios. The demonstration focuses on an explicit-to-implicit feedback conversion experiment with the MovieLens 1M dataset, initiated by the following prompt: 
+
+Test the influence of [...] feedback conversion strate-gies on recommendation accuracy by comparing mul-tiple binarization thresholds [...]. Evaluate [...] on the MovieLens1M dataset. Report metrics [...], and compare ranking quality [...]. 
+
+From this prompt, AutoRecLab derived 22 requirements covering data loading, conversion thresholds, train-test splitting, and eval-uation. It produced 169 lines of executable Python code and the requested comparative plots (see fig. 1) for a total API cost of USD 0.76 with GPT-5.4-mini .To assess reproducibility across standard algorithms, we asked AutoRecLab to establish a performance baseline with 6 algorithms for model comparison. Eight of the nine runs ( ≈ 89%) generated bug-free code and plots, with a cost of about $1 per run. Table 1 reports the run-level statistics. Some runs have long total runtimes because execution of the generated code dominates the elapsed time. We also evaluated AutoRecLab on a dataset-filtering task that measured the performance effect of pruning users with few in-teractions. A final scenario examined how random seeds used for user splitting affect evaluation metrics. The resulting patterns re-produced qualitative trends from existing human-conducted re-search [21], indicating that AutoRecLab can support empirical Rec-Sys experimentation.  
+
+> 2https://github.com/ISG-Siegen/AutoRecLab. AutoRecLab: Describe the Experiment, Get the Code! RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA
+
+Figure 1: Plot generated by AutoRecLab for the explicit-to-implicit conversion experiment. The panels report NDCG@10 (top) and Precision@10 (bottom) on MovieLens 1M for different algorithms and rating thresholds: greater than or equal to (ge) 1, greater than 3, and greater than 4. Table 1: Statistics for the AutoRecLab baseline experiment across nine runs (P: Prototype, F: Final Refinement)                                                                                                               
+
+> Run Number Metric 1.1 1.2 1.3 2.1 2.2 2.3 3.1 3.2 3.3 Dataset MU MU MU ML1M ML1M ML1M VI VI VI
+> Algos 666666666
+> Cost ($) 1.09 1.08 1.10 0.95 0.98 0.91 1.04 1.01 0.90
+> Runtime P 4.37h 12.23h 40m 23m 58m 1.52h 17.32h 7m 19m
+> Runtime F 30.2h 33.65h 16.23h 32.33h 32.08h 22.43h 5m 24.48h 16.58h
+> Best Score P 0.89 0.84 0.375 0.6 0.875 0.857 0.56 0.45 0.4
+> Avg. LoC 110 111 139 100 134 118 100 141 109
+> Nodes P 888888888
+> Nodes F 444444444
+> Buggy P? No No Yes No No No Yes Yes Yes
+> Buggy F? No No No No No No Yes No No
+> Datasets: ML1M : MovieLens 1M, MU : Amazon2018MusicalInstruments, VI :Amazon2018VideoGames.
+
+## 3.2 System Architecture 
+
+AutoRecLab implements and executes experiments through the three stages shown in fig. 2. 
+
+3.2.1 Requirements Engineering. AutoRecLab translates the user’s natural-language prompt into a research plan and two requirement sets. (1) Prototype Requirements specify a small, fast-running experiment, usually limited to one dataset, one baseline algorithm, and one metric cutoff. (2) Full Requirements preserve the com-plete request, including every specified algorithm, dataset, metric, and visualization. This separation lets AutoRecLab test the implementation on a small experiment before expanding it to the full setup. Research Prompt 
+
+> Prototype
+> Requirements
+> Full
+> Requirements
+> Summary +
+> Code +
+> Plots
+> Final
+> Refinement
+
+User   
+
+> Tree Search
+> Code (+ Typechecker )
+> Review / Score
+> Improve /Debug
+> Docs
+> MCP
+
+AutoRecLab 
+
+> Requirements
+> Engineering
+> Prototype
+> Prototyping
+> Stage
+> Refinement
+> Stage
+> Uses
+> OmniRec
+> API
+
+Figure 2: AutoRecLab workflow. Requirements are derived from the research task. During prototyping, tree search and MCP-based documentation retrieval produce a working pro-totype. The refinement loop expands this prototype to the full experiment and returns the experimental summary, code, and plots. 
+
+3.2.2 Prototyping Stage. AutoRecLab currently executes experi-ments through OmniRec and is therefore limited to the libraries and datasets that OmniRec supports. Using AutoRecLab reduces manual setup; using OmniRec directly gives researchers more immediate control over configuration and implementation. 
+
+Code Generation & Verification : AutoRecLab generates code and applies static checks for type mismatches. Detected errors start an automated correction loop. 
+
+RAG Documentation Server (MCP) : AutoRecLab reduces hal-lucinated API calls by retrieving indexed documentation and code for OmniRec, LensKit, and RecBole through the Model Context Protocol (MCP). 
+
+Evaluation & Tree Search : AutoRecLab executes each candi-date in an independent workspace. An LLM evaluates the generated code and console output and classifies, for every prototype require-ment, whether the candidate fulfills it and whether the candidate is buggy or bug-free. The fraction of fulfilled requirements defines the node score 𝑆 ∈ [ 0, 1]. This score records requirement coverage and does not represent general confidence or guarantee correctness. Candidate implementations form a search tree. For node selection, AutoRecLab first chooses whether to sample from the buggy or bug-free node set. An 𝜖 -greedy strategy then selects either the highest-scoring candidate in that set or a random alternative for improvement or debugging. The search stops when a candidate reaches 𝑆 = 1 or the configured iteration limit is reached. 
+
+3.2.3 Refinement Stage. AutoRecLab starts from the executable prototype and incrementally extends it until the full requirements are satisfied. Each revision is executed and evaluated before the RecSys ’26, September 27-October 02, 2026, Minneapolis, MN, USA Moritz Baumgart, Philipp Meister, Justus Krell, Michael Schmidt, Bela Gipp, and Joeran Beel 
+
+next refinement. At the end of the process, AutoRecLab returns the Python code, generated plots, execution logs, and a Markdown summary for inspection and modification. 
+
+## 4 Conclusion 
+
+The evaluation covers a limited set of comparatively simple of-fline RecSys tasks. Across nine runs, AutoRecLab produced code classified as bug-free in eight cases, although some resulting anal-yses were not scientifically meaningful. The results suggest that the approach is technically feasible and indicate that requirement coverage and successful execution alone may not fully capture experiment quality. AutoRecLab is an early proof of concept for the broader vision of autonomous RecSys research labs [5]. Its current capabilities depend on OmniRec, the underlying LLM, the coverage of indexed documentation, and a sequential search process that can produce long runtimes. For supported tasks, AutoRecLab can reduce im-plementation effort and produce inspectable artifacts; researchers remain responsible for experimental design, code inspection, result interpretation, and decisions about when user studies are required. Future evaluations can cover more complex RecSys tasks and differ-ent LLMs, assess generated code quality explicitly, index additional recommendation libraries, and parallelize the tree search. Further extensions could add support for literature search and manuscript preparation. 
+
+## References 
+
+[1] Allen Institute for AI. 2025. Code Scientist. https://github.com/allenai/ codescientist. Accessed: 2025-10-20. [2] Rohan Anand and Joeran Beel. 2020. Auto-Surprise: An Automated Recommender-System (AutoRecSys) Library with Tree of Parzens Estimator (TPE) Optimization. In Proceedings of the 14th ACM Conference on Recommender Systems . 585–587. doi:10.1145/3383313.3411467 [3] Vito Walter Anelli, Alejandro Bellogín, Antonio Ferrara, Daniele Malitesta, Fe-lice Antonio Merra, Claudio Pomo, Francesco Maria Donini, and Tommaso Di Noia. 2021. Elliot: A comprehensive and rigorous framework for reproducible recommender systems evaluation. In Proceedings of the 44th international ACM SIGIR conference on research and development in information retrieval . 2405–2414. [4] Joeran Beel, Corinna Breitinger, Stefan Langer, Andreas Lommatzsch, and Bela Gipp. 2016. Towards reproducibility in recommender-systems research. User Modeling and User-Adapted Interaction 26, 1 (March 2016), 69–101. doi:10.1007/ s11257-016-9174-x [5] Joeran Beel, Bela Gipp, Tobias Vente, Moritz Baumgart, and Philipp Meister. 2025. From AutoRecSys to AutoRecLab: A Call to Build, Evaluate, and Govern Au-tonomous Recommender-Systems Research Labs. arXiv preprint arXiv:2510.18104 
+
+(2025). [6] Joeran Beel, Bela Gipp, Tobias Vente, Moritz Baumgart, Philipp Meister, and Sinan Pourazari. 2026. A RecSys Paper for $20: Why We Must Build, Evaluate, and Govern Autonomous Recommender Systems Research Labs (AutoRecLabs). In Methodology First – Rethinking Research Assessment in RecSys (FRAME 2026) .Minneapolis, Minnesota, USA. Accepted for publication. [7] Joeran Beel, Dietmar Jannach, Alan Said, Guy Shani, Tobias Vente, and Lukas Wegmeth. 2024. Best-Practices for Offline Evaluations of Recommender Systems. In Report from Dagstuhl Seminar 24211 – Evaluation Perspectives of Recommender Systems: Driving Research and Education (2024-01-01), Christine Bauer, Alan Said, and Eva Zangerle (Eds.). [8] Joeran Beel, Min-Yen Kan, and Moritz Baumgart. 2025. Evaluating Sakana’s AI Scientist: Bold Claims, Mixed Results, and a Promising Future? ACM SIGIR Forum 
+
+59, 1 (June 2025), 1–20. doi:10.1145/3769733.3769747 [9] Jun Shern Chan, Neil Chowdhury, Oliver Jaffe, James Aung, Dane Sherburn, Evan Mays, Giulio Starace, Kevin Liu, Leon Maksin, Tejal Patwardhan, Lilian Weng, and Aleksander Mądry. 2024. MLE-bench: Evaluating Machine Learning Agents on Machine Learning Engineering. doi:10.48550/arXiv.2410.07095 [10] Michael D Ekstrand. 2020. Lenskit for python: Next-generation software for recommender systems experiments. In Proceedings of the 29th ACM international conference on information & knowledge management . 2999–3006. [11] Maurizio Ferrari Dacrema, Paolo Cremonesi, and Dietmar Jannach. 2019. Are we really making much progress? A worrying analysis of recent neural recommen-dation approaches. In Proceedings of the 13th ACM Conference on Recommender Systems (RecSys ’19) . ACM, 101–109. doi:10.1145/3298689.3347058 [12] Qian Huang, Jian Vora, Percy Liang, and Jure Leskovec. 2023. MLAgentBench: Evaluating Language Agents on Machine Learning Experimentation. doi:10. 48550/arXiv.2310.03302 [13] Tal Ifargan, Lukas Hafner, Maor Kern, Ori Alcalay, and Roy Kishony. 2025. Au-tonomous LLM-Driven Research — from Data to Human-Verifiable Research Papers. NEJM AI 2, 1 (Jan. 2025). doi:10.1056/aioa2400555 [14] Zhengyao Jiang, Dominik Schmidt, Dhruv Srikanth, Dixing Xu, Ian Kaplan, Deniss Jacenko, and Yuxiang Wu. 2025. AIDE: AI-Driven Exploration in the Space of Code. doi:10.48550/arXiv.2502.13138 [15] Chris Lu, Cong Lu, Robert Tjarko Lange, Jakob Foerster, Jeff Clune, and David Ha. 2024. The AI Scientist: Towards Fully Automated Open-Ended Scientific Discovery. doi:10.48550/ARXIV.2408.06292 [16] Lien Michiels, Robin Verachtert, and Bart Goethals. 2022. Recpack: An (other) experimentation toolkit for top-n recommendation using implicit feedback data. In Proceedings of the 16th ACM Conference on Recommender Systems . 648–651. [17] Samuel Schmidgall, Yusheng Su, Ze Wang, Ximeng Sun, Jialian Wu, Xiaodong Yu, Jiang Liu, Michael Moor, Zicheng Liu, and Emad Barsoum. 2025. Agent Laboratory: Using LLM Agents as Research Assistants. doi:10.48550/ARXIV.2501. 04227 [18] Jiabin Tang, Lianghao Xia, Zhonghang Li, and Chao Huang. 2025. AI-Researcher: Autonomous Scientific Innovation. doi:10.48550/ARXIV.2505.18705 [19] Tobias Vente, Michael D. Ekstrand, and Joeran Beel. 2023. Introducing LensKit-Auto, an Experimental Automated Recommender System (AutoRecSys) Toolkit. In Proceedings of the 17th ACM Conference on Recommender Systems . 1212–1216. doi:10.1145/3604915.3610656 [20] Lukas Wegmeth, Moritz Baumgart, Philipp Meister, Bela Gipp, and Joeran Beel. 2026. OmniRec: The All-In-One Solution for Reproducible and Interoperable Recommender Systems Experimentation. In European Conference on Information Retrieval . Springer, 129–135. [21] Lukas Wegmeth, Tobias Vente, Lennart Purucker, and Joeran Beel. 2023. The Effect of Random Seeds for Data Splitting on Recommendation Accuracy.. In 
+
+Perspectives@ RecSys .[22] Yutaro Yamada, Robert Tjarko Lange, Cong Lu, Shengran Hu, Chris Lu, Jakob Foerster, Jeff Clune, and David Ha. 2025. The AI Scientist-v2: Workshop-Level Automated Scientific Discovery via Agentic Tree Search. doi:10.48550/ARXIV. 2504.08066 [23] Wayne Xin Zhao, Shanlei Mu, Yupeng Hou, Zihan Lin, Yushuo Chen, Xingyu Pan, Kaiyuan Li, Yujie Lu, Hui Wang, Changxin Tian, et al. 2021. Recbole: Towards a unified, comprehensive and efficient framework for recommendation algorithms. In proceedings of the 30th acm international conference on information & knowledge management . 4653–4664. [24] Andy Zhou, Ron Arel, Soren Dunn, and Nikhil Khandekar. 2025. Zochi Technical Report. https://www.intology.ai/blog/zochi-tech-report. Accessed: 2025-10-20.
