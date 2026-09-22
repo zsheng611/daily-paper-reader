@@ -1,0 +1,1060 @@
+Title: ScholarStack: Layered Research Asset Orchestration and Cross-Task Reuse for Scientific Agents
+
+URL Source: https://arxiv.org/pdf/2609.23735v1
+
+Published Time: Tue, 22 Sep 2026 01:41:52 GMT
+
+Number of Pages: 39
+
+Markdown Content:
+# ScholarStack: Layered Research Asset Orchestration and Cross-Task Reuse for Scientific Agents 
+
+ScholarSeed AI Team ∗
+
+DAMO Academy, Alibaba Group 
+
+wotao.yin@alibaba-inc.com 
+
+## Abstract 
+
+Scientific agents support a range of literature-based research tasks, such as retrieval, question answering, evidence-grounded generation, and claim assessment. Most existing systems, however, are organized around individual tasks: the same papers are repeatedly retrieved, segmented, and interpreted, and the understanding built in one task is difficult to reuse in the next. We present ScholarStack, a layered research asset framework that compiles a paper collection into reusable, versioned, and provenance-preserving assets at three complementary levels: source-grounded paper-level statements, domain-level organization, and evidence-grounded cross-paper syntheses. A common access interface returns task-specific views at the evidence granularity each task requires, preserving study conditions, source trace-ability, and verification status. We instantiate the framework on four task families spanning ten task settings, comparing agents that use the compiled assets with task-specific baselines under matched base models. Quality gains concentrate on tasks that require cross-paper evidence, such as multi-paper question answering and literature review generation, and query-time token cost falls on every task where it is measured, with assets compiled once and reused across tasks. These results suggest that layered research assets can serve as shared infrastructure for scien-tific agents, shifting literature-based assistance from isolated document processing toward cumulative, evidence-grounded workflows. 
+
+## 1 Introduction 
+
+Large language models are increasingly deployed as agents that plan, invoke tools, and execute multi-step workflows. These capabilities are reshaping scientific work: research agents retrieve and synthesize literature, answer technical questions, verify evidence, and assist with proposal and experimental design [Zheng et al., 2025, Ren et al., 2025]. Recent systems are also exploring this paradigm toward autonomous experimentation and end-to-end scientific discovery [Lu et al., 2026, Gottweis et al., 2026]. However, scientific research is not a collection of independent requests or solving isolated tasks. It is a cumulative process: the understandings developed while completing one task should remain interpretable, reusable and revisable for the tasks that follow. This cumulative requirement is particularly evident when several research activities build on the same literature. A researcher may begin with searching for relevant studies and organizing them into a review, then use that understanding to develop ideas, assess their novelty, and design experiments. Terminology and groups of related studies identified during search can guide the review; relationships and limitations established in the review can guide idea development; and comparisons made during novelty assessment can inform baseline selection and later writing. Existing agents support many of these activities [Lála et al., 2023, Wang et al., 2024, Li et al., 2024], but the intermediate judgments developed in these workflows remain embedded in temporary contexts or task-specific reports, and 
+
+> ∗Full author list available in the Contributions section. arXiv:2609.23735v1 [cs.AI] 20 Sep 2026
+
+their evidence and scope are difficult to recover independently. Subsequent tasks must then revisit the same papers and reconstruct reasoning that earlier work has already established. We refer to this limitation as the task-specific research bottleneck : knowledge constructed for one task is difficult to reuse in another without repeated source processing or loss of context. Addressing it requires both content reuse and understanding reuse . Content reuse retains source statements with their conditions and evidence. Understanding reuse retains the alignments, organizational judgments, and scoped interpretations built from those statements. Reliable reuse further requires explicit boundaries: a result must remain attached to its setting, a shared category must not imply comparability across settings, and a system interpretation must remain distinguishable from a source’s assertion. Evidence links and checking status let users inspect a judgment’s basis and determine what needs to be re-checked when that basis changes. Existing approaches provide promising foundations for meeting these reuse requirements. Retrieval-augmented generation and long-context processing improve access to evidence at inference time [Lewis et al., 2020, Gao et al., 2023]; hierarchical and graph-based retrieval maintain per-sistent structures such as summary trees, entity graphs, and community summaries [Sarthi et al., 2024, Edge et al., 2024]; and scholarly knowledge bases organize structured research content [Jaradeh et al., 2019, Raimondi et al., 2026, Weiss et al., 2026, Yu and Wang, 2026]. Building on these capabilities, reuse across scientific tasks requires each retained object to make explicit what it represents, under which conditions it applies, and what evidence supports it. The requirements differ by the kind of work being reused. Reusing a reported result requires a source statement bound to its study conditions and evidence; reusing the organization of a literature collection requires shared identities, categories, and relations whose basis can be inspected; reusing a cross-paper interpretation requires an account with a declared scope and links to supporting and limiting evidence. These requirements motivate three complementary representations: source-grounded facts, domain organization, and scoped syn-theses. Their distinct evidential roles call for separate representations, while their dependencies require explicit links: organizational judgments and syntheses must remain connected to the facts and sources on which they rely. A common asset model can therefore let tasks reuse each kind of object while retaining the basis needed to interpret and check it. We introduce ScholarStack , a layered research asset framework for scientific agents. It compiles 
+
+heterogeneous research materials into three linked layers: L1 records source-grounded scientific facts together with their study context and evidence references; L2 organizes them through a domain taxonomy, canonical entities, category assignments, and typed relations; L3 forms scoped cross-paper syntheses that state their coverage and evidence basis explicitly. A common access interface supports retrieving, selecting, expanding, comparing, and synthesizing knowledge, and returns typed knowledge views over these layers. This allows heterogeneous downstream tasks, from literature retrieval and question answering to evidence-grounded generation and claim assessment, to reuse the same research assets while selecting the evidence granularity they need. The resulting assets can remain revisable as materials change. Selected task-derived objects may optionally be registered after identity and reference checks, with semantic verification recorded separately. We instantiate and evaluate the framework on four task families spanning a literature-based research workflow: literature retrieval, scientific question answering, evidence-grounded generation, and claim and consistency assessment. These tasks draw on the layers differently. For example, single-paper question answering exercises primarily the source-grounded facts of L1, whereas literature review generation benefits further from L2 organization and L3 syntheses. Assets compiled once from the source papers serve all tasks through the shared interface. We observe general performance and token efficiency benefits of ScholarStack across ten specific research scenarios, while the largest gains appear on tasks that require cross-paper evidence, such as multi-paper question answering and literature review generation. Our contributions are as follows: • We characterize the task-specific research bottleneck : repeated source processing and reconstruction of prior judgments across tasks. We distinguish reuse of source-grounded content from reuse of derived understanding, and identify the evidence and scope needed to preserve both. • We derive a layered research asset model from these requirements: source-grounded facts, domain organization, and scoped syntheses remain distinct but linked, with a common access interface and registration mechanisms for versioned, reusable objects. 2• We instantiate ScholarStack and demonstrate its generic benefits across ten task settings in four families: literature retrieval, scientific question answering, evidence-grounded generation, and claim and consistency assessment. Results highlight the largest quality gains on cross-paper tasks and reduced query-time token use across the tasks where it is measured. 
+
+## 2 Related Work 
+
+Scientific agents for literature-based research. Large language models are increasingly deployed as scientific agents that automate stages of the research lifecycle, and recent surveys chart their rapid progress across literature synthesis, question answering, evidence verification, and experimental design [Zheng et al., 2025, Ren et al., 2025]. Beyond literature-based assistance, agents have begun to drive autonomous experimentation and end-to-end scientific discovery [Lu et al., 2026, Gottweis et al., 2026]. Closest to our setting are agents built specifically for literature-based research. PaperQA retrieves scientific literature and assesses evidence relevance to answer research questions [Lála et al., 2023], OpenScholar synthesizes the literature through retrieval-augmented generation with citations [Asai et al., 2026], and long-form systems such as STORM organize retrieved material into structured, grounded reports [Shao et al., 2024]. These systems are highly capable at individual tasks, but each is organized around a single request. The understanding built while completing one task, including aligned terminology, cross-paper relationships, and verified findings, remains embedded in a transient context or a task-specific output and is rarely registered in a persistent, reusable form. ScholarStack instead compiles this intermediate understanding into versioned, provenance-preserving assets, so that knowledge constructed for one task becomes infrastructure for the next rather than being reconstructed from the sources at each step. 
+
+Retrieval augmentation and hierarchical indexing. Retrieval-augmented generation (RAG) grounds model outputs in external corpora at inference time and has become a standard paradigm for knowledge-intensive tasks [Lewis et al., 2020, Gao et al., 2023]. To move beyond flat passage retrieval, hierarchical and graph-based methods build persistent index structures over a corpus. RAPTOR recursively summarizes text into a tree that supports retrieval at multiple levels of abstraction [Sarthi et al., 2024], and GraphRAG links an entity graph with community summaries to answer corpus-level questions [Edge et al., 2024]. A related line reasons directly over knowledge-graph structure, as in Think-on-Graph’s traversal of relation paths [Sun et al., 2024] and G-Retriever’s subgraph retrieval for textual-graph question answering [He et al., 2024]. These approaches demonstrate the value of access across levels of abstraction, but their primary abstraction is a retrieval structure optimized to fetch relevant context, and it does not separate the distinct evidential roles that reusable research knowledge must carry, namely what an individual source states and under which conditions, how research objects relate within a domain, and what several studies jointly support. ScholarStack keeps these three roles distinct yet linked and exposes them through typed operations, rather than folding them into a single summary tree or entity graph that is queried anew for each request. 
+
+Scholarly knowledge bases and structured research representations. A complementary line represents scholarly knowledge in structured, machine-actionable form. The Open Research Knowl-edge Graph (ORKG) curates paper contributions as structured, comparable descriptions to support their reuse [Jaradeh et al., 2019]. SCALE organizes scientific terminology into reusable concepts within a disciplinary taxonomy [Raimondi et al., 2026], Lacuna links paper-level content to research directions and open problems [Weiss et al., 2026], and Knows exposes agent-native structured rep-resentations of research content [Yu and Wang, 2026]. More broadly, coupling language models with knowledge graphs has been framed as a spectrum from KG-enhanced models to synergized systems in which the two are mutually reinforcing [Pan et al., 2024]. Each of these commits to a single primary representation, whether a contribution graph, a concept hierarchy, a research map, or a typed entry, and while several already record provenance and support reuse, none jointly maintains source-grounded facts, domain organization, and scoped cross-paper syntheses as separate-but-linked assets under shared provenance and revision semantics. ScholarStack targets this integration problem by maintaining a single evolving asset collection that preserves the three evidential roles, tracks their provenance and versions, and serves task-specific views over the same knowledge, so that a sequence of related research activities accumulates rather than repeats. 33 Method: Layered Research Asset Orchestration and Reuse 
+
+3.1 Research Requirements and Asset Design 
+
+Research tasks repeatedly revisit the same literature, but the knowledge worth preserving extends beyond retrieved passages. Answering a question requires recovering what a study reports and under which conditions; comparing methods requires identifying related research objects and checking their assumptions, measurements, and evaluation settings; synthesis requires clarifying what multiple studies jointly support and within what scope. When such judgments remain embedded in task-specific outputs, subsequent tasks need to reconstruct their conditions, organization, and evidential basis. These requirements imply that reusable research assets must preserve three complementary forms of information ( Table 1). Source-grounded statements preserve what an individual paper asserts together with its conditions and source locations (L1); domain organization preserves identities, categories, and relations together with the basis and uncertainty of these judgments (L2); scoped syntheses preserve cross-paper interpretations together with their coverage and supporting, opposing, or limiting evidence (L3). The distinction reflects different evidential responsibilities: fidelity to a source, justification of an organizational judgment, and support for a scoped interpretation. Shared identifiers and evidence references connect these objects without treating them as interchangeable forms of knowledge. Table 1: Research requirements and corresponding reusable assets.       
+
+> Research need Reusable assets Reuse benefits Grounded reading and verification
+> L1: Source-grounded facts with study conditions, source locations, and checking states. Reduce repeated source processing while preserving the context of reported findings. Organization and comparison
+> L1 + L2: Canonical entities, categories, and relations linked to result-specific assumptions, measurements, and settings. Reuse organizational judgments while avoiding comparisons across incompatible settings. Cross-paper synthesis
+> L3 (grounded in L1 + L2): Scoped syntheses built over organized research objects and linked to source-grounded evidence. Reuse scoped interpretations without extending conclusions beyond the examined evidence. Inspection and revision
+> Across layers: Evidence dependencies, identifiers, versions, and checking states. Preserve justification and identify what requires rechecking when evidence changes.
+
+ScholarStack realizes this design as three linked knowledge layers (Fig 1): L1 captures source-grounded scientific facts, L2 represents domain organization, and L3 represents scoped cross-paper syntheses. The layers are complementary rather than a mandatory processing sequence for every task. For example, L2 may identify two methods as belonging to the same category, but whether their empirical results are directly comparable must still be determined from the conditions retained in L1; an L3 synthesis may integrate those results only within a scope justified by its evidence. During task execution, the agent selects and combines the required objects into a task-specific Knowledge View. Different tasks can therefore select the layers and evidence granularity they require: a single-paper question may rely mainly on L1, a method comparison may combine L2 with L1 conditions, and a literature review may additionally draw on L3 syntheses. The following sections formalize these representations and describe how they are constructed and accessed. 
+
+3.2 Knowledge Representation and Construction 
+
+The knowledge layer compiles a document collection into a layered representation 
+
+K = ( F, O, S ), (1) where F is a collection of source-grounded Scientific Facts (L1), O is the domain organization that aligns and relates them (L2), and S is a collection of Scoped Syntheses that interpret them jointly (L3). These representations carry different evidential commitments: facts preserve what a source states and 41 Offline: Knowledge construction Ingest papers and build reusable, structured knowledge assets (offline) 
+
+Document collection 
+
+> Papers, articles, preprints, etc.
+> Ingest
+> and parse
+
+ScholarStack compiler 
+
+> Extract, normalize
+> and structure knowledge from multiple papers
+
+Three-layer knowledge assets 
+
+L1 L2 L3 Source-grounded scientific facts ( F)Domain metadata and organization ( O)Scoped cross-paper syntheses ( S)
+
+> Statement Study context Evidence reference
+> f = (statement, context,
+> evidence)
+> Canonical entity Domain taxonomy Category assignment Typed relation Organizes and structures facts in the domain
+> Synthesis account Synthesis scope Evidence basis
+> s = (account, scope, basis)
+> Integrates and summarizes
+> evidence across multiple papers
+
+Reusable knowledge assets 
+
+K = ( F, O, S)
+
+> Reusable Versioned
+> Provenance-preserving
+> Shared identifiers Evidence references Explicit scope
+
+2 Online: Task execution Access the knowledge assets to answer task-specific requests (online) 
+
+> Retrieval and reuse across tasks
+
+Request 
+
+> subject scope constraints e.g., effects of exercise on type 2 diabetes in RCTs, 2018–2024
+
+Operations over K 
+
+> Retrieve(K, q) Select(V, c) Expand(K, V, r) Compare(K, V, d) Synthesize(K, V, q)
+
+Knowledge View V 
+
+> Selected typed objects with conditions, evidence references, and status retained
+> L1 Facts
+
+f1
+
+f2
+
+••• 
+
+> L2 Metadata
+
+e1
+
+t1
+
+••• 
+
+> L3 Syntheses
+
+s1
+
+s2
+
+•••    
+
+> Selected typed objects from F,O, and S
+> (with conditions, evidence references, status)
+
+Downstream task families       
+
+> Evidence retrieval
+> Find relevant papers,
+> facts, or metadata
+> Scientific
+> question answering
+> Answer using evidence-grounded information
+> Evidence-grounded
+> generation
+> Generate structured
+> summaries or reports
+> with citations
+> Claim & consistency
+> assessment
+> Check claims, compare
+> evidence, and assess
+> consistency
+> Selected task outputs (after checks) can be registered as candidate assets
+> Legend: L1: scientific facts ( F)L2: metadata and organization ( O)L3: syntheses ( S)Supporting module Data / knowledge flow Optional feedback (asset registration)
+
+Figure 1: Overview of ScholarStack. Knowledge construction compiles documents into source-grounded facts (L1), domain organization (L2), and scoped cross-paper syntheses (L3), linked by shared identifiers and evidence references. During task execution, agents select and combine the required objects into a Knowledge View, retaining their conditions, evidence references, and recorded verification states. Different tasks use different subsets of the layers and operations. The feedback path denotes optional registration of task-derived candidates after the applicable checks; registration does not itself establish semantic verification. under which conditions; domain organization establishes identities, categories, and relations with an explicit basis; syntheses integrate findings within a declared scope. Keeping these roles distinct allows each to be checked and revised according to the kind of knowledge it represents. Attributes and taxonomy dimensions vary with the discipline and study type, while these three roles remain distinct. Appendix A traces one research topic from source sentences through L1 facts and L2 organization to an L3 synthesis. 
+
+3.2.1 L1: Source-Grounded Scientific Facts Representation. L1 directly anchors scientific statements to source sentences and provides the evidential basis for higher-layer objects. A Scientific Fact f ∈ F records one statement from one source together with what is needed to interpret it, f = (statement , context , evidence) : the statement identifies a subject and what the source reports about it, the context records the assumptions and conditions under which the report holds, and the evidence field locates the supporting sentence or sentences. Statements carry a type, such as a finding, a method description, a hypothesis, or a limitation, and a single paper typically contributes facts of several kinds. A quantitative fact keeps the reported value bound to the subject and the setting it was measured in, and every fact carries a verification status recording whether it has been checked against its cited sentences. In every case a fact records what the source asserts rather than certifying its truth. 
+
+Construction. Facts are extracted by a language model guided by schemas for the study type, so that quantitative, qualitative, and theoretical content each keep the conditions that qualify them. Structural checks validate the required fields and source references. Semantic verification assesses whether a statement is attributed to the correct subject and preserves the content and qualifications of its cited sentences. Failed and unresolved semantic checks remain explicit in the fact’s verification status. 5Role in access. Recorded contexts let tasks distinguish relevant facts that concern different popu-lations, assumptions, or evaluation settings. L1 supplies both reusable content and the conditions governing its comparison. Appendix A.1 presents a real paper’s source sentences, extracted state-ments, and verification states. 
+
+3.2.2 L2: Domain Metadata and Organization Representation. Facts from different papers do not line up by themselves: the same object may appear under different names, and F alone does not specify their categories or relationships. The organization O = ( T, E, A, R ) supplies this structure. A Domain Taxonomy T defines categories and membership criteria along field-specific dimensions, such as method family, problem setting, or guarantee type. Canonical Entities E give a shared identity to mentions identified as the same method, dataset, metric, or other research object. Category Assignments A place an entity in a category of T , cite supporting facts, and record whether membership is author-declared or inferred and with what certainty. Assignments derived from a particular result retain that result’s conditions; labels from different results cannot be combined into a single guarantee. Typed Relations R connect identified objects through named relationships, such as evaluation on a dataset, comparison against a baseline, or improvement over an earlier method, with payloads such as reported results or gains. 
+
+Construction. The three derived kinds are built from the extracted facts rather than from raw text: mentions are merged by deterministic rules with model adjudication for ambiguous cases, assignments must cite supporting facts, and relations are anchored in the extracted records that connect their endpoints. The taxonomy may be supplied by experts or prepared from the collection. Author-declared and inferred membership stay distinguishable, and unresolved cases remain uncertain rather than forced into a category. Construction also runs top-down: the taxonomy guides what extraction attends to and along which dimensions findings are compared, and facts that resist classification prompt taxonomy revision or re-extraction. 
+
+Role in access. O supports selection by category, traversal along relations, and comparison along the dimensions of T . Membership in a common category establishes relevance, while comparability is still decided by the contexts recorded in F : two methods in the same family need not share assumptions, and shared membership alone does not justify aggregating their results. Appendix A.2 shows how the same paper’s facts support domain assignments and relations. 
+
+3.2.3 L3: Scoped Cross-Paper Synthesis Representation. A Scoped Synthesis s ∈ S records an interpretation formed across papers, 
+
+s = (account , scope , basis) . It may describe a method family, a qualified disagreement, or an open problem within the covered studies. The account states the interpretation; the scope declares the topic, applicable conditions, and studies considered; the basis cites registered facts and, where relevant, category assignments. Each cited object is marked as supporting, opposing, or limiting, exposing both the grounds for the interpretation and its boundaries. 
+
+Construction. Synthesis uses O to organize and select related material, while its account is grounded in direct citations to the selected facts. Conflicting findings about the same question under comparable conditions are recorded as a disagreement. Differences attributable to study context are described separately, and unresolved uncertainty remains explicit. The generating model may cite only registered facts and assignments; candidates whose citations cannot be resolved are rejected before registration. Reference validation establishes that the basis is identifiable; semantic review separately assesses whether it supports the account and its declared scope. The scope describes the evidence considered, not complete coverage of a field. 
+
+Role in access. Tasks can retrieve an existing synthesis with its basis or request a new account from selected evidence. A new account remains a candidate until registration. Appendix A.3 illustrates a method-family synthesis based on saved records, including its scope, supporting and limiting evidence, and review state. 63.2.4 Cross-Layer Integration and Evidence Traceability 
+
+Shared identifiers link assignments to supporting facts, relations to the extracted records that connect their endpoints, and syntheses to facts and relevant assignments. These references connect derived objects to source sentences and make their evidential dependencies inspectable. Registration turns a knowledge object into a persistent Research Asset by validating required fields, identity, and reference integrity, reusing existing matches, and versioning new or revised objects. Structurally invalid outputs remain outside K. Semantic verification is recorded separately: failed or unresolved objects remain inspectable, and new syntheses do not inherit verification from their evidence. If a source or asset is revised, its dependents require rechecking; earlier versions preserve the basis of prior outputs. 
+
+3.3 Task-Oriented Knowledge Access and Application 
+
+A task accesses K through a Knowledge View V : a selection of typed objects retaining their conditions, evidence references, and verification states. Table 2 defines five operations for constructing and using such views. The agent chooses operations and layers according to the request’s subject, scope, and constraints; there is no fixed sequence or requirement to use all three layers. A paper-scoped task may also receive the designated paper’s complete fact collection directly. Task outputs retain the evidential distinctions established in Section 3.2. Comparison exposes differences in conditions without implying a ranking, and newly generated interpretations remain distinct from registered syntheses. Evidence references locate source sentences; when original-text access is allowed, the agent may read surrounding passages to check context. Knowledge-only settings rely on the recorded evidence and disclose its limitations. Missing evidence indicates limited coverage of the available view; it does not establish that no relevant work exists. Table 2: Core operations over the knowledge layer. K = ( F, O, S ) comprises source-grounded facts, domain organization, and scoped syntheses; q is a retrieval or synthesis request; V is a selected view of typed knowledge objects, and V ′ is the view returned by selection or expansion; c specifies selection constraints, r the relations or evidence links to follow, and d comparison dimensions; C is a Comparison Result, and s a candidate Scoped Synthesis. The signatures specify semantic inputs and outputs rather than a fixed execution policy.                   
+
+> Operation Output and semantics
+> Retrieve (K, q )→VLocate recorded facts, domain objects, or existing syntheses relevant to the request, retaining their sources and status.
+> Select (V, c )→V′Filter the view by explicit conditions, distinguishing confirmed matches from mismatches and missing or inapplicable information.
+> Expand (K, V, r )→V′Supplement the view with objects connected through the specified relations or evidence links, retaining the connections to the selected objects.
+> Compare (K, V, d )→COrganize findings by the requested comparison dimensions, exposing shared and differing conditions and identifying unresolved comparability.
+> Synthesize (K, V, q )→sGenerate a scoped interpretation from the selected evidence, recording its supporting, opposing, and limiting basis as a candidate synthesis.
+
+3.3.1 Literature Retrieval 
+
+For literature search, the view guides query formulation and evidence selection: L1 supplies findings and conditions, while relevant L2 organization and L3 syntheses suggest terminology and related approaches. The agent discovers candidate papers, checks them against source evidence, and refines its search as needed (Fig. 2). Final ranking relies on the retrieved papers. 
+
+Fixed-corpus retrieval. Given a request and a fixed collection, Retrieve and Select assemble relevant knowledge. Source links and knowledge-guided queries identify papers within that collection. The agent checks abstracts and relevant passages against the requested conditions and returns ranked candidates, distinguishing supported matches from unresolved details. 7Knowledge-guided fixed-corpus and open-world literature retrieval 
+
+(a) Offline compilation 
+
+> Domain
+> full-text papers
+> compiled once
+> Shared ScholarStack
+> compiler
+> extract · organize · synthesize
+> Frozen domain layer K d
+> L1 · Facts
+> findings, conditions,
+> source evidence
+> L2 · Organization
+> entities, categories,
+> typed relations
+> L3 · Synthesis
+> scoped cross-paper
+> accounts
+> compile
+> once
+> reuse across
+> queries
+
+(b) Online retrieval   
+
+> Research request
+> topic · entities
+> relations · constraints
+> Domain router
+> select K d(q)
+> same rule for every query
+> Matched local evidence access
+> ScholarStack condition
+> catalog → selected read
+> L1
+> evidence
+> L2
+> structure
+> L3
+> context
+> compact Knowledge View with provenance
+> Raw baseline
+> same source papers:
+> catalog + selective full-text read
+> Shared multi-round Agentic Search
+> Plan
+> decompose request
+> formulate queries
+> Retrieve
+> discover candidates
+> within selected scope
+> Verify
+> inspect paper evidence
+> check constraints
+> Update
+> coverage gaps
+> queries + candidates
+> iterate
+> Tiered
+> papers
+> Tier 1
+> Tier 2
+> Tier 3
+> shared loop for both fixed-corpus
+> and open-world scenarios
+> reusable assets across requests
+> primary ScholarStack path matched Raw control iterative search loop
+
+Figure 2: Knowledge-guided agentic literature retrieval. A compiled Knowledge View informs search planning and evidence selection. Candidate papers are checked against the request using retrieved source evidence, which also supports the final ranking. Fixed-corpus and open-world settings differ in the permitted search scope. 
+
+Open-world retrieval. Given a request, the agent uses a view from an existing domain collection to formulate searches over external scholarly sources. It consolidates candidate identities, verifies the requested conditions, and returns papers with their supporting evidence. The compiled collection remains fixed during this search; newly discovered papers need not already belong to it. 
+
+Novelty assessment. Given a proposed contribution and prior-work corpus, the agent decomposes the contribution by problem, mechanism, and setting. Relevant L1 facts supply comparison evidence, and L2 Canonical Entities align naming variants. Compare identifies overlaps and residual differ-ences with cited support. The output is bounded by the corpus and evidence examined; failure to find an overlap does not establish global novelty. 
+
+3.3.2 Scientific Question Answering 
+
+Given a question and designated papers, the agent identifies the requested information and conditions, assembles evidence, and generates an answer with citations (Fig. 3). Source-reported statements remain distinguishable from interpretations introduced during answering. 
+
+Single-paper question answering. Source-grounded facts and the sentence-level source content indexed with them supply the answer evidence from the designated paper, located at a finer granularity than whole passages. When available, L2 Canonical Entities assist name alignment without expanding the evidence scope to other papers; L3 is generally unnecessary. The answer preserves the facts’ contexts and evidence references. If the selected evidence is insufficient, the agent checks the source when permitted or reports the unresolved information within the available view. 
+
+Multi-paper question answering. Facts retain their paper identities and contexts. L2 entities align subjects, while Compare organizes findings by question-specific dimensions, such as assumptions, settings, and outcomes. The answer combines compatible findings and preserves contextual differ-ences and unresolved conflicts. An existing L3 synthesis may contribute if its scope matches the question; Expand exposes its basis. Otherwise, Synthesize can form a candidate account from the selected facts. Answer-time interpretations do not automatically become registered L3 assets. 8Legend 
+
+shared workflow optional access 
+
+Select evidence 
+
+Single-paper QA Multi-paper QA 
+
+Question + designated papers Identify subjects, requested information, and conditions 
+
+L1 facts from one paper Locate findings and retain qualifications 
+
+Optional access when relevant; inspect scope and evidence basis 
+
+L2: entity alignment and category organization L3: existing scoped synthesis 
+
+L1 facts across papers Align subjects and compare conditions Integrate compatible findings; retain differences and unresolved conflicts 
+
+Generate scoped answer Trace claims to sources Source passages 
+
+> Attribution • Conditions • Unresolved aspects Evidence references
+
+Figure 3: Scientific question answering over designated papers. Single-paper QA selects source-grounded facts; multi-paper QA additionally aligns subjects and compares study conditions. L2 organization and existing L3 syntheses contribute when relevant. Evidence references trace answer claims through supporting facts to source sentences; access to surrounding source text depends on the task setting. Legend 
+
+shared workflow optional source access 
+
+Manuscript, review request, contribution or research idea 
+
+Identify objective, output, scope and constraints 
+
+Organize evidence and generate 
+
+Task-specific Knowledge View 
+
+L1: Scientific Facts 
+
+> Statements, study conditions and evidence references
+
+L2: Domain Organization 
+
+> Entities, categories and typed relations
+
+L3: Scoped Syntheses 
+
+> Developments, disputes and unresolved questions
+> Select layers as needed
+
+Plan output structure Compare conditions Synthesize as needed 
+
+Related-work generation 
+
+Group references by domain categories Compare prior work; position contribution 
+
+Literature review generation 
+
+Organize themes and method families Synthesize developments, disagreements and limits 
+
+Experimental-design generation 
+
+Gather settings, baselines and limitations Propose tests, controls and observable outcomes 
+
+Idea generation 
+
+Identify open questions and restrictive assumptions Develop and refine ideas; explain intended advance 
+
+Trace claims to sources 
+
+Keep distinct: 
+
+> Reported findings Synthesized interpretations Proposed hypotheses and designs
+> Preserve conditions, evidence scope and unresolved limitations
+
+Source passages Evidence references 
+
+> Source checks where permitted
+
+Figure 4: Evidence-grounded generation. A task-specific Knowledge View supports planning, com-parison, and synthesis for related-work, review, experimental-design, and idea generation. Outputs retain study conditions and evidence references and distinguish literature-based interpretations from proposed hypotheses and design choices. 
+
+3.3.3 Evidence-Grounded Generation 
+
+Given a writing or research objective, the agent organizes a view into themes, comparisons, or questions (Fig. 4). L2 categories and relations guide organization; L1 facts substantiate claims; L3 syntheses provide scoped interpretations. Compare aligns conditions, and Synthesize supplies an additional account when needed. Outputs distinguish literature-supported statements and interpre-tations from proposed hypotheses and design choices, which do not inherit verification from their motivating evidence. 
+
+Related-work generation. Given a focal manuscript and reference collection, the agent identifies the target’s research problem, approach, and claimed contribution. L2 Category Assignments group 9references into research threads. Typed Relations capture support, contrast, and extension among studies. L1 facts provide evidence for comparing methods, assumptions, and findings while preserving their study conditions. L3 Scoped Syntheses provide cross-paper context within an explicit scope. The agent applies Compare to organize the evidence along dimensions relevant to the target. It then writes a coherent account that relates prior work to the target’s approach and claimed contribution. Substantive claims about prior work cite the supplied references. 
+
+Literature review generation. For a survey request, ScholarStack first retrieves a task-specific literature collection and compiles its knowledge assets, then constructs a view for writing. Existing assets can be reused; updates are needed only when the intended coverage requires additional or revised material. The writer uses the L2 Domain Taxonomy and Category Assignments to organize the field, L3 Scoped Syntheses to characterize developments and disagreements, and L1 facts with their source sentences to substantiate technical claims. It links the outline and central assertions to the selected facts and syntheses through their evidence references, then checks attribution, quantities, comparison scope, and citation placement. This top-down organization followed by bottom-up source checking exposes coverage gaps and allows provisional classifications and interpretations to be qualified or rejected. 
+
+Experimental-design generation. Given a contribution’s claims, the agent gathers L1 facts about relevant procedures, baselines, observables, and limitations, using L2 relations and L3 accounts to organize them. For each claim, the plan specifies a change, comparator, observations that would support or weaken it, and applicable conditions. Reported settings provide the rationale; new design choices are marked as proposals. 
+
+Idea generation. Given a topic or preliminary idea, the idea-generation skill identifies the research problem and resource constraints. It develops candidate directions and assesses their scientific value and feasibility. Through internal iteration, it strengthens each candidate’s rationale and outlines how the proposed contribution could be tested. In ScholarStack, the agent applies this skill using evidence accessed through the asset layer: L1 facts and study contexts, L2 relations, and relevant L3 syntheses. These assets support comparisons with prior approaches and help assess whether candidate ideas fit the conditions of the supporting evidence. The final ideas state their proposed contributions, rationale, and supporting references. 
+
+3.3.4 Claim and Consistency Assessment 
+
+This task family assesses assertions against available evidence. Here we instantiate it as claim verification against a designated cited paper, separately from the extraction verification used during knowledge construction. 
+
+Scientific claim verification. Given a claim and paper, the verifier receives the paper’s complete L1 fact collection, without query-time retrieval or L2/L3 processing. Statements and contexts support a relation label and rationale distinguishing direct support, overstatement, topical similarity without support, and irrelevance [Wadden et al., 2020]. Missing qualifications can affect the judgment, and incomplete evidence references limit traceability [Wadden et al., 2022]. 
+
+## 4 Experiments 
+
+4.1 Experimental Setup 
+
+We evaluate ScholarStack across four task families: literature retrieval, scientific question answering, evidence-grounded generation, and claim and consistency assessment. Unless otherwise specified, we use Qwen3.8-Max as the base model and Codex as the agent framework. Within each matched comparison, conditions share the source collection, base model, task instructions, and execution budget, subject to the task-specific access and prompting variants. Throughout the experiments, 
+
+Full-text denotes the baseline that accesses the original paper texts, and ScholarStack denotes our method, which accesses research assets compiled from the same sources. 10 Evaluation uses task-specific quality metrics and, where available, query-time resource usage. Unless noted otherwise, token counts include model input and output. Construction costs, reuse assumptions, and further implementation details are reported in the appendices. 
+
+4.1.1 Literature Retrieval Fixed-corpus retrieval. We evaluate fixed-corpus literature retrieval on 50 queries sampled from LitSearch [Ajith et al., 2024]. ScholarStack uses assets compiled from 900 representative source papers, while Full-text accesses the same sources as raw text. Both follow a four-stage protocol comprising planning, expansion, verification, and ranking under matched search and reading budgets. We additionally compare three deterministic baselines: BM25, Dense embeddings, and Hybrid retrieval. We report macro-averaged gold-paper recall at ranks 1, 5, and 10, MRR@40, and mean time and tokens per query. Corpus construction, baseline implementations, execution limits, and metric definitions are detailed in Appendix B.1. 
+
+Open-world retrieval. In this task, we evaluate whether ScholarStack improves the high-priority results of an agent that can search beyond the layer’s source collection. We use the open-ended portion of SAGE [Hu et al., 2026], which associates each research-style query with two most relevant 
+
+seed papers and a set of relevant shared references. We select 89 queries covering computer science, natural science, and healthcare domains. Each query has two most relevant seed papers and additional 
+
+relevant references. A query-independent collection of approximately 1,750 full-text papers per domain supplies the local context; benchmark domain annotations route queries to the corresponding collection. Full-text receives a title-and-abstract catalog followed by selected full-text passages, whereas ScholarStack receives a structured catalog followed by selected L1/L2/L3 records. Both use one catalog call and one read call within a 12,000-character budget, followed by the same multi-round Agentic Search workflow over the public Web and an internal scholarly index. We score the explicit Tier 1 recommendations, averaging 4.95 papers per query, using macro recall, precision, and F1, together with macro and micro weighted recall (weights of 2 and 1 for the two relevance levels). Further details are provided in Appendix B.2. 
+
+Novelty assessment. We evaluate whether a system can distinguish substantive overlap with prior work from topical similarity. For this task, we build a cross-domain benchmark from a citation-linked scientific corpus spanning 12 fields. It contains 40 overlap-present targets and 135 gold overlaps. Ground truth consists of a target’s prior work identified through citation relations; same-domain non-cited papers serve as hard distractors. Both methods share the base model, tool budget, and closed-book setting, differing only in knowledge access: Full-text applies our novelty assessment method while reading the original related-paper texts, and ScholarStack applies the same method over assets compiled offline from those texts. Web search is disabled. We report weighted identification F1, using an LLM matcher and weights of 1.0 for core overlap axes and 0.3 for peripheral axes, together with tokens per query. Appendix B.3 provides matcher, cost-accounting, ablation, and weighting-sensitivity details. 
+
+4.1.2 Scientific Question Answering Single-paper QA. We evaluate answering from one designated paper on QASPER [Dasigi et al., 2021] (416 papers and 1,428 questions) and PeerQA [Baumgärtner et al., 2025] (208 papers and 579 questions). This setting primarily tests access to local, source-grounded evidence. Full-text receives the entire paper; RAG retrieves fixed passages; ScholarStack retrieves structured facts and sentence-level evidence. Conditions share the answering prompt, and RAG and ScholarStack use the same semantic retriever. For QASPER, we report official Answer-F1, its answer-type breakdown, and Evidence-F1. For PeerQA, we report answerability metrics over 495 questions and generation Rouge-L against free-form answers (FF) and annotated evidence (AE) over 245 questions. Mean input tokens per question measure query-time cost. Appendix C.1 provides benchmark composition and evaluation details and additional analyses. 
+
+Multi-paper QA. We evaluate our method on MDAQA [Huang et al., 2025], which contains 797 questions, each referring to at least two articles. Each question is accompanied by gold answers, from which we identify the corresponding gold papers. Using the same ordinary prompt without additional retrieval, we compare Full-text, which provides the complete parsed texts of the gold papers, with 11 ScholarStack. GPT-6 Astra with high reasoning effort evaluates all candidate answers anonymously against a fixed evidence package, with randomized candidate identifiers and presentation order. Condition denotes the input setting used to generate each answer and is hidden from the evaluator. Correctness (Corr.) assesses evidential support and accurate attribution of subjects, values, and conditions. Completeness (Comp.) measures coverage of the question, while cross-paper synthesis (Synth.) assesses evidence-based integration and comparison across papers. Calibration (Cal.) measures whether the strength of assertions and stated limitations are consistent with the evidence. Directness (Dir.) assesses relevance and the avoidance of redundancy. Tokens denote the mean number of input and output tokens per question, and Sec. denotes the mean generation time in seconds per question. Costs include answer generation only, excluding knowledge construction and judging. Additional details see Appendix C.2. 
+
+4.1.3 Evidence-Grounded Generation Related-work generation. We evaluate related-work generation on 64 target manuscripts from the OARelatedWork test split [Docekal et al., 2024]. Each instance contains a focal manuscript and a fixed reference set of at least five papers. Its original related-work section is withheld from the generation input. The reference set is fixed, so no additional retrieval is performed. We compare the proposed ScholarStack with the Full-text baseline. Both use the same model and write-related-work skill. Full-text applies this skill to the complete reference texts, whereas ScholarStack applies the same skill to frozen paper-level assets and the L1/L2/L3 knowledge layers without access to those full texts. The focal-manuscript context, citation registry, writing procedure, and 300–600-word limit are otherwise identical, so the comparison isolates the evidence representation used by the shared writing skill. An independent LLM judge evaluates each anonymized section separately on Relevance, Coverage, Specificity, Support, and Overall quality. We also audit claims against the original references as True, Wrong Citation, Unverifiable, or False, and compute citation F1 against the benchmark reference set. Appendix D.1 gives selection, access, and evaluation details. 
+
+Literature Review Generation. We evaluate on the 25-task ReportBench-ML subset used by Lacuna [Li et al., 2025, Weiss et al., 2026]. Each task requests an English survey under topic, coverage, and publication-date constraints. For each task, ScholarStack uses an agentic search workflow to retrieve 100 relevant papers, compiles them into an L1–L3 knowledge view, and applies the review skill to produce the survey. Claude Code DeepResearch with Opus 4.8 model serves as the local comparator and cites 13 papers per task on average. Expert-survey content and gold reference membership are withheld from both workflows. We report micro citation precision, recall, and F1 over papers cited in the final body; the count-control condition retains the first 13 papers cited by ScholarStack in retrieval order, without gold-based reranking or regeneration. Content quality is assessed with point-wise RACE [Du et al., 2025] using an independent judge and shared task-specific rubrics. Published Lacuna values provide external context rather than rerun baselines. Appendix D.2 reports resource accounting and trace-backed examples. 
+
+Experimental-design generation. We construct a cross-domain benchmark for experimental-design generation from a citation-linked scientific corpus spanning 12 fields with 38 targets. Each target is a paper whose source text reports an experimental study, and the ground truth is the set of experiments that paper actually performed, extracted from its source text; each target is accompanied by a corpus of related papers (median 14 per case) that a system may draw on when designing experiments. All methods share the base model and tool budget and are closed-book, differing only in knowledge access: Full-text (w/o Skill) reads the raw files with no task method, Full-text (w/ Skill) applies our domain-agnostic design method over the same raw files, and ScholarStack applies that method over assets compiled offline from the related corpus. We report (i) a coverage F1 against the paper’s actual experiments, weighted by experiment kind (main comparison/ablation 1.0; analysis, robustness, human evaluation, theory 0.6; other 0.3), and (ii) a blind pairwise preference in which a neutral LLM judge (GPT-6), shown the contribution and two anonymized designs in randomized order with an anti-verbosity instruction, selects the better design. Per-query cost is reported in tokens. Appendix D.3 details the metric, cost accounting, and honest-comparison notes. 
+
+Idea generation. We evaluate 35 cases across five broad domains drawn from IdeaBench [Guo et al., 2024], MOOSE-Chem [Yang et al., 2024], and AI Idea Bench 2025 [Qiu et al., 2025]. Each case provides a research task and reference papers. Full-text (w/o Skill) generates ideas directly from 12 the task and reference full texts; Full-text (w/ Skill) applies the idea-generation skill described in Section 3.3.3 to the same full texts; ScholarStack retains that skill while accessing assets compiled from the same references, without directly reading the full papers. An LLM judge ranks anonymized outputs across five evaluation dimensions adopted from Li et al. [2024]: novelty, significance, clarity, feasibility, and effectiveness. First, second, and third place receive 1, 0.5, and 0, respectively; scores are averaged across cases and then equally across dimensions. Appendix D.4 details the benchmark composition and judging protocol. 
+
+4.1.4 Claim and Consistency Assessment Scientific claim verification. We evaluate 80 claim–paper pairs from the public train-ing/development split of NLPCC 2026 Shared Task 10, Track 2 [NLP2CT, 2026], balanced across 
+
+Supported , Overstate , Topical Match , and Irrelevant (20 per label). Full-text receives the dataset-provided article text, whereas ScholarStack receives the original L1 objects compiled from the same paper. Neither condition receives task images or external retrieval. We report exact-label accuracy and mean tokens per query, including retries; failures and abstentions remain in the accuracy denominator. Evidence localization is not evaluated. Appendix E.1 provides selection criteria, label definitions, and cost accounting. 
+
+4.2 Main Results 4.2.1 Literature Retrieval Fixed-corpus retrieval. Table 3 reports fixed-corpus retrieval results over all 50 LitSearch queries. On the 50 LitSearch queries, ScholarStack exceeds the Full-text baseline at R@1, R@5, and MRR@40, while the Full-text baseline is higher at R@10. ScholarStack also uses slightly less time and fewer tokens per query. The coverage split in Table 4 localizes the difference. For in-source queries, ScholarStack improves all four retrieval metrics. For out-of-source queries, it ties the Full-text baseline at R@1 and R@5 while being slightly lower at R@10 and MRR@40. These results indicate that the aggregate head-ranking gains are concentrated among queries whose gold set overlaps the papers used to compile the layer. Table 3: Fixed-corpus literature search results on LitSearch [Ajith et al., 2024]. Tokens are per-query means. Bold marks the best retrieval value among methods evaluated on LitSearch. Corpus and asset size refer to the number of papers.                                           
+
+> Method Corpus Asset Size R@1 R@5 R@10 MRR@40 Tokens BM25 64,183 –0.220 0.470 0.537 0.331 –Dense 64,183 –0.257 0.503 0.533 0.379 –Hybrid 64,183 –0.347 0.537 0.583 0.452 –Full-text 64,183 900 0.650 0.767 0.787 0.707 49.3k ScholarStack 64,183 900 0.670 0.773 0.773 0.717 47.9k
+
+Table 4: Fixed-corpus literature search results by knowledge-source coverage: 19 queries with at least one gold paper among the 900 asset sources (in-source), and 31 with none (out-of-source). All gold papers are evaluated against the same retrieval corpus. Bold marks the best value within each model and coverage group, including ties.                          
+
+> In-source Out-of-source Method R@1 R@5 R@10 MRR@40 R@1 R@5 R@10 MRR@40 Full-text 0.711 0.807 0.807 0.781 0.613 0.742 0.774 0.662
+> ScholarStack 0.763 0.825 0.825 0.818 0.613 0.742 0.742 0.654
+
+Open-world retrieval. Table 5 reports pooled Tier 1 results over all 89 queries. Relative to matched raw-text access, ScholarStack raises precision from 0.1376 to 0.1579 (14.7% relative) and recall from 0.1240 to 0.1338 (7.9%), yielding a 10.7% improvement in F1. Macro and Micro Weighted Recall increase by 6.6% and 11.5%, respectively. The source papers and online access budget are matched: 13 Raw can inspect the same papers in full text, whereas ScholarStack exposes their precompiled cross-layer representation. The difference is therefore associated with representation and access rather than additional source documents. The experiment evaluates the layer as a whole and does not attribute the gain separately to L1, L2, or L3. Table 5: Pooled open-world retrieval results on 89 SAGE queries. All metrics use the explicit Tier 1 set, which contains approximately five papers. Recall, Precision, F1, and Macro Weighted Recall are macro-averaged over queries; Micro Weighted Recall pools weighted labels.                
+
+> Method Recall Precision F1-Score Macro W-Recall Micro W-Recall Full-text 0.124 0.138 0.128 0.117 0.113 ScholarStack 0.134 0.158 0.141 0.124 0.126
+
+Novelty assessment. Table 6 reports novelty assessment results across 12 fields. ScholarStack uses 21.4k tokens per query, compared with 35.6k for the Full-text method (about 40% fewer). Under our decision-relevance axis weighting its weighted identification F1 is also higher, verifying the benefit of structured knowledge layers. Table 6: Novelty-assessment results for n=40 overlap-present targets across 12 fields and 135 gold overlaps. Weighted identification F1 uses weights of 1.0 for core axes and 0.3 for peripheral axes; token counts are per-query means.             
+
+> Method Weighted F1 Recall Precision Tokens Full-text 0.645 0.761 0.560 35.6k
+> ScholarStack 0.662 0.779 0.576 21.4k
+
+4.2.2 Scientific Question Answering Single-paper QA. Tables 7 and 8 report the two benchmarks. On QASPER, ScholarStack improves overall Answer-F1 (0.5708 versus 0.5613) and Evidence-F1 (0.5887 versus 0.5610) over RAG while using 12% fewer input tokens. ScholarStack reaches about 93% of the full-text Answer-F1 at 34% of its input tokens. Table 7: Single-paper QA on QASPER (416 papers / 1,428 questions). Overall denotes Answer-F1 across all questions; Extr., Abst., Bool., and Unans. denote extractive, abstractive, boolean, and unanswerable questions, respectively. Answer-F1 measures token-level answer overlap; Evidence-F1 measures paragraph-level evidence overlap. Human is the reported human-answer reference from QASPER [Dasigi et al., 2021]. Tokens denotes mean input tokens per question; bold marks improvements over RAG. 
+
+Answer-F1 Method Overall Extr. Abst. Bool. Unans. Evidence-F1 Tokens Full-text 0.6146 0.6596 0.2697 0.6950 0.9198 0.6015 5.4k Human 0.6090 – – – – 0.7160 –RAG 0.5613 0.5792 0.2527 0.6571 0.9091 0.5610 2.1k ScholarStack 0.5708 0.5988 0.2631 0.6495 0.9114 0.5887 1.9k 
+
+On PeerQA, ScholarStack improves all five aggregate answerability metrics and free-form ROUGE-L over RAG while using 28% fewer input tokens. ScholarStack reaches about 93% of the full-text Macro-F1 with about 11% of its input tokens. Appendix C.1 reports domain-level results and selected qualitative examples. 
+
+Multi-paper QA. Table 9 reports results on 797 MDAQA questions. With the same answering model, ScholarStack achieves an overall score of 18.41, compared with 8.46 for Full-text, an absolute gain of 9.95. Compared with Full-text, ScholarStack improves correctness from 1.11 to 3.89, 14 Table 8: Single-paper QA on PeerQA (208 papers / 579 questions). Answerability is evaluated on 495 questions: Ans-F1 and Unans-F1 denote F1 for answerable and unanswerable questions; Acc., W-F1, and Macro-F1 denote accuracy, class-frequency-weighted F1, and unweighted mean class F1. Generation ROUGE-L is evaluated on 245 questions against free-form reference answers (FF) and annotated evidence (AE). Human denotes model answers using human-annotated evidence, with answerability scored only on answerable questions [Baumgärtner et al., 2025]. Tokens denotes mean input tokens per question; bold marks improvements over RAG.                                          
+
+> Answerability Generation (Rouge-L) Method Ans-F1 Unans-F1 Acc. W-F1 Macro-F1 FF AE Tokens Full-text 0.8056 0.5071 0.7212 0.7381 0.6564 0.1548 0.2048 12.6k Human 0.7318 ––––0.1501 0.1605 0.3k RAG 0.7356 0.4759 0.6485 0.6768 0.6057 0.1416 0.1564 1.9k ScholarStack 0.7485 0.4783 0.6606 0.6874 0.6134 0.1447 0.1558 1.4k
+
+completeness from 2.01 to 3.35, cross-paper synthesis from 1.41 to 3.48, calibration from 0.92 to 3.90, and directness from 3.01 to 3.80. The improvements in synthesis and calibration suggest that ScholarStack organizes evidence in a form that better supports cross-paper integration and evidence-aligned answers under the same answering model. At the same time, ScholarStack reduces answer-generation costs, using 5.5k total tokens per question compared with 20.8k for Full-text, a reduction of approximately 73.3%. The mean generation time also decreases from 13.13 to 7.54 seconds per question. Table 9: Multi-paper QA on 797 MDAQA questions. Corr., Comp., Synth., Cal., and Dir. denote correctness, completeness, cross-paper synthesis, calibration, and directness. Scores are from 0 to 4, and Total sums the five scores (0 to 20). Tokens and Sec. are mean tokens and generation seconds per question over available usage records, excluding knowledge construction and judging.                         
+
+> Method Corr. Comp. Synth. Cal. Dir. Total Tokens Sec. Full-text 1.11 2.01 1.41 0.92 3.01 8.46 20.8k 13.13 ScholarStack 3.89 3.35 3.48 3.90 3.80 18.41 5.5k 7.54
+
+ScholarStack achieves higher completeness and synthesis scores while using shorter inputs. The knowledge layers organize information at the levels needed for cross-paper answering. The rep-resentations of L1, L2 and L3 establish together an explicit structure for comparing findings and tracing conclusions back to their sources. In the evaluation, this organization is associated with higher coverage and better calibration, while requiring fewer generation tokens and less recorded generation time. This combination is particularly useful for multi-paper questions, where an answer must integrate several findings while preserving the conditions under which each applies. The appendix reports the results for the intermediate-level L1 and L1+L2 configurations, as well as those using the Cross-Paper Evidence Synthesis (CPES) skill. 
+
+4.2.3 Evidence-Grounded Generation Related-work generation. Table 10 shows that ScholarStack outperforms Full-text on four of the five independently judged quality dimensions. Its gains in Coverage ( 4.250 vs. 4.219 ), Specificity (4.453 vs. 4.359 ), Support ( 4.438 vs. 4.234 ), and Overall quality ( 4.203 vs. 4.156 ) indicate that the knowledge layer helps the writer cover the relevant literature, make more concrete comparisons, and ground the resulting synthesis in evidence. Table 11 shows the same favorable pattern in evidence use. ScholarStack increases the True rate from 91 .82% to 92 .43% , while reducing Wrong Citation from 2.14% to 1.10% and False claims from 1.81% to 1.15% . It also improves citation F1 from 0.95 
+
+to 0.97 , showing closer agreement with the references selected by the target authors. Although its Unverifiable rate is slightly higher, ScholarStack produces fewer citation errors and false claims while selecting a more appropriate reference set. Taken together, ScholarStack outperforms Full-text on most quality dimensions and on the key citation and factuality indicators. L2 organization and L3 scoped syntheses expose coherent research threads and cross-paper relations, while L1 facts retain the concrete source-grounded details needed 15 Table 10: Quality-dimension performance on the OARelatedWork benchmark (each dimension scored out of 5). Rel., Cov., Spec., and Supp. denote Relevance, Coverage, Specificity, and Support.                
+
+> Method Rel. Cov. Spec. Supp. Overall Full-text 4.688 4.219 4.359 4.234 4.156 ScholarStack 4.578 4.250 4.453 4.438 4.203
+
+Table 11: Factuality and citation performance on the OARelatedWork benchmark. Claim-label values are sample-mean percentages; citation F1 uses a 0–1 scale.                     
+
+> Method True ↑Wrong Cit. ↓Unverif. ↓False ↓Citation F1 ↑
+> Full-text 91.82 2.14 4.23 1.81 0.95 ScholarStack 92.43 1.10 5.31 1.15 0.97
+
+to substantiate them. This layered representation lets the writer work from reusable structured assets instead of repeatedly processing full papers, while producing more comprehensive, specific, and well-supported related work with better citation selection. 
+
+Literature Review Generation. Table 12 shows that ScholarStack achieves the strongest reference coverage, recovering 637 expert-survey references and reaching 0.182 recall and 0.214 micro F1. Claude Code recovers 171 references, with 0.049 recall and 0.090 F1. ScholarStack’s lower full-set precision (0.260 versus 0.553) follows from its substantially broader search: the Agentic Search workflow retrieves approximately 100 papers for each survey, enabling the final report to cover more relevant directions but also increasing the number of citations outside the expert reference set. To compare the systems at a similar citation budget, we restrict ScholarStack to the first 13 papers it cites in retrieval order, matching Claude Code’s average. Under this control, ScholarStack reaches 0.603 precision, 0.056 recall, and 0.103 F1, exceeding Claude Code on all three metrics. The result shows that the coverage gain is not obtained only by adding a long tail of references: the early ScholarStack citation set is itself more concentrated on expert-survey references, while the remaining citations provide the additional breadth observed in the full condition. Table 13 further shows that ScholarStack achieves the highest report-quality score overall (9.18) and in every RACE dimension. The largest gains over Claude Code are in comprehensiveness (9.23 versus 7.04) and insight (9.30 versus 7.43), consistent with L2 providing a corpus-level organization and L3 connecting findings across papers. L1 evidence and the review skill’s source-checking workflow help preserve technical conditions and support coherent, well-grounded exposition, contributing to the gains in instruction following and readability as well. These scores evaluate the complete workflows; Appendix D.2.2 provides trace-backed examples of the three mechanisms and discusses the evaluation boundaries in detail. Table 12: ReportBench-ML citation overlap against expert-survey references.                                 
+
+> System F1 Prec. Rec. Hits GPT-Researcher 0.039 0.290 0.022 72 STORM 0.015 0.250 0.008 21 LangChain ODR 0.007 0.055 0.004 13 Lacuna Deep Research 0.052 0.339 0.028 99 Claude Code DR 0.090 0.553 0.049 171 ScholarStack 0.214 0.260 0.182 637
+> First 13 cited 0.103 0.603 0.056 196
+
+Experimental-design generation. Table 14 reports coverage and cost; Table 15 reports the blind preference. On coverage F1, ScholarStack and the Full-text method are essentially tied ( 0.404 vs. 
+
+0.398 ; we do not read this 0.006 gap as a quality difference), and both clearly exceed Base LLM (0.339 ). Both methods are strongly preferred over Base LLM by the blind judge ( 32 /38 and 34 /38 
+
+wins); the gain is precision-driven, as Base LLM over-proposes experiments (mean 22 .9 vs. 18 .6–
+
+18 .7) and is penalized for padding. Head-to-head, the judge slightly favors Full-text over ScholarStack 16 Table 13: RACE report-quality scores on ReportBench-ML. Scores are out of 10.                                    
+
+> System Overall Comp. Insight Instr. Read. GPT-Researcher 5.24 5.31 4.87 4.41 7.62 STORM 2.90 3.45 2.67 1.66 4.20 LangChain ODR 7.42 7.48 7.23 7.22 8.16 Lacuna Deep Research 7.82 8.01 7.61 7.57 8.34 Claude Code DR 7.54 7.04 7.43 8.28 7.88 ScholarStack 9.18 9.23 9.30 9.16 8.81
+
+(22 vs. 16 ), so we do not claim ScholarStack improves design quality over Full-text. ScholarStack’s contribution is matching Full-text’s quality at the lowest per-query cost of the three methods—about 
+
+40% fewer tokens than the Full-text method—while requiring no task-specific assets. Table 14: Experimental-design generation results. Coverage F1 against the paper’s actual experiments (weighted by experiment kind). Tokens indicate per query.                 
+
+> Method Coverage F1 Recall Precision Tokens Base LLM 0.339 0.665 0.255 18.7k Full-text 0.398 0.665 0.329 20.7k ScholarStack 0.404 0.642 0.331 12.4k
+
+Table 15: Blind pairwise preference (GPT-6 judge; anonymized, randomized order, anti-verbosity instruction). Wins/losses/ties over 38 targets.             
+
+> Comparison Wins Losses Ties Full-text vs. Base LLM 32 60ScholarStack vs. Base LLM 34 40ScholarStack vs. Full-text 16 22 0
+
+Idea generation. Table 16 shows that ScholarStack achieves the highest score on all five dimensions, with an overall mean of 0.5771, compared with 0.5257 for Full-text (w/ Skill) and 0.3971 for Full-text (w/o Skill). The generation method improves the mean score by 0.1286 under full-text access, while the knowledge layer adds a further 0.0514 with the method held fixed. The largest gains of Full-text (w/ Skill) over Full-text (w/o Skill) occur in clarity and feasibility. This pattern is consistent with the generation method’s explicit organization of candidate ideas and its emphasis on resource constraints and internal refinement. The gains of ScholarStack over Full-text (w/ Skill) suggest that the structured organization of reference evidence supports idea development and refinement. Preserved applicability conditions inform feasibility judgments, while relations among prior approaches support novelty by facilitating the identification of new combinations and distinct contributions. Cross-study syntheses of limitations and conditional findings provide an evidential basis for explaining how proposed directions could improve on existing work, consistent with the gain in effectiveness. 
+
+4.2.4 Claim and Consistency Assessment Scientific claim verification. Table 17 compares the two paper contexts on all 80 claim–paper pairs. ScholarStack yields 41 /80 correct predictions versus 37 /80 for the Full-text baseline, an observed accuracy gain of 5.00 percentage points. Mean usage falls from 12 ,046 .29 to 2,817 .10 tokens per query, a reduction of 76 .61% . The L1 view reduces query-time token use while retaining useful support-relation information. This single-run accuracy comparison on a small, balanced subset is descriptive, with no significance test and nearly half of the labels incorrect. Reliability and total cost, including construction, require further evaluation. 17 Table 16: Comparison of idea-generation quality across five dimensions on the benchmark.                         
+
+> Method Novelty Significance Clarity Feasibility Effectiveness Mean Full-text (w/o Skill) 0.486 0.457 0.343 0.257 0.443 0.397 Full-text (w/ Skill) 0.500 0.514 0.571 0.543 0.500 0.526 ScholarStack 0.514 0.529 0.586 0.700 0.557 0.577
+
+Table 17: Scientific claim verification on 80 NLPCC instances ( 20 per label). Tokens/query includes input, output, and retries, excluding knowledge construction. Bold marks the better observed value in each metric.          
+
+> Method Correct Accuracy (%) Tokens/query Full-text 37/80 46.25 12.0k ScholarStack 41/80 51.25 2.8k
+
+4.3 Analysis of Layer Contributions 
+
+The results above show that compiled assets can improve both query-time efficiency and the quality of research outputs. The asset layers contribute to these improvements in different ways across tasks: some tasks rely primarily on source-grounded facts, while others also draw on domain organization or existing syntheses. L1 preserves source statements together with their study conditions and evidence references. These records provide the basis for answering questions about a paper and assessing whether its findings support a claim. The single-paper QA results in Tables 7 and 8 show higher QASPER Answer-F1 and PeerQA answerability scores than RAG with fewer input tokens. The L1-only claim verifier in Table 17 similarly reduces token use relative to Full-text, with a small observed improvement in accuracy. Beyond these paper-specific tasks, L1 provides evidence for identifying substantive overlaps in novelty assessment and tracing claims to their sources in scholarly writing. The related-work audit in Table 11 reports fewer wrong citations and false claims, consistent with the value of retaining source links for attribution. For idea generation and experimental design, reported findings, procedures, and evaluation conditions supply concrete premises for assessing proposed directions and choosing appropriate tests. L2 organizes research objects through shared identities, categories, and relations. In fixed-corpus retrieval, this structure guides candidate selection; in open-world retrieval, it helps formulate search terms and identify related approaches to investigate. Table 4 shows that the fixed-corpus advantage is concentrated on queries with relevant papers among the asset sources, underscoring the importance of source coverage. In novelty assessment, canonical identities resolve naming variations, allowing references to the same method or concept to be aligned across papers. Table 6 reports higher weighted identification F1 with about 40% fewer tokens than Full-text in this task. For related-work and review generation, categories group studies into research threads, while taxonomy dimensions provide explicit axes for comparison. Relations among methods also help identify candidate baselines for experimental design and possible combinations of approaches for idea generation. L2 thus makes relevant research objects and their relationships accessible to tasks that would otherwise need to reconstruct this organization from the literature. L3 provides scoped interpretations of findings across studies. These syntheses support multi-paper answers, position contributions in relation to prior work, and explain methodological developments in surveys. Table 30 provides evidence from MDAQA: with the base evidence package and Bare answering procedure held fixed, adding L3 to L1+L2 increases the total score from 17.01 to 18.41 and the cross-paper synthesis score from 2.80 to 3.48. These improvements are consistent with the usefulness of supplying an explicit account of how the findings fit together. The continual-learning review in Appendix D.2.2 illustrates this interpretive role in writing by connecting successive methods through the limitations they address. For idea generation, such accounts can reveal unresolved questions and motivate directions for further investigation. For experimental design, they can identify limitations or disagreements that warrant targeted tests. By relating prior findings to unresolved questions, L3 provides a rationale for proposed research directions and the experiments needed to investigate them. 18 Across these tasks, the assets support reuse of both reported content and the understanding derived from it. Tasks draw on source facts, domain organization, and scoped syntheses according to the evidence and reasoning they require. 
+
+## 5 Conclusion 
+
+We presented ScholarStack, a layered research asset framework for literature-based scientific agents. It addresses the task-specific research bottleneck by separating source-grounded facts, domain orga-nization, and scoped cross-paper syntheses while linking them through shared identifiers, evidence references, and versioning. Task-adapted knowledge views make these assets reusable across retrieval, question answering, evidence-grounded generation, and claim assessment, while retaining their study conditions and evidential scope. Our evaluations show that structured assets can improve task effectiveness and reduce query-time token use, with benefits varying by task and source coverage. On SAGE, ScholarStack improves Tier 1 retrieval F1 by 10.7% relative to matched full-text access. Reusing assets built for novelty assessment also yields comparable experimental-design coverage F1 with about 40% fewer query-time tokens than the full-text baseline. These query-time savings exclude initial asset construction costs; repeated reuse may amortize those costs and reduce the average cost per task. In general, ScholarStack offers a foundation for cumulative scientific assistance in which research knowledge remains inspectable and revisable across tasks. Future work will examine longer task sequences and evolving corpora, strengthen evidence verification, and account systematically for construction, maintenance, and reuse costs. 
+
+## 6 Contributions 
+
+The names are listed in alphabetical order by first name. 
+
+Leader 
+
+Wotao Yin 
+
+Core Contributors 
+
+Ao Zhang, Caoqinwei Gong, Haifan Zhang, Hanwei Zhang, Jiayi Sheng, Jihai Zhang, Wei Luo, Xiaoyu Qiu, Xue Jiang, Yi Wang, Zheng Yu 
+
+Contributors 
+
+Guanglei Wang, Kai Ying, Liyun Dai, Tingyu Zhu, Wei Chen, Wenkai Fang, Yuan Cao 
+
+## References 
+
+Anirudh Ajith, Mengzhou Xia, Alexis Chevalier, Tanya Goyal, Danqi Chen, and Tianyu Gao. Litsearch: A retrieval benchmark for scientific literature search. In Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing , pages 15068–15083, 2024. Akari Asai, Jacqueline He, Rulin Shao, Weijia Shi, Amanpreet Singh, Joseph Chee Chang, Kyle Lo, Luca Soldaini, Sergey Feldman, Mike D’Arcy, David Wadden, Matt Latzke, Jenna Sparks, Jena D. Hwang, Varsha Kishore, Minyang Tian, Pan Ji, Shengyan Liu, Hao Tong, Bohao Wu, Yanyu Xiong, Luke Zettlemoyer, Graham Neubig, Daniel S. Weld, Doug Downey, Wen-tau Yih, Pang Wei Koh, and Hannaneh Hajishirzi. Synthesizing scientific literature with retrieval-augmented language models. Nature , 650:857–863, 2026. doi: 10.1038/s41586-025-10072-4. Tim Baumgärtner, Ted Briscoe, and Iryna Gurevych. PeerQA: A scientific question answer-ing dataset from peer reviews. In Luis Chiruzzo, Alan Ritter, and Lu Wang, editors, Pro-ceedings of the 2025 Conference of the Nations of the Americas Chapter of the Associa-tion for Computational Linguistics: Human Language Technologies (Volume 1: Long Pa-pers) , pages 508–544, Albuquerque, New Mexico, April 2025. Association for Computa-tional Linguistics. ISBN 979-8-89176-189-6. doi: 10.18653/v1/2025.naacl-long.22. URL 
+
+https://aclanthology.org/2025.naacl-long.22/ .19 Pradeep Dasigi, Kyle Lo, Iz Beltagy, Arman Cohan, Noah A. Smith, and Matt Gardner. Adataset of information-seeking questions and answers anchored in research papers. In Pro-ceedings of the 2021 Conference of the North American Chapter of the Association for Com-putational Linguistics: Human Language Technologies , pages 4599–4610, Online, June 2021. Association for Computational Linguistics. doi: 10.18653/v1/2021.naacl-main.365. URL 
+
+https://aclanthology.org/2021.naacl-main.365/ .Scott Deerwester, Susan T. Dumais, George W. Furnas, Thomas K. Landauer, and Richard Harshman. Indexing by latent semantic analysis. Journal of the American Society for Information Science , 41 (6):391–407, 1990. Aaron Defazio, Francis Bach, and Simon Lacoste-Julien. SAGA: A fast incremental gradient method with support for non-strongly convex composite objectives. In Advances in Neural Information Processing Systems , volume 27, 2014. URL https://proceedings.nips.cc/paper_files/ paper/2014/hash/937964195d6fb3a55cd7cc578165f058-Abstract.html .Martin Docekal, Martin Fajcik, and Pavel Smrz. Oarelatedwork: A large-scale dataset of related work sections with full-texts from open access sources. arXiv preprint arXiv:2405.01930 , 2024. Mingxuan Du, Benfeng Xu, Chiwei Zhu, Xiaorui Wang, and Zhendong Mao. DeepResearch Bench: A comprehensive benchmark for deep research agents. arXiv preprint arXiv:2506.11763 , 2025. URL https://arxiv.org/abs/2506.11763 .Darren Edge, Ha Trinh, Newman Cheng, Joshua Bradley, Alex Chao, Apurva Mody, Steven Truitt, Dasha Metropolitansky, Robert Osazuwa Ness, and Jonathan Larson. From local to global: A graph RAG approach to query-focused summarization. arXiv preprint arXiv:2404.16130 , 2024. URL https://arxiv.org/abs/2404.16130 .Yunfan Gao, Yun Xiong, Xinyu Gao, Kangxiang Jia, Jinliu Pan, Yuxi Bi, Yi Dai, Jiawei Sun, Meng Wang, and Haofen Wang. Retrieval-augmented generation for large language models: A survey. 
+
+arXiv preprint arXiv:2312.10997 , 2023. URL https://arxiv.org/abs/2312.10997 .Juraj Gottweis, Wei-Hung Weng, Alexander Daryin, Tao Tu, Petar Sirkovic, Artiom Myaskovsky, Grzegorz Glowaty, Felix Weissenberger, Alessio Orlandi, Dan Popovici, Anil Palepu, Keran Rong, Ryutaro Tanno, Khaled Saab, Fan Zhang, Jacob Blum, Andrew Carroll, Kavita Kulkarni, Nenad Tomašev, Dina Zverinski, Ivor Rendulic, Elahe Vedadi, Florian Hasler, Luka Rimanic, Marina Boia, Ivan Budiselic, Ben Feinstein, Mathias Bellaiche, Tom Sheffer, Jan Freyberg, Jeremy Ratcliff, Ottavia Bertolli, Katherine Chou, Avinatan Hassidim, Burak Gokturk, Amin Vahdat, Yuan Guan, Vikram Dhillon, Eeshit Dhaval Vaishnav, Byron Lee, Tiago R. D. Costa, José R. Penadés, Gary Peltz, Yossi Matias, James Manyika, Demis Hassabis, Yunhan Xu, Pushmeet Kohli, Annalisa Pawlosky, Alan Karthikesalingam, and Vivek Natarajan. Accelerating scientific discovery with Co-Scientist. Nature , 655(8122):487–496, 2026. doi: 10.1038/s41586-026-10644-y. URL 
+
+https://doi.org/10.1038/s41586-026-10644-y .Sikun Guo, Amir Hassan Shariatmadari, Guangzhi Xiong, Albert Huang, Eric Xie, Stefan Bekiranov, and Aidong Zhang. IdeaBench: Benchmarking large language models for research idea generation. 
+
+arXiv preprint arXiv:2411.02429 , 2024. URL https://arxiv.org/abs/2411.02429 .Xiaoxin He, Yijun Tian, Yifei Sun, Nitesh V. Chawla, Thomas Laurent, Yann LeCun, Xavier Bresson, and Bryan Hooi. G-retriever: Retrieval-augmented generation for textual graph understanding and question answering. In Advances in Neural Information Processing Systems 37 (NeurIPS 2024) ,2024. arXiv:2402.07630. Tiansheng Hu, Yilun Zhao, Canyu Zhang, Arman Cohan, and Chen Zhao. SAGE: Benchmarking and improving retrieval for deep research agents. arXiv preprint arXiv:2602.05975 , 2026. URL 
+
+https://arxiv.org/abs/2602.05975 .Hui Huang, Julien Velcin, and Yacine Kessaci. Towards multi-document question answering in scientific literature: Pipeline, dataset, and evaluation. In Christos Christodoulopoulos, Tanmoy Chakraborty, Carolyn Rose, and Violet Peng, editors, Findings of the Association for Computational Linguistics: EMNLP 2025 , pages 10867–10881, Suzhou, China, November 2025. Association for Computational Linguistics. ISBN 979-8-89176-335-7. doi: 10.18653/v1/2025.findings-emnlp.576. URL https://aclanthology.org/2025.findings-emnlp.576/ .20 Mohamad Yaser Jaradeh, Allard Oelen, Kheir Eddine Farfar, Manuel Prinz, Jennifer D’Souza, Gábor Kismihók, Markus Stocker, and Sören Auer. Open research knowledge graph: Next generation infrastructure for semantic scholarly knowledge. arXiv preprint arXiv:1901.10816 , 2019. URL 
+
+https://arxiv.org/abs/1901.10816 .Jakub Lála, Odhran O’Donoghue, Aleksandar Shtedritski, Sam Cox, Samuel G. Rodriques, and Andrew D. White. PaperQA: Retrieval-augmented generative agent for scientific research. arXiv preprint arXiv:2312.07559 , 2023. URL https://arxiv.org/abs/2312.07559 .Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin, Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel, Sebastian Riedel, and Douwe Kiela. Retrieval-augmented generation for knowledge-intensive NLP tasks. In Advances in Neural Information Processing Systems 33 (NeurIPS 2020) , pages 9459–9474, 2020. Long Li, Weiwen Xu, Jiayan Guo, Ruochen Zhao, Xingxuan Li, Yuqian Yuan, Boqiang Zhang, Yuming Jiang, Yifei Xin, Ronghao Dang, Deli Zhao, Yu Rong, Tian Feng, and Lidong Bing. Chain of ideas: Revolutionizing research via novel idea development with LLM agents. arXiv preprint arXiv:2410.13185 , 2024. URL https://arxiv.org/abs/2410.13185 .Minghao Li, Ying Zeng, Zhihao Cheng, Cong Ma, and Kai Jia. ReportBench: Evaluating deep research agents via academic survey tasks. arXiv preprint arXiv:2508.15804 , 2025. URL https: //arxiv.org/abs/2508.15804 .Chris Lu, Cong Lu, Robert Tjarko Lange, Yutaro Yamada, Shengran Hu, Jakob Foerster, David Ha, and Jeff Clune. Towards end-to-end automation of AI research. Nature , 651(8107):914–919, 2026. doi: 10.1038/s41586-026-10265-5. URL https://doi.org/10.1038/s41586-026-10265-5 .NLP2CT. NLPCC 2026 shared task 10: Reliability of AI-assisted scientific reporting. Of-ficial task guidelines and benchmark release, 2026. URL https://github.com/NLP2CT/ NLPCC-2026-Task10-Science/blob/main/GUIDELINES.md . Track 2: Citation-Level Faith-fulness to External Evidence. Accessed 2026-09-17. Balamurugan Palaniappan and Francis Bach. Stochastic variance reduction methods for saddle-point problems. In Advances in Neural Information Processing Systems ,volume 29, 2016. URL https://papers.nips.cc/paper_files/paper/2016/hash/ 1aa48fc4880bb0c9b8a3bf979d3b917e-Abstract.html .Shirui Pan, Linhao Luo, Yufei Wang, Chen Chen, Jiapu Wang, and Xindong Wu. Unifying large language models and knowledge graphs: A roadmap. IEEE Transactions on Knowledge and Data Engineering (TKDE) , 2024. URL https://arxiv.org/abs/2306.08302 . arXiv:2306.08302. Yansheng Qiu, Haoquan Zhang, Zhaopan Xu, Ming Li, Diping Song, Zheng Wang, and Kaipeng Zhang. AI Idea Bench 2025: AI research idea generation benchmark. arXiv preprint arXiv:2504.14191 , 2025. URL https://arxiv.org/abs/2504.14191 .Daniele Raimondi, Feichi Lu, Oliver Grun, Mariia Eremina, and Andrea Perlato. SCALE: Scientific concept aggregation via LLMs and embeddings for fine-grained taxonomy extension. arXiv preprint arXiv:2608.07254 , 2026. URL https://arxiv.org/abs/2608.07254 .Nils Reimers and Iryna Gurevych. Sentence-bert: Sentence embeddings using siamese bert-networks. In Proceedings of EMNLP-IJCNLP , pages 3982–3992, 2019. doi: 10.18653/v1/D19-1410. Shuo Ren, Can Xie, Pu Jian, Zhenjiang Ren, Chunlin Leng, and Jiajun Zhang. Towards scientific intelligence: A survey of llm-based scientific agents. arXiv preprint arXiv:2503.24047 , 2025. URL 
+
+https://arxiv.org/abs/2503.24047 .Gerard Salton and Christopher Buckley. Term-weighting approaches in automatic text retrieval. 
+
+Information Processing & Management , 24(5):513–523, 1988. doi: 10.1016/0306-4573(88) 90021-0. Parth Sarthi, Salman Abdullah, Aditi Tuli, Shubh Khanna, Anna Goldie, and Christopher D. Man-ning. RAPTOR: Recursive abstractive processing for tree-organized retrieval. In The Twelfth International Conference on Learning Representations (ICLR) , 2024. arXiv:2401.18059. 21 Yijia Shao, Yucheng Jiang, Theodore Kanell, Peter Xu, Omar Khattab, and Monica Lam. Assist-ing in writing Wikipedia-like articles from scratch with large language models. In Proceedings of the 2024 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 6252–6278. As-sociation for Computational Linguistics, 2024. doi: 10.18653/v1/2024.naacl-long.347. URL 
+
+https://aclanthology.org/2024.naacl-long.347/ .Jiashuo Sun, Chengjin Xu, Lumingyuan Tang, Saizhuo Wang, Chen Lin, Yeyun Gong, Lionel M. Ni, Heung-Yeung Shum, and Jian Guo. Think-on-graph: Deep and responsible reasoning of large language model on knowledge graph. In The Twelfth International Conference on Learning Representations (ICLR) , 2024. arXiv:2307.07697. David Wadden, Shanchuan Lin, Kyle Lo, Lucy Lu Wang, Madeleine van Zuylen, Arman Cohan, and Hannaneh Hajishirzi. Fact or fiction: Verifying scientific claims. In Proceedings of the 2020 Conference on Empirical Methods in Natural Language Processing (EMNLP) , pages 7534–7550. Association for Computational Linguistics, 2020. doi: 10.18653/v1/2020.emnlp-main.609. URL 
+
+https://aclanthology.org/2020.emnlp-main.609/ .David Wadden, Kyle Lo, Lucy Lu Wang, Arman Cohan, Iz Beltagy, and Hannaneh Hajishirzi. MultiVerS: Improving scientific claim verification with weak supervision and full-document context. In Findings of the Association for Computational Linguistics: NAACL 2022 , pages 61–76. Association for Computational Linguistics, 2022. doi: 10.18653/v1/2022.findings-naacl.6. URL 
+
+https://aclanthology.org/2022.findings-naacl.6/ .Yidong Wang, Qi Guo, Wenjin Yao, Hongbo Zhang, Xin Zhang, Zhen Wu, Meishan Zhang, Xinyu Dai, Min Zhang, Qingsong Wen, Wei Ye, Shikun Zhang, and Yue Zhang. AutoSurvey: Large language models can automatically write surveys. In Advances in Neural Information Processing Systems , 2024. Martin Weiss, Miles Q. Li, Alejandro H. Artiles, Yacine Mkhinini, Chris Pal, Hugo Larochelle, and Nasim Rahaman. Lacuna: A research map for machine learning. arXiv preprint arXiv:2606.26246 ,2026. URL https://arxiv.org/abs/2606.26246 .Lin Xiao and Tong Zhang. A proximal stochastic gradient method with progressive variance reduction. SIAM Journal on Optimization , 24(4):2057–2075, 2014. doi: 10.1137/140961791. URL 
+
+https://doi.org/10.1137/140961791 .Zonglin Yang, Wanhao Liu, Ben Gao, Tong Xie, Yuqiang Li, Wanli Ouyang, Soujanya Poria, Erik Cambria, and Dongzhan Zhou. MOOSE-Chem: Large language models for rediscovering unseen chemistry scientific hypotheses. arXiv preprint arXiv:2410.07076 , 2024. URL https: //arxiv.org/abs/2410.07076 .Guangsheng Yu and Xu Wang. Knows: Agent-native structured research representations. arXiv preprint arXiv:2604.17309 , 2026. URL https://arxiv.org/abs/2604.17309 .Tianshi Zheng, Zheye Deng, Hong Ting Tsang, Weiqi Wang, Jiaxin Bai, Zihao Wang, and Yangqiu Song. From automation to autonomy: A survey on large language models in scientific discovery. 
+
+arXiv preprint arXiv:2505.13259 , 2025. URL https://arxiv.org/abs/2505.13259 . EMNLP 2025 (Main). 22 A Case Study of Layered Knowledge Construction 
+
+This appendix illustrates the knowledge representation and construction described in Section 3.2, using variance reduction in stochastic optimization as a single research topic. It follows source sentences through L1 facts and L2 domain organization to an L3 scoped synthesis. SAGA [Defazio et al., 2014] is the focal paper; Prox-SVRG [Xiao and Zhang, 2014] and a study of saddle-point methods [Palaniappan and Bach, 2016] provide the cross-paper evidence. Figure 5 gives the reading path, and Table 18 summarizes the objects used below.       
+
+> Topic: variance reduction in stochastic optimization
+> SAGA ·Prox-SVRG ·Saddle-point methods
+> L1: Scientific facts
+> Method descriptions Conditions and guarantees Source sentences
+> L2: Domain organization
+> Shared method identity Family / guarantee labels Evaluation relations
+> L3: Scoped synthesis
+> Cross-paper account Declared coverage Supporting / limiting basis
+> Extract facts Organize facts Build synthesis assignment basis synthesis basis source lookup
+
+Figure 5: Construction and evidence access within one topic. Solid arrows show source-to-L1 extraction, L1-to-L2 organization, and L2-guided evidence selection for L3 synthesis. Dashed arrows show L2 assignments and the L3 synthesis citing L1 facts, followed by L1 source lookup through sentence maps. These are selected links in the case study, not an executed workflow or a complete dependency graph. Table 18: Object fields used in the example. These are presentation fields for the representation in Section 3.2, not a complete storage schema. All objects have an identity; verification and lifecycle states are annotations. The final column gives illustrative types and values, not exhaustive enumerations.              
+
+> Object Core fields Example types or values Scientific Fact statement, context, evidence Method description; theoretical result; limitation Domain Taxonomy dimensions, categories, membership criteria Method family; assumption regime; guarantee type Canonical Entity name, type, aliases, source anchors Method: SAGA; dataset: MNIST Category Assignment subject, dimension, category, basis, inference type, certainty SAGA ∈variance reduction; system judgment Typed Relation source, relation, target, evidence, payload Paper evaluated on dataset; reported metric Scoped Synthesis account, scope, supporting / opposing / limiting basis Method-family overview; selected studies
+
+How to read the example. Names such as saga.method are display aliases, not store identifiers. A locator such as SAGA:20 means sentence 20 in the saved source map and does not number the example objects. Bibliographic citations identify the papers; prefixes SAGA , Prox-SVRG , and Saddle 
+
+identify the three sources. Cards abridge saved records; locators that a stored record does not carry directly were resolved from the saved maps. The source card reproduces selected sentences, and the L3 card is an editorially revised illustration. 23 A.1 L1: From a Paper to Scientific Facts 
+
+The focal source is SAGA: A Fast Incremental Gradient Method With Support for Non-Strongly Convex Composite Objectives [Defazio et al., 2014]. Two records illustrate complementary uses of L1: a method description supports family membership, while a theoretical result supports condition-aware selection. 
+
+Source sentences | SAGA 
+
+SAGA:19 “We start with some known initial vector x0 ∈ Rd and known derivatives f ′ 
+
+> i
+
+(ϕ0 
+
+> i
+
+) ∈ Rd with 
+
+ϕ0 
+
+> i
+
+= x0 for each i.” 
+
+SAGA:20 “These derivatives are stored in a table data-structure of length n, or alternatively a n × d matrix.” 
+
+SAGA:58 “By using an unbiased update in SAGA, we are able to obtain a simple and tight theory, with better constants than SAG, as well as theoretical rates for the use of proximal operators.” 
+
+SAGA:29 The displayed bound for the average iterate is 
+
+E[F (¯ xk )] − F (x∗) ≤ 4nk
+
+ 2Ln ∥x0 − x∗∥2 + f (x0) − ⟨ f ′(x∗), x 0 − x∗⟩ − f (x∗)
+
+
+
+.
+
+Here ¯xk = k−1 Pkt=1 xt averages the iterates excluding x0; n is the number of finite-sum components, k the iteration count, and x∗ an optimum. Each component fi is convex with L-Lipschitz continuous gradient; 
+
+F = f + h includes a convex regularizer h with a computable proximal operator. The source specifies a step size of 1/(3 L).
+
+Scientific Fact | saga.method type: method description 
+
+subject: SAGA 
+
+statement: Maintains a table of previously computed component gradients and uses an unbiased corrected update. 
+
+context: Incremental optimization; proximal support for composite objectives. 
+
+evidence: Initialization: SAGA:19 ; gradient table: SAGA:20 ; unbiasedness and proximal support: 
+
+SAGA:58 . The update equation is at SAGA:59 (not reproduced here). 
+
+record note: Abridged method-identity record; the cited sentences are resolved through its source card and sentence map. Verification annotations are omitted from this card. 
+
+reuse: Basis of SAGA’s variance-reduction assignment; also cited by the family synthesis. 
+
+Scientific Fact | saga.convex-rate type: theoretical result 
+
+subject: SAGA 
+
+statement: The expected objective gap of the average iterate has the sublinear bound displayed above. 
+
+context: Finite-sum structure; each component is convex and L-smooth; convex regularization with a computable proximal operator. 
+
+evidence: Bound and step size: SAGA:29 ; finite-sum, convexity, and smoothness assumptions: SAGA:9 ;composite objective: SAGA:10 .
+
+stored verification: Faithful extraction; source reference checked. 
+
+reuse: Basis of the sublinear-rate assignment; qualifies the synthesis by a specific result and setting. 
+
+The theorem card uses the structured theoretical-result record. Its conditions stay attached to the bound when the fact is selected or compared. The method card and theorem card therefore contribute different kinds of evidence, even though both concern SAGA. A stored extraction verdict concerns fidelity to the cited sentences, not independent validation of the theorem. The saved records also contain a separate prose summary of this result, whose adjudication ended disputed; the structured record shown here was judged independently as faithful, and the two verdicts are retained side by side rather than reconciled. 24 A.2 L2: From Facts to Domain Organization 
+
+The following cards and table illustrate four components of L2: a taxonomy, a canonical entity for SAGA, category assignments supported by its method description and theoretical results, and an evaluation relation to MNIST. The assignments retain their supporting facts, so labels derived from different results are not interpreted as a single combined guarantee. 
+
+Domain Taxonomy | variance-reduction dimension: method family 
+
+category: variance reduction 
+
+criterion: A reference-point full gradient, per-example gradient table, or recursive gradient-difference correction is central to the method. 
+
+positive examples: SAGA, SVRG, SARAH, SPIDER, SAG 
+
+other dimensions: Assumption regime (e.g., convex, strongly convex); guarantee type (e.g., linear rate, sublinear rate). 
+
+Canonical Entity | SAGA type: method 
+
+name: SAGA 
+
+alias: SAGA 
+
+source: arXiv 1407.0202 
+
+mention: Paper’s method-name field. This record anchors one method identity; it does not demonstrate a multi-alias merge. 
+
+Category Assignment | saga.family subject: SAGA 
+
+category: variance reduction 
+
+basis: saga.method inference: system judgment 
+
+certainty: confirmed 
+
+validity: current 
+
+reason: The gradient-table correction meets the family criterion. 
+
+Table 19: Distinct organizational views of the same method. The assumption and guarantee rows share the convex result as their displayed basis. These labels describe that result, not every guarantee available for SAGA. The family assignment records three agreeing votes; all three displayed assign-ments have stored confirmed certainty, current validity, and passed evidence verification. 
+
+Dimension Assigned category Basis Method family Variance reduction saga.method : historical gradient-table correction Assumption regime Convex saga.convex-rate : component assumptions at 
+
+SAGA:9 
+
+Guarantee type Sublinear rate saga.convex-rate : convex result at SAGA:29 
+
+Typed Relation | SAGA paper → MNIST 
+
+relation: evaluated on 
+
+source / target: SAGA paper / MNIST dataset 
+
+payload: Method: SAGA; task: binary classification. 
+
+evidence locator: First dataset entry in the saved experiment card; source sentences SAGA:162,166 
+
+identify MNIST among the evaluated datasets. 
+
+interpretation: Records that the paper evaluates SAGA on this dataset and task; no comparative score is asserted. 
+
+Family selection makes SAGA relevant to a variance-reduction request. Comparing convergence guar-antees additionally requires the L1 assumptions and measured quantities. Dataset relations provide another access route without implying that results on different datasets are directly comparable. 25 A.3 L3: From Related Facts to a Scoped Synthesis 
+
+The final card demonstrates how a cross-paper account retains its coverage and evidence roles. It is an editorial revision of a stored family overview, narrowed to the evidence below; it is not a newly registered or automatically verified synthesis. 
+
+Scoped Synthesis | variance-reduction.overview kind: method-family overview 
+
+account: In the selected finite-sum studies, Prox-SVRG uses periodic full-gradient computations and SAGA maintains historical component gradients. Related work extends SVRG and SAGA to convex-concave saddle-point problems. Guarantees must be read with their assumptions, and uniform sampling may be inferior to an accelerated batch method in the reported experiments. 
+
+scope: The SAGA paper [Defazio et al., 2014]; A Proximal Stochastic Gradient Method with Progressive Variance Reduction [Xiao and Zhang, 2014]; and Stochastic Variance Reduction Methods for Saddle-Point Problems [Palaniappan and Bach, 2016]. Only the mechanisms, results, and comparisons cited below are covered. 
+
+basis: Supporting and limiting evidence in Table 20; no opposing entry is asserted in this illustration. 
+
+status: Editorially revised illustration. The original stored overview has review state unreviewed and lifecycle state current .
+
+Table 20: Evidence roles in the displayed synthesis. A supporting entry contributes to the account; a limiting entry qualifies its application. Locators identify sentences in each paper’s saved source map. The convex-rate entry uses the corrected basis at SAGA:29 .
+
+Role Source fact Contribution and source locator Supporting Prox-SVRG method [Xiao and Zhang, 2014] Periodic full-gradient computation; Prox-SVRG:83 
+
+states when the full gradient is computed. Supporting saga.method [Defazio et al., 2014] Historical gradient storage; SAGA:20 . Same fact as the L2 family-assignment basis. Supporting Saddle-point method [Palaniappan and Bach, 2016] Extension to saddle-point problems: Saddle:19 ;convex-concave setting: Saddle:14 .Limiting saga.convex-rate [Defazio et al., 2014] Specifies the guarantee in the convex setting (SAGA:9,29 ); this upper bound does not establish that faster convergence is impossible. Limiting Saddle-point comparison [Palaniappan and Bach, 2016] Uniform-sampling SAGA/SVRG may be inferior to an accelerated batch method; Saddle:118 .
+
+26 B Additional Details: Literature Retrieval 
+
+B.1 Fixed-Corpus Retrieval Corpus and knowledge assets. The retrieval corpus comprises 64,183 papers, represented by a title–abstract index and six full-text Parquet shards Ajith et al. [2024]. Knowledge assets are constructed from a fixed, query-independent set of 900 source papers. The Full-text and ScholarStack conditions use the same source-paper set, which is not selected or adapted using query-specific gold papers. Membership in this set does not affect eligibility for retrieval: all conditions can search the entire corpus and inspect previously disclosed candidates under the same corpus-access limits. 
+
+Source-paper selection. Papers are eligible for asset construction if they have a nonempty title, a nonempty abstract, and a positive full-text character count. These criteria retain 55,631 of the 64,183 papers. The eligibility filter applies only to asset construction; the retrieval corpus retains all 64,183 papers. The source set consists of 720 semantic-coverage representatives (80%) and 180 citation anchors (20%). Each eligible paper is represented by its title followed by a newline and its abstract. We construct two representations: (i) a 128-dimensional TF–IDF/SVD vector Salton and Buckley [1988], Deerwester et al. [1990] and (ii) a 384-dimensional embedding produced by all-MiniLM-L6-v2 Reimers and Gurevych [2019]. TF–IDF uses lowercasing, Unicode accent stripping, English stopword removal, word unigrams and bigrams, a minimum document frequency of 2, a maximum document frequency of 0.95, at most 50,000 features, and sublinear term frequency. Truncated SVD uses seven iterations with a fixed random seed. The two representations are independently normalized, scaled by √0.5,and concatenated into a 512-dimensional vector. We apply MiniBatchKMeans with 720 clusters, a batch size of 4,096, three initializations, at most 100 iterations, and a reassignment ratio of 0.01. Citation anchors are drawn from eligible papers outside the 720 representatives. They are ranked by descending incoming citation count within the corpus. The coverage and citation lists are interleaved so that the cumulative citation quota at position r follows Python’s round(0 .2r), skipping identifiers already selected. 
+
+Deterministic baselines. BM25 uses SQLite FTS5 over titles and abstracts, with field weights of 4:1, at most 40 query tokens, and a top-100 output. Dense uses all-MiniLM-L6-v2 with a maximum input length of 256 tokens and 384-dimensional embeddings. Paper inputs consist of the title, a newline, and the abstract, with missing fields replaced by empty strings. Query inputs use the original public query text without the BM25 token filter. Both paper and query embeddings are L2-normalized, allowing exact cosine search through dot products. Dense returns the top 100 papers. Papers with missing titles or abstracts remain in the corpus. Hybrid combines the two top-100 lists from BM25 and Dense, using equal-weight reciprocal-rank fusion with a rank constant of 60. 
+
+Additional details for ScholarStack. ScholarStack exposes existing record content without gen-erating additional facts during retrieval. The agent receives a shortened textual rendering of the selected knowledge records for search planning. This rendering omits verification metadata; final ranking is grounded in independently inspected abstracts and full texts. L2 content includes assign-ment rationales and record titles. L3 content includes synthesis statements, scopes, and supporting explanations, without additional titles. Other records contribute substantive text while excluding non-informative fields such as identifiers, taxonomy bookkeeping, and serialized provenance. L2 or L3 records without substantive content produce empty text rather than metadata-only fallbacks. The selected content supports query formulation and evidence checking while preserving the distinct evidential roles of L1–L3. An in-memory SQLite FTS5 index supports English-word and Chinese-character-bigram retrieval. The English and Chinese searches each return up to 60 records, which are merged using reciprocal-rank fusion with a rank constant of 60. Let T (q) and T (v) denote the query and record term sets, respectively, let N be the number of indexed records, and let df( t) be the number of records containing term t. The primary ranking score is 
+
+S(q, v ) = X  
+
+> t∈T(q)∩T(v)
+
+log N + 1 df( t) + 1 . (2) 27 Table 21: Maximum numbers of tool calls per stage. Asset lookups are available to Full-text and ScholarStack but not to the no-asset control. All allocations are subject to the cumulative limits in Table 22.                     
+
+> Stage Corpus searches Title lookups Asset lookups Abstract inspections Full-text reads 0: Initial planning 321001: Expansion and checks 321642: Final verification 220423: Ranking 00000
+
+Table 22: Execution and response limits per query. Byte limits are measured in UTF-8; character and token limits are enforced separately.             
+
+> Resource Limit Model calls / candidate-context size 4 / 180 papers Corpus searches / title lookups 8 (20 papers per search) / 6 Metadata resolutions / abstract inspections 10 / 10 Asset lookups and returned content 2 lookups; at most 3 records per lookup; 8,000 characters in total Full-text reads 6 calls covering at most 6 distinct papers Full-text response length 4,000 characters per call; 6,000 per paper; 24,000 in total Model-output size 18,000 bytes per call Prompt size 160,000 bytes per call; 480,000 in total Corpus-response length 160,000 characters in total Observed input / output token stopping thresh-olds 140,000 / 16,000 tokens Wall-clock time 300 seconds per model call; 720 seconds per query Automatic retries / format repairs 0 / 0
+
+Ties are resolved first by fused rank and then by a stable record identifier. Records must match at least min(2 , |T (q)|) content terms; L3 records always require at least two. No layer is allocated a reserved result slot. Duplicate texts are removed after normalization, and at most two records are retained per source-paper combination. For long records, the returned content is a 1,200-character window selected to maximize weighted query-term coverage. Candidate windows are drawn from positions near term matches, including the beginning of the text and up to the first eight occurrences of each query term. Each lookup returns at most three records. This procedure differs from corpus full-text reads, which return a window near the first matching term. 
+
+Agentic search protocols. Each query is processed through four model calls: planning, expansion, verification, and ranking. All Qwen3.8-Max runs disable thinking and use a temperature of 0. Within each model, prompts, tools, budgets, and final-context filtering are aligned across the compared conditions. Table 21 summarizes the per-stage tool allocations, and Table 22 reports the cumulative execution limits. Knowledge access can identify source candidates through bounded metadata resolution or motivate additional corpus searches. During verification, the agent distinguishes query conditions that are supported, unchecked, or contradicted. It prioritizes methodological details, comparisons, datasets, and results likely to affect the ranking, using one to three distinctive terms in each full-text request. Only candidates disclosed before a model call can be inspected during that call; newly retrieved candidates become available for inspection in a subsequent stage. For final ranking, the model receives candidate metadata and direct evidence from abstracts or full texts. Intermediate knowledge records, discovery annotations, and the preceding gap checklist are excluded. The model returns at most 40 unique corpus identifiers encountered during retrieval. Direct support takes precedence over unchecked details, and missing evidence is not treated as contradiction. The same final-context policy applies to all aligned experimental conditions. 28 Table 23: Fixed-corpus retrieval results with GPT-5.6 Terra. Source papers denotes the number of papers used to construct the auxiliary assets. Runtime and token usage are averaged per query; GPT token counts are reported-usage lower bounds. Bold indicates the best value in each retrieval-metric column. Method Corpus Asset Size R1 R5 R10 MRR40 Tokens Full-text 64,183 900 0.670 0.773 0.773 0.721 41.1k ScholarStack 64,183 900 0.710 0.803 0.803 0.763 39.5k Table 24: Fixed-corpus retrieval results by knowledge-source coverage with GPT-5.6 Terra. Bold indicates the best value in each column, including ties. In-source Out-of-source Method R1 R5 R10 MRR40 R1 R5 R10 MRR40 Codex raw (w/o full-text) 0.605 0.719 0.719 0.684 0.677 0.774 0.774 0.720 Full-text 0.711 0.772 0.772 0.763 0.645 0.774 0.774 0.695 ScholarStack 0.711 0.798 0.798 0.781 0.710 0.807 0.807 0.753 Metrics. Runtime and total input-plus-output token usage are averaged over queries and exclude knowledge construction. Dense runtime excludes offline encoding and loading. Hybrid runtime is the sum of the component-query and fusion times. Qwen token-usage records are complete, whereas the supplementary GPT token counts are lower bounds based on reported usage. Let Q denote the evaluation query set, Gq the gold-paper set for query q, P (k) 
+
+> q
+
+the first k predictions, and rq the rank of the first gold-paper match. We compute 
+
+R@ k = 1
+
+|Q|
+
+X
+
+> q∈Q
+
+|Gq ∩ P (k) 
+
+> q
+
+||Gq | , (3) 
+
+MRR@40 = 1
+
+|Q|
+
+X
+
+> q∈Q
+
+1/r q , if a gold paper is ranked within the top 40 ,
+
+0, otherwise . (4) Recall is the macro-average of gold-paper coverage, not the fraction of queries with at least one hit. Predictions are finalized before scoring, and evaluation does not use an LLM-based relevance judge. 
+
+Additional results. We report additional results using another base LLM. Table 23 reports fixed-corpus results with GPT-5.6 Terra. Table 24 further reports results by knowledge-source coverage. 
+
+B.2 Open-World Retrieval Evaluation setting and domain routing. We evaluate open-world retrieval on a fixed subset of 89 queries from the open-ended SAGE benchmark. The subset is sampled using fixed seeds and comprises 29 computer-science, 28 natural-science, and 32 healthcare queries. Each query expresses a research-oriented information need rather than a paper title. During evaluation, the benchmark-provided domain label routes each query to its corresponding frozen domain collection. This deterministic routing removes domain-classification errors as a confound in the comparison. Retrieval prompts and parameters are not specialized by domain. Gold titles and relevance labels are withheld until the returned lists are finalized. 
+
+Query-independent source collections. Each domain collection is constructed independently of SAGE queries and labels. We first define 18 broad topic groups per domain to cover major subfields rather than benchmark-specific entities. Generic explicit and implicit topic queries retrieve candidate papers from an internal scholarly index that combines multiple retrieval algorithms. We reserve a coverage quota of 45 papers per topic and rank the remaining candidates using retrieval provenance, topic coverage, bibliographic metadata, citation evidence, and full-text availability. 29 Table 25: Frozen source collections for open-world retrieval. "Source papers" denotes the number of full-text documents underlying both the Full-text and ScholarStack conditions. Domain SAGE queries Source papers Computer science 29 1,754 Natural science 28 1,749 Healthcare 32 1,748 Candidate full texts must contain at least 2,000 characters and ten parsed sentences. Deterministic quality checks exclude a small number of malformed documents, yielding the source-paper counts in Table 25. Within each domain, Full-text and ScholarStack use exactly the same source-paper identifiers. 
+
+Knowledge-layer construction. Each domain collection is processed once with Qwen3.8-Max (thinking disabled) to construct L1–L3. L1 extracts paper-grounded statements, conditions, methods, findings, limitations, and sources. L2 organizes L1 records into categories, assignments, relations, and citation links. L3 builds scoped cross-paper syntheses from compatible L1 evidence, retaining links to supporting or limiting evidence. Invalid or weakly grounded objects are not promoted. The resulting stores and hashes are frozen before retrieval scoring and reused across queries, so construction cost is excluded from per-query retrieval time. 
+
+Source-matched Full-text baseline. Full-text first searches titles and abstracts, returning at most ten papers within a 3,000-character budget. The agent then selects one to five papers and reads their full texts, returning at most two passages per paper within 9,000 characters. Full-text therefore uses one catalog call and one read call, with at most 12,000 characters of local context. 
+
+ScholarStack access. ScholarStack uses the same paper-first interface and budgets. Its first call searches a compiled structured catalog and returns at most ten candidate papers within 3,000 characters. After selecting one to five identifiers, the second call returns up to 9,000 characters of query-focused L1 facts, grounded L2 structure, and provenance-linked L3 syntheses. Thus, both conditions expose different representations of the same source-paper collection under the same 12,000-character ceiling. Local knowledge is accessed before external retrieval and provides aliases, conditions, relationships, comparison axes, and citation anchors for search and verification. It changes search planning and evidence allocation, but not the final candidate set. 
+
+Shared agentic-search framework. After the local catalog-and-read phase, both conditions use the same bounded multi-round search agent. The agent decomposes the request, runs keyword and exact-title searches, expands candidates through citations, and consults public web evidence to resolve aliases or gaps. The output is a tiered set of papers, with Tier 1 containing about five highest-confidence recommendations. Both conditions use Qwen3.8-Max with thinking disabled, the Balanced retrieval policy, live network retrieval, disabled query caches, and the same soft ten-minute time budget. 
+
+Title matching and head metrics. Evaluation uses the Tier 1 set explicitly produced by the agent rather than the first five entries of a flattened result list. Let Q denote the query set, Hq the Tier 1 predictions for query q, and Gq its gold-paper set. Titles are normalized by lowercasing and removing non-alphanumeric characters. Matching requires equality between normalized titles, with a containment exception for long subtitle variants: the shorter normalized title must be contained in the longer title and exceed 80% of its length. Let Cq ⊆ Gq
+
+denote the unique gold papers matched by Hq . Per-query head recall, precision, and F1 are 
+
+Rq = |Cq ||Gq | , Pq = |Cq ||Hq | , Fq = 2Pq Rq
+
+Pq + Rq
+
+. (5) 30 A metric is defined as zero when its denominator is zero. Reported values are query-level macro-averages: 
+
+Macro( X) = 1
+
+|Q| 
+
+X
+
+> q∈Q
+
+Xq , X ∈ { R, P, F }. (6) Macro F1 is therefore the mean of the per-query F1 scores, not the harmonic mean of macro precision and macro recall. 
+
+Relevance-weighted recall. SAGE distinguishes two most relevant seed papers from additional 
+
+relevant shared references. We assign each gold paper the weight 
+
+wq (g) = 
+
+2, if g is most relevant ,
+
+1, if g is relevant . (7) The relevance-weighted head-recall metrics are 
+
+MacroWR = 1
+
+|Q| 
+
+X
+
+> q∈Q
+
+P 
+
+> g∈Cq
+
+wq (g)
+
+P 
+
+> g∈Gq
+
+wq (g) , (8) 
+
+MicroWR = 
+
+P
+
+> q∈Q
+
+P 
+
+> g∈Cq
+
+wq (g)
+
+P
+
+> q∈Q
+
+P 
+
+> g∈Gq
+
+wq (g) . (9) 
+
+B.3 Details: Novelty Assessment System and judge. Both methods use the same base model (Qwen3.8-Max, thinking disabled) and agentic executor with a fixed tool budget. Web search is disabled, so the comparison is closed-book. The two methods differ only in knowledge access: Full-text applies a general, domain-agnostic novelty method while reading the original related-paper texts; ScholarStack applies the same method over assets compiled offline from those texts. Ground-truth matching uses GPT-6 with high reasoning effort and no Web access. 
+
+Benchmark composition. The benchmark is built from a citation-linked scientific corpus and spans 12 non-CS-dominated fields. It comprises 85 cases: 40 overlap-present targets, each a paper with genuine prior-art overlaps, and 45 absent targets that test whether a system correctly reports no genuine overlap. Table 26 gives the per-field breakdown of the present targets. Each present target provides a research contribution (its problem, method family, and setting) and a candidate pool of related papers (mean 14 .4 per case: on average 3.4 genuine prior works plus ≈ 11 same-domain non-cited hard distractors ); absent targets carry a comparable pool (mean 11 .0) with no genuine overlap. Across the 40 present targets there are 135 gold overlaps (mean 3.4, range 2–6 per target), each recorded as a (cited work, overlap axis, residual difference) tuple. By axis, 106 are core—same problem ( 44 ), similar method family ( 35 ), similar mechanism ( 27 )—and 29 are peripheral—shared data or setting ( 14 ), other ( 15 ); this distribution motivates the 1.0/0.3 core/peripheral weighting used below. Table 26: Per-field breakdown of the 40 overlap-present novelty targets (12 fields).                          
+
+> Field Count Field Count Field Count Linguistics 5Physics 4Education 2Medicine 5Psychology 4Art 1Engineering 5Business 4Chemistry 1Mathematics 4Biology 4Materials Sci. 1
+
+Metric provenance. The weighted identification F1 matches each citation-derived gold overlap to the agent output with the LLM matcher. Let each overlap carry axis weight w=1 .0 for core axes (same problem, similar method family, similar mechanism), which determine whether a contribution is novel, and w=0 .3 for peripheral axes (shared data/setting, other), which are incidental to novelty; a uniform scheme would score an incidental shared-dataset overlap as heavily as a same-mechanism one. The matcher labels each gold overlap hit ( 1.0), partial ( 0.5), or miss ( 0.0); a proposed overlap 31 matching no gold is a false positive. Per case, weighted recall is P 
+
+> gold
+
+w · credit / P 
+
+> gold
+
+w and weighted precision is P 
+
+> matched proposed
+
+w · credit / P 
+
+> proposed
+
+w (credit ∈ { 1, 0.5}); F1 is their harmonic mean, and a zero denominator (no gold, or no proposed overlap) yields 0 for that component. Reported values are macro-averaged over the 40 overlap-present targets. Gold overlaps are the target’s cited prior work; citation is an operational proxy for genuine prior art. Because gold is citation-derived, our conclusions are relative comparisons under identical gold labels. 
+
+## C Additional Details: Scientific Question Answering 
+
+C.1 Single-paper QA 
+
+This appendix reports benchmark composition and evaluation details for single-paper question answering, followed by the full set of evaluated conditions, a per-domain breakdown of the results, and qualitative examples. 
+
+Benchmarks and evaluation. We follow the evaluation metrics of the original QASPER [Dasigi et al., 2021] and PeerQA [Baumgärtner et al., 2025] benchmarks. For QASPER (416 papers / 1,428 questions), we use the official evaluator to compute token-level Answer-F1, overall and by answer type, and paragraph-level Evidence-F1, taking the best reference score per question before averaging. For PeerQA (208 papers / 579 questions), we report the original answerability metrics—per-class F1, accuracy, weighted F1, and macro F1—on 495 labeled questions, and generation ROUGE-L against free-form answers (FF) and annotated evidence (AE) on the 245-question generation subset. We additionally report mean query-time input tokens as a cost measure, excluding knowledge construction. Human denotes the reported human-answer reference on QASPER; on PeerQA, it denotes model answers using human-annotated evidence, with answerability evaluated only on answerable questions. 
+
+Complete condition set (PeerQA). Table 27 reports the evaluated conditions using the metric-specific subsets above. RAG@ k places the top-k retrieved passages in context; the main text reports RAG@10, while RAG@20 doubles that passage budget. ScholarStack improves the aggregate answerability metrics over RAG@10 at lower input usage, with a small decrease in AE ROUGE-L. RAG@20 achieves higher Macro-F1 (0.6273 versus 0.6134) and generation scores than ScholarStack, using approximately 2.6 times as many input tokens. Table 27: All evaluated conditions on PeerQA (208 papers / 579 questions). RAG@ k retrieves the top-k passages. Answerability is evaluated on 495 questions: Ans-F1 and Unans-F1 denote F1 for answerable and unanswerable questions; Acc., W-F1, and Macro-F1 denote accuracy, class-frequency-weighted F1, and unweighted mean class F1. Generation ROUGE-L is evaluated on 245 questions against free-form reference answers (FF) and annotated evidence (AE). Human denotes model answers using human-annotated evidence, with answerability scored only on answerable questions. Tokens denotes mean input tokens per question; bold marks ScholarStack’s improvements over RAG10.                                                   
+
+> Answerability Generation (Rouge-L) Method Ans-F1 Unans-F1 Acc. W-F1 Macro-F1 FF AE Tokens Full-text 0.806 0.507 0.721 0.738 0.656 0.155 0.205 12,577 Human (reference) 0.732 ––––0.150 0.161 301 RAG10 0.736 0.476 0.649 0.677 0.606 0.142 0.156 1,864 RAG20 0.766 0.489 0.679 0.703 0.627 0.149 0.184 3,481 ScholarStack 0.749 0.478 0.661 0.687 0.613 0.145 0.156 1,350
+
+Per-domain robustness (PeerQA). Table 28 reports the full answerability panel and answer-generation Rouge-L for each PeerQA domain. On the two domains with substantial support, machine learning and NLP, which together account for 446 of the 495 answerability questions (about 90%), ScholarStack is competitive or stronger: it slightly exceeds RAG on machine learning (0.5942 versus 0.5908 Macro-F1) and surpasses both RAG and the full-text reader on NLP (0.7251 versus 0.6903 and 0.7071). The geoscience and biomedicine-and-social-science splits are small (27 and 22 answerability questions, with only 1 and 10 unanswerable, and 14 and 4 generation questions respectively), so 32 their per-domain scores carry high variance; within this limitation, ScholarStack again leads on the biomedicine-and-social-science split and trails on geoscience. The advantage of ScholarStack therefore holds on the domains with sufficient support and is not driven by any single field. Table 28: Per-domain results on PeerQA. Parentheses give the numbers of answerability / generation questions. Ans-F1 and Unans-F1 denote F1 for answerable and unanswerable questions; Acc., W-F1, and Macro-F1 denote accuracy, class-frequency-weighted F1, and unweighted mean class F1. RgL ∗FF and RgL ∗AE denote generation ROUGE-L against free-form reference answers and annotated evidence, respectively. Bold marks the best Macro-F1 in each domain. 
+
+Method Ans-F1 Unans-F1 Acc. W-F1 Macro-F1 RgL ∗FF RgL ∗AE 
+
+Machine learning (313 answerability / 158 generation) Full-text 0.808 0.517 0.725 0.747 0.662 0.142 0.199 RAG 0.722 0.460 0.633 0.666 0.591 0.130 0.149 ScholarStack 0.729 0.459 0.639 0.672 0.594 0.128 0.141 
+
+NLP (133 / 69) Full-text 0.822 0.593 0.752 0.761 0.707 0.194 0.235 RAG 0.777 0.604 0.714 0.731 0.690 0.174 0.181 ScholarStack 0.822 0.628 0.759 0.771 0.725 0.193 0.212 
+
+Geoscience (27 / 14) Full-text 0.818 0.200 0.704 0.795 0.509 0.105 0.131 RAG 0.791 0.182 0.667 0.768 0.486 0.112 0.124 ScholarStack 0.700 0.143 0.556 0.679 0.421 0.099 0.066 
+
+Biomedicine & social science (22 / 4) Full-text 0.667 0.000 0.500 0.364 0.333 0.150 0.185 RAG 0.625 0.000 0.455 0.341 0.313 0.130 0.149 ScholarStack 0.645 0.154 0.500 0.422 0.400 0.134 0.094 
+
+Qualitative examples. Table 29 presents selected qualitative examples with abridged reference answers and model responses. ScholarStack and Full-text provide relevant answers in these cases, although their completeness differs, while RAG gives a different answer or abstains. Table 29: Selected qualitative examples on QASPER and PeerQA. Gold denotes the reference answer. Reference answers and model responses are abridged for presentation; answer completeness varies. Aggregate quality and input usage are reported in Tables 7 and 8.                                   
+
+> Question Gold Full-text RAG ScholarStack
+> QASPER
+> What inference models are used? XGBoost, AdaBoost, Random Forest XGBoost, AdaBoost and Random Forest Gaussian Pro-cesses XGBoost, AdaBoost, Random Forest How many actions are present in the dataset? 14,769 14,769 No Answer 14,769
+> PeerQA
+> Does the optimization hap-pen only over map loca-tions observed so far? No; it also covers unobserved (halluci-nated) regions No; any region ob-served or hallucinated No Answer No; goals from any ob-served or hallucinated region What values are repre-sented in Table 2? Zero-shot classifi-cation performance across 5 datasets and 14 language models Zero-shot classifi-cation performance for all models and datasets No Answer Performance statistics for all models and datasets
+
+C.2 Multi-Paper QA Ablation design. MDAQA requires evidence synthesis across scientific papers. Each question provides gold answers, which we used to identify the corresponding gold papers and construct the Full-text and knowledge-layer inputs. The benchmark provides English questions and answers, with pre-extracted paper content available through the associated SPIQA materials. We evaluate the same 797 questions used in the main comparison. Table 30 reports the full MDAQA ablation. The comparisons below examine three knowledge configurations using the same answering model, 33 Qwen3.8-Max with reasoning disabled, and the same ordinary prompt. The configurations share a frozen base evidence package for each question, produced by the same retrieval and filtering process, with no additional retrieval during answer generation. L1 provides selected source-grounded facts. L1+L2 adds domain categories and assignments, and the full ScholarStack configuration adds persistent cross-paper syntheses through L3. Full-text serves as the reference method based on parsed papers. 
+
+Judging and provenance audit. GPT-6 Astra with high reasoning effort scores each candidate independently using the question and a fixed evidence package. Gold answers (not shown in the table) enter evaluation only as additional anonymous candidates and are not supplied as answer-generation inputs or treated as ground truth. Candidate identifiers and presentation order are randomized, with no pairwise ranking or scoring by similarity to the gold answers. Content scores are frozen before provenance auditing. The audit checks key claims against the evidence actually supplied to each configuration, distinguishing full support, partial support, no support, contradiction, and common knowledge. The existence of reference identifiers is verified programmatically, while semantic support is assessed separately. Invalid or missing executions are recorded as N/A, and empty or refused answers remain part of the results. Each question is treated as an independent statistical unit. Table 30: Full ablation and generation-cost results on the 797-question MDAQA bank. Bare denotes the answering model using the ordinary prompt and supplied evidence, without the additional skill instructions. Skill denotes Cross-Paper Evidence Synthesis skill, which guides comparison of study conditions, synthesis of findings, and attribution of claims to evidence. Corr., Comp., Synth., Cal., and Dir. denote correctness, completeness, cross-paper synthesis, calibration, and directness. Scores are weighted means on a 0–4 scale, except Total (0–20). Generation-cost columns use the available per-question usage audit. Construction and judging are excluded. Bold marks the best value in each column, where higher is better for the six score columns and lower is better for the two cost columns.                                                                 
+
+> Method Corr. Comp. Synth. Cal. Dir. Total Tokens Sec. Full-text + Bare 1.11 2.01 1.41 0.92 3.01 8.46 20.8k 13.13 ScholarStack (L1) + Bare 3.90 3.56 2.99 3.78 3.82 18.04 4.1k 9.83 ScholarStack (L1) + Skill 3.91 3.60 3.03 3.82 3.83 18.18 4.2k 10.45 ScholarStack (L1+L2) + Bare 3.82 3.25 2.80 3.26 3.88 17.01 4.8k 7.20
+> ScholarStack (L1+L2) + Skill 3.89 3.53 3.02 3.78 3.84 18.05 4.9k 10.67 ScholarStack (L1+L2+L3) + Bare 3.89 3.35 3.48 3.90 3.80 18.41 5.5k 7.54 ScholarStack (L1+L2+L3) + Skill 3.92 3.62 3.59 3.96 3.76 18.85 5.7k 10.51
+
+Effects of knowledge layers and answering procedure. L1, L2, and L3 differ in how much comparison and interpretation they provide. L1 makes selected findings and study conditions more accessible; L2 groups related findings but still requires the model to judge comparability; L3 adds explicit scope, evidence, and limitations. Adding L2 reduces output from 557.12 to 378.98 tokens, but completeness and calibration decline. With the same evidence, Cross-Paper Evidence Synthesis (CPES) improves answer scores. The largest Total gain occurs with L1 + L2, from 17.01 to 18.05. L3 already supplies some comparisons and qualifications, so its additional gain is smaller. Overall, CPES helps organize evidence, preserve qualifications, and improve answer quality. 
+
+## D Additional Details: Evidence-Grounded Generation 
+
+D.1 Related-Work Generation D.1.1 Benchmark and Controlled Conditions 
+
+We sample 64 eligible targets from the flattened-sections OARelatedWork test split, each with complete outputs under all executed generation conditions. The final cohort contains 47 CS/ML papers and 17 papers from other domains. Eligibility requires nonempty target text, at least five distinct cited papers, valid nonduplicated reference identifiers, and non-abstract full text for every reference. The complete-case selection uses generation completion only; it does not inspect generated quality, judge scores, or the held-out related-work section. 34 The benchmark supplies a fixed cited-paper collection for each target, and the author-written related-work section is excluded from generation. Both conditions use independent Qwen3.8-Max writer sessions with reasoning disabled. Full-text and ScholarStack otherwise share the same target material, citation registry, task instructions, writing procedure, and 300–600-word constraint. Full-text exposes the original reference files. ScholarStack instead exposes frozen paper-level assets, L1 source-grounded facts, L2 categories and relations, and L3 scoped syntheses, and cannot reread or silently substitute the reference files. The comparison therefore changes the evidence representation while holding the writer and generation procedure fixed. 
+
+D.1.2 Evaluation Protocol Independent quality scoring. An LLM judge evaluates the 64 sections generated by each of the two methods, submitting each section in a separate request. Each request contains one anonymized draft, the focal-manuscript context, the original reference materials, and the citation map; it does not contain the competing draft, the generation condition, the ScholarStack assets, or the held-out author section. The judge assigns integer scores from 1 to 5 for five dimensions. Relevance measures alignment with the focal manuscript. Coverage measures whether important related work and information are included. Specificity measures concrete descriptions of methods, contributions, and differences. Support measures whether the supplied references substantiate the generated statements. Overall is a holistic judgment constrained by the component scores. Structured outputs are validated against the frozen schema, including resolution of cited source and draft spans. 
+
+Factuality and citation overlap. The factuality audit checks generated claims against the original reference texts and assigns True, Wrong Citation, Unverifiable, or False. Label proportions are computed within each generated section before being averaged across the 64 targets, so a section containing more claims does not receive greater weight. Citation F1 compares the generated citation set with the references cited by the held-out author section. It measures agreement with the author-selected reference set, not whether every generated statement is supported and not whether the set exhausts all relevant work. 
+
+D.2 Literature Review Generation D.2.1 Resource Accounting 
+
+We report the mean resources used to produce one review, including literature retrieval and survey generation. Input and output are shown in thousands of tokens, and cache hit is the fraction of input served from cache. The cost column applies a common token-price calculation to the recorded usage so that the two workflows can be compared on the same reporting surface. Table 31: Per-report resource use and standardized cost for the two locally evaluated review-generation workflows. k denotes one thousand tokens.             
+
+> System Input(k) Output(k) Cache hit(%) Cost(USD) Claude Code DR 3,128 106 78.94 7.18
+> ScholarStack 10,533 117 96.02 3.49
+
+ScholarStack processes a broader evidence set and therefore uses more input tokens than Claude Code DeepResearch (10,533k versus 3,128k), while their output usage is similar (117k versus 106k). Its substantially higher cache-hit rate, 96.02% versus 78.94%, reduces the price contribution of repeated context. Under the standardized calculation, this yields 3.49 USD per report for ScholarStack and 7.18 USD for Claude Code DeepResearch. These values exclude reusable knowledge construction and evaluation, and should be interpreted as normalized estimates rather than actual invoices or end-to-end deployment costs. 
+
+D.2.2 Trace-Backed Excerpt Comparisons 
+
+We randomly sample one paired example for each of L1, L2, and L3. Each example presents excerpts from the two reports on the same task in stacked panels. The panels retain the reports’ wording, with headings, line breaks, and emphasis added for readability; numeric citations are the reports’ original identifiers. We verified all quoted statistics against the source PDFs. 35 L1: preserving conditions and limits of technical claims. Both reports discuss Space2Vec using the same source paper. Claude Code states the broad efficacy claim and later notes that scale hyperparameters require tuning. ScholarStack places the direction and magnitude of the wavelength effect, a negative setting, and two applicability boundaries next to the claim. 
+
+Claude Code DR 
+
+Empirically, the multi-scale Space2Vec representation is reported to outperform RBF kernels, multi-layer feed-forward nets, and tile embedding approaches on POI type prediction and geo-aware image classification, precisely because those baselines handle only a single scale while Space2Vec handles all scales [10]. 
+
+Later limitation The number and spacing of scales are hyperparameters requiring tuning. 
+
+ScholarStack 
+
+The improvement is, however, conditional on the wavelength hyperparameter: relative MRR gains over the wrap baseline are -0.2% , +0.6% and +2.1% for λmin of 1 km, 500 m and 50 m respectively, so one setting is a small regression and the benefit grows as the minimum wavelength shrinks [1]. Space2Vec’s location encoding becomes less important when rich context from nearby points is already available. The model is formulated for 2-D continuous spaces, with higher-dimensional extension unexplored, and only late fusion with image classifiers is investigated [1]. 
+
+Figure 6: L1 example on Space2Vec. ScholarStack keeps effect size, hyperparameter setting, negative result, and applicability boundaries adjacent to the claim. 
+
+L2: organizing the literature across multiple dimensions. Both reports organize graph-based time-series anomaly detection along graph construction and detection objective. Claude Code states the two axes directly, whereas ScholarStack explains why a single axis would merge scientifically different methods and keeps architecture as a cross-cutting dimension. 
+
+Claude Code DR Axis A — How the graph is obtained. Prior/explicit graphs are derived from known topology or physical connectivity; learned graphs are inferred from data via attention, similarity embeddings, or top-k neighbor selection; dual/hybrid graphs jointly capture inter-variable and intra-variable (temporal) structure. 
+
+Axis B — The training/scoring paradigm. Reconstruction-based methods learn to reconstruct normal windows; anomalies yield high reconstruction error. In adversarial/generative methods, a generator models the normal distribution and discriminator/reconstruction residuals score anomalies. Prediction-based methods forecast the next value from graph context; large forecast error flags anomalies. Self-supervised or contrastive methods use pretext tasks or contrastive objectives to learn normal representations. 
+
+ScholarStack 
+
+A single-dimension taxonomy would be misleading: the same paradigm appears with static similarity graphs, learned implicit graphs, and dynamic graphs, and the same graph strategy appears with forecasting, reconstruction, and flow objectives. This survey therefore uses graph construction as the primary axis (what the graph is and where it comes from) and detection objective as the secondary axis (how a score is produced from it), with architecture treated as a cross-cutting implementation choice. 
+
+Figure 7: L2 example on graph-based time-series anomaly detection. ScholarStack explains why multiple dimensions are needed and how they determine the survey structure. 
+
+L3: tracing how later methods address earlier limitations. Both reports summarize prompt-based continual learning as an evolution from selecting prompts to composing them differentiably. ScholarStack extends this into a cross-paper lineage: each successor is tied to the limitation it addresses, and the sequence is summarized as a shift in where adaptation occurs. 36 Claude Code DR             
+
+> Prompt-based methods add a small, learnable, input-conditioned instruction mechanism, buying plasticity while keeping the backbone frozen. The internal evolution from L2P’s hard pool selection to Dual-Prompt’s complementary decomposition to CODA-Prompt’s end-to-end differentiable assembly is essentially a progressive removal of non-differentiable bottlenecks. Hard selection is simpler but caps plasticity, while differentiable assembly improves plasticity at the cost of complexity.
+> ScholarStack CODA-Prompt improves over DualPrompt by attacking the non-differentiable key-query selection that limits plasticity, and over L2P by replacing pool selection with attention-weighted decomposition.
+> HiDe-Prompt improves over L2P by attacking the degradation of prompt methods under self-supervised pre-training. LAE treats prompting as one PET instantiation and adds calibration, accumulation, and en-sembling. EASE makes the subspace per task and synthesizes old-class prototypes inside new subspaces. The direction of travel is consistent: each step moves the locus of adaptation further away from the backbone weights, first into prompts, then into prompts plus statistics, then into per-task modules, and finally into the classifier and inference-time aggregation rule.
+
+Figure 8: L3 example on continual learning with pre-trained models. ScholarStack connects succes-sive methods through the limitations they address and extracts a coherent direction of travel. 
+
+D.3 Experimental-Design Generation System and judge. All methods use the same base model (Qwen3.8-Max, non-thinking), a fixed tool budget, and a closed-book setting, differing only in knowledge access: Base LLM reads raw files with no task method, Full-text adds a domain-agnostic design method over the same raw files, and ScholarStack applies that method over assets compiled offline from the related corpus. Coverage matching and the blind pairwise judge use GPT-6 (high reasoning effort, no web access). 
+
+Benchmark composition. The benchmark is built from a citation-linked scientific corpus and spans 12 non-CS-dominated fields, with n=38 targets. Table 32 gives the per-field breakdown. Each target is a paper that reports an experimental study; it provides a research contribution to validate and a candidate pool of related papers (median 14 per case, range 13 –17 ) that a system may draw on when designing experiments. Ground truth is the set of experiments the target paper actually performed, extracted from its source text— 220 gold experiments in total (mean 5.8, median 4, range 
+
+1–20 per target), each a (name, purpose, kind) tuple. By kind, 93 are core validation experiments (main comparisons 54 , ablations 39 ), 119 are supporting studies (analysis 82 , robustness 17 , theory 
+
+15 , human evaluation 5), and 8 are other; this distribution motivates the kind weighting defined below. Table 32: Per-field breakdown of the 38 experimental-design targets (12 fields).                          
+
+> Field Count Field Count Field Count Medicine 5Physics 4Education 2Engineering 5Business 4Art 1Linguistics 4Biology 4Chemistry 1Mathematics 4Psychology 3Materials Sci. 1
+
+Metric provenance. The gold experiments are the experiments the target paper actually performed, extracted from the source paper by GPT-6; they are not human-validated and are not an exhaustive enumeration of all valid designs, so absolute coverage is bounded by design under-determination and the reported effects should be read as relative differences between methods under identical conditions. Coverage F1 assigns each gold experiment kind a weight w by how directly it tests a contribution’s central claims: main comparisons and ablations ( 1.0), supporting analysis, robustness, human-evaluation, and theory studies ( 0.6), and other ( 0.3). The judge labels each gold experiment hit (1.0), partial ( 0.5), or miss ( 0.0); per case, weighted recall is P 
+
+> gold
+
+w · credit / P 
+
+> gold
+
+w and precision is the fraction of proposed experiments that match some gold experiment (a partial match counts as matched; experiments matching no gold are “extras”), with F1 the harmonic mean of precision and 37 weighted recall and a zero denominator yielding 0 for that component; reported values macro-average per-case F1/recall/precision over the 38 targets. The blind pairwise judge receives the contribution and two anonymized designs in a per-case-seeded random order, with an explicit “more is not better; ignore formatting” instruction; wins/losses/ties are decoded after judging (Table 15). 
+
+Precision, not padding. Base LLM’s low precision ( 0.255 ) reflects over-proposal: it emits a mean of 22 .9 experiments per target, versus 18 .6 (Full-text) and 18 .7 (ScholarStack). The blind judge, instructed that more is not better, prefers the shorter claim-targeted designs, which is why both methods beat Base LLM by wide margins ( 32 /38 , 34 /38 ) despite producing fewer experiments. 
+
+Limitations. A moderate sample ( n=38 ), a single judge family used for both coverage matching and pairwise preference, self-constructed benchmarks, and GPT-6-extracted (non-human-validated) gold whose design under-determination is discussed above. The coverage-F1 margin between Full-text and ScholarStack is small ( 0.006 ) and we report no significance tests, so we do not read it as a quality difference; the effects we rest on are the wide pairwise preference of both methods over Base LLM and ScholarStack’s lower per-query cost. 
+
+D.4 Idea-Generation D.4.1 Benchmark composition 
+
+Table 33: Domain composition of the idea-generation benchmark.        
+
+> Domain Count AI and engineering 14 Chemistry and materials 12 Life sciences and medicine 4Public health and social sciences 3Environmental science 2Total 35
+
+D.4.2 Evaluation dimensions 
+
+Table 34: Definitions of evaluation dimensions from Li et al. [2024].       
+
+> Dimension Definition Novelty Are the problems or approaches new? Is this a novel combination of familiar tech-niques? Is it clear how this work differs from previous contributions? Is related work adequately referenced? Significance Is the idea important? Are other people (practitioners or researchers) likely to use these ideas or build on them? Does the idea address a difficult problem in a better way than previous research? Does it provide a unique theoretical or pragmatic approach? Clarity Is the paper clearly written? Is it well-organized? Does it adequately inform the reader? Feasibility Can the idea be realized with existing technology or methods? Are there any technical difficulties or bottlenecks? Is the idea clear and logical? Are there any obvious errors or unreasonable parts in the idea, and can the experiments be designed normally according to this idea. Effectiveness How likely the proposed idea is going to work well (e.g., better than existing base-lines).
+
+D.4.3 Score aggregation 
+
+For each case, the LLM judge receives the task, common reference papers, and three anonymized outputs. It ranks complete outputs independently on each dimension, with instructions not to favor response length or the number of proposed ideas. The ranking and aggregation procedure is specific to this evaluation. For case i, configuration g, and dimension d, let ri,g,d ∈ { 1, 2, 3} denote the rank 38 assigned by the judge. The corresponding score, mean dimension score, and overall mean are 
+
+si,g,d = 3 − ri,g,d 
+
+2 , Sg,d = 1
+
+N
+
+> N
+
+X
+
+> i=1
+
+si,g,d , Sg = 15
+
+> 5
+
+X
+
+> d=1
+
+Sg,d , (10) where N = 35 . Thus, first, second, and third place receive 1, 0.5, and 0, respectively, with equal weight assigned to each case and dimension. The resulting scores express relative preference among the evaluated configurations. 
+
+## E Additional Details: Claim and Consistency Assessment 
+
+E.1 Scientific Claim Verification Dataset and relation labels. The 80 claim–paper pairs come from the public training/development split of NLPCC 2026 Shared Task 10, Track 2 [NLP2CT, 2026], with 20 instances per label. Claims and papers are deduplicated, and source texts are limited to 50 ,000 characters. This is a selected public subset, not the official held-out test. Supported requires direct support from the cited paper; 
+
+Overstate exceeds the scope or strength of that support; Topical Match shares the subject matter without supporting the specific claim; and Irrelevant lacks a substantive relation. The labels describe support by the cited source, not scientific truth. 
+
+Matched paper contexts. The Fulltext uses the complete article text supplied by the dataset, subject to its existing extraction quality. ScholarStack reuses the original paper-level L1 objects unchanged, without supplemental extraction, appended source passages, or claim-conditioned selection. The entire collection is supplied directly; no query-time retrieval or L2/L3 processing is performed. Both conditions use the same source papers and receive neither task images nor external retrieval. 
+
+Model and scoring. Both conditions use Qwen3.8-Max with thinking disabled and the same classification prompt, without access to gold labels. Predicted labels are scored by exact match, without an LLM judge. Accuracy is the number of correct predictions divided by 80 , with failures and abstentions retained in the denominator. All 80 instances in each condition have a valid final prediction. 
+
+Cost accounting. For condition c, mean query usage is 
+
+T c = 180 
+
+X
+
+> a∈A c
+
+ T in  
+
+> a
+
++ T out 
+
+> a
+
+ , (11) where Ac includes all evaluation attempts, including retries. Total usage is 963 ,703 tokens for the Fulltext and 225 ,368 for ScholarStack, giving the means in Table 17 and a relative reduction of 
+
+1 − 225 ,368 /963 ,703 = 76 .61% . Historical construction usage for these objects is unavailable. The reported savings therefore concern queries against existing assets and do not establish end-to-end savings or a construction-cost break-even point. 
+
+Scope and limitations. The evaluation covers relation classification, not evidence localization or the official joint classification-and-evidence score. The original objects lack a complete field-level evidence map, so correct labels do not establish source traceability or rationale faithfulness. Extraction may omit qualifications needed to distinguish support from overstatement or topical similarity. The balanced, length-limited public subset does not represent the original label distribution or longer papers, and the single-run accuracy difference has not been tested for significance. Evaluation on additional held-out papers is needed to assess reliability and evidence fidelity. 39

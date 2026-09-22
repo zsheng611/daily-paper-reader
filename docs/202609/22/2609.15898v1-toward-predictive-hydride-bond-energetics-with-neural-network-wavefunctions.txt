@@ -1,0 +1,519 @@
+Title: Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions
+
+URL Source: https://arxiv.org/pdf/2609.15898v1
+
+Published Time: Tue, 15 Sep 2026 02:54:00 GMT
+
+Number of Pages: 12
+
+Markdown Content:
+# Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions ∗
+
+Aqsa Shaikh, 1 Lubos Mitas, 1 P. Ganesh, 2 and Jaron T. Krogel 3
+
+> 1
+
+Department of Physics, North Carolina State University, Raleigh, North Carolina 27695-8202, USA 
+
+> 2
+
+Center for Nanophase Materials Sciences, Oak Ridge National Laboratory, Oak Ridge, Tennessee 37831, USA 
+
+> 3
+
+Materials Science and Technology Division, Oak Ridge National Laboratory, Oak Ridge, Tennessee 37831, USA 
+
+Accurate prediction of transition-metal hydride (TM-H) bond dissociation energies (BDEs) remains chal-lenging because of strong electron correlation, relativistic effects, and nuclear quantum contributions. Recent advances in neural-network wavefunctions have enabled highly accurate electronic structure calculations, yet their performance for hydride bond energetics has not been systematically benchmarked. Here, we assess the performance of neural-network variational Monte Carlo (NN-VMC) based on the Psiformer ansatz for systems with increasing complexity (LiH, OH, TiH and NiH), and compare it against coupled-cluster singles, doubles, triples, and perturbative quadruples with complete basis set extrapolation (CCSDT(Q)/CBS) as well as avail-able theoretical and experimental data. Throughout this study, both NN-VMC and ab initio calculations employ a common correlation-consistent effective core potential (ccECP) Hamiltonian to enable tractable and consis-tent comparisons. To reduce finite-training errors, we introduce complementary zero-variance and infinite-step extrapolation schemes. For LiH and OH systems, NN-VMC yields total energies that differ within sub-milli Hartree compared to CBS extrapolated ab initio results and the BDE differences remain under 2 σ. In case of the early transition-metal systems Ti and TiH, the variational NN-VMC energies at the end of training are already consistent with CCSD(T)/CBS, while post-training extrapolation systematically closes the gap towards the CCSDT(Q)/CBS results. In contrast, NiH provides a stringent test of wavefunction expressivity, where increasing the number of determinants in NN-wavefunction ansatz, by going from 16 determinants to 160, im-proves the recovered correlation energy at the end of training by 14 mHa. The comparison of NiH BDE further reveals that, while the existing theoretical predictions cluster into distinct high and low BDE groups, the broad scatter and large uncertainties in available experimental data prevents a definitive assessment of the most ac-curate theoretical approach for NiH. Overall, this work demonstrates that NN-VMC with ccECPs Hamiltonian provides a competitive framework for quantitative prediction of main-group and early transition-metal hydride energetics, while identifying late transition-metal hydrides as an important benchmark for future developments in neural-network wavefunctions and electronic structure theory. 
+
+I. Introduction 
+
+Computational tools based on machine learning (ML) ap-proaches such as neural networks (NN) and related methodolo-gies have opened new perspectives for many-body electronic structure calculations [1–4]. These approaches have produced remarkably accurate results for several types of atomic, molec-ular, condensed and model systems [5–13]. In some of these cases accuracy proved to be competitive with the most accurate correlated wave function methods that exploit basis set expan-sions such as Configuration Interaction and large-scale Coupled Cluster. Similarly, these approaches were on par or improved upon well-known stochastic approaches such as quantum Monte Carlo (QMC) [14–16]. In fact, many aspects of these NN/ML based methods are shared with variational Monte Carlo (VMC) [17] that has been used for decades [18–21]. The new NN approaches employ multi-layer functional archi-tectures that vastly expand the variational freedom for descrip-tion of many-body quantum effects. One of the advances is based on multi-particle/all-particle orbitals that are subsequently used to build the antisymmetric forms such as generalized many-body Slater determinants [2–4]. This provides a qualitative step forward in expanding the variational freedom at the orbital level. The second important point is the vast increase in the number of variational parameters that are organized into multi-layer, ef-fectively nonlinear functional forms that are adaptive along the training/optimization evolution. Since this creates a nonlinear    
+
+> ∗Notice: This manuscript has been authored by UT-Battelle, LLC, under contract DE-AC05-00OR22725 with the US Department of Energy (DOE). The US government retains and the publisher, by accepting the article for publication, acknowledges that the US government retains a nonexclusive, paid-up, irrevocable, worldwide license to publish or reproduce the published form of this manuscript, or allow others to do so, for US government pur-poses. DOE will provide public access to these results of federally spon-sored research in accordance with the DOE Public Access Plan ( http: //energy.gov/downloads/doe-public-access-plan ).
+
+and hierarchical description, the estimation of expectations is practically possible only in a stochastic manner, in effect fol-lowing VMC approaches with sampling corresponding to the electronic degrees of freedom. Optimization of such flexible forms have been shown to be highly effective in a number of cases, as cited before, with calculations now feasible for sys-tems within moderate size limits ( ∼200 electrons at present). However, systematic comparisons between NN-VMC and other high-level wavefunction benchmarksunder consistent basis set convergence, pseudopotential protocols, and controlled extrapo-lation, remain limited. Several recent benchmark studies have shown that transition metal (TM) systems are one of the difficult testing grounds for a variety of widely used electronic structure methods. Aoto et al. [22] produced a 60-molecule TM diatomic benchmark set using a composite core-valence coupled-cluster with sin-gles, doubles, perturbative triples at complete basis set limit (CCSD(T)(CV)/CBS) along with an internally contracted mul-tireference correction, ∆MR , from icMRCCSD(T). Their main conclusion is not simply that coupled cluster fails for transition metals, but rather that carefully extrapolated CCSD(T) along with relevant corrections, such as spin-orbit (SO) and relativis-tic treatments, can be reliable in many cases, while some hy-drides remain problematic even after multireference corrections. In particular, TiH and NiH were included among the hydrides for which the calculated bond dissociation energy (BDE) values are systematically higher than experiment by several kcal/mol; for NiH the disagreement was especially large, about 12 kcal/mol. This is important because the reported ∆MR corrections for TiH and NiH are sizeable ( ≈ 3-3.7 kcal/mol) but do not remove the discrepancy, suggesting that, in their study, the disagree-ment is not easily explained by a simple missing multireference correction alone. Shee and co-workers [23] later examined 44 first row TM diatomics with phaseless Auxiliary Field quan-tum MonteCarlo (ph-AFQMC) and compared directly to Den-sity Functional theory (DFT), CCSD(T), and multi-reference (MR) CCSD(T) data. Their ph-AFQMC results showed an im-proved overall consistency with experiment, but also reinforced arXiv:2609.15898v1 [physics.chem-ph] 14 Sep 2026 2the special difficulty of certain hydrides, including NiH. For TiH the ph-AFQMC estimate lies closer to the selected experimen-tal value than the MR-CCSD(T) result of Aoto et al., whereas NiH required their most complete ph-AFQMC/CBS treatment, where ph-AFQMC at triple- and quadruple-zeta (TZ and QZ) basis sets levels were used to extrapolate to CBS value, unlike for TiH where CBS correction was scaled using coupled-cluster at perturbative triples. Notably, Moltved and Kepp identified a broader metal hydride problem by studying neutral and cationic M–H bonds across the transition series [24]. Their study in-cludes testing various DFT functionals as well as CCSD(T) with TZ basis set. They trace much of the DFT difficulty to self in-teraction error and diffuse hydride-like density, while also noting that single-reference post-HF methods such as CCSD(T) can be-have unexpectedly poorly for these bonds. In their analysis, NiH is one of the pathological CCSD(T) cases, further supporting the view that NiH is not a routine single-reference benchmark. The aforementioned studies also emphasized on the need for a re-vised experimental data for NiH. Taken together, these studies motivate the present focus on TiH and NiH, providing an early resolvable TM-H, TiH, and a more challenging case, NiH, with persistent discrepancies among experiment and various theoret-ical results. In this contribution we first address the technicalities just mentioned such as basis set extrapolations, convergence proto-cols, etc., so that we can start with a clean slate for more salient aspects of the considered methods. We examine zero-variance [25] and infinite-training extrapolations [26] recently used to ob-tain asymptotic predictions for NN-VMC energies within a par-ticular ansatz. We develop a robust regression approach in order to control the outliers and to allow for a direct assessment of sensitivity to various choices in the fitting process further dis-cussed in III B. We show that, for the studied systems, robust regressions toward zero-variance and infinite-training produce BDEs in quantitative agreement, despite the distinct assump-tions intrinsic to each approach. While the primary objective of this work is to assess the expressivity of neural-network wave-functions for transition-metal systems, we begin with two com-paratively simple sp -block molecules, LiH and OH. These sys-tems serve as useful reference cases, as the different electronic-structure approaches considered here yield results that are sta-tistically indistinguishable within their respective numerical un-certainties. For LiH, we quantify the impact of pseudopotential-related errors present in both the NN-VMC and other high-level 
+
+ab initio calculations. We then extend the analysis to the early transition-metal hydride TiH, where the NN-VMC total ener-gies of both Ti and TiH reach the CCSD(T)/CBS level by the end of training, while the extrapolated estimates approach the CCSDT(Q)/CBS benchmark. In contrast, NiH presents a sub-stantially greater challenge. Despite the use of extrapolation techniques, the NN-VMC calculations, with the same parame-ters as for the other systems, remain approximately 2 % short of the correlation energy recovered by CCSDT(Q)/CBS. To better understand this discrepancy, we investigate avenues for improv-ing the wavefunction expressivity and recovering parts of the remaining correlation energy. The subsequent sections are divided into two main parts, methodology in section II and discussion of key findings in sec-tion III. A theoretical overview of coupled cluster and NN-VMC electronic structure methods is contained in section II A, while II B and II C are dedicated to bond dissociation energy formal-ism and and an overview of existing experimental data. We pro-vide computational details of both the explored approaches in II D. In the results and discussion section, we examine the qual-itative behavior of the NN-VMC wavefunctions in section III A followed by section III B which outlines the extrapolation meth-ods utilized in the NN-VMC approach. Sections III C and III D present and discuss the total energies and bond dissociation en-ergies obtained for the systems considered in this study. We con-clude our findings in section IV.   
+
+> II. Methodology A. Theoretical Framework: Electronic Structure Hamiltonian and Wavefunction Approaches
+
+The stationary many-body Schr¨ ondinger equation with Born-Oppenheimer Hamiltonian that is given by 
+
+H = −
+
+> N
+
+X
+
+> i=1
+
+12 ∇2 
+
+> i
+
+− X
+
+> i,A
+
+ZA
+
+|ri − RA|
+
++ X
+
+> i<j
+
+1
+
+|ri − rj | + X
+
+> A<B
+
+ZAZB
+
+|RA − RB | (1) where {ri} and {RA, RB } denote spatial positions of electrons and static nuclei, respectively, while {ZA, Z B } are the charges. Throughout this work, we employ pseudopotentials to replace chemically inert core electrons with an effective potential. This reduces the variational parameter space and restricts the cal-culation to valence energy scales, thereby improving computa-tional efficiency and mitigating numerical and statistical errors due to lowered energy scale. In the present study we employ correlation-consistent Effective Core Potentials (ccECPs) across both the methods, these ccECPs and the respective basis sets can be found at the Pseudopotential Library [27]. Except for the smallest systems, the exact eigenstate of this Hamiltonian, in eq 1 , is often inaccessible. Hence, the central challenge of the electronic structure theory is to obtain the accurate/best ap-proximation to the exact many-electron wavefunction and/or its corresponding ground-state energy. While various approximate methods exist, coupled cluster methods are known for their high accuracy, and for this reason, we choose to compare our NN-based results against our coupled cluster calculations, as well as previous theory and experiment. 
+
+a. Coupled cluster theory: Coupled-cluster (CC) theory represents the correlated wavefunction as an exponential of ex-citation operators acting on a single reference slater determinant, 
+
+|ΨCC ⟩ = e ˆT |Φ0⟩, with ˆT = ˆT1 + ˆT2 + · · · [28]. The expo-nential ansatz ensures size extensivity and incorporates discon-nected excitations through the nonlinear structure of the cluster operator which enables a systematically improvable treatment of dynamic electron correlation. The amplitudes associated with ˆT
+
+are obtained by projecting the similarity-transformed Hamilto-nian onto excited determinants, giving a set of coupled nonlin-ear equations. Truncation at singles and doubles yields CCSD, while CCSD(T), widely regarded as the gold standard of thermo-chemistry, includes a perturbative treatment of connected triple excitations. In CCSDT(Q) the theory is extended to perturba-tive quadruples. Since the theory is typically realized in a gaus-sian basisset, estimates of the ground state energy rely on semi-empirical, but widely validated, angular-momentum based ex-trapolations to the complete basis set (CBS) limit. 
+
+b. Neural-Network Variation Monte Carlo: An alterna-tive route to ab initio methods is provided by variational meth-ods, where the variational ground state energy ( EV ) is obtained by optimizing a parameterized trial wavefunction ( ψt) according to the Rayleigh −Ritz variational principle, 
+
+EV = ⟨H⟩ = min 
+
+> ψt
+
+⟨ψt|H|ψt⟩⟨ψt|ψt⟩ . (2) Due to its stochastic nature, besides the variational energy it is also instructive to evaluate the corresponding variance (second 3central moment of H) given by 
+
+σ2 = ⟨(H − EV )2⟩ = ⟨ψt|(H − EV )2|ψt⟩⟨ψt|ψt⟩ . (3) that measures energy fluctuations around EV . The variance van-ishes only for an exact eigenstate and therefore serves as an ad-ditional indicator of wavefunction quality. Neural-network variational Monte Carlo (NN-VMC) fol-lows this variational framework and employs highly expres-sive neural-network parameterizations of the many-body wave-function. Recent developments have introduced NN ansatze in which the trial wavefunction is constructed from the slater de-terminants containing multi-particle permutation-equivariant or-bitals, enabling highly accurate real-space descriptions of elec-tronic correlation. The parameters of the neural network are optimized through the minimization of eq 2. Similar to con-ventional VMC, a common reference for NN-VMC is the an-tisymmetrized product wavefunction of electron orbitals ϕ(x),
+
+Ψ( ϕ(x)) = A[ϕ1(x1)ϕ2(x2)...ϕ N (xN )] , where A denotes the antisymmetrization operator. The state of electron i is denoted by xi = ( ri, σ i), where ri and σi are its spatial and spin coordi-nates, respectively, and x = ( x1, . . . , x N ) denotes the full elec-tronic configuration. In case of traditional VMC, this wavefunc-tion contains single particle orbitals, Ψ( ϕj (xi)) , which are fixed functions of individual electron coordinates and the correlation effects are often achieved through Jastrow factors [20, 29, 30]. In contrast, NN-VMC methods employ generalized many body orbitals which include explicit dependence on the full set of electronic coordinates, Ψ( ϕj (xi; x̸=i)) . Neural-network (NN) wavefunctions such as FermiNet, PauliNet, and Psiformer con-struct antisymmetric many-electron wavefunctions using deter-minants whose matrix elements are parameterized by neural net-works [2–4, 7, 13]. Here, we focus on the Psiformer ansatz, fol-lowing the notation of Ref. [4], the Psiformer wavefunction can be written as 
+
+Ψθ (x) = exp[ Jθ (x)] 
+
+> Ndet
+
+X
+
+> k=1
+
+det ϕkθ (x) , (4) where θ denotes the trainable parameters, k labels the determi-nants, and Φkθ (x) ∈ RN ×N is the learned orbital matrix associ-ated with determinant k. Unlike a conventional Slater determi-nant, whose matrix elements are single-electron orbitals, the ele-ments of Φkθ (x) are permutation-equivariant functions of the full electronic configuration and can therefore encode many-electron correlations directly. In the Psiformer, Φkθ (x) is constructed from electron features processed through a sequence of multi-head self-attention and nonlinear layers [4]. The self-attention mechanism allows the representation associated with each elec-tron to incorporate information from all other electrons through learned query −key interactions, providing a flexible representa-tion of electron correlation without imposing a fixed functional form for electron-electron interactions. The resulting electron representations are projected onto the elements of the determi-nant matrices and multiplied by exponentially decaying enve-lope functions to enforce the appropriate asymptotic behavior. An optional Jastrow factor Jθ (x) is included to impose the cusp conditions. Efficiency of other explored ansatze available in DeepQMC package, FermiNet [2] and PauliNet2 [3], is shown in section S1 of the supplementary information.  
+
+> B. Bond Dissociation Energy Calculations
+
+Bond dissociation energies for each molecular species are evaluated as the energy difference between the parent molecule and its corresponding dissociation fragments. To enable a direct comparison between theoretical predictions and experimentally reported bond dissociation energies at room temperature (Do
+
+> 298
+
+),zero-point vibrational energy (ZPE) and a finite temperature cor-rection ( RT correction ) are applied. We also include spin-orbit (SO) correction as per the system. The ZPE for the small molecules (LiH and OH) is obtained from the works of Irikura [31], and for TM-H we use the data provided in ref [22], both these references use spectroscopic data to calculate ZPE. Bond dissociation en-ergy ( Do
+
+> 298
+
+), to be compared with experimental results at room temperature, is calculated using the following equations, 
+
+Do 
+
+> 298
+
+= De − ZPE + RT correction , (5) where, RT correction = 3.7 kJ/mol [32]. We obtain the equilibrium dissociation energy ( De), from the energy difference of the dis-sociated fragments and parent molecule ( Delec  
+
+> e
+
+) with added spin-orbit corrections as discussed below, 
+
+De = Delec  
+
+> e
+
++ ∆ Dso e (6) The value for Delec  
+
+> e
+
+is obtained from our total energy calcula-tions with ab initio and NN-VMC methodologies for fragments (E(A) and E(B)) and the parent molecule ( E(A − B)), 
+
+Delec  
+
+> e
+
+= E(A) + E(B) − E(A − B) (7) For systems containing Li no SO correction was required (∆Eso = 0 ) and for OH it is directly taken from ref. [33]. Whereas, for the TM-H systems the total ∆Dso e is calculated using atomic and molecular spin-orbit contributions, 
+
+∆Dso e = ∆ Eatom  
+
+> so
+
+(A) + ∆ Eatom  
+
+> so
+
+(B) − ∆Emol  
+
+> so
+
+(A − B) (8) Here, the molecular SO term ∆Emol so is from ref. [22], where it was computed using CASSCF with Breit–Pauli spin–orbit cou-pling and for atomic SO contributions, we use the statistical av-erage over the atomic fine structure levels [22], 
+
+∆Eatom  
+
+> so
+
+= −
+
+P 
+
+> J
+
+(2 J + 1) , E (J)
+
+P 
+
+> J
+
+(2 J + 1) , (9) Energies E(J) and total angular momentum quantum numbers 
+
+J are taken from the NIST Atomic Spectra Database [34]. It should be noted that the relativistic corrections are included nat-urally by employing correlation-consistent effective core poten-tials (ccECPs). These pseudopotentials are constructed using a tenth-order Douglas–Kroll–Hess Hamiltonian to incorporate av-eraged scalar relativistic effects [35–37]. Throughout this work, experimental bond lengths are employed, taken from the NIST database for lighter molecules (LiH and OH) and from ref [22] for transition-metal systems (TiH and NiH). Zero-point ener-gies (ZPE) and SO corrections ( ∆Eso ) along with the respective bond lengths of the studied molecules are listed in Supplemen-tary Table S2.  
+
+> C. Experimental Bond Dissociation Energies
+
+While comparing various electronic structure methods, it is essential to benchmark theoretical results not only against each other but also against available experimental measurements and previously reported high accuracy theoretical studies in the lit-erature. Experimental reference values for each molecule were collected from standard spectroscopic and thermochemical com-pilations, including the CRC Handbook [32], Lange’s Handbook [38], and the Huber–Herzberg database [39]. BDE values from these databases along with selected experimental estimates from the literature are tabulated in Supplementary Table S3. 4For the lighter molecules, LiH and OH, nearly all experimen-tal and theoretical bond dissociation energies fall within chemi-cal accuracy of each other. The few exceptions typically corre-spond to the studies that either report only upper/lower bounds or rely on older experimental measurements that have since been revised. In contrast, the experimental values of bond dissociation energy reported for TiH exhibit a bimodality, clustering around two distinct values separated by approximately 50 kJ/mol, in-dicating unresolved experimental inconsistencies. The situation is most severe for NiH, where reported experimental bond dis-sociation energies show substantial scatter across the literature. This dispersion highlights the need for renewed experimental investigation and, in the interim, justifies meaningful compari-son against reliable high-level theoretical predictions. As noted above, prior studies have been performed in service of this goal, and we add our own predictions to this body of work.  
+
+> D. Computational Details
+
+In both, the ab initio framework and neural-network (NN) based wavefunction approaches, we use the recently devel-oped ccECPs, which adopt a semi-local form with averaged scalar relativistic effects and are optimized at the CCSD(T) level against all-electron atomic spectra and bonding environ-ments. The ccECPs are accompanied by correlation-consistent basis sets constructed by minimizing the CCSD(T) ground-state total atomic energy and validated for smooth CBS ex-trapolation. Details of their construction and validation are given in refs. [35–37, 40], and the potentials and basis sets in various formats are publicly available in the pseudopoten-tial library [27]. For the ab initio calculations we employ augmented correlation-consistent atomic basis sets, (aug)-cc-p(C)V nZ with n ∈ { D, T, Q, 5, (6) }, where core–valence (C)V sets are used for TM-systems. All CCSD(T) calculations are per-formed with MOLPRO codebase [41], for perturbative quadru-ples, CCSDT(Q), we additionally integrate MRCC package [42]. All reported ab initio energies are extrapolated to the complete basis set (CBS) limit. This CBS extrapolation is performed in a two step process, where the Hartree–Fock (HF) and correlation components are extrapolated separately according to [43]: 
+
+EHF  
+
+> n
+
+= EHF CBS + ae −bn (10) 
+
+Ecorr  
+
+> n
+
+= Ecorr CBS + α
+
+(n + 3 /8) 3 + β
+
+(n + 3 /8) 5 (11) Here, n is the cardinal number of the basis set and EHF  
+
+> CBS
+
+and 
+
+Ecorr  
+
+> CBS
+
+denote the extrapolated HF and correlation energies, re-spectively. Direct CCSDT(Q) calculations with larger basis sets (QZ–5Z) were computationally prohibitive, therefore, the corre-sponding total energies are estimated using the previously vali-dated ratio-based approach described in Ref. [44]. Total energies at various basis levels and the corresponding extrapolated values for all the studied systems are listed in Supplementary Table S4. Moving on to the second electronic structure method, all the neural-network VMC (NN-VMC) calculations are performed using the DeepQMC package [45], which utilizes JAX [46] for efficient execution on accelerator hardware. As discussed in section II A, due to its enhanced ability to capture electronic correlation, all quantitative comparisons of BDEs presented in this work are performed using the Psiformer ansatz [4], with de-fault parameters provided by DeepQMC package, unless spec-ified otherwise. During the training phase, VMC optimization was carried out using the Kronecker-Factored Approximate Cur-vature (KFAC) [47] method in combination with a hybrid elec-tronic sampler. A walker batch size of 4096 is used with 10 5
+
+training iterations performed for each atom and molecule. The overall computational workflow is divided into training and in-ference phases, both of which were carried out on individual compute nodes containing 4 NVIDIA A100 GPUs. Details of the computational expense with a summary of the computational setup and parameters is provided in supplementary section S4 and Table S5, respectively. To estimate the asymptotic energies within practical com-putational budgets, we employ two post-training extrapolation schemes: zero-variance ( σ2 → 0) and infinite-step ( t → ∞ )extrapolations. These procedures mitigate residual optimization bias arising from finite training length. Details of the extrap-olation protocols that we have explored and further developed, along with the resulting energies, are discussed in sections III B and III C respectively.   
+
+> III. Results and discussion A. NN-VMC Training Efficiency
+
+Before moving on to the resulting energies for the studied sys-tems, first we assess the accuracy of our neural-network imple-mentation by comparing our training efficiency with previously published results for the Ti atom which was obtained using the FermiNet ansatz combined with ccECPs [9]. Here we employ the same training parameters as provided by Li. et. al in ref. [9]. Notably, the Psiformer ansatz in DeepQMC, using default hyperparameters, recovers a comparable fraction of the correla-tion energy with approximately five times fewer training steps than reported by Li. et. al , suggesting the improved efficiency of the attention based architecture as compared to the published FermiNet based results. We also observe that the DeepQMC im-plementation of the FermiNet ansatz yields variational energies similar to those reported in Ref. [9]. 10 0 10 1 10 2 10 3 10 4 10 5 10 6
+
+> Training Step
+> 10 0
+> 10 1
+> 10 2
+> Correlation Energy Error (%)  DeepQMC–FermiNet DeepQMC–PsiFormer Prior-FermiNet
+> FIG. 1: Training curves for the Ti atom, shown as the percentage of residual correlation energy with respect to CCSDT(Q)/CBS results. DeepQMC based optimization with FermiNet architecture (solid red) is qualitatively similar to the FermiNet based result in ref. [9] (dashed red). Notably, the Psiformer ansatz [4] (blue) recovers a greater amount of correlation energy in fewer training steps. Median energy over the last 10% of iterations is shown for clarity.
+
+To further assess the performance of the Psiformer architec-ture, we examine the convergence curves across the atomic sys-tems considered in this study: Li, O, Ti, and Ni. Figures 2a 5and 2b outline the training behavior of the Psiformer ansatz in terms of the total energy error and the variance-to-energy ra-tio ( σ2 
+
+> V
+
+/|E|), which together provide complementary indicators of convergence. The curves are constructed by evaluating the wavefunction at a series of saved training checkpoints through separate inference calculations. The total energy error, in Figure 2a, is relative to the calculated CCSDT(Q)/CBS energies for the respective atoms. For all systems, the training initially shows a rapid decrease in energy error followed by a slower asymptotic regime. The convergence rate depends on the atomic number, e.g. lighter systems such as Li and O reach chemical accuracy (<1 kcal/mol) with respect to CCSDT(Q)/CBS earlier in train-ing, whereas the heavier TM-systems require longer optimiza-tion. By the end of our training, using the set up listed in sup-plementary Table S5, Ni remains approximately 12 mHa above the CCSDT(Q)/CBS reference, while the other atoms demon-strate that the neural-network wavefunction is capable of reach-ing close to high-accuracy theoretical values. Moving to the quality of wavefunction demonstrated in Figure 2b, a substantial improvement in the V-E-ratio, σ2 
+
+> V
+
+/|E|, relative to the conven-tional Slater-Jastrow ansatz is observed [48, 49]. Remarkably, even for Ni, which exhibits the slowest convergence among the atomic systems studied, the V-E-ratio drops to approximately 0.01 Ha within the first quarter of the training process, high-lighting the effectiveness of the ansatz in rapidly approaching a high-quality wavefunction.  
+
+> B. NN-VMC Extrapolation Protocols
+
+In an attempt to arrive at the most accurate estimates possible for atomic/hydride total and binding energies, we employ two distinct extrapolation approaches. The first has been applied by the QMC community for a long time: energy vs energy variance extrapolation - (E, σ 2) [50–52]. The second is newer, based on observations of the progression of the NN-VMC training ener-gies, where power-law behavior is evident - (E, 1/t α) [26]. In each case, linearity between the primary variables is assumed: 
+
+Eσ2 = Eσ2→0 + mσ 2 (12) 
+
+Et = Et→∞ + m/t α (13) Where, Eσ2→0 and Et→∞ represent the extrapolated asymptotic energies for variance ( σ2) and training step ( t) extrapolations and 
+
+m is the slope of the fit. In keeping with this assumption, we use a robust regression scheme to extract essential linear relation-ships in the data. The Theil-Sen [53, 54] method is a known robust regression approach. We further reduce outlier sensitivity by using RANSAC [55], with Theil-Sen as its interior regressor. The combined systematic and statistical uncertainty is estimated in the following way. We draw a large number of 50/50 split samples from the (E, σ 2, t ) data points (sub-sampling) to repre-sent systematic variability in the points generated by the training process. For each 50/50 split, we include statistical error via resampling based on the estimated error on the mean energy at each training point. For each of these perturbed sub-datasets we perform robust linear regression as just described. We then ex-tract the mean estimates of the asymptotic energies ( Eσ2→0 and 
+
+Et→0) and their uncertainties from the distribution of extrapo-lated values. The bare training data are often extremely noisy, producing a large number of extreme outliers. To remedy this, we consider two different approaches to obtain well-behaved data for subse-quent regression. In the first approach, we notice that the in-termediately optimized wavefunctions show reduced sensitivity relative to the training energies produced at low sampling. We therefore performed inference calculations on an evenly spaced subset of the training steps. Since these inference calculations are performed with substantially larger sampling than the corre-sponding training evaluations, they possess significantly smaller statistical uncertainties and provide a more reliable basis for the extrapolation. As an alternative, for inverse step extrapolation only, we also perform smoothing on the original training data without additional inference. To smooth the data, we obtain the median energy over fixed ranges (1000 steps) of the training curves. This is beneficial because the median is quite insensitive to outliers. One example of energy variance and step based ex-trapolations is shown in Figure 3 for the Ni atom (see SI for the rest of the systems). Energy variance extrapolation is shown in green and step-based extrapolation in blue. The horizontal lines beneath the linear fits are the total energies obtained from basis-set extrapolated CCSD(T) and CCSDT(Q). While in this exam-ple the two extrapolated NN-VMC values closely agree, approx-imately 1 σ apart, this need not be the case in general. Indeed, we observe small differences in a number of cases, as reported in Table I (also see supplementary Figures S3, S6, S9 and S12). We take these differences as a final indicator of uncertainty (or the lack thereof) in our predicted ground state energies based on the Psiformer wavefunction ansatz. 1. Extrapolations Based on Energy Variance In quantum Monte Carlo studies, extrapolations based on ra-tios of the first and second moment of the Hamiltonian have been used for some time, see for example [50–52]. More recently, NN based study, by W. Fu et al , have also found variance based extrapolation to provide a reliable estimate of the asymptotic en-ergies. [25]. As we now demonstrate, an approximate scaling relation that provides the basis for data analysis can be placed on a more sound mathematical footing in the limit of high qual-ity wavefunctions. Neural-network wavefunctions certainly fall within this class, as many prior studies in addition to our own have shown that it could obtain correlations at the ∼ 99% level and beyond (shown in Figure 1 and later in Figures 5 and 6). By expanding a given trial wavefunction in the basis of the many-body eigenstates, |Ψt⟩ = c0|Ψ0⟩ + P 
+
+> i> 0
+
+ci|Ψi⟩ with en-ergies Ei, we can define the contamination in the first and second moments of the energy distribution as 
+
+ES = ⟨H⟩ − E0
+
+1 − c20
+
+(14) 
+
+E(2)  
+
+> D
+
+= ⟨H2⟩ − E20
+
+1 − c20
+
+− 2E0ES (15) where ⟨Hn⟩ = ⟨Ψt|Hn|Ψt⟩. Using these expressions for ⟨H⟩
+
+and ⟨H2⟩ one can derive the following (exact) identity 
+
+⟨H⟩ = E0 + ES
+
+E(2) 
+
+> D
+
+[σ2 
+
+> V
+
++ ( ⟨H⟩ − E0)2] (16) For accurate trial functions we have σ2 
+
+> V
+
+≫ (⟨H⟩ − E0)2 and we can write 
+
+⟨H⟩ = E0 + ES
+
+E(2) 
+
+> D
+
+σ2 
+
+> V
+
++ O[( ⟨H⟩ − E0)2] (17) The proportionality factor is the ratio of the contaminations that are both positive. More details regarding the derivation can be found in supplementary section S5. The last expression shows that for accurate trial wavefunctions the dominant scaling of the total energy is nominally proportional to the variance. However, there remain important issues to consider. One issue is that the proportionality constant in front of σ2 
+
+> V
+
+, in fact, still indirectly 610 3 10 4 10 5          
+
+> Training Step
+> 10 3
+> 10 2
+> 10 1
+> 10 0
+> 10 1
+> 10 2
+> 10 3
+> Energy Error (mHa)
+> Li OTi Ni
+> (a) 10 310 410 5
+> Training Step
+> 10 4
+> 10 3
+> 10 2
+> 10 1
+> Variance/Energy Ratio (Ha)
+> Li OTi Ni (b)
+
+FIG. 2: Convergence behavior of the Psiformer ansatz (16 determinants) during training. (a) Total energy errors for Li, O, Ti, and Ni atoms with respect to the CCSDT(Q)/CBS reference energies. Accuracy at the 1 mHa level is denoted by the horizontal dashed line. (b) Variance-to-energy ratio, the horizontal dashed line corresponds to a level not often crossed in the traditional Slater-Jastrow ansatz (0.01 Ha) [48]. 0.0 1.5 3.0        
+
+> 2
+> -169.39 -169.38 -169.37 -169.36 -169.35 -169.34 -169.33
+> E (Ha)
+> ENN
+> 20: -169.3840(6)
+> ENN t: -169.3829(8)
+> CCSD(T)/CBS: -169.3888(6) CCSDT(Q)/CBS: -169.3883(6)
+> 0.0 1.5 3.0
+> t11e 5
+
+FIG. 3: Extrapolation of the NN-VMC total energy toward zero variance ( Eσ2→0) (green) and infinite training steps ( Et→∞ ) (blue) shown for the Ni atom with 16 determinants in the NN-wavefunction ansatz. Robust linear fitting is performed via the methods described in III B. The horizontal lines refer to CBS extrapolated CCSD(T) and CCSDT(Q) energies. 
+
+depends on σ2 
+
+> V
+
+, ie, the perfect linearity is not guaranteed even when the explicitly quadratic error term is small. Empirically, it has turned out that this indirect dependence might be visible and depending on the details of the wavefunction this effect can be pronounced or diminished. We also have to consider that the dependence ⟨H⟩ vs σ2 
+
+> V
+
+can exhibit irregularities (eg, lower variational energy can lead to higher variance and vice versa) that might occur during training and therefore one could expect some additional scatter from inherent VMC randomness. In-terestingly, indeed even high accuracy variational results show some dispersion. However, we were able to reach meaningful extrapolations that has enabled us to either confirm agreement with independent, essentially accurate CC/CBS calculations, or to point out residual level of variational bias as shown in the fol-lowing sections. 2. Extrapolations Based on Training Step A complementary and independent predictor of total energies is extrapolation based on the training steps ( t). For this ex-trapolation, we employ the empirical power law approach pro-posed by Scherbela et al. [26], in which the residual error de-cays as E(t) − Et→∞ ∝ t−α, with α ≈ 1 and t is the train-ing/optimization step. Here we explicitly consider how the re-sulting estimates of Et→∞ depend on the choice of exponent ( α)and the portion of the training trajectory included in the fit. The first set of investigation is performed on median smoothed training data, in the absence of large number of inference points one can utilize training trajectory to estimate the asymptotic energy. We perform multiple fits for each value of α (α ∈
+
+[0 .7, 2.0] ) as successively larger amounts of the early training data are excluded. Whenever proportionality to 1/t α holds well, we expect a stable prediction of the energy. As a demonstra-tion, we choose NiH binding energies here since Ni systems are least converged in total energy with respect to the finite train-ing and thus represent the largest challenge for extrapolation. As shown in Figure 4 for NiH, we find that over a significant range of excluded data, the extrapolated energies converge to a plateau separately for each value of α which represent the best estimates. We also observe that the inclusion of early training steps results in larger α dependence, due to abundant outliers in initial training stage, suggesting that the asymptotic convergence regime has not yet been reached. For example, while quantifying the α sensitivity within each fitting window relative to α = 1 ,the decay exponent proposed in ref. [26], the largest deviation in the mean Do 
+
+> 298
+
+is 7 kJ/mol, obtained for α = 0 .7 when fit-ting the full training trajectory. Excluding the initial 2 × 10 4
+
+steps reduces this deviation to below ∼ 3 kJ/mol. This is an expected behavior due to the fit running over two distinct train-ing phases; early transient dynamics and late asymptotic region. Further on, when more than half the training steps have been excluded, the fitted data gain higher variability with higher sta-tistical uncertainty, as shown in Figure 4, indicating that robust extrapolation requires retaining data from the intermediate train-ing regime through the end of training (EOT). Together, these results show that the extrapolation is most sensitive to the inclu-sion of initial training regime or excluding too large a fraction of the trajectory. The same qualitative dependence on the fitting window and α is reproduced when the analysis is performed us-7ing inference checkpoints for the asymptotic energy estimates of other studied systems (supplementary Figures S7, S10, and S13). Based on these observations we exclude the initial 2 × 10 4
+
+training steps in all final energy extrapolations and adopt α = 1 ,as also observed by [26]. For these parameters, we obtain Do
+
+> 298
+
+(NiH) =271.9(1.3) kJ/mol. 0 1 2 3 4 5 6 7 8               
+
+> Start step of fitting window ×10 4
+> 260 265 270 275 280 285
+> Do
+> 298  (kJ/mol)
+> CCSDT(Q)/CBS (280.7 ± 2.2)
+> α= 0.7
+> α= 0.8
+> α= 0.9
+> α= 1.0
+> α= 1.1
+> α= 1.2
+> α= 1.3
+> α= 1.4
+> α= 1.5
+> α= 1.6
+> α= 1.7
+> α= 1.8
+> α= 1.9
+> α= 2.0
+
+FIG. 4: Sensitivity of the infinite step extrapolated Do
+
+> 298
+
+(NiH) to the choice of the polynomial decay factor ( α) and the fitting window. Each point on the x-axis specifies the beginning of the fitting window, such that the corresponding fit is performed over the interval ([x,EOT]), where EOT denotes the end of training. 
+
+C. Total Energy Results 
+
+a. Li and O containing systems: Supplementary Tables S4 and S6 report the total energies entering eq 7 for these sp-
+
+systems. These total energies were computed using two comple-mentary methodologies: conventional ab initio quantum chem-istry methods and neural network based Variational Monte Carlo (NN-VMC). For the smallest systems in this study, atomic Li and LiH, calculations were carried out using both ccECP-based pseudopotentials and all-electron Hamiltonians. Removal of the 
+
+1s2 core reduces Li and LiH to effective one-electron and two-electron systems for which HF/CBS and CISD/CBS values are reported as exact within a given basis set. For the all-electron case we provide the total energies obtained with FCI/CBS. The NN-VMC energies, both at the end of training and after extrap-olation, agree within ab initio CBS energies within their respec-tive uncertainties (see supplementary Table 6). For atomic oxygen and its hydride, ccECP-based ab initio 
+
+and stochastic NN-VMC calculations were performed where we find the EOT and extrapolated asymptotic NN-VMC energies to be within sub-milli Ha agreement with the CBS-extrapolated CCSD(T) results as shown in supplementary Table S6. Inclu-sion of higher-order correlation through CCSDT(Q)/CBS fur-ther lowers the total energies of both O and OH by approxi-mately 0.5 mHa. For the oxygen atom, however this correc-tion remains within the combined uncertainties and is therefore indistinguishable from the CCSD(T)/CBS value. For these sys-tems, the agreement of NN-VMC with the reference is reached purely at the variational level and no extrapolations were nec-essary. More detailed discussion of energetics involving these prototypical sp -system can be found in supplementary section S7. 
+
+b. Ti and TiH: For the early transition-metal systems, Ti and TiH, using the Psiformer ansatz with the parameters listed in supplementary Table S5, we observe good performance for both the lowest achieved variational energies and those includ-0123456
+
+> Residual  Ecorr  (%)
+
+Ti TiH 
+
+> CCSD(T)/QZ CCSD(T)/5Z CCSD(T)/CBS NN-EOT NN-step-ext NN-var-ext
+
+FIG. 5: Percentage of uncaptured correlation energy for Ti and TiH through the two studied eletronic structure methods. 1. CCSD(T) at QZ and 5Z basis levels and in the CBS extrapolated limit. 2. NN-VMC at end of training (EOT), after extrapolation through infinite-step (NN-step-ext) and zero-variance (NN-var-ext) approaches. In each case, CCSDT(Q)/CBS is used as the reference to estimate the full correlation energy and the error bars show the combined propagated uncertainty of each respective method and the reference. 
+
+ing extrapolation. Within all comparisons, whether CCSD(T) or NN-VMC, the molecular system is substantially more difficult, perhaps due to symmetry lowering intrinsic to bond formation. In Figure 5, we compare NN-VMC with CCSD(T) against the CCSDT(Q)/CBS benchmark. The quantity shown is the percent-age of missing correlation energy. For CCSD(T), the finite but large QZ and 5Z basis sets miss more than 4% and 2% of the correlation energy and in the complete basis set limit reaching or exceeding ∼1% accuracy with respect to CCSDT(Q)/CBS. Our final variational energies obtained at the end of 10 5 training steps (NN-EOT) already matches the quality of CCSD(T)/CBS. The infinite-step extrapolated NN-VMC energies show only a small increase in gained correlation energy, while the zero-variance extrapolation reduces the error to 0.5% or less. Overall, NN-VMC with the Psiformer ansatz shows excellent quality as a benchmark level electronic structure methods for the Ti-based systems. 0123456 
+
+> Residual  Ecorr  (%)
+> Ni NiH
+> CCSD(T)/QZ CCSD(T)/5Z CCSD(T)/CBS NN-EOT (16 det) NN-step-ext (16 det) NN-16 var-ext (16 det) NN-EOT (160 det) NN-step-ext (160 det)
+
+FIG. 6: Same as Figure 5, now for Ni and NiH, with NN-VMC results shown for both 16 and 160 determinant Psiformer ansatze. 
+
+c. Ni and NiH: The situation is different for the most chal-lenging systems considered here, namely Ni and NiH. Figure 6 similarly shows the remaining correlation energy relative to the CCSDT(Q)/CBS benchmark. Somewhat surprisingly, in con-trast to Ti/TiH, in these cases CCSD(T)/CBS shows complete agreement with CCSDT(Q), while NN-VMC shows increased error. Considering the case of default Psiformer ansatz with 16 determinants (NN-16), NN-VMC still recovers more correlation 8
+
+TABLE I: Total energies (Ha) and BDEs, Do 
+
+> 298
+
+kJ/mol (eq 5), for TiH and NiH. Listed are our results (NN-VMC, CCSD(T) and CCSDT(Q)), prior theoretical and experimental estimates. Where relevant, extrapolation methods used to arrive at the final results are specified. EOT (end-of-training) refers to the energies obtained by performing inference calculation at the last trained checkpoint (after training for 10 5
+
+optimization steps). For TiH, dataset of inference points along the training curves is used for extrapolation whereas NiH uses median-smoothed training data for extrapolation as described in III B 2. For NiH, here we show energies obtained from expanded wavefunction ansatz with 160 determinants, energetics via default 16 determinant ansatz can be found in Figures S12 and S14 in supplementary information. System Method Extrap. Eatom (Ha) Emol (Ha) Do 
+
+> 298
+
+(kJ/mol) 
+
+This Study: TiH NN-VMC EOT -58.090754(42) -58.670359(55) 202.79(0.18) NN-VMC eq 13 ( t → ∞ ) -58.09145(10) -58.67112(13) 202.96(0.42) NN-VMC eq 12 ( σ2 → 0) -58.09297(19) -58.67362(37) 205.53(1.1) CCSD(T)-QZ -58.07270087 -58.65043884 197.89 CCSD(T)-5Z -58.08119845 -58.65931705 198.89 CCSD(T)-CBS eqs 10 - 11 -58.09078(81) -58.66949(71) 200.4(2.8) CCSDT(Q)-CBS eqs 10 - 11 -58.09241(80) -58.67593(70) 213.1(2.8) 
+
+Prior Theory: 
+
+CCSD(T)-QZ[24] 210.2 CCSD(T)(CV)/CBS[22] 200.2 CCSD(T)(CV)/CBS+ ∆MR [22] 215.7 AFQMC/TZ[23] CCSD(T) corr. 194.8(3.8) 
+
+Prior Expt.: 
+
+CRC [32] 204.6(8.8) Armentrout [56] 192.7(6.0) 
+
+This Study: NiH NN-VMC EOT -169.37924(19) -169.98598(16) 268.08(65) NN-VMC eq 13 ( t → ∞ ) -169.38533(37) -169.99354(35) 271.9(1.3) CCSD(T)-QZ -169.3357012 -169.9430187 269.6 CCSD(T)-5Z -169.3582773 -169.9666837 272.5 CCSD(T)-CBS eqs 10 - 11 -169.38885(63) -169.99856(56) 275.9(2.2) CCSDT(Q)-CBS eqs 10 - 11 -169.38830(64) -169.99985(56) 280.7(2.2) 
+
+Prior Theory: 
+
+CCSD(T)-QZ[24] 293.1 CCSD(T)(CV)/CBS [22] 275.2 CCSD(T)(CV)/CBS+ ∆MR [22] 290.7 AFQMC/TZ [23] CCSD(T) corr. 270.2(4.6) AFQMC/CBS[23] TZ–QZ basis sets 248.2(7.4) 
+
+Prior Expt.: 
+
+CRC [32] 240(8) Tolbert [57] 272(25) 
+
+energy at the end of training ( 10 5 training steps) than the finite-basis CCSD(T)/5Z but remains approximately 12 and 28 mHa above the CCSDT(Q)/CBS benchmarks for atomic and hydride systems, respectively. We should also note that at fixed training length ( 10 5), NN-VMC reaches less of its full potential in each respective system from LiH to NiH. This is illustrated particularly well in Figure 2b, where the independent variance-to-energy ratio metric shows reduced quality in this exact ordering, while also suggesting that equal quality might be reached between the systems at succes-sively larger training times at higher electron count. To deter-mine whether the remaining difference could be attributed to in-complete optimization, we extended the NiH training to 2 × 10 5
+
+steps followed by a final inference calculation (see supplemen-tary Figure S2(a)). Despite the doubled training time, corre-sponding energy improvement at the end of extended training remained limited to ∼ 2 mHa. This modest gain suggests that the optimization trajectory is approaching saturation, hence, fur-ther improvement likely requires a more expressive representa-tion of the wavefunction. Given the well-established multirefer-ence character of NiH [58] and the near-degeneracies present in the Ni electronic manifold, the determinant content of the ansatz is expected to play an important role. To investigate this effect in case of NiH, which remained farthest from the CCSDT(Q)/CBS reference, we increased the number of determinants in the Psi-former ansatz from the default value of 16 to 160 and the further recovered correlation energy (in percentage) is shown in Figure 6 (NN-160). The resulting infinite step extrapolated value (us-ing median-smoothed training curve) improves by ∼ 15 mHa over the 16 determinant case, reducing the difference from the CCSDT(Q)/CBS reference from 22 mHa to 6 mHa – a 3.5x im-provement – which brings the the level of missing correlation energy down to < 1% similar to other cases. A comparison of training curves obtained from 16 and 160 determinant Psiformer anstaz is shown is supplementary Figure S2(b). Importantly, a tenfold increase in determinant count results in only about a twofold increase in the computational cost. This suggests the ul-timate limit of the Psiformer ansatz promises much greater gains and merits further systematic investigation in later studies. 
+
+D. Bond Dissociation Energies 
+
+We now examine hydride bond dissociation energies (BDE), 
+
+Do
+
+> 298
+
+, obtained with various levels of theory, including coupled cluster and extrapolated neural network wavefunction data. Here 9CCSD(T)/CBS CCSDT(Q)/CBS NN-VMC (step-extrapolation) CCSD(T)(CV)/CBS CCSD(T)(CV)/CBS+ (ΔMR )ph-AFQMC/TZ+ (CCSD(T)/CBS correction) ph-AFQMC/CBS 
+
+> −20 −10 010 20 30
+> ΔDo
+> 298 (kJ/mol)
+> FIG. 7: Deviation of predicted NiH BDEs with respect to the average experimental value of 258.4(6.6) kJ/mol (See Table S3 in supporting information for list of experimental values). Our results are shown with cross-hatched bars and prior theory shown with solid colors. Coupled cluster approaches are colored red, while QMC methods (NN-VMC and AFQMC) are marked green. The gray band around zero represents averaged experimental uncertainty.
+
+we choose to focus the discussion on TiH and NiH. Data for LiH and OH can be found in the section S7 of the supplementary information, where it can be seen that the results are essentially exact compared to prior experiment and other high-level theory and relevant explanations are provided in case of disagreement. 
+
+a. TiH: Among the 3d monohydrides, TiH provides an in-termediate case, exhibiting moderate correlation effects while remaining computationally tractable. The experimental situa-tion, however, remains unsettled. Two reported values differ by approximately 50 kJ/mol: 204.6(8.8)kJ/mol from the CRC Handbook [32] and ca. 159 kJ/mol from data reported in Lange’s Handbook [38]. This discrepancy far exceeds the stated uncer-tainties and complicates direct experimental validation. Hence we compare our results with published high-accuracy theoreti-cal predictions [22–24]. These prior theoretical results for TiH bond dissociation energies, Do
+
+> 298
+
+, can be found in Table I, along-side experimental data and our own calculations. In the present study, the ccECP-based CCSDT(Q)/CBS cal-culation yields a BDE of 213.1(2.8)kJ/mol, placing it higher than the stated CRC experimental value, but with very low sta-tistical significance (1 σ) due large uncertainty in the reported experimental estimate. A similar trend is observed in previ-ous high-level coupled-cluster studies: Moltved et al. reported a CCSD(T)/QZ value of 210 .2 kJ/mol, while Aoto et al. ob-tained 215 .7 kJ/mol using icMRCC/CBS (with MR corrections on CCSD(T)/CBS result). Prior AFQMC found a somewhat lower value of 194 .8(3 .8) kJ/mol close to icMRCC without MR correction, which was reported at 200 .2 kJ/mol. Our own cou-pled cluster results largely comport with these prior studies, as we find dissociation energies of 200.4(2.8)and 213.1(2.8) kJ/mol with CCSD(T)/CBS and CCSDT(Q)/CBS, respectively. The NN-VMC results fall in the middle of the other reported the-oretical values, where, infinite training step and zero variance extrapolations provide results within ≈ 2σ of each other, finding a BDE of 202.96(0.42) and 205.53(1.1) kJ/mol. Since these results rely on extrapolation, it is worthwhile to consider the sensitivity to choices in the fitting process. For this purpose, we have examined the consequences of the fitting form used in infinite step extrapolation, where the asymptotic energy is rep-resented by an inverse power law (eq 13). As shown in sup-plementary Figure S11, selecting the decay exponent α over the range [ 0.7 − 2.0] shows robust performance over tested fit-ting windows, with the BDEs falling in a narrow range between 
+
+202 .4(1 .4) and 204 .9(6 .6) kJ/mol. Altogether, the theoretical re-sults provide a unified picture with nearly all methods predicting a bond dissociation energy of ∼ 195(4) or higher. This strongly suggests that the experimental results of 204.6(8.8)(CRC[32]) and 192.7(6.0) (Armentrout[56]) are the most accurate. 
+
+b. NiH: NiH represents the most demanding system con-sidered in this work due to its pronounced near-degeneracies and multireference character [58]. Among the 3d hydrides ex-amined by Moltved et al. [24], NiH was judged to have the largest absolute deviation between CCSD(T) predictions and ex-perimental BDEs, marking it a particularly challenging case for electronic structure theories. The experimental literature values summarized in Table I (more listed in supplementary Table S3) show a large scatter and uncertainties reaching several tens of kJ/mol, complicating direct assessment of theoretical accuracy. Tolbert and Beauchamp [57] determined the NiH bond dissocia-tion energy using ion-beam mass spectrometry. The heterolytic bond energy BDE(Ni +−H−) was obtained by bracketing hy-dride transfer reactions with reference donors of known ther-mochemistry, and the homolytic BDE was subsequently derived through a thermochemical cycle involving the ionization poten-tial of Ni and the electron affinity of H yielding BDE(NiH) = 272(25) kJ/mol. Later, Armentrout and Beauchamp [56] deter-mined the NiH bond dissociation energy using guided ion beam tandem mass spectrometry. By measuring the onset energy of the reaction Ni ++ H2 → NiH ++ H, they obtained the bond energy of NiH +, which was subsequently converted to the neu-tral NiH BDE through a thermochemical cycle involving IP(Ni) and IP(NiH), giving 240(8.0) kJ/mol, matching with the BDE listed in CRC Handbook [32], while an additional higher value of 289(13) kJ/mol appears in Lange’s Handbook [38], though the primary experimental source underlying this compilation entry is not explicitly identified. 10 Due to the large spread in experimental results, we choose to compare theoretical BDEs with the average over experimen-tal values. Theoretical results referenced against the average of 258.4(6.6) kJ/mol are shown in Figure 7. Within theoretical BDEs, we observe a consistent trend among high-level elec-tronic structure methods. Both all-electron and ccECP-based coupled-cluster calculations, including single and multirefer-ence treatments, generally predict larger BDE values than the ex-perimental central estimates. The CBS extrapolated CCSDT(Q) and CCSD(T) values (ours and those of Aoto et al. [22]) fall between ∼275 and 280 kJ/mol. The inclusion of multireference corrections results in an even higher estimate of 290.7 kJ/mol [22]. A separate theoretical approach involving QMC methodol-ogy, is pursued by Shee et al. , where ph-AFQMC, was applied to a set of 44 3d-TM diatomics. In most cases, the BDEs were com-puted from ph-AFQMC/TZ data with a residual CBS correction scaled via CCSD(T). For a select set of diatomics, including NiH, that showed large inconsistencies with experimental data, CBS extrapolation was additionally performed directly within ph-AFQMC (two point TZ-QZ). In the CCSD(T) based extrap-olation case, (ph-AFQMC/CCSD(T)-CBS), the estimated BDE was 270.2(4.6) kJ/mol, aligning closely with coupled cluster. In contrast, the ph-AFQMC/CBS obtained solely with QMC data yielded a lower dissociation energy of 248.2(7.4) kJ/mol. It is in-teresting to note that the methods that aim to more fully account for multireference effects differ by the most among prior theo-ries, with a 42.5(7.4) kJ/mol gap between the ph-AFQMC/CBS and CCSD(T)/CBS+ ∆M R results. Compared to the just discussed theoretical methods, a poten-tial advantage of the NN-VMC approach is that it both intrinsi-cally includes multireference effects and naturally resides in the CBS (continuum) limit. As mentioned III C, we employed 160-determinant Psiformer ansatz on Ni and its hydride to investigate the bond dissociation question. At the final training point ( 10 5
+
+steps), we find a BDE of 268.08(65) kJ/mol. At this point, the energy variance between Ni and NiH were nearly identical–a criterion that is often sought to improve the quality of energy differences. We find a similar result when applying infinite step extrapolation on the training data. The extrapolated result of 271.9(1.3) kJ/mol was further tested for robustness against para-metric assumptions as in the case of TiH. The results from the sensitivity test are present in Figure 4 and discussed in detail in section III B 2, which align closely with CCSD(T)/CBS (ours and Aoto et al. [22] as well as with ph-AFQMC when combined with coupled cluster CBS corrections [23]. Out of the listed CBS extrapolated results in Table I, the icMR corrected CCSD(T) and ph-AFQMC/CBS estimates remain at the higher and lower end of the of theoretical estimates. When considering the comparison between theory and exper-iment, there is no clear possibility to identify one most accurate theory to gauge against one most accurate experiment. We can instead only assess consistency or inconsistency between theory and experiment in broader terms. If we assume that the experi-mental average makes for a reasonable basis of comparison, we find the deviation between the experimental average and indi-vidual theories with a joint uncertainty in the range of 1.0-5.3 σ.Given the variability amongst experiments, and the differences observed between some high-level theories, it is clear that fur-ther work is warranted to fully resolve the challenge posed by NiH.  
+
+> IV. Conclusions
+
+In this work, we assessed the accuracy and limitations of neural-network variational Monte Carlo (NN-VMC) for hydride bond dissociation energies across a sequence of systems ranging from simple main-group molecules (LiH and OH) to transition metal hydrides (TiH and NiH). In order to provide a meaningful assessment, we have taken particular care to both control for and accurately measure sources of systematic errors. And to achieve 
+
+nearly exact total energies via highly-accurate CCSDT(Q)/CBS, we probed and slightly improved the accuracy of some of the previous total energy calculations [40]. Partially due to their high degree of flexibility, neural-network wavefunctions continue to improve over very long training tra-jectories, sometimes leaving unrealized the full quality possible within a given ansatz. For this reason, extrapolation approaches are often employed, in our study we include extrapolation to zero-variance and infinite-training length. While linearity is of-ten assumed in these extrapolations, it is not guaranteed. In the case of zero-variance extrapolation, we have established a more formal basis to explain the approximate linearity empirically ob-served in QMC studies involving neural-network and other high quality wavefunctions. In addition, to control for systematic and statistical uncertainties in these procedures, we have developed robust regression techniques that further allow us to assess the sensitivity of the extrapolations. In all of our assessments, we employ both zero-variance and infinite training extrapolations, with significant agreement while still showing marginal, residual differences between the distinct approaches in more complicated systems with heavier elements. The LiH and OH results provide useful reference cases. For these systems, we find that the end-of-training and extrapolated bond energies are essentially converged. The resulting BDE val-ues are statistically consistent with our high quality CBS extrap-olated ab initio benchmarks such as FCI and CCSDT(Q) and also with published experimental BDEs in CRC Handbook [32]. These systems therefore establish that for moderately correlated hydrides, the Psiformer ansatz in DeepQMC can reach the chem-ically relevant limit with little to no dependence on post-training extrapolation. Notably, the two extrapolation schemes give mu-tually consistent results for these simpler systems, validating the protocols before they are applied to harder cases. The two transition metal hydrides studied here, TiH and NiH, have previously been identified as non-trivial cases when ex-plored through various high-level electronic structure methods. We find that, for Ti and TiH, the default 16-determinant Psi-former wavefunction reaches sub-milli-Hartree agreement with CCSD(T)/CBS by the end of training. Zero-variance and in-finite step extrapolations lower the total energies by a further 1-3 mHa, at which point more than 99.5% of the correlation en-ergy has been recovered when compared with CCSDT(Q)/CBS as shown in Figure 5. The two NN-VMC extrapolation schemes produce BDE ( Do
+
+> 298
+
+), 205.53(1.1) and 202.96(0.42) kJ/mol, re-spectively, which are 2σ apart. These values agree closely with the CRC estimate of 204.6(8.8) kJ/mol. While the BDE obtained from CCSDT(Q)/CBS, 213.1(2.8) kJ/mol, remains close to the upper bound on the experimental estimate. Assuming our very fine scale for the correlation energy re-covery, NiH appears to be significantly different from TiH and it comes as the most stringent benchmark considered here. With the default 16-determinant ansatz, NN-VMC recovers more cor-relation than finite-basis CCSD(T)/5Z, but the extrapolated total energies leave 1-2% of the correlation energy unaccounted for. We show that substantially expanding the Psiformer ansatz to in-clude 10 × the number of determinants systematically improves the wavefunction to capture all but ∼0.5% of the correlation en-ergy even for this challenging highly multireference system (see Figure 6 and supplementary Table S7). We provide a detailed comparison of NiH bond dissociation between the still nascent NN-VMC approach and other high level theories previously ap-plied to this challenging system. The prior theories present an unusual spread among the estimated BDEs. While coupled 11 cluster calculations with complete basis set extrapolation show relatively tight agreement between 275-280 kJ/mol, methodolo-gies aiming to better account for multireference effects produce substantially higher and lower estimates. At these extremes, pure ph-AFQMC/CBS estimates a BDE of 248.2(7.4) kJ/mol while CCSD(T)(CV)/CBS+ ∆M R predicts dissociation to oc-cur at 290.7 kJ/mol. Careful application of the expanded Psi-former ansatz along with infinite-step extrapolation yields re-sults closely in line with coupled cluster, finding a Do
+
+> 298
+
+(NiH) of 271.9(1.3) kJ/mol. While existing experimental data are insufficient to discrim-inate among the theoretical predictions due to lack of agree-ment and high uncertainties, our results establish NN-VMC, in combination with correlation-consistent effective core potentials (ccECP), as quantitatively competitive with the best coupled-cluster and QMC methods for main-group and early transition-metal hydrides. We also note that NN-VMC approaches provide samples of explicitly constructed variational wavefunctions and therefore this allows for direct variational calculations of arbi-trary expectations without any further bias. However, this re-search angle is beyond the scope of the present study and it is left for future explorations. 
+
+Acknowledgments 
+
+This research (A.S., L.M., J.T.K.) was supported by the U.S. Department of Energy, Office of Science, Basic Energy Sci-ences, Materials Sciences and Engineering Division, as part of the Computational Materials Sciences Program and Center for Predictive Simulation of Functional Materials. A portion (P. G. – early conceptualization, discussion, writing) of this research was sponsored by the Laboratory Directed Research and Devel-opment Program of Oak Ridge National Laboratory, managed by UT-Battelle, LLC, for the US Department of Energy. The authors thank Paul R. C. Kent for reading the manuscript and providing helpful suggestions. This research used resources of the National Energy Research Scientific Computing Center (NERSC), a U.S. Department of Energy Office of Science User Facility operated under Contract No. DE-AC02-05CH11231. An award of computer time was provided by the Innovative and Novel Computational Impact on Theory and Experiment (INCITE) program. This research used resources of the Oak Ridge Leadership Computing Facil-ity, which is a DOE Office of Science User Facility supported under Contract No. DE-AC05-00OR22725. 
+
+Conflict of Interest 
+
+The authors have no conflicts to disclose. 
+
+Author Contributions 
+
+A. Shaikh: NN-VMC and coupled cluster calculations (lead), technical development of extrapolation methods (equal), data analysis (equal), writing (equal). L. Mitas: data analysis (equal), writing (equal), mentorship (equal). P. Ganesh: writ-ing (equal), conceptualization (supporting). J.T. Krogel: techni-cal development of extrapolation methods (equal), data analysis (equal), writing (equal), mentorship (equal), conceptualization (lead). 
+
+REFERENCES 
+
+[1] G. Carleo and M. Troyer, Science 355 , 602 (2017). [2] D. Pfau, J. S. Spencer, A. G. D. G. Matthews, and W. M. C. Foulkes, Phys. Rev. Res. 2, 033429 (2020). [3] J. Hermann, Z. Sch¨ atzle, and F. No´ e, Nature Chemistry 12 , 891 (2020). [4] I. von Glehn, J. S. Spencer, and D. Pfau, in The Eleventh Interna-tional Conference on Learning Representations (2023). [5] K. Choo, A. Mezzacapo, and G. Carleo, Nature Communications 
+
+11 , 2368 (2020). [6] M. Scherbela, R. Reisenhofer, L. Gerard, P. Marquetand, and P. Grohs, Nature Computational Science 2, 331 (2022). [7] X. Li, Z. Li, and J. Chen, Nature Communications 13 , 7895 (2022). [8] L. Gerard, M. Scherbela, P. Marquetand, and P. Grohs, in Ad-vances in Neural Information Processing Systems , edited by A. H. Oh, A. Agarwal, D. Belgrave, and K. Cho (2022). [9] X. Li, C. Fan, W. Ren, and J. Chen, Physical Review Research 4,013021 (2022). [10] D. Pfau, S. Axelrod, H. Sutterud, I. von Glehn, and J. S. Spencer, Science 385 , eadn0137 (2024). [11] M. Scherbela, L. Gerard, and P. Grohs, Nature Communications 
+
+15 , 120 (2024). [12] P. B. Szab´ o, Z. Sch¨ atzle, M. Entwistle, and F. No´ e, Journal of Chemical Theory and Computation 20 , 8128 (2024). [13] M. Scherbela, L. Gerard, H. Sutterud, W. M. C. Foulkes, and P. Grohs, Nature Computational Science 5, 1147 (2025). [14] G. Cassella, H. Sutterud, S. Azadi, N. Drummond, D. Pfau, J. S. Spencer, and W. M. C. Foulkes, Physical review letters 130 ,036401 (2023). [15] W. Ren, W. Fu, X. Wu, and J. Chen, Nature Communications 14 ,1860 (2023). [16] J. Kessler, F. Calcavecchia, and T. D. K¨ uhne, Advanced Theory and Simulations 4, 2000269 (2021). [17] D. M. Ceperley, G. V. Chester, and M. H. Kalos, Physical Review B 16 , 3081 (1977). [18] D. M. Ceperley and B. J. Alder, Physical Review Letters 45 , 566 (1980). [19] C. J. Umrigar, K. G. Wilson, and J. W. Wilkins, Physical Review Letters 60 , 1719 (1988). [20] W. M. C. Foulkes, L. Mitas, R. J. Needs, and G. Rajagopal, Re-views of Modern Physics 73 , 33 (2001). [21] R. J. Needs, M. D. Towler, N. D. Drummond, P. L. R´ ıos, and J. R. Trail, The Journal of Chemical Physics 152 , 154106 (2020). [22] Y. A. Aoto, A. P. de Lima Batista, A. K¨ ohn, and A. G. S. de Oliveira-Filho, Journal of Chemical Theory and Computation 
+
+13 , 5291 (2017). [23] J. Shee, B. Rudshteyn, E. J. Arthur, S. Zhang, D. R. Reichman, and R. A. Friesner, Journal of Chemical Theory and Computation 
+
+15 , 2346–2358 (2019). [24] K. A. Moltved and K. P. Kepp, The Journal of Physical Chemistry A 123 , 2888 (2019). [25] W. Fu, W. Ren, and J. Chen, Machine Learning: Science and Tech-nology 5, 015016 (2024). [26] M. Scherbela, N. Gao, P. Grohs, and S. G¨ unnemann, arXiv preprint (2025), arXiv:2504.06087. [27] Pseudopotential library, a community website for pseudopoten-tials/effective core potentials developed for high accuracy cor-related many-body methods such as quantum Monte Carlo and quantum chemistry (last accessed Aug. 03, 2026). [28] J. ˇ C´ ıˇ zek, The Journal of Chemical Physics 45 , 4256 (1966). [29] R. Jastrow, Physical Review 98 , 1479 (1955). [30] T. Kato, Communications on Pure and Applied Mathematics 10 ,151 (1957). [31] K. K. Irikura, Journal of Physical and Chemical Reference Data 
+
+36 , 389 (2007). 12 
+
+[32] L. R. McEwen, ed., CRC Handbook of Chemistry and Physics ,107th ed. (CRC Press, Boca Raton, FL, 2026). [33] B. Ruscic, A. F. Wagner, L. B. Harding, R. L. Asher, D. Feller, D. A. Dixon, K. A. Peterson, Y. Song, X. Qian, C. Y. Ng, J. Liu, and W. Chen, The Journal of Physical Chemistry A 106 , 2727 (2002). [34] A. Kramida, Y. Ralchenko, J. Reader, and N. A. Team, Nist atomic spectra database (ver. 5.12), National Institute of Stan-dards and Technology, Gaithersburg, MD (2024), available online: https://physics.nist.gov/asd (last accessed Aug 03, 2026). [35] M. C. Bennett, C. A. Melton, A. Annaberdiyev, G. Wang, L. Shu-lenburger, and L. Mitas, The Journal of Chemical Physics 147 ,224106 (2017). [36] A. Annaberdiyev, G. Wang, C. A. Melton, M. C. Bennett, L. Shu-lenburger, and L. Mitas, The Journal of Chemical Physics 149 ,134108 (2018). [37] G. Wang, A. Annaberdiyev, C. A. Melton, M. C. Bennett, L. Shu-lenburger, and L. Mitas, The Journal of Chemical Physics 151 ,144110 (2019). [38] J. A. Dean, ed., Lange’s Handbook of Chemistry , 15th ed. (McGraw-Hill, New York, 1999). [39] K. P. Huber and G. Herzberg, Molecular Spectra and Molecular Structure. IV. Constants of Diatomic Molecules (Springer, New York, 1979). [40] A. Annaberdiyev, G. Wang, C. A. Melton, M. C. Bennett, L. Shu-lenburger, and L. Mitas, The Journal of Chemical Physics 149 ,134108 (2018). [41] H. J. Werner, P. J. Knowles, G. Knizia, F. R. Manby, and M. Schutz, Molpro, version 2019.1, a package of ab initio pro-grams (2019), (last accessed Aug. 03, 2026). [42] M. Kallay, P. R. Nagy, Z. Rolik, D. Mester, G. Samu, J. Csontos, J. Csoka, B. P. Szabo, L. Gyevi-Nagy, I. Ladjanszki, L. Szegedy, B. Ladoczki, K. Petrov, M. Farkas, P. D. Mezei, , and B. Hegely, Mrcc, a quantum chemical program suite. [43] A. J. C. Varandas, Phys. Scr. 76 , C28 (2007). [44] A. Shaikh, O. Madany, B. Kincaid, and L. Mitas, Journal of Chem-ical Theory and Computation 22 , 4716 (2026). [45] Z. Sch¨ atzle, P. B. Szab´ o, M. Mezera, J. Hermann, and F. No´ e, The Journal of Chemical Physics 159 , 094108 (2023). [46] J. Bradbury, R. Frostig, P. Hawkins, M. J. Johnson, C. Leary, D. Maclaurin, G. Necula, A. Paszke, J. Vander-Plas, S. Wanderman-Milne, and Q. Zhang, GitHub repository (2018), https://github.com/jax-ml/jax .[47] J. Martens and R. Grosse, in Proceedings of the 32nd International Conference on Machine Learning , Proceedings of Machine Learn-ing Research, Vol. 37, edited by F. Bach and D. Blei (PMLR, Lille, France, 2015) pp. 2408–2417. [48] QMCPACK user’s guide and developer’s manual, section “Judg-ing wavefunction optimization,” (last accessed Aug. 15, 2026. [49] A. Ghaffar, S. Zhang, L. F. Wan, K. Saritas, F. A. Reboredo, and J. T. Krogel, Journal of Chemical Theory and Computation 22 ,4346 (2026). [50] L. Mit´ aˇ s, E. L. Shirley, and D. M. Ceperley, The Journal of Chem-ical Physics 95 , 3467 (1991). [51] Y. Kwon, D. M. Ceperley, and R. M. Martin, Physical Review B 
+
+48 , 12037 (1993). [52] L. Mit´ aˇ s, in Computer Simulation Studies in Condensed-Matter Physics V , edited by D. P. Landau, K. K. Mon, and H.-B. Sch¨ uttler (Springer Berlin Heidelberg, Berlin, Heidelberg, 1993) pp. 94– 105. [53] H. Theil, Proceedings of the Koninklijke Nederlandse Akademie van Wetenschappen 53 , 386 (1950). [54] P. K. Sen, Journal of the American Statistical Association 63 , 1379 (1968). [55] M. A. Fischler and R. C. Bolles, Communications of the ACM 24 ,381 (1981). [56] P. B. Armentrout and B. L. Kickel, Gas-phase thermochemistry of transition metal ligand systems: reassessment of values and pe-riodic trends, in Organometallic Ion Chemistry , edited by B. S. Freiser (Springer Netherlands, Dordrecht, 1996) pp. 1–45. [57] M. A. Tolbert and J. L. Beauchamp, The Journal of Physical Chemistry 90 , 5015 (2002). [58] W. Jiang, N. J. DeYonker, and A. K. Wilson, Journal of Chemical Theory and Computation 8, 460 (2012).

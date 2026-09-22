@@ -1,0 +1,511 @@
+Title: ECENet: An Edge Cluster Expansion Line-Graph Neural Network
+
+URL Source: https://arxiv.org/pdf/2609.23134v1
+
+Published Time: Tue, 22 Sep 2026 01:19:50 GMT
+
+Number of Pages: 24
+
+Markdown Content:
+# ECENet: An Edge Cluster Expansion Line-Graph Neural Network 
+
+R. Allen LaCour* 1,2, Teresa Head-Gordon* 1,2,31Kenneth S. Pitzer Theory Center and Department of Chemistry 
+
+> 2
+
+Chemical Sciences Division, Lawrence Berkeley National Laboratory 
+
+> 3
+
+Departments of Bioengineering and Chemical and Biomolecular Engineering University of California, Berkeley, CA, 94720 USA corresponding authors: alacour@berkeley.edu, thg@berkeley.edu 
+
+Abstract 
+
+Machine-learned interatomic potentials (MLIPs) have emerged as a promising alternative to classical force fields and first-principles theory for predicting the properties of chemical and material systems. Many MLIPs are graph neural networks with O(3)-equivariant features, whose accuracy comes at substantial computational cost. Here we introduce the edge cluster expansion (ECE), an analogue of the atomic cluster expansion in which the environment is expanded around edges between atom pairs rather than single atoms, and build upon it to develop the line-graph neural network ECENet. ECENet uses O(2)-equivariant features that persist on the edges between atoms, giving it natural access to O(2) operations that are cheaper and less restrictive than their O(3) counterparts. ECENet performs at the state of the art on the MD22 benchmark and lies on the accuracy–cost Pareto frontier when trained on the SPICE-MACE-OFF dataset. Furthermore, with long-range electrostatics implemented via latent Ewald summation, ECENet accurately predicts molecular dipole moments and the infrared spectrum of liquid water. The frontier ECENet architecture establishes equivariant edge-centered representations as an efficient and physically expressive foundation for equivariant MLIPs. 
+
+1arXiv:2609.23134v1 [physics.chem-ph] 19 Sep 2026 1 Introduction 
+
+Molecular dynamics (MD) is a central technique for studying the equilibrium and dynamic behavior of chemical and material systems. Key to its efficacy is an accurate model for interatomic energies and forces whose computational expense is low enough to allow for converged sampling. The most common approaches are to compute energies and forces with expensive ab initio methods such as density functional theory (DFT) 1–4 , which limits MD to short simulations of small systems, or with inexpensive classical force fields (FFs) 5–9 , whose fixed functional forms are less accurate but enable simulations over longer timescales and larger length scales. 10 
+
+Machine-learned interatomic potentials (MLIPs) have recently emerged 11–14 as an attractive alternative to both ab initio and FF potential energy surfaces. Like FFs, MLIPs are parametrized functions of the atomic positions, but their functional forms are flexible enough to reproduce ab initio energies and forces to near-chemical accuracy at a small fraction of the cost. Most MLIPs are graph neural networks in which each atom carries a feature vector that is updated by message passing with its neighbors 15,16 . Alternatively, an MLIP can be built on the line graph, in which the edges of the atomic graph carry the features and pass messages through the nodes 17–19 . The features may be invariant under rotations of the system 20,21 , such as distances and angles, or equivariant under them 16,22–25 , such as displacement vectors and higher-order spherical harmonics. Equivariant models currently lead most MLIP accuracy benchmarks 22,23,26 , but they are usually considerably slower than their invariant counterparts. Two factors constrain the utility of MLIPs in scientific applications. First, because MLIPs encode few physical priors, they require large amounts of training data and may behave unphysically outside it. The recent publication of increasingly large and diverse high-quality datasets 27–29 has lessened this problem and has led to robust “universal” models 30–33 that can simulate systems of broad elemental and configurational diversity. Nonetheless, discrepancies between the predictions of these models and experiment, such as liquid densities 34 , point to the need both for more high-quality data and for more physically motivated model components, such as explicit long-range electrostatics, that generalize beyond the training input. The second constraining factor is their computational efficiency. Although far faster than ab initio 
+
+MD, MLIPs remain slow relative to classical force fields. The slow simulation speed of MLIPs stems from the same expressive functional forms with many adjustable weights that make them accurate. Furthermore, maintaining equivariance throughout the network permits only a limited set of operations, such as equivariant linear maps and gated nonlinearities, and the Clebsch–Gordan tensor product at the heart of most equivariant networks scales steeply with the degree of angular momentum coupling. 22,35 
+
+Hence, a current frontier in MLIP development is to formulate architectures that retain equivariance at lower computational cost. One widely adopted approach, introduced in eSCN 35 and since used in various forms by other architectures 26,29,36–38 , exploits the SO(2) symmetry about each graph edge by rotating features into an edge-aligned frame, where the SO(3) tensor product reduces to cheaper SO(2) operations. Even so, these models exploit SO(2) operations only transiently during message passing, and otherwise maintain SO(3)-equivariant atomic features with the associated expense. Here we introduce ECENet, an equivariant line-graph neural network built on the edge cluster expansion (ECE). Instead of maintaining atomic features, ECENet maintains persistent features only in the edge frame, which are O(2)-equivariant by construction. The total number of features therefore scales with the number of edges rather than the number of atoms, increasing expressivity, while computational expense is limited by the use of efficient and expressive O(2) operations throughout the network. In what follows, we first discuss the ECE formalism and then its incorporation into the ECENet line-graph architecture. We show that ECENet trained from scratch matches the best current model on the MD22 benchmark, and that ECENet models trained on the SPICE-MACE-OFF dataset lie on the accuracy–efficiency Pareto frontier alongside the strongest current model on that dataset, DPA4 37 . Next, we show that including long-range electrostatics via the latent Ewald summation (LES) approach, as introduced by Cheng 39 ,2enables ECENet to predict molecular dipole moments and the infrared spectrum of liquid water without ever being trained on electrostatic multipoles. These results establish equivariant line-graph networks as a physically expressive route to MLIPs with frontier-level accuracy and efficiency. 
+
+# 2 Model 
+
+2.1 The edge cluster expansion and ECENet 
+
+ECE’s core idea of exploiting O(2) symmetry in the edge frame was introduced in passing by Dusson et al. 40 under the name “bond cluster expansion” in their study of the atomic cluster expansion (ACE) 21 .Later, Zitnick and co-workers 35 showed that the SO(2) symmetry of an edge-aligned frame can be used to accelerate the Clebsch–Gordan tensor product at the heart of most equivariant message-passing MLIPs, and subsequent work found further uses for operations unique to SO(2) 26,37 , with Xu et al. 38 describing their construction as an “edge cluster expansion” (ECE). We also develop our model within the ECE framework but take a different approach: rather than using the edge frame only to evaluate messages between atoms, we make O(2)-equivariant edge features the primary and persistent representation of the network. ECE is analogous to ACE 21 in that the environment is expanded in a body-ordered basis but is distinguished by the expansion being centered on an edge between a pair of atoms rather than on a single atom. In ACE, the basis is built from spherical harmonics so that it transforms according to irreducible representations of O(3). Fixing an edge direction reduces this symmetry to the subgroup that leaves the axis invariant, O(2), which encompasses rotations about the edge axis and reflections in planes containing it. The ECE basis is accordingly built from circular harmonics. Because circular harmonics account for only one angular degree of freedom, two further coordinates are needed to specify a neighbor’s position, compared with the single radial coordinate of ACE. One natural choice is the cylindrical pair: the signed distance along the edge, z, and the distance from the edge axis, ρ (Figure 1a). Alternatively, an edge basis can be formed by concatenating atom-centered bases of the ACE type evaluated at each endpoint atom (Figure 1b), as described below. The total number of features in ECE scales as N d , where N is the number of atoms and d is the average number of neighbors per atom. This scaling is greater than ACE’s N , and thus ECE may be more expressive than ACE at the same number of parameters. On the other hand, each edge basis depends on the ∼ d atoms in its environment, and therefore naively computing the ECE features requires O(N d 2)
+
+basis-function evaluations, compared with O(N d ) in ACE. However, using a concatenation of ACE-type basis functions reduces the complexity. When the polar axis of the spherical harmonics is aligned with the edge, the azimuthal factor of Yℓm reduces to a circular harmonic of frequency m, independent of ℓ. This alignment can be performed exactly by rotation with Wigner D-matrices; one can thus compute N atomic bases in a global frame, as in ACE, and obtain the N d edge bases by rotating each atomic base into the frame of each of its d edges. Since applying a Wigner D-matrix is inexpensive relative to evaluating basis functions, the cost of computing ECE’s basis functions is on the order of N d rather than N d 2.In linear ACE, an MLIP is constructed from symmetrized products of the atomic base, contracted into invariants. An analogous linear ECE model can be built from the ECE basis in a manner that highlights the benefit of the O(2) structure of its features. When the tensor product is taken between two irreps of 
+
+O(2) of frequencies a and b, the result decomposes into only two irreps, of frequencies |a − b| and a + b,and the mixing is trivial (diagonal in the complex basis, since eiaφ eibφ = ei(a+b)φ). In contrast, the tensor product of O(3) irreps of degrees ℓ = a and ℓ = b decomposes into irreps of every degree from |a − b|
+
+to a + b, each appearing exactly once, with mixing given by Clebsch–Gordan coefficients. Symmetrized products in ECE therefore reduce to addition and subtraction of frequencies, with no Clebsch–Gordan coupling at all. Rather than being linear models, most recent MLIPs, including MACE 23 , DPA4 37 , and UMA 29 ,3incorporate an ACE-like atomic basis into a graph neural network. Message passing between atoms propagates information beyond the local cutoff and composes features nonlinearly across layers. As mentioned previously, models of this type currently lead most benchmarks. With ECENet, we instead incorporate the O(2)-equivariant edge features of ECE into a line-graph neural network, in which the edges of the atomic graph carry the features and pass messages through the atoms. As described below, this allows the O(3)-equivariant operations of atom-centered networks to be replaced by O(2)-equivariant analogues that are cheaper and, in several respects, more expressive. The overall model is illustrated in Figure 1c. Below, we deconstruct the operations of ECENet in more detail. xi, z i   
+
+> Edge basis construction Equivariant FiLM injection
+> length + endpoint elements rij , z i, z j
+> Equivariant block Message passing Equivariant block (final stage) Edgewise read-out
+> Eij
+> edgewise energies
+> qij , μ ij
+> Electrostatics (LES)
+> ELR
+> electrostatic energy
+> ×NMP
+
+(c) Aij          
+
+> O(2) linear
+> width 2c(ℓmax + 1) →c′
+> DFT (SiLU(IDFT( ·)) )
+> O(2) linear
+> width c′→2c(ℓmax + 1)
+> +
+> fe(Aij )
+
+(d)              
+
+> Aij m=0 (invariant channels) MLP MLP LES
+> ·f(rij )·f(rij )
+> Eij (qij , μ ij )
+> f: radial basis with cutoff envelope
+
+(f)                             
+
+> Aij, n
+> Message block fmsg
+> e
+> equivariant block, also outputs scores
+> Mij sij hℓ =[·]
+> m=0
+> Dℓ(ˆ rij )⊤(ℓ-labelled channels)
+> rotate to global frame
+> Mjh=∑
+> i∈N (j)sij hℓ Mij hfcut (rij )
+> gated sum at atom j
+> Dℓ(ˆ rjk ):Mj→Mj→jk
+> rotate into frame of edge jk
+> Receiving block frcv
+> e
+> equivariant block
+> +Ajk, n
+> Ajk, n +1
+
+(e) 
+
+> ˆrij
+> ρzij
+
+(a)  
+
+> ˆrij
+> rθϕij
+
+(b) 
+
+Figure 1: The ECENet equivariant line-graph model with O(2) edge embeddings . The ECE basis is built from circular harmonics using either (a) the cylindrical pair or (b) a concatenation of atom-centered bases. (c) Schematic of the entire ECENet architecture. (d) The equivariant block, (e) the message-passing block, and (f) the edgewise readout with LES 39 for long-range electrostatics. 
+
+2.2 Edge Construction 
+
+To construct the initial edge features, we first build an atomic base Ai for each atom, as in ACE. The one-particle basis functions are products of radial functions Rn, here sinc functions multiplied by a smooth cutoff envelope, and real spherical harmonics up to degree ℓmax , evaluated in a global frame: 
+
+Aienℓm = X
+
+j∈N (i)
+
+ej =e
+
+Rn(rij ) Yℓm (ˆ rij ), (1) where n indexes the radial basis, e the element of the neighbor, and N (i) the neighbors of atom i within the cutoff radius rc. We then contract the radial and element indices with learned weights, specific to the 4element zi of the central atom, to form c channels per (ℓ, m ):
+
+Aicℓm = Wzi, cen Aienℓm . (2) We form edge features for each ordered pair of atoms (i, j ) within the same cutoff radius rc by rotating both atomic bases into a common frame whose polar axis is aligned with the edge and then concatenating them: 
+
+Aij cℓm =
+
+h
+
+Dℓ(ˆ rij ) Aicℓm , D ℓ(ˆ rij ) Ajcℓm 
+
+i
+
+, (3) where Dℓ(ˆ rij ) denotes the Wigner D-matrix of the rotation taking the global z-axis to the edge direction 
+
+ˆrij . We use directed edges because they handle the exchange of endpoints naturally, and thus each pair of atoms yields two directed edges, Aij and Aji (the latter using ˆrji = −ˆrij ). In the edge frame, the residual symmetry is O(2), which corresponds to all rotations about the edge axis and reflections through planes containing it. Under O(2), features transform only according to their azimuthal frequency m, with the degree ℓ acting as an ordinary channel index rather than a symmetry label. We retain frequencies 
+
+|m| ≤ mmax , where mmax ≤ ℓmax . The values of mmax and ℓmax are both hyperparameters important for the cost and accuracy of the network. We further exploit the demotion of ℓ by rectangularizing the feature grid: each frequency block, which natively contains 2c(ℓmax − | m| + 1) components, is padded to a uniform width of 2c(ℓmax + 1) channels, initialized to zero and populated by the first equivariant block. Because the added channels carry the same frequency m as their block, equivariance is preserved, and the uniform block size allows all frequencies to be processed with identical batched operations. After forming the edge basis, we inject edge length and endpoint element information into Aij using feature-wise linear modulation (FiLM) 41 . Each channel is multiplied by a learned scaling factor, with identical factors applied to the +m and −m channels, and the m = 0 channels additionally receive a learned shift; because scaling commutes with rotations about the edge axis and shifts affect only the invariant frequency, this modulation preserves O(2) equivariance. The scaling and shift factors are produced by a small multilayer perceptron applied to the concatenation of learned element embeddings for atoms i and j
+
+and a radial-basis expansion of the edge length rij . Since the edges are directed, the ordered concatenation of the two element embeddings makes the modulation sensitive to edge orientation. Although the atomic bases already encode radial and element information, they aggregate over all neighbors of each endpoint and therefore contain nothing that singles out the edge itself; the FiLM layer supplies this missing information, conditioning the edge features on their own length and endpoint elements. 
+
+2.3 Equivariant Block 
+
+After the FiLM injection, we apply an O(2) -equivariant block (Figure 1d), consisting of a nonlinearity ˜σ
+
+between two O(2) -equivariant linear layers with a skip connection: 
+
+fe(Aij ) = Aij + W O(2) 2 ˜σ
+
+
+
+W O(2) 1 Aij 
+
+, (4) where W O(2) 1 expands (or contracts) the channel dimension, ˜σ acts at the altered width, and W O(2) 2 restores the original width so that the skip connection is well defined. An O(2)-equivariant linear layer can mix freely across channels and across ℓ at fixed |m|, provided the +m and −m components receive the same real weight block (a complex weight would be SO(2)-equivariant but not invariant under the reflections of O(2)), and it may carry a bias on the invariant m = 0 components only. By contrast, an O(3) -equivariant linear layer cannot mix across ℓ, and all 2ℓ + 1 components of m at a given ℓ must share a single weight, making it considerably more restrictive than its O(2) counterpart. For the nonlinearity ˜σ, we use a Fourier pointwise activation as an alternative to explicit tensor products. The frequency-space features are transformed to values on a uniform grid of N points over the azimuthal 5angle, a pointwise nonlinearity is applied on the grid, and the result is transformed back: 
+
+˜σ(Aij ) = DFT  SiLU  IDFT( Aij ) , (5) where the transforms act over the azimuthal angle independently for each channel. A pointwise activation commutes with both a cyclic shift and a reversal of the grid, so the output transforms exactly as the input does. The equivariance is exact up to aliasing; here, we always use mmax = 2 with at least 10 grid points, twice the minimum of 2mmax + 1 points needed to represent the input. On the grid, pointwise powers of the features correspond to repeated convolutions in frequency space, so the activation implicitly forms products of many orders, filling the role played by explicit tensor products in linear ECE, at the cost of two linear transforms and a pointwise operation. Analogous grid activations are used in O(3)-equivariant models 35,36,42,43 , but they require quadrature over the sphere, whereas in the edge frame a one-dimensional transform over the circle suffices. 
+
+2.4 Message Passing 
+
+Messages are passed edge-to-edge through shared endpoint atoms: each edge emits a message, incoming messages are aggregated at each atom, and the aggregate is redistributed to the edges leaving that atom (Figure 1e). This is message passing on the line graph of the atomic graph, whose nodes are the directed atomic edges and whose edges connect atomic edges that share an atom; the atoms themselves serve only as aggregation sites. Rather than conditioning messages on an explicit function of bond length and endpoint elements, we produce each message by applying a dedicated equivariant block of the form of equation 4 to the edge features: 
+
+M ij = f msg  
+
+> e
+
+(Aij ), (6) so that M ij has the same shape as Aij . The output layer of this block additionally emits H(ℓmax + 1) 
+
+channels beyond the feature width, and the invariant ( m = 0 ) component of each provides a scalar score 
+
+sij hℓ for gating head h and degree ℓ. Using the Wigner D-matrices computed during edge construction, each message is rotated from its edge frame back into the global frame, where messages from different edges transform consistently and can be summed equivariantly. Because transport between frames acts through the Dℓ-matrices, only components carrying a definite degree ℓ can be rotated: the ℓ-labeled (triangular) subset of M ij is transported, while the padded channels remain in the edge frame and participate only through the per-edge blocks. The transported message is subdivided along the channel axis into H blocks 
+
+M ij h , one per head, and the aggregate at atom j is 
+
+M jh,ℓm = X 
+
+> i∈N (j)
+
+sij hℓ M ij h,ℓm fcut (rij ), (7) where fcut is the same smooth cutoff function used in the radial basis, ensuring continuity as atoms enter and leave the neighborhood. The aggregate is then distributed to each edge jk leaving atom j: it is rotated into that edge’s frame, denoted M j→jk , passed through a receiving equivariant block of the form of equation 4, and added residually to the edge features: 
+
+Ajk, n +1 = Ajk, n + f rcv 
+
+> e
+
+
+
+M j→jk 
+
+, (8) where n indexes the message-passing layer. No exclusion is applied to the reversed edge: the aggregate at atom j includes the message from edge kj and is distributed to edge jk , so each directed edge also receives, through the shared atom, information from its own reverse. The full network consists of stages of per-edge equivariant blocks separated by message-passing layers. Our use of O(3)-structured features in the global frame during aggregation on the atoms and O(2)-structured features in the edge frame parallels recent models that reduce SO(3) convolutions to SO(2) operations in an edge-aligned frame 26,29,35–37 . Our approach is distinguished by the persistence of the edge features across layers: atoms serve only as transient aggregation sites, and no atomic features are maintained between layers. 62.5 Readout 
+
+The total energy is a sum of per-atom and per-edge contributions. The per-atom terms E0(zi), which depend only on the element zi, are computed by linear regression of total configuration energies against element counts and fine-tuned during training. The per-edge contribution is computed from the edge features after the final stage: the invariant ( m = 0 ) channels are passed through an MLP, and the result is contracted with a vector of radial basis functions of the edge length: 
+
+Eij = MLP 
+
+
+
+Aij m=0 
+
+
+
+· f (rij ). (9) As before, the radial basis carries the smooth cutoff envelope, so that Eij and its first derivative vanish continuously as rij approaches the cutoff. The total non-LES energy is 
+
+ESR = X
+
+> (i,j )
+
+Eij + X
+
+> i
+
+E0(zi), (10) where the first sum runs over directed edges. Forces are obtained as the negative gradient of the total energy with respect to atomic positions, computed by automatic differentiation, and are therefore conservative by construction. 
+
+2.6 Latent Charges and Dipoles 
+
+We incorporate long-range electrostatics using the LES approach 39,44 , as shown in Figure 1f. We use an expression analogous to equation 9:. 
+
+(qij , μ ij ) = MLP LES 
+
+
+
+Aij m=0 
+
+
+
+· f (rij ), (11) where the MLP output supplies one coefficient vector per predicted quantity, and the cutoff envelope in f
+
+ensures both quantities vanish smoothly at the cutoff. LES operates on per-atom charges and dipoles, so we aggregate over incoming edges, 
+
+qj = X 
+
+> i∈N (j)
+
+qij , μj = X 
+
+> i∈N (j)
+
+μij ˆrij , (12) where ˆrij is the unit vector pointing from atom i to atom j. In the case of the dipole, multiplication by ˆrij 
+
+promotes the scalar μij to a vector with the correct rotational symmetry. The long-range energy ELR is then evaluated from the latent charges and dipoles using the smeared charge–charge, charge–dipole, and dipole–dipole interactions of references 39 and 45, and the total energy is E = ESR + ELR .
+
+# 3 Results 
+
+3.1 Interaction Range 
+
+Before applying ECENet to benchmark datasets, we first examined how the model captures interactions beyond the range of a single edge. Specifically, we varied three hyperparameters that control the interaction range: the cutoff radius, which determines both the edges and the neighborhoods entering the atomic bases; the number of message-passing (MP) layers; and the presence of long-range electrostatics via LES. We were particularly interested in message passing, since there is little precedent for equivariant message passing from edge to edge: Allegro 19 deliberately omits it, and the edge-to-edge messages of other line-graph models are invariant. We examined four systems in which long-range effects are expected to be relevant for various reasons: liquid water 46 , Au 2 on Al-doped MgO 47 , and the AT-AT and buckyball catcher complexes from the MD22 benchmark 48 . Figure 2 reports the force MAE for each system as a function of these choices. 7Figure 2: Examining ECENet performance with interaction range . We examine the performance on (a) Au 2 on MgO, (b) liquid water, (c) an AT-AT molecular complex, and (d) a buckyball catcher. For the Au 2 on MgO and water systems, we examine how the force MAE varies with the cutoff, the presence of MP layers, and the addition of long-range interactions with LES. For the AT-AT and buckyball catcher systems, we examine the same factors but limit our cutoffs to 5 Å and 6 Å while exploring more MP layers. 
+
+Our results for Au 2 on MgO and liquid water are shown in Figures 2a and 2b, respectively. Long-range electrostatics are important in both systems: in water because of its large molecular dipole, and in Au 2/MgO because adsorption behavior is governed by long-range charge transfer between the gold dimer and the Al-doped substrate. Consistent with this expectation, at short cutoffs (3–4 Å) adding a MP layer and adding LES both lower the force MAE, with LES having the larger effect. Increasing the cutoff from 3 Å to 4 Å also sharply reduces the error, while further increases to 5 Å or 6 Å yield diminishing returns. At the longest cutoff examined (6 Å), the additional benefit of MP layers or LES is less than at shorter cutoffs. This saturation is expected because the simulation cells are only ∼12 Å across, so a 6 Å cutoff already places most of the cell within each edge’s receptive field, leaving little for message passing or LES to contribute. Our results for the AT-AT and buckyball catcher systems are shown in Figures 2c and 2d, respectively. These systems are large isolated molecules whose spatial extent exceeds the cutoff, so interactions exist between atom pairs that no single edge environment contains, and dispersion is expected to be the dominant long-range interaction (especially for the buckyball catcher). To probe ECENet’s ability to capture these longer-range interactions, we examined only cutoffs of 5 Å and 6 Å and vary the number of MP layers and the presence of LES. For 0 or 1 MP layers, LES substantially lowers the force MAE, but its effect is 8weaker than adding an MP layer, and for the buckyball catcher—composed only of C and H, with weak electrostatics—LES becomes neutral or slightly detrimental once two or more MP layers are present. The force MAE does consistently drop when going from a cutoff of 5 Å to 6 Å, but again the drop is smaller than that from adding an MP layer. The benefit of additional MP layers is not completely saturated by 3 layers, but the gain for each additional layer is reduced, indicating sufficient range to capture most interatomic interactions. For reference, we indicate the force MAE of GotenNet, the previous top performer on these MD22 systems. ECENet nearly matches GotenNet on AT-AT and substantially surpasses it on the buckyball catcher. 
+
+3.2 Comparative Performance on the MD22 Dataset 
+
+We next trained ECENet from scratch on each system in the MD22 dataset 48 , which consists of molecules and molecular complexes of 42–370 atoms, and compared our results to other MLIP architectures trained previously on the same benchmark. Each ECENet model used two MP layers, a 6 Å cutoff, and 1.1M parameters. We used the standard training-set sizes found in reference 48; complete training details are given in the Methods. Table 1 compares energy and force MAEs against other top-performing models. 
+
+Table 1: Comparative performance on the MD22 dataset among different MLIP architectures. The units of energy (E) and forces (F) are kcal/mol and kcal/mol/Å, respectively, and E is per atom. The best results for each category is shown in bold. GotenNet B 49 and ECENet are the best-performing MLIPs, although the ECENet model contains far fewer parameters.                                                                                                                                                                       
+
+> Model Allegro 19,50 MACE 51 Equiformer 24,50 ViSNet 50,52 QuinNet 53 E-LSRM 50 V-LSRM 50 ESCAIP 54 GotenNet B49 ECENet Parameter Count 15M 3.8M ∗3.0M 2.2M 8.8M ∗3.0M 1.7M 15.0M >9.2M ∗1.1M Tetrapeptide (42) E0.1019 0.0620 0.0828 0.0796 0.0840 0.0780 0.0654 0.0589 0.0505 0.0438
+> F0.1068 0.0876 0.0804 0.0972 0.0681 0.0887 0.0902 0.0719 0.0567 0.0514
+> DHA (56) E0.1153 0.1317 0.1788 0.1526 0.1200 0.0878 0.0873 0.0640 0.0575 0.0497
+> F0.0732 0.0646 0.0506 0.0668 0.0515 0.0534 0.0598 0.0496 0.0421 0.0333
+> Stachyose (87) E0.2485 0.1244 0.1404 0.1283 0.2300 0.1252 0.1055 0.0751 0.0673 0.0621
+> F0.0971 0.0876 0.0635 0.0869 0.0543 0.0632 0.0767 0.0512 0.0427 0.0441 AT-AT (60) E0.1428 0.1093 0.1309 0.1688 0.1400 0.1007 0.0772 0.0640 0.0544 0.0600 F0.0952 0.0992 0.0960 0.1070 0.0687 0.0881 0.0781 0.0632 0.0478 0.0529 AT-AT-CG-CG (118) E0.3933 0.1578 0.1510 0.1995 0.3800 0.1335 0.1135 0.0964 0.0923 0.0908
+> F0.1280 0.1153 0.1252 0.1563 0.1273 0.1065 0.1063 0.0824 0.0744 0.0485
+> Buckyball catcher (148) E0.5258 0.481 0.3978 0.4421 0.5624 –0.4220 0.3432 0.3032 0.2982
+> F0.0887 0.085 0.1114 0.1335 0.1091 –0.1026 0.0838 0.0789 0.0587
+> Double-walled nanotube (370) E2.2097 1.655 1.1945 1.0339 1.8130 –1.8230 0.9993 0.6641 0.8491 F0.3428 0.277 0.2747 0.3959 0.2473 –0.3391 0.2464 0.1888 0.2104
+> ∗
+
+Parameter counts not reported by the original authors; instead estimated from reported hyperparameters. The reported 9.2M for GotenNet is a lower bound, as the models trained for MD22 were larger than those trained for QM9. 
+
+GotenNet and ECENet emerge as the two best-performing models, splitting the top position across the seven systems. No obvious system property predicts which model wins: ECENet performs best on the second-largest system (the buckyball catcher), while GotenNet performs best on the largest system, the double-walled nanotube. Notably, the ECENet models are smaller than the other reported architectures, including GotenNet (1.1M vs. >9.2M parameters). We attribute this parameter efficiency to the edge-based representation: with 2d directed edges per atom, ECENet maintains roughly 2d times as many feature vectors as a node-based model of equal width. The parameters acting on them are shared across all edges, so representational state grows without a corresponding growth in parameters. 
+
+3.3 Comparative Performance on the SPICE-MACE-OFF Dataset 
+
+We next evaluated ECENet on the SPICE-MACE-OFF dataset 55,56 , the subset of SPICE used to train the original MACE-OFF models. It contains molecules and molecular complexes (dimers, solvated amino acids, and water clusters) spanning ten elements (H, C, N, O, F, P, S, Cl, Br, I), and models trained on it transfer 9to organic molecules outside the training set 56 , making it a standard benchmark for general-purpose organic MLIPs. We trained a smaller model, ECENet-1.7M, with one MP layer, and a larger model, ECENet-4.8M, with three MP layers (see Methods), and evaluated both on the standard per-category test set.  
+
+> Figure 3: Performance on the standard SPICE-MACE-OFF test set. Comparison among current state-of-the-art MLIPs for (a) the force MAE and (b) the energy MAE per atom; see Supplementary Table S1 for the numerical values. On most splits, the larger ECENet model performs similarly to the current top performer on the dataset, DPA4, while the smaller ECENet model performs similarly to the other smaller models.
+
+Figure 3 reports their energy and force MAEs alongside models trained on the same data; see Supple-mentary Table S2 for tabular results. The other models shown are MACE-4.7M 56 , from the original model family; MACELES-1.9M 57 , which augmented MACE with LES; and eSEN 26 , DPA4 37 and AllScAIP 58 ,which represent the current state of the art. We denote each variant by its number of parameters. Un-surprisingly, the recent models all outperform the MACE-4.7M baseline. ECENet-4.8M obtains excellent results on the dataset, having the lowest force MAE in four of seven categories and the lowest energy MAE in five of seven categories. Relative to DPA4-8.8M, previously the most accurate model, ECENet-4.8M is 10 essentially tied in geometric-mean force MAE (1.65 vs. 1.64 meV/Å) and lower in energy (0.076 vs. 0.085 meV/atom), with 55 % of the parameters. It has a lower force MAE than eSEN-6.5M in every category and than AllScAIP-34M in six of seven. At the small end, ECENet-1.7M has lower geometric-mean energy and force errors than both eSEN-3.2M and DPA4-1.1M, the models closest to it in size. However, comparing test-set accuracy alone can be misleading because more accurate models are generally slower. For MD, accuracy at a given simulation throughput is more relevant than accuracy alone, since throughput determines which model can affordably be run in production. In Figure 4 we therefore plot the geometric-mean force and energy MAEs from Figure 3 against the throughput of each model in NVE simulations of two model systems, ice I h and liquid methanol, measured on the same GPU with the same integrator and time step (see Methods). eSEN and AllScAIP are absent because their SPICE-trained checkpoints have not been released; the remaining models were timed with their publicly available weights and each code’s recommended inference settings for efficiency, including the use of TF32 matrix multiplication.  
+
+> Figure 4: Pareto accuracy–efficiency frontier for MLIPs trained on the SPICE-MACE-OFF dataset. We show the geometric mean of the per-split force MAE on the test set against each model’s simulation throughput on (a) ice Ih and (b) liquid methanol. We do the same for the energy MAE per atom, again with (c) ice-Ih and (d) liquid methanol. The size of each marker is proportional to the number of parameters in the model; in general, accuracy increases but simulation efficiency decreases as the models grow larger.
+
+We find that both ECENet models and all three DPA4 models are simultaneously faster and several times more accurate than MACE-4.7M and MACELES-1.9M, and thus the accuracy–efficiency frontier is defined jointly by ECENet and DPA4. ECENet-4.8M and DPA4-8.8M occupy essentially the same point, matching each other in both throughput and error, while ECENet-1.7M sits between DPA4-1.1M and DPA4-5.1M in both speed and accuracy. ECENet reaches this frontier with a small set of custom Triton 59 
+
+kernels for its edge-frame rotations and nonlinearities, with the remainder of the network running as unfused PyTorch 60 operations. Timings and accuracy values in tabular form are provided in Supplementary Table 11 S3. 
+
+3.4 Dipole Prediction and IR Spectrum 
+
+Incorporating LES 39 gives ECENet latent atomic charges and bond dipoles, and hence molecular dipole moments, even though the model is trained only on energies and forces and never on charges or dipoles. These charges are not guaranteed to be physical: the latent charges are free to take any values that lower the energy and force loss, and they will resemble the true charge distribution only if that is the most effective way to reproduce the long-range interactions 39,57 . Of the models in Figure 3, only MACELES-1.9M, which also uses LES, produces charges at all. Figure 5a compares the molecular dipoles predicted by ECENet-4.8M with DFT reference values for the SPICE test subsets of Kim et al. 57 , grouped by category.      
+
+> Figure 5: Dipole prediction with ECENet-4.8M . (a) The dipole moments predicted by ECENet versus the dipole moments computed from DFT for subsets of the SPICE test set. We use the same configurations and dipole moments as Kim et al. 57 and show each predicted component separately. The panels correspond to (i) PubChem, (ii) DES370K monomers, (iii) DES370K dimers, (iv) dipeptides, (v) solvated amino acids, (vi) water clusters, (vii) QMugs, and (viii) all subsets. (b) The radial distribution function between oxygen atoms ( gOO (r)) computed from a simulation of liquid water using ECENet-4.8M compared with experiment 61 . (c) The IR spectrum computed from the same simulation compared with experiment 62 ; see Methods for full calculation details.
+
+Figure 5a shows close agreement between the dipole moments predicted by ECENet and those from DFT across all seven categories, demonstrating that the latent charges learned from energies and forces alone are physically meaningful. We next tested whether these charge distributions are meaningful in the condensed phase, as access to dipole moments opens up applications like infrared spectroscopy. We ran NVT molecular dynamics of liquid water at 300 K and the experimental density with the same SPICE-trained 12 ECENet-4.8M; we emphasize that the training set contains water only as small gas-phase clusters and no bulk liquid of any kind. The oxygen–oxygen radial distribution function gOO (r) (Figure 5b) agrees closely with the X-ray diffraction reference of Skinner et al. 61 and lies within the family of radial distribution functions consistent with experimental uncertainty, as analyzed by Brookes and Head-Gordon 63 . Following Kim et al. 57 , we obtained the infrared spectrum from the autocorrelation of the polarization current, 
+
+I(ω) ∝
+
+Z ∞
+
+> 0
+
+J(0) · J(t) cos( ωt ) d t, J(t) = 
+
+> N
+
+X
+
+> i=1
+
+Z∗ 
+
+> i
+
+(t) vi(t), (13) where vi is the velocity of atom i and Z∗ 
+
+> i
+
+= ∂M/∂ ri is its Born effective charge tensor, obtained by automatic differentiation of the latent polarization M and therefore also predicted without any training on charges. Figure 5c compares the resulting spectrum, normalized to the OH-stretch maximum, with the measured absorption spectrum of liquid water at 25 ◦C62 . The positions and relative intensities of the libration, bend, and stretch bands are all reproduced. As expected for classical MD, the OH-stretch band is blueshifted relative to experiment; the peak redshifts when nuclear quantum effects are included 64 .
+
+# 4 Conclusion 
+
+We introduced ECENet, an equivariant line-graph neural network in which the edges of the atomic graph, rather than the atoms, carry the persistent features. ECENet builds on the edge cluster expansion, with each feature living in the edge-aligned frame, where it transforms under O(2) rather than O(3), so that Clebsch–Gordan couplings can be replaced by cheaper O(2)-equivariant operations. The features are constructed efficiently by forming an O(3)-equivariant atom-centered basis once per atom and rotating it into each edge’s frame with Wigner D-matrices, and messages are passed equivariantly between edges through their shared atoms, again using Wigner D-matrices to move features into and out of edge frames. This equivariant line-graph design differs from existing MLIPs and yields a model whose number of features scales with the number of edges while its parameter count does not. We examined ECENet on several paradigmatic datasets and consistently obtained results at or near the state of the art. Training on individual systems showed that equivariant edge-to-edge message passing and LES are complementary, with systems with strong electrostatic interactions (e.g., water) benefiting more from LES and dispersion-dominated systems (e.g., organic molecules) benefiting more from message-passing layers. On the MD22 dataset of biomolecules and supramolecular complexes, ECENet matches or exceeds the previous top performer on most energy and force metrics with a fraction of the parameters. On the SPICE-MACE-OFF dataset, ECENet lies on the accuracy–efficiency frontier alongside DPA4, the strongest current model, matching its accuracy and cost with roughly half the parameters. The parameter efficiency likely stems from the greater number of features when using an edge-based model as opposed to a node-based one. Because ECENet handles long-range electrostatics through latent Ewald summation, it also predicts quantities that a purely short-range model cannot. Molecular dipoles on the SPICE test set agree closely with DFT across all chemical categories, and the same model, trained only on isolated molecules and small clusters, reproduces the structure and the infrared spectrum of liquid water, demonstrating that charges and dipoles inferred from energies and forces alone are accurate enough to be used, not merely to improve the fit. The ECENet-SPICE models are accurate and efficient potentials for organic systems in their current form, but we expect accuracy to improve further with dataset size and are thus scaling ECENet to larger molecular and materials datasets. Those experiments will test whether an edge-based, O(2)-equivariant representation remains parameter-efficient as chemical diversity grows; our results on SPICE-MACE-OFF suggest that it will. 13 Methods 
+
+ECENet Model Details 
+
+Radial basis and envelope function. We used a radial basis in three places in ECENet: during calculation of the initial atomic basis, as an input for the FiLM injection, and as the vector contracted with the output of the final MLP. In all cases we used the same basis, a series of sinc functions up to nmax 
+
+(16 in all cases) multiplied by a cosine cutoff envelope: 
+
+fcut (r) = 
+
+
+
+> 12
+
+
+
+1 + cos 
+
+ πr rc
+
+ 
+
+, r < r c,
+
+0, r ≥ rc.
+
+(14) We used the same envelope function when aggregating messages in equation 7. 
+
+Edge frames and Wigner D-matrices. Real spherical harmonics are evaluated with sphericart 65 
+
+in the orthonormal, z-polar convention. For each directed edge we construct a right-handed orthonormal frame {ex, ey, ez } with ez = ˆ rij by Gram–Schmidt orthogonalization of a fixed reference axis against ˆrij ;the reference is ˆx, or ˆy when |ˆrij · ˆx| ≥ 0.9, so that the construction is free of singularities and large gradients everywhere on the unit sphere. The choice of reference axis fixes only the azimuthal origin of the frame, a gauge under which every subsequent operation is O(2)-equivariant and the readout (which uses the m = 0 channels) is invariant, so predictions do not depend on it and remain continuous where the two charts meet. The ℓ = 1 Wigner matrix D1(ˆ rij ) is this frame’s rotation matrix expressed in the real spherical-harmonic basis, obtained directly from the components of ˆrij without Euler angles or trigonometric functions. Matrices for ℓ ≥ 2 follow from the Clebsch–Gordan recursion 66,67 :
+
+Dℓ = Cℓ ⊤
+
+> 1,ℓ −1
+
+ D1 ⊗ Dℓ−1 Cℓ
+
+> 1,ℓ −1
+
+, (15) where Cℓ 
+
+> 1,ℓ −1
+
+are the real Clebsch–Gordan coefficients coupling degrees 1 and ℓ − 1 to ℓ, precomputed once. The block-diagonal matrix Lℓmax  
+
+> ℓ=0
+
+Dℓ is built once per edge per forward pass and reused for every rotation into the edge frame and, through its transpose, for the rotation of messages back to the global frame. Because the frame is a differentiable function of the atomic positions, forces obtained by automatic differentiation include the dependence of the rotation on the edge direction. 
+
+Long-range electrostatics. The long-range energy is evaluated with the reference implementation of latent Ewald summation 39,57 (LES). Latent charges and bond dipoles are multiplied by a fixed factor of 0.1
+
+before entering the long-range energy so that it starts small relative to the short-range fit. Charges are smeared with Gaussians of width σ = 1 .5 Å. For periodic systems the charge–charge, charge–dipole and dipole–dipole interactions are evaluated by Ewald summation with a real-space grid spacing of 2.0 Å and the standard neutralizing background; for isolated molecules they are evaluated directly in real space. 
+
+Training 
+
+All models were trained on energies and forces with the AdamW optimizer ( β = (0 .9, 0.999) , weight decay 
+
+10 −8) on a loss L = wE Hδ
+
+ (Epred − Eref )/N at 
+
+ + wF Hδ
+
+ Fpred − Fref 
+
+, where the energy error is taken per atom and averaged over structures, the force error is averaged over Cartesian components, and Hδ is the Huber loss (quadratic below δ, linear above). The units of Hδ are eV/atom and eV/Å for the SPICE-trained models and kcal/mol/atom and kcal/mol/Å for the others. Forces are obtained by automatic differentiation of the total energy, including the long-range term, so that the short-range network and the latent charges were trained jointly on one computational graph. We used a milestone-based learning rate schedule, in which the learning rate is halved at specific epochs. 14 Table 2: Model hyperparameters. c is the number of channels per (ℓ, m ) in the atomic basis, c′ the bottleneck width of the equivariant blocks, N the azimuthal grid size, H the number of gating heads, and cMP the width of the message and receiving blocks. 
+
+Figure 2 systems MD22 ECENet-1.7M ECENet-4.8M cutoff rc (Å) 3–6 6 5 5
+
+ℓmax 2 2 3 3
+
+mmax 2 2 2 2
+
+nmax 16 16 16 16 
+
+c 32 32 24 42 
+
+c′ 128 128 256 256 
+
+N (grid points) 10 10 10 16 
+
+NMP 0–3 2 1 3
+
+cMP , H 64, 8 64, 8 64, 8 128, 6 energy MLP [256, 256] [256, 256] [512, 512] [512, 512] FiLM del , MLP 4, [64, 128] 4, [64, 128] 10, [128, 128, 128] 10, [128, 128, 128] LES with/without yes yes yes parameters 0.4–1.3M 1.1M 1.7M 4.8M 
+
+Training 
+
+loss H0.0025 H0.0025 H0.0025 H0.0025 
+
+initial wE , wF 0.1, 1 0.1, 1 0.1, 1 0.1, 1 fine-tune wE , wF NA 20, 0.5 10, 0.5 10, 0.5 optimizer AdamW AdamW AdamW AdamW initial learning rate 10 −3 10 −3 5 × 10 −4 5 × 10 −4
+
+weight decay 10 −8 10 −8 10 −8 10 −8
+
+gradient clipping 1.0 1.0 1.0 1.0 warm-up epochs 0 0 1 1epochs 800 800 + 200 200 + 20 300 + 20 batch 4 structures 2–4 structures 250 atoms/rank 250 atoms/rank GPUs 1 A100 1 A100 16 A100 16 A100 
+
+Range exploration systems (Figure 2). For liquid water, we used 574 training, 30 validation, and 50 test configurations taken from reference 46. For Au 2 on MgO we used 4250 training, 250 validation, and 500 test configurations taken from reference 47. Models were trained for 800 epochs in single precision with a batch size of 4. Learning rate milestones were placed at epochs 400, 600, 700, 750, 775, and 790. 
+
+MD22. We used the training set sizes of reference 48, which the baselines in Table 1 share: 6000 (Ac-Ala3-NHMe), 8000 (DHA), 8000 (stachyose), 3000 (AT-AT), 2000 (AT-AT-CG-CG), 600 (buckyball catcher) and 800 (double-walled nanotube) configurations, with 5 % held out for validation in each case. We used 200 frames from the same trajectory for the test set. Models were trained in single precision for 800 epochs and then fine-tuned with a higher energy weight for a further 200 epochs. Stachyose, the buckyball catcher and the double-walled nanotube were trained with a batch size of 2; other models were trained with a batch size of 4. Learning rate milestones were placed at epochs 400, 600, 700, 750, 775, 790, 850, 900, 950, and 975. 
+
+SPICE-MACE-OFF. We trained on the SPICE-MACE-OFF split of SPICE v1 55,56 , holding out 51,005 structures for validation, and report errors on the standard per-category test set. Both models were trained using distributed data parallelism on 16 A100 GPUs with size-aware batching to an atom budget 15 of 250 atoms per rank. Models were trained in single precision with TF32 matrix multiplication for 200 epochs (ECENet-1.7M) or 300 epochs (ECENet-4.8M), then fine-tuned for a further 20 epochs in full single precision (TF32 disabled). For ECENet-1.7M, learning rate milestones were placed at 80, 130, 170, 190, 210, and 215. For ECENet-4.8M, learning rate milestones were placed at 128, 192, 256, 280, 290, 310, and 315. Per-category MAEs are reported for the forces and the energies per atom; the geometric mean over the seven categories is used as the single-number summary. 
+
+Throughput benchmarks 
+
+All timings in Figure 4 were obtained on a single NVIDIA A100 40 GB GPU, running NVE molecular dynamics in the Atomic Simulation Environment 68 with the velocity-Verlet integrator at a 1.0 fs time step. Each measurement comprised 10 warm-up steps followed by 100 timed steps, and throughput is reported as ns/day. Every model was run in float32 with TF32 enabled, from its publicly released weights. ECENet used its fused Triton kernels for the edge-frame rotations and the real-space nonlinearity; DPA4 was frozen with dp freeze on the target GPU; and MACE and MACELES used the MACE calculator with cuEquivariance acceleration. The SPICE-trained eSEN and AllScAIP checkpoints have not been released, so those models appear in Figure 3 but not in Figure 4. The two condensed-phase systems fall under the 100-neighbor limit of the DPA4-SPICE models. 
+
+Liquid water simulation and IR spectrum (Figure 5b,c). We simulated 80 water molecules in a cubic cell of side 13.389 Å (0.997 g/cm 3) with ECENet-4.8M, using the Atomic Simulation Environment 68 
+
+Langevin integrator at 300 K with a friction coefficient of 10 −3 fs −1 and a 0.5 fs time step, starting from Maxwell–Boltzmann velocities at 300 K. The model was evaluated in single precision with TF32 matrix multiplication. The trajectory was run for 275 ps, with the first 175 ps discarded as equilibration. gOO (r)
+
+was computed from the remaining frames. The polarization current J(t) of equation 13 was evaluated from the per-frame Born effective charges and velocities, its autocorrelation function was smoothed with a Gaussian window, and the resulting spectrum was normalized to the maximum of the OH-stretch band. 
+
+# Data Availability 
+
+The Au 2 on MgO dataset is taken from reference 47; the water dataset from reference 46; the MD22 dataset from reference 48; and the SPICE-MACE-OFF dataset from reference 56. Tabular data for the models’ per-formance on the SPICE-MACE-OFF dataset are given in the supplementary information. Model weights for the SPICE-trained ECENet models can be found at https://huggingface.co/THGLab/ECENet-4.8M-SPICE 
+
+and 
+
+https://huggingface.co/THGLab/ECENet-1.7M-SPICE .
+
+# Code Availability 
+
+All ECE architecture code can be found at https://github.com/THGLab/ecenet .
+
+# Acknowledgments 
+
+We thank Dongjin Kim and Bingqing Cheng for helpful discussions in regards to LES. We thank the CPIMS program, Office of Science, Office of Basic Energy Sciences, Chemical Sciences Division of the U.S. Department of Energy under Contract DE-AC02-05CH11231 for support of the machine learning. This research used computational resources of the National Energy Research Scientific Computing, a DOE 16 Office of Science User Facility supported by the Office of Science of the U.S. Department of Energy under Contract No. DE-AC02-05CH11231. Anthropic Claude assisted with literature organization, manuscript editing, and code development. The authors directed its use and independently verified all scientific claims, calculations, code, figures, and references. 
+
+# Author Contributions Statement 
+
+R.A.L. and T.H.G. defined goals of the project. R.A.L. created and developed the ECE model and performed all calculations. R.A.L. and T.H.G. discussed the results and wrote and edited the manuscript. 
+
+# Competing Interests Statement 
+
+The authors declare no competing interests. 
+
+# References 
+
+(1) Hohenberg, P.; Kohn, W. Inhomogeneous electron gas. Physical Review 1964 , 136 , B864. (2) Kohn, W.; Sham, L. J. Self-Consistent Equations Including Exchange and Correlation Effects. Physical Review 1965 , 140 , A1133–A1138. (3) Car, R.; Parrinello, M. Unified Approach for Molecular Dynamics and Density-Functional Theory. 
+
+Physical Review Letters 1985 , 55 , 2471–2474. (4) Marx, D.; Hutter, J. Ab Initio Molecular Dynamics: Basic Theory and Advanced Methods ; Cambridge University Press: Cambridge, 2009. (5) Cornell, W. D.; Cieplak, P.; Bayly, C. I.; Gould, I. R.; Merz, K. M.; Ferguson, D. M.; Spellmeyer, D. C.; Fox, T.; Caldwell, J. W.; Kollman, P. A. A Second Generation Force Field for the Simulation of Proteins, Nucleic Acids, and Organic Molecules. Journal of the American Chemical Society 1995 ,
+
+117 , 5179–5197. (6) Jorgensen, W. L.; Maxwell, D. S.; Tirado-Rives, J. Development and Testing of the OPLS All-Atom Force Field on Conformational Energetics and Properties of Organic Liquids. Journal of the American Chemical Society 1996 , 118 , 11225–11236. (7) MacKerell, A. D. et al. All-Atom Empirical Potential for Molecular Modeling and Dynamics Studies of Proteins. The Journal of Physical Chemistry B 1998 , 102 , 3586–3616. (8) Wang, J.; Wolf, R. M.; Caldwell, J. W.; Kollman, P. A.; Case, D. A. Development and testing of a general AMBER force field. Journal of Computational Chemistry 2004 , 25 , 1157–1174. (9) Albaugh, A. et al. Advanced Potential Energy Surfaces for Molecular Simulation. The Journal of Physical Chemistry B 2016 , 120 , 9811–9832. (10) Demerdash, O.; Wang, L.-P.; Head-Gordon, T. Advanced models for water simulations. WIREs Computational Molecular Science 2018 , 8, e1355. (11) Behler, J.; Parrinello, M. Generalized Neural-Network Representation of High-Dimensional Potential-Energy Surfaces. Physical Review Letters 2007 , 98 , 146401. 17 (12) Bartók, A. P.; Payne, M. C.; Kondor, R.; Csányi, G. Gaussian Approximation Potentials: The Accuracy of Quantum Mechanics, without the Electrons. Physical Review Letters 2010 , 104 , 136403. (13) Deringer, V. L.; Caro, M. A.; Csányi, G. Machine Learning Interatomic Potentials as Emerging Tools for Materials Science. Advanced Materials 2019 , 31 , 1902765. (14) Unke, O. T.; Chmiela, S.; Sauceda, H. E.; Gastegger, M.; Poltavsky, I.; Schütt, K. T.; Tkatchenko, A.; Müller, K.-R. Machine Learning Force Fields. Chemical Reviews 2021 , 121 , 10142–10186. (15) Gilmer, J.; Schoenholz, S. S.; Riley, P. F.; Vinyals, O.; Dahl, G. E. Neural Message Passing for Quantum Chemistry. Proceedings of the 34th International Conference on Machine Learning. 2017; pp 1263–1272. (16) Schütt, K. T.; Sauceda, H. E.; Kindermans, P.-J.; Tkatchenko, A.; Müller, K.-R. SchNet – A deep learning architecture for molecules and materials. The Journal of Chemical Physics 2018 , 148 , 241722. (17) Gasteiger, J.; Yeshwanth, C.; Günnemann, S. Directional message passing on molecular graphs via synthetic coordinates. Advances in Neural Information Processing Systems 2021 , 34 , 15421–15433. (18) Choudhary, K.; DeCost, B. Atomistic Line Graph Neural Network for improved materials property predictions. npj Computational Materials 2021 , 7, 185. (19) Musaelian, A.; Batzner, S.; Johansson, A.; Sun, L.; Owen, C. J.; Kornbluth, M.; Kozinsky, B. Learning local equivariant representations for large-scale atomistic dynamics. Nature Communications 2023 ,
+
+14 , 579. (20) Smith, J. S.; Isayev, O.; Roitberg, A. E. ANI-1: an extensible neural network potential with DFT accuracy at force field computational cost. Chemical Science 2017 , 8, 3192–3203. (21) Drautz, R. Atomic cluster expansion for accurate and transferable interatomic potentials. Physical Review B 2019 , 99 , 014104. (22) Batzner, S.; Musaelian, A.; Sun, L.; Geiger, M.; Mailoa, J. P.; Kornbluth, M.; Molinari, N.; Smidt, T. E.; Kozinsky, B. E(3)-equivariant graph neural networks for data-efficient and accurate interatomicpoten-tials. Nature Communications 2022 , 13 , 2453. (23) Batatia, I.; Kovács, D. P.; Simm, G. N. C.; Ortner, C.; Csányi, G. MACE: Higher Order Equivariant Message Passing Neural Networks for Fast and Accurate Force Fields. Advances in Neural Information Processing Systems. 2022. (24) Liao, Y.-L.; Smidt, T. Equiformer: Equivariant Graph Attention Transformer for 3D Atomistic Graphs. International Conference on Learning Representations. 2023. (25) Haghighatlari, M.; Li, J.; Guan, X.; Zhang, O.; Das, A.; Stein, C. J.; Heidar-Zadeh, F.; Liu, M.; Head-Gordon, M.; Bertels, L.; Hao, H.; Leven, I.; Head-Gordon, T. NewtonNet: a Newtonian message passing network for deep learning of interatomic potentials and forces. Digital Discovery 2022 , 1,333–343. (26) Fu, X.; Wood, B. M.; Barroso-Luque, L.; Levine, D. S.; Gao, M.; Dzamba, M.; Zitnick, C. L. Learning Smooth and Expressive Interatomic Potentials for Physical Property Prediction. Proceedings of the 42nd International Conference on Machine Learning. 2025. 18 (27) Barroso-Luque, L.; Shuaibi, M.; Fu, X.; Wood, B. M.; Dzamba, M.; Gao, M.; Rizvi, A.; Uyttendaele, M.; Zitnick, C. L.; Ulissi, Z. W. The Open Materials 2024 (OMat24) Inorganic Materials Dataset and Models. Nature Computational Science 2026 , 6, 642–652. (28) Levine, D. S. et al. The Open Molecules 2025 (OMol25) Dataset, Evaluations, and Models. 2025; arXiv:2505.08762. (29) Wood, B. M. et al. UMA: A Family of Universal Models for Atoms. Advances in Neural Information Processing Systems. 2025; pp 143528–143564. (30) Chen, C.; Ong, S. P. A universal graph deep learning interatomic potential for the periodic table. 
+
+Nature Computational Science 2022 , 2, 718–728. (31) Deng, B.; Zhong, P.; Jun, K.; Riebesell, J.; Han, K.; Bartel, C. J.; Ceder, G. CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling. Nature Machine Intelligence 2023 , 5, 1031–1041. (32) Batatia, I.; Benner, P.; Chiang, Y.; Elena, A. M.; Kovács, D. P.; Riebesell, J.; Advincula, X. R.; Asta, M.; Avaylon, M.; Baldwin, W. J.; others A foundation model for atomistic materials chemistry. 
+
+The Journal of chemical physics 2025 , 163 .(33) Yuan, E. C.-Y.; Liu, Y.; Chen, J.; Zhong, P.; Raja, S.; Kreiman, T.; Vargas, S.; Xu, W.; Head-Gordon, M.; Yang, C.; Blau, S. M.; Cheng, B.; Krishnapriyan, A.; Head-Gordon, T. Foundation models for atomistic simulation of chemistry and materials. Nature Reviews Chemistry 2026 , 10 ,212–230. (34) Batatia, I.; Baldwin, W. J.; Kuryla, D.; Hart, J.; Kasoar, E.; Elena, A. M.; Moore, H.; Gawkowski, M. J.; Shi, B. X.; Kapil, V.; others MACE-POLAR-1: A polarisable electrostatic foundation model for molecular chemistry. arXiv:2602.19411 2026 ,(35) Passaro, S.; Zitnick, C. L. Reducing SO(3) Convolutions to SO(2) for Efficient Equivariant GNNs. Proceedings of the 40th International Conference on Machine Learning. 2023. (36) Liao, Y.-L.; Wood, B.; Das, A.; Smidt, T. EquiformerV2: Improved Equivariant Transformer for Scaling to Higher-Degree Representations. International Conference on Learning Representations. 2024. (37) Li, T.; Xue, J.; Zhang, L.; Zhang, D.; Wang, H. Universal Machine-learning Molecular Dynamics at the Speed of Empirical Potentials. arXiv:2608.19041 2026 ,(38) Xu, Z.; Xie, W.; Hu, P. Edge Cluster Expansion with Radial Rotary Attention for Interatomic Potentials. arXiv:2607.10664 2026 ,(39) Cheng, B. Latent Ewald summation for machine learning of long-range interactions. npj Computational Materials 2025 , 11 , 80. (40) Dusson, G.; Bachmayr, M.; Csányi, G.; Drautz, R.; Etter, S.; van der Oord, C.; Ortner, C. Atomic cluster expansion: Completeness, efficiency and stability. Journal of Computational Physics 2022 ,
+
+454 , 110946. (41) Perez, E.; Strub, F.; de Vries, H.; Dumoulin, V.; Courville, A. FiLM: Visual Reasoning with a General Conditioning Layer. Proceedings of the AAAI Conference on Artificial Intelligence. 2018. 19 (42) Cohen, T. S.; Geiger, M.; Köhler, J.; Welling, M. Spherical CNNs. International Conference on Learning Representations. 2018. (43) Zitnick, C. L.; Das, A.; Kolluru, A.; Lan, J.; Shuaibi, M.; Sriram, A.; Ulissi, Z.; Wood, B. Spherical Channels for Modeling Atomic Interactions. Advances in Neural Information Processing Systems. 2022. (44) King, D. S.; Kim, D.; Zhong, P.; Cheng, B. Machine Learning of Charges and Long-Range Interactions from Energies and Forces. Nature Communications 2025 , 16 , 8763. (45) Kim, D.; King, D. S.; Park, Y.; Savoj, R.; Hamel, S.; Wang, X.; Cheng, B. Polarizable atomic multipoles for learning long-range electrostatics. arXiv:2605.05746 2026 ,(46) Schmiedmayer, B.; Kresse, G. Derivative learning of tensorial quantities—Predicting finite temperature infrared spectra from first principles. The Journal of Chemical Physics 2024 , 161 , 084703. (47) Ko, T. W.; Finkler, J. A.; Goedecker, S.; Behler, J. A fourth-generation high-dimensional neural net-work potential with accurate electrostatics including non-local charge transfer. Nature Communications 
+
+2021 , 12 , 398. (48) Chmiela, S.; Vassilev-Galindo, V.; Unke, O. T.; Kabylda, A.; Sauceda, H. E.; Tkatchenko, A.; Müller, K.-R. Accurate global machine learning force fields for molecules with hundreds of atoms. 
+
+Science Advances 2023 , 9, eadf0873. (49) Aykent, S.; Xia, T. GotenNet: Rethinking Efficient 3D Equivariant Graph Neural Networks. Interna-tional Conference on Learning Representations. 2025. (50) Li, Y.; Wang, Y.; Huang, L.; Yang, H.; Wei, X.; Zhang, J.; Wang, T.; Wang, Z.; Shao, B.; Liu, T.-Y. Long-Short-Range Message-Passing: A Physics-Informed Framework to Capture Non-Local Interaction for Scalable Molecular Dynamics Simulation. International Conference on Learning Representations. 2024. (51) Kovács, D. P.; Batatia, I.; Arany, E. S.; Csányi, G. Evaluation of the MACE force field architecture: From medicinal chemistry to materials science. The Journal of Chemical Physics 2023 , 159 , 044118. (52) Wang, Y.; Wang, T.; Li, S.; He, X.; Li, M.; Wang, Z.; Zheng, N.; Shao, B.; Liu, T.-Y. Enhancing geometric representations for molecules with equivariant vector-scalar interactive message passing. 
+
+Nature Communications 2024 , 15 , 313. (53) Wang, Z.; Liu, G.; Zhou, Y.; Wang, T.; Shao, B. Efficiently incorporating quintuple interactions into geometric deep learning force fields. Advances in Neural Information Processing Systems 2023 , 36 ,77043–77055. (54) Qu, E.; Krishnapriyan, A. S. The importance of being scalable: Improving the speed and accuracy of neural network interatomic potentials across chemical domains. Advances in Neural Information Processing Systems 2024 , 37 , 139030–139053. (55) Eastman, P.; Behara, P. K.; Dotson, D. L.; Galvelis, R.; Herr, J. E.; Horton, J. T.; Mao, Y.; Chodera, J. D.; Pritchard, B. P.; Wang, Y.; De Fabritiis, G.; Markland, T. E. SPICE, A Dataset of Drug-like Molecules and Peptides for Training Machine Learning Potentials. Scientific Data 2023 , 10 ,11. 20 (56) Kovács, D. P.; Moore, J. H.; Browning, N. J.; Batatia, I.; Horton, J. T.; Pu, Y.; Kapil, V.; Witt, W. C.; Magdău, I.-B.; Cole, D. J.; Csányi, G. MACE-OFF: Short-Range Transferable Machine Learning Force Fields for Organic Molecules. Journal of the American Chemical Society 2025 , 147 , 17598–17611. (57) Kim, D.; Wang, X.; Vargas, S.; Zhong, P.; King, D. S.; Inizan, T. J.; Cheng, B. A Universal Augmentation Framework for Long-Range Electrostatics in Machine Learning Interatomic Potentials. 
+
+Journal of Chemical Theory and Computation 2025 , 21 , 12709–12724. (58) Qu, E.; Wood, B. M.; Krishnapriyan, A. S.; Ulissi, Z. W. A recipe for scalable attention-based MLIPs: unlocking long-range accuracy with all-to-all node attention. arXiv:2603.06567 2026 ,(59) Tillet, P.; Kung, H. T.; Cox, D. Triton: An Intermediate Language and Compiler for Tiled Neural Network Computations. Proceedings of the 3rd ACM SIGPLAN International Workshop on Machine Learning and Programming Languages (MAPL). 2019; pp 10–19. (60) Paszke, A. et al. PyTorch: An Imperative Style, High-Performance Deep Learning Library. Advances in Neural Information Processing Systems. 2019; pp 8024–8035. (61) Skinner, L. B.; Benmore, C. J.; Neuefeind, J. C.; Parise, J. B. The Structure of Water around the Compressibility Minimum. The Journal of Chemical Physics 2014 , 141 , 214507. (62) Bertie, J. E.; Lan, Z. Infrared Intensities of Liquids XX: The Intensity of the OH Stretching Band of Liquid Water Revisited, and the Best Current Values of the Optical Constants of H 2O(l) at 25°C between 15,000 and 1 cm −1. Applied Spectroscopy 1996 , 50 , 1047–1057. (63) Brookes, D. H.; Head-Gordon, T. Family of Oxygen–Oxygen Radial Distribution Functions for Water. 
+
+The Journal of Physical Chemistry Letters 2015 , 6, 2938–2943. (64) Medders, G. R.; Paesani, F. Infrared and Raman Spectroscopy of Liquid Water through “First-Principles” Many-Body Molecular Dynamics. Journal of Chemical Theory and Computation 2015 , 11 ,1145–1154. (65) Bigi, F.; Fraux, G.; Browning, N. J.; Ceriotti, M. Fast evaluation of spherical harmonics with 
+
+sphericart . The Journal of Chemical Physics 2023 , 159 , 064802. (66) Ivanic, J.; Ruedenberg, K. Rotation Matrices for Real Spherical Harmonics. Direct Determination by Recursion. The Journal of Physical Chemistry 1996 , 100 , 6342–6347. (67) Ivanic, J.; Ruedenberg, K. Rotation Matrices for Real Spherical Harmonics. Direct Determination by Recursion [Erratum]. The Journal of Physical Chemistry A 1998 , 102 , 9099–9100. (68) Larsen, A. H. et al. The Atomic Simulation Environment—A Python Library for Working with Atoms. 
+
+Journal of Physics: Condensed Matter 2017 , 29 , 273002. 21 Supplementary Information ECENet: An Edge Cluster Expansion Line Graph Neural Network 
+
+# R. Allen LaCour* 1,2, Teresa Head-Gordon ∗1,2,3
+
+> 1
+
+Kenneth S. Pitzer Theory Center and Department of Chemistry 
+
+> 2
+
+Chemical Sciences Division, Lawrence Berkeley National Laboratory 
+
+> 3
+
+Departments of Bioengineering and Chemical and Biomolecular Engineering University of California, Berkeley, CA, 94720 USA corresponding author: alacour@berkeley.edu, thg@berkeley.edu 
+
+# Supplementary Tables 
+
+Table S1: Per-category force MAE on the MACE-OFF SPICE test set, in meV/Å (the data of Figure 3). The last column is the geometric mean over the seven categories (LWAMAE). Best value per column in bold. Superscripts give the source of the reported values; rows without a superscript are this work. Model PubChem DES370K monomers DES370K dimers Dipeptides Solvated amino acids Water QMugs Geometric mean MACE-4.7M 1 14.75 6.58 6.62 10.19 19.43 16.93 13.57 11.66 MACELES-1.9M 2 17.24 7.65 7.48 11.46 18.37 12.54 20.11 12.67 eSEN-3.2M 3 6.10 1.85 2.77 3.04 5.76 3.88 5.70 3.83 eSEN-6.5M 3 4.21 1.24 2.12 2.00 3.68 2.50 3.78 2.58 DPA4-1.1M 4 5.92 2.13 2.16 3.10 6.69 4.46 5.36 3.89 DPA4-5.1M 4 3.59 1.22 1.23 1.68 3.59 2.47 2.91 2.18 DPA4-8.8M 4 2.98 0.91 0.96 1.25 2.59 1.78 2.14 1.64 
+
+AllScAIP-34M 5 3.21 0.97 0.95 1.54 4.86 2.12 2.73 2.00 ECENet-1.7M 6.88 1.88 1.73 3.53 5.88 3.41 6.35 3.73 ECENet-4.8M 3.42 0.88 0.79 1.52 2.37 1.45 2.66 1.65 
+
+S1 Table S2: Per-category energy MAE on the MACE-OFF SPICE test set, in meV/atom (the data of Figure 3). The last column is the geometric mean over the seven categories (LWAMAE), given to three decimals. Best value per column in bold. Superscripts give the source of the reported values; rows without a superscript are this work. Model PubChem DES370K monomers DES370K dimers Dipeptides Solvated amino acids Water QMugs Geometric mean MACE-4.7M 1 0.88 0.59 0.54 0.42 0.98 0.83 0.54 0.655 MACELES-1.9M 2 0.71 0.54 0.47 0.52 0.82 0.69 0.76 0.632 eSEN-3.2M 3 0.22 0.17 0.20 0.10 0.30 0.24 0.16 0.189 eSEN-6.5M 3 0.15 0.13 0.15 0.07 0.25 0.15 0.12 0.137 DPA4-1.1M 4 0.24 0.17 0.18 0.10 0.27 0.30 0.12 0.184 DPA4-5.1M 4 0.13 0.17 0.11 0.06 0.13 0.16 0.07 0.111 DPA4-8.8M 4 0.12 0.12 0.11 0.04 0.09 0.11 0.05 0.085 AllScAIP-34M 5 0.13 0.07 0.06 0.06 0.13 0.08 0.11 0.087 ECENet-1.7M 0.22 0.15 0.13 0.11 0.19 0.17 0.17 0.159 ECENet-4.8M 0.11 0.10 0.06 0.05 0.07 0.09 0.07 0.076 Table S3: Simulation throughput and accuracy of the models (the data of Figure 4). Throughput is the NVE molecular-dynamics rate in ns/day on a single NVIDIA A100 for ice I h (1536 atoms) and liquid methanol (384 atoms), measured under the common protocol described in the Methods (float32 with TF32, DPA4 frozen, MACE with cuEquivariance). Accuracy is the geometric mean over the seven MACE-OFF SPICE test categories of the force MAE (meV/Å) and energy MAE (meV/atom) from Tables S1 and S2. Superscripts give the source of the accuracy values; throughputs were all measured in this work. eSEN and AllScAIP are absent because their SPICE-trained checkpoints have not been released. Model Ice I h
+
+(ns/day) Methanol (ns/day) Force MAE geo. mean (meV/Å) Energy MAE geo. mean (meV/atom) MACE-4.7M 1 0.92 1.38 11.66 0.655 MACELES-1.9M 2 1.31 1.86 12.67 0.632 DPA4-1.1M 4 1.45 4.43 3.89 0.184 DPA4-5.1M 4 0.80 2.69 2.18 0.111 DPA4-8.8M 4 0.38 1.41 1.64 0.085 ECENet-1.7M 1.09 3.43 3.73 0.159 ECENet-4.8M 0.39 1.47 1.65 0.076 
+
+# References 
+
+[1] Kovács, D. P.; Moore, J. H.; Browning, N. J.; Batatia, I.; Horton, J. T.; Pu, Y.; Kapil, V.; Witt, W. C.; Magdău, I.-B.; Cole, D. J.; Csányi, G. MACE-OFF: Short-Range Transferable Machine Learning Force Fields for Organic Molecules. Journal of the American Chemical Society 
+
+2025 , 147 , 17598–17611. [2] Kim, D.; Wang, X.; Vargas, S.; Zhong, P.; King, D. S.; Inizan, T. J.; Cheng, B. A Universal Augmentation Framework for Long-Range Electrostatics in Machine Learning Interatomic Potentials. Journal of Chemical Theory and Computation 2025 , 21 , 12709–12724. [3] Fu, X.; Wood, B. M.; Barroso-Luque, L.; Levine, D. S.; Gao, M.; Dzamba, M.; Zitnick, C. L. Learning Smooth and Expressive Interatomic Potentials for Physical Property Prediction. Proceedings of the 42nd International Conference on Machine Learning. 2025. [4] Li, T.; Xue, J.; Zhang, L.; Zhang, D.; Wang, H. Universal Machine-learning Molecular Dynamics at the Speed of Empirical Potentials. arXiv:2608.19041 2026 ,S2 [5] Qu, E.; Wood, B. M.; Krishnapriyan, A. S.; Ulissi, Z. W. A recipe for scalable attention-based MLIPs: unlocking long-range accuracy with all-to-all node attention. arXiv:2603.06567 2026 ,S3

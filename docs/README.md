@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-21</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-22</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 10 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 11 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>7</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>4</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>7</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-21 19:07:58 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-22 17:59:33 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日精读7篇、速读3篇共10篇推荐，最高分是振动强耦合机器学习分子动力学框架cboamd（9.0/10）。最值得看的是9.0分的cboamd和8.0分的自动化实验平台材料合成定量控制与记录。普通读者可先从这两篇高分工作入手，再按兴趣浏览速读中的相变预测与分子溶解度模型。</p>
+<p>2026</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +78,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">7 篇</strong>
+    <strong class="dpr-home-dashboard-count">4 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="cboamd: A Machine Learning Molecular Dynamics Framework for Vibrational Strong Coupling">cboamd: A Machine Learning Molecular Dynamics Framework for Vibrational Strong Coupling</span></li><li><span class="dpr-home-dashboard-paper-title" title="Quantitative control and recording of materials-synthesis processes using an automated experimentation platform">Quantitative control and recording of materials-synthesis processes using an automated experimentation platform</span></li><li><span class="dpr-home-dashboard-paper-title" title="Triply-Scalable Equivariant Gaussian Process Modeling">Triply-Scalable Equivariant Gaussian Process Modeling</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="ECENet: An Edge Cluster Expansion Line-Graph Neural Network">ECENet: An Edge Cluster Expansion Line-Graph Neural Network</span></li><li><span class="dpr-home-dashboard-paper-title" title="Divergent strategies and convergent outcomes in autonomous materials discovery">Divergent strategies and convergent outcomes in autonomous materials discovery</span></li><li><span class="dpr-home-dashboard-paper-title" title="Small-supercell and Small-dataset Training Strategy of Machine Learning Interatomic Potentials for Point Defects">Small-supercell and Small-dataset Training Strategy of Machine Learning Interatomic Potentials for Point Defects</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>5</strong></span><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span><span class="dpr-home-dashboard-tag">ar <strong>1</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -91,12 +91,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">3 篇</strong>
+    <strong class="dpr-home-dashboard-count">7 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Probabilistic Deep Learning Framework for Phase Transformation Forecasting aided by In Situ High temperature Microscopy">Probabilistic Deep Learning Framework for Phase Transformation Forecasting aided by In Situ High temperature Microscopy</span></li><li><span class="dpr-home-dashboard-paper-title" title="EnSol: an environment-aware graph neural network for molecular solubility prediction">EnSol: an environment-aware graph neural network for molecular solubility prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="PAOFLOW: an automated suite for ab initio electronic, transport, and topological properties of materials">PAOFLOW: an automated suite for ab initio electronic, transport, and topological properties of materials</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="AutoRASOR: Autonomous Rapid Scanning Electron Microscope Operator">AutoRASOR: Autonomous Rapid Scanning Electron Microscope Operator</span></li><li><span class="dpr-home-dashboard-paper-title" title="Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions">Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions</span></li><li><span class="dpr-home-dashboard-paper-title" title="SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness">SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ar <strong>4</strong></span><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span></div>
 </section>
 </div>
 

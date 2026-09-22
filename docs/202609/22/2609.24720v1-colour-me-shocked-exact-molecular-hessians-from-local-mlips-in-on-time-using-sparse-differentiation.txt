@@ -1,0 +1,718 @@
+Colour me shocked:
+Exact Molecular Hessians from local MLIPs in O(N)
+time using sparse differentiation!
+Luca Thiede
+Department of Computer Science
+University of Toronto
+Vector Institute for Artificial Intelligence
+Toronto, Canada
+luca.thiede@yahoo.com
+Andreas Burger
+Department of Computer Science
+University of Toronto
+Vector Institute for Artificial Intelligence
+Toronto, Canada
+Alán Aspuru-Guzik
+Department of Computer Science, University of Toronto
+Vector Institute for Artificial Intelligence
+Acceleration Consortium
+Senior Fellow, Canadian Institute for Advanced Research (CIFAR)
+NVIDIA
+Toronto, Canada
+Abstract
+The Hessian of the energy with respect to the nuclear positions is indispensable
+in atomistic modelling. However, constructing this matrix requires O(N) Hessian
+vector products, traditionally limiting high-accuracy Hessians to small systems.
+Machine learning interatomic potentials (MLIPs) have accelerated atomistic mod-
+elling by providing highly accurate energies and forces at O(N) cost, yet the
+resulting O(N 2) cost of Hessians remains a practical bottleneck for large systems.
+Based on the insight that we can derive the sparsity pattern for an MLIP’s Hessians
+in closed form, we show in this paper how to use techniques from sparse automatic
+differentiation to reduce the cost of a local MLIP’s Hessians to a system-size-
+independent number of Hessian-vector products, yielding overall O(N) total cost
+without any approximations. We benchmark our approach on a variety of systems
+ranging from alkane chains to water clusters to Aβ40 conformers. Depending on
+the MLIP configuration, we achieve the linear scaling regime already on relatively
+small systems, resulting in large runtime reductions between 2×-15× for these
+systems. This opens up the possibility of scaling high-accuracy MLIP Hessians to
+very large systems, such as proteins that were previously inaccessible.
+1
+Introduction
+The Hessian is a basic ingredient in atomistic modelling, entering, for example, vibrational analysis,
+normal-mode calculations, transition-state characterization, and second-order geometry optimization.
+Yet building the full Hessian is far more expensive than evaluating the underlying energy or forces,
+typically scaling by a factor of O(N) worse.
+Machine learning interatomic potentials built on architectures such as SchNet, MACE, eSEN, AimNet,
+and TensorNet and trained on large databases of electronic structure data, such as OMOL25 Levine
+et al. [2025], now provide reliable surrogate potentials Schütt et al. [2017], Batatia et al. [2022], Fu
+Preprint.
+arXiv:2609.24720v1  [cs.CE]  21 Sep 2026
+
+
+et al. [2025], Zubatyuk et al. [2019], Simeon and De Fabritiis [2023], Ko et al. [2025] with accuracy
+comparable to high level density functional theory (DFT) at a scaling of O(N) due to the enforcement
+of cutoff radii. Forces are trivially available because they follow by differentiating the learned scalar
+energy with respect to Cartesian coordinates once, which roughly doubles the cost but introduces no
+additional asymptotic scaling compared to the energy. By contrast, constructing the full 3N × 3N
+Cartesian Hessian requires 3N second-derivative probes, and O(N 2) storage, thereby introducing an
+additional factor in system size in time and memory and leading to a total time complexity of O(N 2),
+see section 2.
+Prior work in chemistry has repeatedly exploited locality and effective sparsity to reduce the cost
+of second derivatives. Representative examples include reduced-scaling analytic Hessians based on
+localized density-matrix response, sparse numerical Hessians that evaluate only important couplings,
+block- or fragment-reduced vibrational models for large systems, or by using Hessian information
+from a cheaper method to accelerate the Hessian computation of a more expensive method Kussmann
+et al. [2015], Yang et al. [2024], Ghysels et al. [2011], Nakata and Fedorov [2021], Sanders et al.
+[2015]. A different route is taken in recent work that achieves O(N) Hessian prediction by learning
+second-order information directly, rather than by differentiating through the force field Burger et al.
+[2025]. However, all these methods have in common that they are only approximately correct. In
+parallel, the field of automatic differentiation developed methods to exploit sparsity in derivatives
+for arbitrary black-box computer programs. In contrast to the previously listed approaches, sparse
+automatic differentiation is guaranteed to be exact Curtis et al. [1974], Newsam and Ramsdell [1983],
+Coleman and Moré [1984], Powell and Toint [1979], Coleman and Cai [1986], Gebremedhin et al.
+[2005]. The central practical limitation of sparse automatic differentiation is that it relies on knowing
+the sparsity pattern of the Hessian Hill et al. [2025]. In general-purpose settings, obtaining that
+pattern requires a sparsity-detection pass, which can be costly. Here we show, however, that for a
+broad class of modern local message-passing interatomic potentials, the Hessian sparsity pattern
+follows trivially from how information propagates through a finite number of message-passing layers
+within a radius of neighbours.
+Once that pattern is known, the classical sparse-derivative pipeline constructs a seed matrix from an
+admissible colouring, evaluates compressed Hessian-vector products, and recovers the full Hessian
+exactly. This graph-derived sparsity removes the sparsity pattern detection pass and makes exact
+sparse Hessians efficient even for single Hessian evaluations of relatively small systems. By defining
+heuristic sparsity patterns based on a cutoff radius, we can further extend the idea more broadly to
+any ab-initio method as long as the Hessian is well behaved and we accept an approximation error.
+This leads to an efficient black-box sparse Hessian algorithm without the need to change any of the
+underlying quantum chemistry code.
+We summarize the contributions of this paper as follows:
+1. We derive the sparsity pattern for Cartesian Hessians of the most common forms of MLIPs
+in closed form.
+2. We introduce ColPackPy, an easy to use Python interface for sparse Hessian computa-
+tions, including the graph-derived sparsity construction for MLIPs, colouring via ColPack
+Gebremedhin et al. [2013], compressed probing, and differentiable recovery in PyTorch.
+3. We benchmark the resulting pipeline across representative molecular systems and MLIPs and
+quantify the resulting speedups across favourable and unfavourable compression regimes.
+2
+Background
+The standard way to obtain second-order information in major automatic differentiation frameworks
+such as Jax and PyTorch is through Hessian-vector products (HVPs) Pearlmutter [1994], Griewank
+and Walther [2008], Baydin et al. [2018]. For a black box scalar function E : R3N →R (in our case
+this will of course be the MLIP mapping the atomic positions to the energy), evaluated at coordinates
+R, let g(R) = ∇RE(R). Then for any probing vector v ∈R3N,
+H(R)v = d
+dϵ g(R + ϵv)
+
+ϵ=0
+,
+(1)
+that is, the directional derivative of the gradient, equivalently the Jacobian-vector product of g in
+the direction v Pearlmutter [1994], Griewank and Walther [2008]. In settings where an exact HVP
+2
+
+
+operator is unavailable, the same directional probe can be approximated by the finite difference
+H(R)v ≈g(R + ϵv) −g(R)
+ϵ
+,
+(2)
+Importantly, AD frameworks expose these products without explicit formation of H Pearlmutter
+[1994], Baydin et al. [2018]. In fact, to get the full dense Hessian, we usually apply HVPs with the
+standard basis vectors {ei}3N
+i=1 to recover the explicit Hessian column by column,
+H(R)ei = H:,i(R),
+Hexplicit = Himplicit I,
+(3)
+In contrast, sparse-Hessian methods reduce the number of probes by replacing the identity matrix
+with a compressed seed matrix derived from a colouring of the sparsity pattern, as we will describe in
+the next section Coleman and Moré [1984], Gebremedhin et al. [2005, 2009]; see also Fig. 1.
+3
+Sparse Automatic Differentiation
+Figure 1: Top: The naive method probes each direction of the implicit Hessian individually, yielding
+one column of the Hessian per HVP. This requires N HVPs, where N is the dimension of the Hessian
+and can be written as the multiplication of the implicit Hessian with the identity matrix. Bottom: We
+first derive a sparsity pattern from the molecule and the MLIP cutoff and layer count. Using a graph
+colouring algorithm, this is mapped into the seed matrix S which is much lower dimensional than I.
+After multiplication with the implicit Hessian Y = Himpl.S we can use a recovery algorithm fRec. to
+reconstruct the explicit Hexpl..
+The sparse Hessian procedure employed here comprises four stages, see figure 1:
+1. First we derive a sparsity pattern P from the atomistic graph, section 3.1
+2. We then map the sparsity pattern to a graph and use graph colouring algorithms to obtain a
+seed matrix S ∈{0, 1}3N×p, whose columns are our probing vectors. Our goal is to get a
+seed matrix with p as small as possible, while still having enough information to recover the
+Hessian exactly.
+3. We probe the Hessian using the seed matrix to obtain the response Y = HimplicitS
+4. We use a reconstruction algorithm to get the Hessian Hexplicit = frec.(Y)
+The essential simplification relative to generic sparse-derivative settings is that we can derive the spar-
+sity pattern P a priori from the locality of the message-passing architecture (or get an approximately
+by a heuristic cutoff radius).
+3
+
+
+3.1
+The Sparsity Pattern of MLIPs
+To apply sparse derivative techniques, we need the sparsity pattern P of the Hessian Coleman and
+Moré [1984], Gebremedhin et al. [2009],
+Pij =
+1
+if Hij̸ = 0,
+0
+if Hij = 0.
+(4)
+which indicates whether the Hessian entry coupling i and j can be nonzero. Detecting this sparsity
+pattern is often complicated and expensive Gebremedhin et al. [2009] for black box programs.
+Therefore, using sparse automatic differentiation gives the most benefits if we either reuse the same
+sparsity pattern across multiple calculations with different inputs, or we can use knowledge about the
+problem to determine the pattern efficiently. Our approach falls into the latter category.
+Most modern ML interatomic potentials are local message-passing models and can be written as
+Etot =
+N
+X
+a=1
+Ea
+ {Ri}i∈R(a)
+
+,
+(5)
+where R(a) is the receptive field of atom a. This form is standard for atom-centered and message-
+passing models for molecules and materials Gilmer et al. [2017], Schütt et al. [2017], Batatia et al.
+[2022]. If A is the adjacency matrix of the interaction graph and the model consists of L message-
+passing layers, then
+R(a) =
+n
+i
+ ( ˜A L)ai̸ = 0
+o
+,
+˜A = A + I,
+(6)
+where the identity is included so that each atom remains in its own receptive field. This is the standard
+graph-theoretic interpretation of L rounds of message passing: Information propagates along paths of
+length of at most L Gilmer et al. [2017].
+We define the receptive-field incidence matrix
+M = 1
+h
+˜A L̸ = 0
+i
+,
+(7)
+so that Mai = 1 exactly when atom i lies in the receptive field of center a. Then a Hessian block
+(i, j) can be nonzero only if there exists some atomic term Ea that depends on both Ri and Rj, i.e.
+P atom
+ij
+= 1[∃a such that MaiMaj = 1] = 1
+
+(M⊤M)ij̸ = 0
+
+(8)
+This gives a graph-based upper bound on the atomwise Hessian sparsity pattern induced by the local
+decomposition of the energy Schütt et al. [2017], Batatia et al. [2022]. Extensions to sparsity patterns
+of higher order derivatives are trivial by adding more Mak to the product.
+So far, we have only considered nodes, but each node is embedded in Cartesian space, and therefore,
+the full Cartesian Hessian sparsity pattern is
+P = Patom ⊗13×3
+(9)
+Sparsity is therefore inferred from the graph topology, avoiding the computation from the sparsity-
+detection pass Gebremedhin et al. [2009].
+In some cases, the model does not permit any exact sparsity. This can occur when message-passing
+cutoffs are too large compared to the system size, when the network has many layers or non-local
+interactions such as charge equilibration, or when one seeks to apply the same sparsity logic to
+electronic-structure methods such as density functional theory. In these cases, we can instead
+use a heuristic cutoff-based sparsity pattern Papprox. There are several reasonable choices. The
+simplest one is to set L = 1 together with a distance cutoff. However, we can also use other, more
+sophisticated patterns like choosing L > 1 and a smaller cutoff to capture long-range responses
+mediated by covalent bonds, or include coupling terms between formally charged groups and other
+prior chemical domain knowledge. A more blackbox approach is to run a cheap method like xtb
+Grimme et al. [2017] or lower rung DFT with a large or no cutoff, threshold the Hessian to obtain a
+sparsity pattern, and use it for a more expensive method like higher rung DFT.
+Next, we use P to construct a compressed set of probing vectors for the Hessian, so that the Hessian
+can be reconstructed exactly from as few directional probes as permitted by the chosen colouring and
+recovery scheme Coleman and Moré [1984], Gebremedhin et al. [2005, 2009].
+4
+
+
+3.2
+From Sparsity to Seed Matrix
+Given the structural sparsity pattern P of the Hessian, we form the associated adjacency graph
+G(P) = (V, E),
+V = {1, . . . , n},
+(i, j) ∈E ⇐⇒i̸ = j and Pij = 1.
+(10)
+This means, the vertices correspond to the columns of the sparsity pattern P and two vertices are
+connected by an edge if the off-diagonal entry in sparsity pattern that connects them is non-zero.
+A colouring of G(P) partitions these columns into colour classes, which defines a seed matrix
+S ∈{0, 1}n×p. If c : V →{1, . . . , p} denotes the colouring, then
+Sik = 1[c(i) = k].
+(11)
+Each column of S is therefore a probing direction that simultaneously perturbs all variables assigned
+the same colour. The compressed Hessian
+Y = HS
+(12)
+can then be computed using one Hessian probe per colour class. The objective is to find a colouring,
+and hence a seed matrix S, with as few colours as possible while still allowing exact reconstruction
+of H Gebremedhin et al. [2005, 2009].
+While there are several colouring schemes that permit exact recovery, the minimum requirement
+common to all of them is that the colouring is proper:
+(i, j) ∈E =⇒c(i)̸ = c(j).
+(13)
+This ensures that two variables whose coupling may be nonzero are never assigned to the same
+probing direction. However, proper colouring alone is not sufficient for exact Hessian recovery.
+Even when adjacent vertices have different colours, the compressed product Y can still mix multiple
+unknown Hessian entries in a way that prevents unique separation. Additional structural constraints
+are therefore needed to guarantee that Y contains enough information to recover H exactly. We
+distinguish between direct recovery, where Hessian entries can be read off directly from Y, and
+substitution-based recovery, where some entries are obtained directly from Y and the remaining
+ones are recovered sequentially by subtracting contributions from entries that have already been
+determined Gebremedhin et al. [2005, 2007, 2009], Montoison et al. [2025].
+For direct recovery of a symmetric Hessian, the colouring must satisfy the star colouring con-
+dition, which demands in addition to proper colouring that every path on four vertices uses at least
+three colours Gebremedhin et al. [2007, 2009].
+For substitution-based recovery, one can weaken this to an acyclic colouring, which demands,
+in addition to proper colouring, that every cycle uses at least three colours Gebremedhin et al. [2007,
+2009].
+Star colouring is more restrictive, but it leads to a simpler reconstruction procedure. Acyclic colouring
+is less restrictive and therefore typically requires fewer colours, but the reconstruction step is more
+involved; in practice, indirect (substitution-based) recovery is often faster overall despite the more
+complicated decompression step. For implementation details on colouring and recovery, please refer
+to Gebremedhin et al. [2009]
+For sparse graphs with maximum degree δ, the coloring is typically inexpensive, with commonly
+used heuristics scaling on the order of O(|V |δ2). For sparse graphs, δ becomes a constant with graph
+size, and the coloring itself therefore grows linear with system size.
+3.3
+Scaling
+We now make the scaling regime in which the number of Hessian-vector products becomes indepen-
+dent of system size precise: Consider a sequence of systems with fixed MLIP cutoff radius, fixed
+message-passing depth L, and bounded local density, i.e. a bounded number of at most d atoms
+inside any cutoff ball, independent of the total system size N. Then each L-hop receptive field has
+size bounded by a constant depending only on d and L. Consequently, the induced Cartesian Hessian
+sparsity graph G(P) has maximum degree δ(G(P)) bounded by a function dependent only on d and
+L, and hence independent of the number of atoms N. Standard sparse-Hessian colouring results then
+imply that admissible star or acyclic colourings require p = Od,L(1) colours, corresponding to a
+system-size-independent number of HVPs Gebremedhin et al. [2005]. Since each HVP through a
+local MLIP costs O(N), the sparse Hessian can be constructed in O(N) time and stored in O(N)
+space, using a sparse tensor format.
+5
+
+
+3.4
+ColPackPy
+We package the full sparse-Hessian workflow in a lightweight Python interface using Python bindings
+of the C++ ColPack library Gebremedhin et al. [2013] for the graph-colouring algorithms, reim-
+plementations of the recovery algorithms in PyTorch, and utility functions to derive the sparsity
+pattern from the connectivity graph and number of layers. The library supports sparse return types
+for scalable Hessians of very large systems. For the jax ecosystem, asdex Hill and Dalle [2026]
+provides similar functionality, although no acyclic coloring is supported as of now.
+A typical usage pattern is shown below:
+1
+from colpackpy.torch_utils import compute_sparse_hessian_fn
+2
+3
+def energy_fn(x_flat: torch.Tensor) -> torch.Tensor:
+4
+pos = x_flat.view(-1, 3)
+5
+return mlip_energy(pos)
+# scalar torch.Tensor from any MLIP
+6
+7
+sparsity_pattern = create_sparsity_pattern_from_graph(g, # "dgl.DGLGraph"
+8
+num_layers # int
+9
+)
+10
+11
+H, stats = compute_sparse_hessian_fn(
+12
+energy_fn,
+13
+positions, # flattened Cartesian coordinates, shape (3 * n_atoms,)
+14
+sparsity_pattern,
+15
+n=positions.numel(),
+16
+coloring_algorithm="ACYCLIC",
+# or "STAR"
+17
+)
+Because the compressed probing and recovery steps are implemented in PyTorch, the resulting
+sparse-Hessian calculation remains differentiable.
+4
+Experiments
+The results presented here address five questions.
+1. How much does sparse colouring reduce the number of HVPs?
+2. How strongly does that reduction translate into wall-clock savings?
+3. How do the savings vary across the systems studied?
+4. Which colouring algorithm performs best?
+5. How large is the error stemming from an approximate sparsity pattern?
+We compare the (naive) Hessian to the sparse Hessian via direct recovery (star), and substitution-
+based recovery (acyclic). All reported runtimes are timed on a Quadro RTX 5000 GPU, and all
+MLIP implementations and checkpoints came from the MatGL library Ko et al. [2025]. The maximal
+difference between the naive and the sparsely recovered Hessians over all elements is on the order of
+10−8 for float32, so within floating point precision as expected.
+4.1
+Exact recovery
+We characterize the speedup of exact sparse differentiation across three systems and two MLIP
+settings: We use linear alkane chains to test the best case scenario, dense water clusters for the worst
+case, and Aβ40, a 40-residue protein in differently folded states for intermediate cases taken from
+the protein ensemble database Protein Ensemble Database, Lazar et al. [2021]. For the MLIPs, we
+use TensorNet Simeon and De Fabritiis [2023] with one layer and a cutoff of 5 Å, similar to what is
+used in simulations of very large systems such as Wang et al. [2025], Song et al. [2024], Willman
+et al. [2024], Liu et al. [2026] and TensorNet with two layers and a cutoff of 5 Å, similar to some
+foundation models such as MACE-OFF Kovács et al. [2023]. For each system, we count the number
+6
+
+
+(a) Runtime scaling for a one layer TensorNet on alkane
+chains.
+(b) Runtime scaling for a one layer TensorNet on water
+clusters.
+(c) HVP count scaling for a one layer TensorNet on
+Alkane chains.
+(d) HVP count scaling for a one layer TensorNet on
+water clusters.
+Figure 2: Runtime and HVP count scaling of a one layer TensorNet on increasing alkane chains and
+water clusters.
+of HVPs and the total runtime. We additionally tested MACE-OFF23 (medium) which has the same
+sparsity pattern as the larger tested TensorNet. Sparsity therefore saves the same number of HVPs;
+however, each MACE HVP is 38x more expensive than TensorNet (48ms vs 1852ms on the C300
+Alkane chain on our system). The share of the total runtime of the coloring overhead therefore shrinks
+from 26% for TensorNet to 0.8% for MACE, and the speedup for MACE becomes even larger.
+Alkanes and Water Cluster
+We plot the timings of the one-layer MLIP in 2a and 2b. Plots of
+the HVP counts as well as the timings of the two-layer MLIPs are in appendix 6 and 7. The HVP
+count for the naive approach grows linearly, while it tapers and becomes constant for the sparse
+approaches as expected. This translates into linear scaling timings even in the unfavourable dense
+water cluster case. Especially acyclic leads to consistent and large runtime savings of up to 15×
+for alkanes and 8× for water cluster, which is why we recommend it as the default choice. The star
+algorithm still reduces the HVP count but generally performs worse than theacyclic coloring and
+should therefore only be understood as a reference.
+Aβ40 Protein Conformer
+We further plot the HVP count and timings with a breakdown in
+colouring, HVPs, and recovery in 3 for the one-layer MLIP, and in the appendix 8 for the two-layer
+MLIP. We see a similar story as in the previous section, with consistent and significant savings in
+HVP and runtime with up to 6× runtime savings.
+The breakdown also reveals that the colouring, while small, is not completely negligible. The reason
+for this is that the HVPs are running on GPU while the colouring is currently implemented on CPU,
+which could be addressed in the future with GPU based colouring algorithms.
+4.2
+Cutoff-based approximate recovery
+In cases where the receptive field of the model becomes too large compared to the system, such that
+there is no exactly exploitable sparsity, we can use a heuristic sparsity pattern as discussed in section
+3.1. The simplest of such heuristics is to build it from a simple atom pair cutoff radius. We test
+7
+
+
+Figure 3: Runtime for computing the Hessian of a one layer TensorNet on different Aβ40 confor-
+mations with a runtime breakdown into the colouring, HVP and recovery step. The corresponding
+sparsity pattern induced by TensorNet is shown for two examples on the bottom.
+this on the Chignolin protein Wang et al. [2023] in a difficult non-equilibrium conformation with
+maximal span of about 32Å, by sweeping over cutoff radii from 5 to 32 Åand record the average
+relative eigenvalue error
+1
+3N
+P3N
+i
+|λapprox
+i
+−λGT
+i |
+|λGT
+i |+1e−5 after Eckart projection Eckart [1935] and the number
+of HVPs. In the appendix A.3 we additionally show the maximum error over Hessian elements. We
+test two models:
+CHGNet
+We use a CHGNet model Deng et al. [2023] with 5 layers and 6 Å, resulting in a receptive
+field of 30 Å, almost entirely covering the protein. The results are shown in figure 4a and 4b. We see
+that both acyclic and star get, for this system, close to numerical accuracy with an error between
+10−6 −10−7 after about 17 Å. However, the acyclic method clearly saves more HVPs at the 17 Å
+cutoff.
+DFT
+We further test the approach with DFT at the PBE level of theory on the same Chignolin
+protein using ORCA Neese [2012]. As ORCA does not expose their HVP API we emulate the HVPs.
+For DFT and HVP details, see appendix A.3. The results are shown in figure 5a and 5b. Again, we
+drop to very low errors of about 0.1% average eigenvalue error after about 17 Å. However, compared
+to CHGNet the error drops slower, indicating that there are slightly more long-range dependencies
+present in DFT Hessians.
+8
+
+
+(a) Average relative eigenvalue error after Eckart pro-
+jection on Chignolin, dependent on the cutoff radius
+when used for the CHGNet MLIP with a receptive field
+covering the entire molecule.
+(b) Average relative eigenvalue error after Eckart pro-
+jection on Chignolin, dependent on the number of HVP
+we perform as a result of the cutoff radius implied spar-
+sity pattern.
+Figure 4: Approximation error induced by using an approximate cutoff-based sparsity pattern with
+the CHGNet MLIP with a receptive field covering the entire protein.
+(a) Average relative eigenvalue error after Eckart pro-
+jection on Chignolin, dependent on the cutoff radius
+when used with DFT at PBE level of theory.
+(b) Average relative eigenvalue error after Eckart pro-
+jection on Chignolin with DFT at PBE level of theory,
+dependent on the number of HVP we perform as a re-
+sult of the cutoff radius implied sparsity pattern.
+Figure 5: Approximation error induced by using an approximate cutoff-based sparsity pattern with
+DFT at the PBE level of theory.
+5
+Extensions and future work
+Currently, the colouring cost is usually small, but not completely negligible, as it runs on CPU. In the
+future, it might be possible to further reduce the runtime by adapting advances in GPU accelerated
+colouring algorithms to star and acyclic colouring Chen et al. [2017].
+The framework can also be extended to higher derivatives like the anharmonicity Kaser et al. [2021].
+Our sparsity pattern derivation extends trivially to higher orders. The coloring can be achieved either
+by chaining lower-order derivatives or using tensor colorings Deussen and Naumann [2019]. Sparse
+higher-order derivatives are useful, for example, to scale anharmonic vibrational corrections like
+VPT2 to large systems.
+Another application of our work is batched parallel computation of Hessians of different non-
+interacting systems. Naively, this requires 3Ntot HVPs with a total number of atoms Ntot. However,
+the total Hessian is block-diagonal, and using our framework, the number of HVPs can therefore be
+reduced to at most 3Nmax, with the maximum number of atoms over the systems in the batch Nmax,
+even if each subsystem is dense.
+Finally, it might be possible to supervise MLIP second derivatives in the compressed subspace
+spanned by the seed matrix, instead of random HVPs as is currently done Rodriguez et al. [2026],
+Koker et al. [2026].
+9
+
+
+6
+Conclusions
+By deriving the sparsity pattern for MLIPs analytically without the need for expensive detection
+algorithms, this paper makes sparse second-order derivatives practical, even for relatively small
+systems, yielding linear scaling exact Hessians while leaving the underlying force-field architecture
+unchanged. To make these techniques as accessible as possible, we introduce the easy to use
+ColPackPy library. Across various systems, the method reduces both probe counts and runtimes
+considerably. Real production biomolecular systems can be orders of magnitude larger than the
+considered systems. For example, a typical protein can have on the order of 1000 residues, compared
+to the 40 of our Aβ40 test case. Since our approach scales better, the savings for more typical systems
+will be even larger.
+References
+Ilyes Batatia, David P Kovacs, Gregor Simm, Christoph Ortner, and Gábor Csányi. Mace: Higher
+order equivariant message passing neural networks for fast and accurate force fields. Advances in
+neural information processing systems, 35:11423–11436, 2022.
+Atilim Gunes Baydin, Barak A. Pearlmutter, Alexey Andreyevich Radul, and Jeffrey Mark Siskind.
+Automatic differentiation in machine learning: A survey. Journal of Machine Learning Research,
+18(153):1–43, 2018. URL https://jmlr.org/papers/v18/17-468.html.
+Andreas Burger, Luca Thiede, Nikolaj Rønne, Varinia Bernales, Nandita Vijaykumar, Tejs Vegge,
+Arghya Bhowmik, and Alan Aspuru-Guzik. Hip: Hessian interatomic potentials without derivatives.
+arXiv preprint arXiv:2509.21624, 2025. URL https://arxiv.org/abs/2509.21624.
+Xuhao Chen, Pingfan Li, Jianbin Fang, Tao Tang, Zhiying Wang, and Canqun Yang. Efficient
+and high-quality sparse graph coloring on gpus. Concurrency and Computation: Practice and
+Experience, 29(10):e4064, 2017.
+Thomas F. Coleman and J. Y. Cai. The cyclic coloring problem and estimation of sparse hessian
+matrices. SIAM Journal on Algebraic and Discrete Methods, 7(2):221–235, 1986. doi: 10.1137/
+0607026. URL https://doi.org/10.1137/0607026.
+Thomas F. Coleman and Jorge J. Moré. Estimation of sparse hessian matrices and graph coloring
+problems. Mathematical Programming, 28(3):243–270, 1984. doi: 10.1007/BF02612334. URL
+https://doi.org/10.1007/BF02612334.
+A. R. Curtis, M. J. D. Powell, and J. K. Reid. On the estimation of sparse jacobian matrices. IMA
+Journal of Applied Mathematics, 13(1):117–119, 1974. doi: 10.1093/imamat/13.1.117. URL
+https://doi.org/10.1093/imamat/13.1.117.
+Bowen Deng, Peichen Zhong, KyuJung Jun, Janosh Riebesell, Kevin Han, Christopher J. Bartel, and
+Gerbrand Ceder. Chgnet as a pretrained universal neural network potential for charge-informed
+atomistic modelling. Nature Machine Intelligence, 5(9):1031–1041, 9 2023. ISSN 2522-5839. doi:
+10.1038/s42256-023-00716-3. URL https://doi.org/10.1038/s42256-023-00716-3.
+Jens Deussen and Uwe Naumann. Efficient computation of sparse higher derivative tensors. In
+International Conference on Computational Science, pages 3–17. Springer, 2019.
+Carl Eckart. Some studies concerning rotating axes and polyatomic molecules. Physical Review, 47
+(7):552, 1935.
+Xiang Fu, Brandon M Wood, Luis Barroso-Luque, Daniel S Levine, Meng Gao, Misko Dzamba, and
+C Lawrence Zitnick. Learning smooth and expressive interatomic potentials for physical property
+prediction. In Forty-second International Conference on Machine Learning, 2025.
+Assefaw H. Gebremedhin, Arijit Tarafdar, Fredrik Manne, and Alex Pothen. New acyclic and star
+coloring algorithms with application to computing hessians. SIAM Journal on Scientific Computing,
+29(3):1042–1072, 2007. doi: 10.1137/050639879. URL https://epubs.siam.org/doi/10.
+1137/050639879.
+10
+
+
+Assefaw H Gebremedhin, Arijit Tarafdar, Alex Pothen, and Andrea Walther. Efficient computation of
+sparse hessians using coloring and automatic differentiation. INFORMS Journal on Computing, 21
+(2):209–223, 2009.
+Assefaw H. Gebremedhin, Duc Nguyen, Md. Mostofa Ali Patwary, and Alex Pothen. Colpack:
+Software for graph coloring and related problems in scientific computing. ACM Trans. Math.
+Softw., 40(1), October 2013. ISSN 0098-3500. doi: 10.1145/2513109.2513110. URL https:
+//doi.org/10.1145/2513109.2513110.
+Assefaw Hadish Gebremedhin, Fredrik Manne, and Alex Pothen. What color is your jacobian?
+graph coloring for computing derivatives. SIAM Review, 47(4):629–705, 2005. doi: 10.1137/
+S0036144504444711. URL https://epubs.siam.org/doi/10.1137/S0036144504444711.
+An Ghysels, H Lee Woodcock III, Joseph D Larkin, Benjamin T Miller, Yihan Shao, Jing Kong,
+Dimitri Van Neck, Veronique Van Speybroeck, Michel Waroquier, and Bernard R Brooks. Efficient
+calculation of qm/mm frequencies with the mobile block hessian. Journal of Chemical Theory and
+Computation, 7(2):496–514, 2011.
+Justin Gilmer, Samuel S Schoenholz, Patrick F Riley, Oriol Vinyals, and George E Dahl. Neural
+message passing for quantum chemistry. In International conference on machine learning, pages
+1263–1272. Pmlr, 2017.
+Andreas Griewank and Andrea Walther. Evaluating derivatives: principles and techniques of
+algorithmic differentiation. SIAM, 2008.
+Stefan Grimme, Christoph Bannwarth, and Philip Shushkov. A robust and accurate tight-binding
+quantum chemical method for structures, vibrational frequencies, and noncovalent interactions of
+large molecular systems parametrized for all spd-block elements (z= 1–86). Journal of chemical
+theory and computation, 13(5):1989–2009, 2017.
+Adrian Hill and Guillaume Dalle. asdex: Automatic sparse differentiation in jax, 2026. URL
+https://github.com/adrhill/asdex.
+Adrian Hill, Guillaume Dalle, and Alexis Montoison. An illustrated guide to automatic sparse
+differentiation. In ICLR Blogposts 2025, 2025.
+Silvan Kaser, Eric D Boittier, Meenu Upadhyay, and Markus Meuwly. Transfer learning to ccsd (t):
+Accurate anharmonic frequencies from machine learning models. Journal of Chemical Theory and
+Computation, 17(6):3687–3699, 2021.
+Tsz Wai Ko, Bowen Deng, Marcel Nassar, Luis Barroso-Luque, Runze Liu, Ji Qi, Atul C. Thakur,
+Adesh Rohan Mishra, Elliott Liu, Gerbrand Ceder, Santiago Miret, and Shyue Ping Ong. Materials
+graph library (matgl), an open-source graph deep learning library for materials science and
+chemistry. npj Computational Materials, 11:253, 2025. doi: 10.1038/s41524-025-01742-y. URL
+https://doi.org/10.1038/s41524-025-01742-y.
+Teddy Koker, Abhijeet Gangan, Mit Kotak, Jaime Marian, and Tess Smidt. Pft: Phonon fine-tuning
+for machine learned interatomic potentials. arXiv preprint arXiv:2601.07742, 2026.
+Dávid Péter Kovács, J Harry Moore, Nicholas J Browning, Ilyes Batatia, Joshua T Horton, Yixuan Pu,
+Venkat Kapil, William C Witt, Ioan-Bogdan Magd˘au, Daniel J Cole, et al. Mace-off: Transferable
+short range machine learning force fields for organic molecules. arXiv preprint arXiv:2312.15211,
+2023.
+Jörg Kussmann, Arne Luenser, Matthias Beer, and Christian Ochsenfeld. A reduced-scaling density
+matrix-based method for the computation of the vibrational hessian matrix at the self-consistent
+field level. The Journal of Chemical Physics, 142:094101, 2015. doi: 10.1063/1.4908131. URL
+https://doi.org/10.1063/1.4908131.
+Tamas Lazar, Elizabeth Martínez-Pérez, Federica Quaglia, András Hatos, Lucía B Chemes, Javier A
+Iserte, Nicolás A Méndez, Nicolás A Garrone, Tadeo E Saldaño, Julia Marchetti, et al. Ped in 2021:
+a major update of the protein ensemble database for intrinsically disordered proteins. Nucleic acids
+research, 49(D1):D404–D411, 2021.
+11
+
+
+Daniel S Levine, Muhammed Shuaibi, Evan Walter Clark Spotte-Smith, Michael G Taylor, Muham-
+mad R Hasyim, Kyle Michel, Ilyes Batatia, Gábor Csányi, Misko Dzamba, Peter Eastman, et al. The
+open molecules 2025 (omol25) dataset, evaluations, and models. arXiv preprint arXiv:2505.08762,
+2025.
+Xianglin Liu, Kai Yang, Fanli Zhou, Yongxiang Liu, Hao Chen, Yijia Zhang, Dengdong Fan, Wenbo
+Li, Bingqiang Wang, Shixun Zhang, et al. Smc-ai: Scaling monte carlo simulation to four trillion
+atoms with ai accelerators. arXiv preprint arXiv:2604.08250, 2026.
+Alexis Montoison, Guillaume Dalle, and Assefaw Gebremedhin. Revisiting sparse matrix coloring
+and bicoloring, May 2025. URL https://arxiv.org/abs/2505.07308.
+Hiroya Nakata and Dmitri G. Fedorov. Development of the analytic second derivatives for the
+fragment molecular orbital method. In Recent Advances of the Fragment Molecular Orbital
+Method, pages 425–458. Springer Nature Singapore, 2021. doi: 10.1007/978-981-15-9235-5_22.
+URL https://doi.org/10.1007/978-981-15-9235-5_22.
+F. Neese. The orca program system. WIRES Comput. Molec. Sci., 2(1):73–78, 2012. doi: 10.1002/
+wcms.81.
+Garry N. Newsam and John D. Ramsdell. Estimation of sparse jacobian matrices. SIAM Journal
+on Algebraic and Discrete Methods, 4(3):404–418, 1983. doi: 10.1137/0604041. URL https:
+//doi.org/10.1137/0604041.
+Barak A. Pearlmutter. Fast exact multiplication by the hessian. Neural Computation, 6(1):147–160,
+1994. doi: 10.1162/neco.1994.6.1.147. URL https://doi.org/10.1162/neco.1994.6.1.
+147.
+M. J. D. Powell and Ph. L. Toint. On the estimation of sparse hessian matrices. SIAM Journal
+on Numerical Analysis, 16(6):1060–1074, 1979. doi: 10.1137/0716078. URL https://epubs.
+siam.org/doi/10.1137/0716078.
+Protein Ensemble Database.
+Structural ensemble of the amyloid beta (aβ40) protein [c36m
+(reweighted)]. https://proteinensemble.org/entries/PED00531. Accessed: 2026-04-
+10.
+Austin Rodriguez, Justin S Smith, Sakib Matin, Nicholas Lubbers, Kipton Barros, and Jose L
+Mendoza-Cortes. Projected hessian learning: Fast curvature supervision for accurate machine-
+learning interatomic potentials. arXiv preprint arXiv:2603.04523, 2026.
+Jacob N. Sanders, Xavier Andrade, and Alán Aspuru-Guzik. Compressed sensing for the fast
+computation of matrices: Application to molecular vibrations. ACS Central Science, 1(1):24–32,
+2015. doi: 10.1021/oc5000404. URL https://doi.org/10.1021/oc5000404.
+Kristof Schütt, Pieter-Jan Kindermans, Huziel Enoc Sauceda Felix, Stefan Chmiela, Alexandre
+Tkatchenko, and Klaus-Robert Müller. Schnet: A continuous-filter convolutional neural network
+for modeling quantum interactions. Advances in neural information processing systems, 30, 2017.
+Guillem Simeon and Gianni De Fabritiis. Tensornet: Cartesian tensor representations for effi-
+cient learning of molecular potentials. In Advances in Neural Information Processing Systems
+36, 2023.
+URL https://proceedings.neurips.cc/paper_files/paper/2023/hash/
+75c2ec5f98d7b2f50ad68033d2c07086-Abstract-Conference.html.
+Keke Song, Rui Zhao, Jiahui Liu, Yanzhou Wang, Eric Lindgren, Yong Wang, Shunda Chen, Ke Xu,
+Ting Liang, Penghua Ying, et al. General-purpose machine-learned potential for 16 elemental
+metals and their alloys. Nature Communications, 15(1):10208, 2024.
+Tong Wang, Xinheng He, Mingyu Li, Bin Shao, and Tie-Yan Liu. AIMD-Chig: exploring the
+conformational space of 166-atom protein Chignolin with ab initio molecular dynamics. 5 2023.
+doi: 10.6084/m9.figshare.22786730.v4. URL https://figshare.com/articles/dataset/
+_strong_AIMD-Chig_exploring_the_conformational_space_of_166-atom_protein_
+strong_em_strong_Chignolin_strong_em_strong_with_strong_em_strong_ab_
+initio_strong_em_strong_molecular_dynamics_strong_/22786730.
+12
+
+
+Xun Wang, Xiangyu Meng, Zhuoqiang Guo, Mingzhen Li, Lijun Liu, Mingfan Li, Qian Xiao, Tong
+Zhao, Ninghui Sun, Guangming Tan, et al. 29-billion atoms molecular dynamics simulation with
+ab initio accuracy on 35 million cores of new sunway supercomputer. IEEE Transactions on
+Computers, 2025.
+Jonathan T Willman, Joseph M Gonzalez, Kien Nguyen-Cong, Sebastien Hamel, Vincenzo Lordi, and
+Ivan I Oleynik. Accuracy, transferability, and computational efficiency of interatomic potentials for
+simulations of carbon under extreme conditions. The Journal of chemical physics, 161(8), 2024.
+Xingyu Yang, Haitao Ma, Qing Lu, and Wensheng Bian. Efficient method for numerical calculations
+of molecular vibrational frequencies by exploiting sparseness of hessian matrix. The Journal
+of Physical Chemistry A, 128:3024–3032, 2024. doi: 10.1021/acs.jpca.3c07645. URL https:
+//doi.org/10.1021/acs.jpca.3c07645.
+Roman Zubatyuk, Justin S Smith, Jerzy Leszczynski, and Olexandr Isayev. Accurate and transferable
+multitask prediction of chemical properties with an atoms-in-molecules neural network. Science
+advances, 5(8):eaav6490, 2019.
+13
+
+
+A
+Additional results and details
+We provide additional results with the 2 layer TensorNet architecture on the Alkane Chains, Water
+Cluster and Aβ40 protein. We can see that similar to the 1 layer model, we achieve linear scaling,
+although somewhat later as the two layer model covers more of the systems and therefore has less
+sparsity to exploit.
+A.1
+Alkanes and Water Cluster
+(a) Alkane runtime scaling.
+(b) Water cluster runtime scaling.
+(c) Alkane HVP count scaling.
+(d) Water cluster HVP count scaling.
+Figure 6: The runtime and HVP count of a 1 Layer TensorNet for increasingly larger alkane chains
+and water clusters.
+14
+
+
+(a) Alkane runtime scaling.
+(b) Water cluster runtime scaling.
+(c) Alkane HVP count scaling.
+(d) Water cluster HVP count scaling.
+Figure 7: The runtime and HVP count of a 2 Layer TensorNet for increasingly larger alkane chains
+and water clusters.
+A.2
+Protein Conformer
+15
+
+
+Figure 8: Conformation-dependent sparse Hessian performance for five Aβ40 structures. Variation
+across conformations arises from differences in the induced graph sparsity pattern.
+A.3
+Cutoff experiments
+To use our sparse differentiation in conjunction with DFT and non-local MLIP Hessians, we have to
+use an approximate sparsity pattern based on atom pair distance cutoffs. For our DFT experiments,
+we are generating the Hessian with ORCA Neese [2012]. We use the PBE/sto-3g level of theory with
+the tight convergence criterion. Since the Chignolin geometry is far from equilibrium, convergence of
+the SCF is tricky, requiring second-order SCF and multiple restarts even in the sto-3g basis set. We
+used ORCA’s tight convergence settings with a total compute time of 3 hours. Since ORCA is closed
+source and doesn’t expose HVPs in their API, we emulate them using the full Hessian. In principle,
+CPKS allows for HVPs, though. Alternatively, we can implement HVPs using the finite difference
+approximation 2.
+Additionally to the average relative eigenvalue spectrum error from figure 4a - 5b we show maximal
+Hessian errors maxij|Hsparse
+ij
+−Hnaive
+ij
+| in figure 9a to 9d.
+Supporting Information
+The code will be publicly available on GitHub soon. The code includes our Python bindings for the
+ColPack C++ library Gebremedhin et al. [2013] and the integration with the Materials Graph Library
+(MatGL) Ko et al. [2025], as well as the xyz files for the benchmarked systems.
+16
+
+
+(a) Maximum error vs cutoff radius on Chignolin with
+the large receptive field CHGNet model.
+(b) Maximum error vs HVP count on Chignolin with
+the large receptive field CHGNet model.
+(c) Maximum error vs cutoff radius on Chignolin with
+DFT Hessians.
+(d) Maximum error vs HVP count on Chignolin with
+DFT Hessians.
+Figure 9: The maximum Hessian entry error of the CHGNet model (top) and DFT (bottom) resulting
+from using an approximate sparsity pattern.
+17

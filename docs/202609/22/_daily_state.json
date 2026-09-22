@@ -1,0 +1,185 @@
+{
+  "date": "20260922",
+  "date_label": "",
+  "generated_at": "2026-09-22 17:59:33 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.23134v1",
+      "route": "202609/22/2609.23134v1-ecenet-an-edge-cluster-expansion-line-graph-neural-network",
+      "title": "ECENet: An Edge Cluster Expansion Line-Graph Neural Network",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "等变线图神经网络构建机器学习原子间势",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.23957v1",
+      "route": "202609/22/2609.23957v1-divergent-strategies-and-convergent-outcomes-in-autonomous-materials-discovery",
+      "title": "Divergent strategies and convergent outcomes in autonomous materials discovery",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向材料发现的自主科学智能体",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.24293v1",
+      "route": "202609/22/2609.24293v1-small-supercell-and-small-dataset-training-strategy-of-machine-learning-interatomic-potentials-for-point-defects",
+      "title": "Small-supercell and Small-dataset Training Strategy of Machine Learning Interatomic Potentials for Point Defects",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "机器学习原子间势训练策略加速缺陷模拟",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.24720v1",
+      "route": "202609/22/2609.24720v1-colour-me-shocked-exact-molecular-hessians-from-local-mlips-in-on-time-using-sparse-differentiation",
+      "title": "Colour me shocked: Exact Molecular Hessians from local MLIPs in O(N) time using sparse differentiation!",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "基于局部机器学习原子间势的 O(N) 精确 Hessian",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.22411v1",
+      "route": "202609/22/2609.22411v1-autorasor-autonomous-rapid-scanning-electron-microscope-operator",
+      "title": "AutoRASOR: Autonomous Rapid Scanning Electron Microscope Operator",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向自驱动实验室高通量表征的自主扫描电镜操作",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.15898v1",
+      "route": "202609/22/2609.15898v1-toward-predictive-hydride-bond-energetics-with-neural-network-wavefunctions",
+      "title": "Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "神经网络波函数用于分子能量学",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.20519v1",
+      "route": "202609/22/2609.20519v1-sol-pi-recursively-scaling-auto-research-loops-for-efficient-agent-harness",
+      "title": "SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "为智能体框架扩展自动科研循环",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.21032v1",
+      "route": "202609/22/2609.21032v1-scaling-discovery-through-test-time-communication",
+      "title": "Scaling Discovery through Test-Time Communication",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "多智能体测试时通信实现协作式发现",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.22663v1",
+      "route": "202609/22/2609.22663v1-spiber-reconstructing-free-energy-landscapes-from-short-unconverged-trajectories-with-generative-flow-networks",
+      "title": "SPIBER: Reconstructing Free Energy Landscapes from Short, Unconverged Trajectories with Generative Flow Networks",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用深度生成模型从短分子动力学轨迹重建自由能景观",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.22992v1",
+      "route": "202609/22/2609.22992v1-from-local-atomic-motifs-to-thermodynamic-state-an-interpretable-physics-informed-framework-for-cu-zr-metallic-glasses",
+      "title": "From Local Atomic Motifs to Thermodynamic State: An Interpretable Physics-Informed Framework for Cu-Zr Metallic Glasses",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "物理信息神经网络关联局域原子基元与金属玻璃热力学状态",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    },
+    {
+      "paper_id": "2609.23735v1",
+      "route": "202609/22/2609.23735v1-scholarstack-layered-research-asset-orchestration-and-cross-task-reuse-for-scientific-agents",
+      "title": "ScholarStack: Layered Research Asset Orchestration and Cross-Task Reuse for Scientific Agents",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向科研智能体的分层研究资产编排与复用",
+      "first_seen_at": "2026-09-22 17:59:33 UTC",
+      "updated_at": "2026-09-22 17:59:33 UTC"
+    }
+  ]
+}

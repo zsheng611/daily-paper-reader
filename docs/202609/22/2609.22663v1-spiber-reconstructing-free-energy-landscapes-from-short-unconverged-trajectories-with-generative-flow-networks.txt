@@ -1,0 +1,791 @@
+Title: SPIBER: Reconstructing Free Energy Landscapes from Short, Unconverged Trajectories with Generative Flow Networks
+
+URL Source: https://arxiv.org/pdf/2609.22663v1
+
+Published Time: Tue, 22 Sep 2026 00:38:46 GMT
+
+Number of Pages: 25
+
+Markdown Content:
+# SPIBER: Reconstructing Free Energy Landscapes from Short, Unconverged Trajectories with Generative Flow Networks 
+
+Venkata Sai Sreyas Adury 1 and Pratyush Tiwary 2, 3, 4, a) 
+
+> 1)
+
+Chemical Physics Program and Institute for Physical Science and Technology, University of Maryland, College Park 20742, USA 
+
+> 2)
+
+Biophysics Program and Institute for Physical Science and Technology, University of Maryland, College Park 20742, USA 
+
+> 3)
+
+Department of Chemistry and Biochemistry and Institute for Physical Science and Technology, University of Maryland, College Park 20742, USA 
+
+> 4)
+
+University of Maryland Institute for Health Computing, Bethesda, Maryland 20852, USA 
+
+(Dated: 22 September 2026) 
+
+Abstract: Molecular systems have many degrees of freedom, but their metastable behavior can often be described by a few collective variables. Identifying these variables and estimating free energies along them from limited simulation data remains a challenging, important problem. Separate short trajectories may sample different metastable states without capturing transitions or establishing their relative equilibrium populations. For unbiased trajectories generated with the same Hamiltonian at a single temperature, alternate methods based on histogram reweighting cannot correct this imbalance. Here we present SPIBER, which combines the State Predictive Information Bottleneck (SPIB) with Generative Flow Networks (GFlowNets). SPIB uses deep learning to approximate slow degrees of freedom through a past–future information bottleneck, retaining information needed to predict future metastable states. We show that this compression limits conditional entropy variations in populated regions, allowing conditional mean potential energies, which are much easier to calculate, to be used to approximate free energy differences. Given sufficient local sampling to estimate these energies, they define the target distribution for GFlowNets, energy-based generative samplers that sample according to estimated thermodynamic stability rather than observed populations. For a particle in a radial double-well potential, for alanine dipeptide, and for the nine-residue peptide (Aib) 9, SPIBER recovers free energy differences between sampled metastable states to within one thermal energy unit of reference values. The method combines collective-variable learning and free energy estimation in up to four latent dimensions, without requiring converged state populations or additional molecular dynamics simulations. 
+
+I. INTRODUCTION 
+
+Molecular Dynamics (MD) simulations have become an indispensable tool for studying complex biomolecular systems, providing atomistic insight into processes that would be prohibitively difficult to reproduce experimen-tally. For an N -atom system, modern forcefields allow us to compute the potential energy U (x) of any configura-tion x ∈ R3N with relative ease. The challenge lies not in evaluating energies but in sampling: generating configu-rations according to their true Boltzmann probabilities, 
+
+p(x) ∼ e−βU (x), remains computationally intractable for most systems of practical interest. Fortunately, we rarely need the full high-dimensional distribution. Most biomolecular systems of interest spend the majority of their time in a small number of metastable states—conformations, binding modes, or functional states—separated by free energy barriers that make transitions between them rare events on accessi-ble simulation timescales. This observation reduces the problem to two parts: finding a low-dimensional repre-sentation z : R3N → Rk (k ≪ 3N ), commonly called a 
+
+collective variable (CV), that separates the metastable 
+
+> a) Electronic mail: ptiwary@umd.edu
+
+states of interest, and estimating the equilibrium prob-ability distribution p(z) along this CV, or equivalently, the free energy surface (FES) F (z) = − 1 
+
+> β
+
+log p(z). The first part, finding CVs, has been addressed by numerous methods. When the states of interest are known a priori , hand-chosen geometric or dihedral co-ordinates often suffice. More generally, linear meth-ods like Principal Component Analysis (PCA) 1, Time-Structure Based Independent Analysis (tICA) 2, as well as many machine-learning-based methods 3 can distin-guish metastable states from each other and even iden-tify slow collective motions, given a simulated trajectory. These approaches work reasonably well for separating metastable states but do not guarantee that the result-ing latent space is suitable for free energy estimation—a distinction we return to below. The second part, sampling the free energy surface, has a long history in statistical mechanics and compu-tational chemistry. The most direct approach—running sufficiently long unbiased simulations until multiple tran-sitions between states are observed—is rarely feasible when barriers are high. Enhanced sampling methods such as umbrella sampling 4 and metadynamics 5 address this by applying external bias potentials along a cho-sen CV to accelerate exploration, followed by reweight-ing procedures to recover unbiased free energy estimates. arXiv:2609.22663v1 [physics.chem-ph] 19 Sep 2026 2While powerful, these methods require additional simula-tion time, careful parameter tuning, and a priori knowl-edge of suitable CVs along which to apply the bias. When directly biased simulations are not desirable or feasible, reweighting methods like WHAM 6, BAR, and MBAR 7,8 offer a theoretically rigorous framework for combining multiple trajectories into free energy es-timates. In practice, however, they only provide mean-ingful corrections when running ensembles across a lad-der of temperatures 9, or by applying external biases such as umbrella potentials 4. For collections of short, unbi-ased simulations performed at only one thermodynamic state condition, these methods have no advantage over simple histogramming. Recent work has attempted to circumvent the overlap and biasing requirement by con-structing invertible maps from easily-sampled prior dis-tributions to the target space 10 , then applying MBAR in the transformed coordinates. While promising in prin-ciple, these approaches rely on the model learning an accurate global mapping—which is not guaranteed—and suffer from mode collapse and poor scalability to higher dimensions 11 .In this work, we present a method, SPIBER (State Pre-dictive Information Bottleneck-based Energy Reweight-ing), that bypasses the need for additional molecular dy-namics and biasing entirely by leveraging potential en-ergy information directly along what we call entropy-free 
+
+CVs, rather than relying solely on population counts. The key insight comes from the thermodynamics-based decomposition of the free energy along a CV z as 
+
+F (z) = ˆE(z) − T S (z), (1) where ˆE(z) = R d3N x U (x) p(x|z = z) is the CV-conditioned average potential energy 12 , readily es-timated from simulation snapshots, and S(z) =
+
+−kB
+
+R d3N x p (x|z = z) log p(x|z = z) is the conditional entropy. We show that when the CV is constructed us-ing a well-regularized State Predictive Information Bot-tleneck (SPIB) 13 , the information-theoretic properties of SPIB ensure that S(z) becomes approximately constant across z-space, while z stays quantifiably and mechanis-tically meaningful, reducing the free energy to: 
+
+F (z) ≈ ˆE(z) + C, (2) where C is an additive constant. This means that po-tential energy alone—accessible from short, unconverged trajectories with no transitions between states—can pro-vide meaningful estimates of free energy differences with-out any enhanced sampling. To sample from the resulting energy-based distribu-tion in latent spaces of 3–5 dimensions (where tra-ditional Monte Carlo becomes impractical), we em-ploy Generative Flow Networks 14,15 (GFlowNets) as policy-independent samplers. Unlike WHAM/MBAR, GFlowNets produce output distributions faithful to the reward function regardless of the input data distribu-tion, making them ideal for reweighting non-overlapping samples 16 .Even when all candidate metastable states have been visited briefly in multiple short MD simulations, obtain-ing a converged free energy surface is non-trivial owing to the difficulty in identification of a collective variable with sufficient overlap between separate trajectories, even as-suming such a latent dimension exists. SPIBER addresses this issue by providing a systematic approach to construct the CV from first principles using only the existing MD data, while also maximally lever-aging the information bottleneck to directly provide a solution to the reweighting problem in this CV space. We validate this approach on three benchmark sys-tems of increasing complexity, demonstrating that SPIB-generated latent spaces combined with GFlowNet sam-pling provide accurate free energy estimates from short, unbiased trajectories alone. Notably, the method scales to four-dimensional latent spaces, where tra-ditional energy-based sampling methods break down since they depend exponentially on the dimensionality 17 .GFlowNets scale only quadratically at inference time due to the principle of amortized inference 18 . By construc-tion, our protocol simultaneously optimizes both the CV, as shown here in up to 4 dimensions, and the quality of the free energy estimate—something not guaranteed by most existing pipelines where these two steps are decou-pled.  
+
+> II. METHODS
+
+Energy-based sampling methods (EBSMs) can gener-ate samples from an unnormalized distribution p(z) ∝
+
+e−βE (z) for any energy function E(z), provided the latent space z is sufficiently low-dimensional 19,20 . In principle, one could apply such methods directly to physical sys-tems by setting E(z) = F (z), thereby sampling from the Boltzmann distribution p(z) ∼ e−βF (z). This, however, is circular: it requires knowing the free energy before com-puting it. What we need instead is a computationally tractable approximation to F (z). The decomposition in Eq. 1 splits the problem into two terms: ˆE(z) := 
+
+Z
+
+d3N x U (x) p(x|z = z) (3) and the conditional entropy S(z). The former is straight-forward to estimate: U (x) is available from any simula-tion snapshot, and as long as sampling at fixed z is locally ergodic, the sample average converges to the true condi-tional mean. The latter term is far more challenging. We show below that information-theoretic arguments allow us to bound its variation across z-space—reducing it to an effectively constant shift—by minimizing the mutual information I(X; z). 3 
+
+> II.A. Methodically learning a CV for energy-based reweighting
+
+A collective variable z : R3N → Rk (with k ≪ 3N )maps the full configuration space to a low-dimensional la-tent representation. For our purposes, z must satisfy two requirements: (i) it should be mechanistically meaning-ful, i.e. be able to distinguish different metastable states as well as capture the correct sequence of state-to-state transitions, and (ii) it should yield a free energy estimate that is accurate up to an additive constant. We label the different metastable states by class variables y. Strictly speaking, the approach in this work does not require the CV to capture the sequence of state-to-state transitions but we keep that as a desirable property for mechanistic interpretability of the CV. If we use an EBSM to sample from 
+
+p(z) ∼ e−β ˆE(z) (4) with ˆE(z) defined in Eq. 3, the resulting samples will re-produce the true Boltzmann distribution whenever the approximation of Eq. 2 holds. We call CVs that satisfy this requirement entropy-free. We now derive the condi-tions under which a CV satisfies this requirement. First, we show how minimizing mutual information between in-put coordinates and the latent z can lead to entropy-free CVs. Then we show how the SPIB approach achieves this minimization while also satisfying the aforementioned condition of being mechanistically meaningful.  
+
+> II.A.1. Minimizing Mutual Information yields Entropy-free CVs
+
+The conditional entropy S(z = z) at any z from Eq. 1 can be expressed in information-theoretic terms as 
+
+S(z = z)
+
+kB
+
+≡ H(X|z = z)= −
+
+Z
+
+d3N x ln [ p(x|z = z)] p(x|z = z)(5) which measures the uncertainty in the full configuration 
+
+X once a value z for z is chosen. For individual values 
+
+z, the conditional entropy H(X | z = z) may be either larger or smaller than H(X). Its p(z)-weighted average equals 
+
+μ ≡ H(X) − I(X; z) = 
+
+Z
+
+dkz p (z) H(X|z = z) (6) where I(X; z) is the mutual information between vari-ables X and z. As I(X; z) → 0, the weighted mean μ
+
+approaches the total entropy H(X). 21 
+
+To quantify fluctuations of the conditional entropy over CV space, we discretize z into M regions with probabil-ities p(zi) summing to unity, and define ϵ ≡ I(X; z). Let 
+
+hi ≡ H(X | z = zi), whose p(z)-weighted mean is μ. The Bhatia–Davis inequality 22 states that a random variable 
+
+Y with mean ⟨Y ⟩ and bounds m ≤ Y ≤ M satisfies Var[ Y ] ≤  M − ⟨ Y ⟩  ⟨Y ⟩ − m.
+
+If hi were strictly confined to [0 , H (X)], this inequality and Eq. 6 would immediately give Var p(z)[h] ≤ I(X; z)H(X) − I(X; z),
+
+where we have used M = H(X), m = 0, and ⟨h⟩p(z) =
+
+μ = H(X) − I(X; z)The pointwise bounds 0 ≤ hi ≤ H(X) need not hold exactly in the most general case. hi is a Shannon en-tropy and therefore satisfies hi ≥ 0 exactly. The upper bound hi ≤ H(X), however, is not guaranteed point-wise: for an individual zi, the conditional distribution can have greater entropy than the marginal distribution. Thus, only violations of the upper bound need to be con-trolled. However, we prove in the Appendix A.1 that as 
+
+I(X; z) → 0, violations contribute only o(1) to the mean and variance, and that for any region R
+
+X
+
+> i∈R
+
+p(zi) → 0 whenever X
+
+> i∈R
+
+p(zi)( hi − μ)2 > 0.
+
+(7) The Bhatia–Davis inequality therefore applies asymptot-ically, giving Var p(z)[h] ≤ I(X; z)H(X) − I(X; z) + o(1) . (8) Eq. 7 shows that driving I(X; z) → 0 forces the p(z)-weighted variance of hi to vanish. Since μ = H(X) −
+
+I(X; z) → H(X), hi approaches H(X), and therefore throughout regions of appreciable probability, S(z) fluc-tuates very little over z. Consequently, S(z = zi) = kB hi
+
+becomes effectively independent of zi over the popu-lated CV space, allowing the entropic contribution to be absorbed into the constant C. The approximation 
+
+F (z) ≈ ˆE(z)+ C is therefore most accurate near the pop-ulated free-energy minima. The consequence of Eq. 7 is that the key argument underlying constant entropy CVs holds true except for regions where the population along the CV is exceedingly small. High-population regions with p(zi) non-vanishing, as quantified in the sense of Eq. 7, exhibit the smallest deviations from the mean en-tropy. Metastable states correspond precisely to these populated regions (free energy minima), where the ap-proximation S(z) ≈ const is most accurate. Empirically, we find this approximation works well even for regions corresponding to barriers in the free energy surface, as seen from the results in Sec. III. Even though these results are derived for an arbitrary partitioning z, reweighting in z transfers directly to the metastable states themselves, provided z groups the rel-evant metastable states into contiguous regions. 4 
+
+> II.A.2. SPIB gives entropy-free and mechanistically meaningful CVs
+
+So far, we have shown that reducing the mutual in-formation between the high-dimensional feature space 
+
+X and low-dimensional CV z leads to minimizing the location-dependence of the entropy S(z). A trivial way of doing so would be to set z to be an X-independent Gaussian random variable. In such a case, z carries no predictive power for the underlying chemistry or physics of the system. Thus our challenge here is two-fold: we seek a CV z with constant entropy that still provides mechanistic insight into the system being studied. The central idea in SPIB is metastability. SPIB assumes that a system transitions between metastable states, with a separation of timescales between relaxation within each state and transitions between states. After entering a metastable state, the system loses memory of its initial configuration on a timescale much shorter than its typical residence time in that state. The number of metastable states depends on the temporal resolution, ∆ t, at which the dynamics is studied. At small ∆ t, more states can be resolved. As ∆ t increases, faster motions are averaged out, reducing the number of distinguishable metastable states. SPIB provides a principled way to construct such a collective variable z from short, pre-existing MD trajec-tories that provides both of these properties. SPIB’s goal is to extract the minimum amount of information needed to predict the final metastable state label y after time ∆t, where y is a one-hot encoded 23 state vector. This is mathematically represented as the objective function for SPIB 13,24 :
+
+LIB ≡ I(z; y) − βIB I(X; z), (9) which balances two competing goals. Maximizing I(z; y)ensures that z retains enough information to distinguish the metastable states (labeled by y), while minimizing 
+
+I(X; z) compresses away everything else. As shown in Sec. II.A.1, this also makes the entropy z-independent. The predictive part of SPIB’s loss function in Eq. 9 is 
+
+I(y; z), which deals with state-classification, and makes 
+
+z actually a useful CV. The regularization term, whose strength is controlled by βIB , caps I(X; z), making our energy-based reweighting possible. Together, these trade-offs allow us to achieve rapid estimation of free en-ergy differences between metastable regions. We refer to our previous work 13 and Appendix A.2 for details of the SPIB approach. When regularization is sufficiently tight that I(X; z) <ϵ for some small ϵ, Eq. 8 gives: 
+
+V ar [H(X|z)] ≤ ϵ  H(X) − ϵ, (10) which vanishes asymptotically as ϵ → 0. This establishes why a well-regularized SPIB produces CVs suitable for energy-based free energy estimation: the entropy correc-tion becomes negligible, leaving F (z) ≈ ˆE(z) + C. 
+
+> II.A.3. Other dimensionality reduction methods
+
+We emphasize here that SPIB, as seen through Eq. 9, naturally performs the task we set out to do - it min-imizes mutual information between input features and the CV while ensuring that the CV stays mechanisti-cally meaningful. It is still natural to wonder if this dual objective could be achieved through other dimensional-ity reduction methods. Contrasting SPIB with other widely used dimensionality reduction techniques, Prin-cipal Component Analysis (PCA) and Variational Au-toencoders (VAEs) share an opposite, common philoso-phy: preserve as much information as possible about X
+
+in the latent representation. PCA achieves this linearly by finding orthogonal directions of maximal variance; un-der Gaussian assumptions, it is equivalent to maximizing 
+
+I(X; z) exactly. VAEs generalize the compression anal-ogy to non-linear encoders by optimizing the evidence lower bound (ELBO) 25 .Performance of a VAE is shown to be linked to maxi-mizing — as opposed to minimizing — I(X; z)26,27 . This is the opposite of what SPIB does: SPIB minimizes 
+
+I(X; z) to suppress entropy variation, while VAEs and PCA maximize it to preserve reconstruction fidelity. In practice, however, strategically discarding information is a far more tractable objective than preserving all of it. Methods that maximize I(X; z) typically require many more latent dimensions to capture metastable structure and are generally unsuitable even for most EBSMs. A third popular approach is the time-lagged Indepen-dent Component Analysis (tICA) 2,28 , which pursues yet another objective: finding linear combinations of fea-tures that maximize autocorrelation at a chosen lag time, thereby capturing slow collective motions. Unlike with PCA and VAE, here the effect on mutual information 
+
+I(X; z) is not obvious. We benchmark all three alternatives — PCA, VAE, and tICA — against SPIB for the same latent variable dimensionality k across our test systems (see Sec. III.E). As predicted by theory in Sec. II.A.1, SPIB strictly out-performs them for free energy estimation. PCA performs poorly in practical cases, while tICA behaves similarly to an unregularized SPIB: it identifies sharp state bound-aries but produces projections unsuitable for reweight-ing.   
+
+> II.B. Estimating ˆE(z)
+
+Formally, the CV-conditioned average potential energy is a Boltzmann-weighted average over all configurations mapping to a given z:ˆE(z) := 
+
+P 
+
+> x∈R3N
+
+e−βE (x) E(x) I[z(x) = z]
+
+P 
+
+> x∈R3N
+
+e−βE (x) I[z(x) = z] , (11) where I[·] is the indicator function that selects only con-figurations with latent coordinate z. In practice, we ap-proximate this using a kernel-based estimator: for any 5query point z∗ in latent space, we collect all simulation frames whose encoded coordinates fall within a radius R0
+
+and average their potential energies: ˆE(z∗) ≈ Ex∼data 
+
+E(x) |z(x) − z∗|2 ≤ R20
+
+ . (12) The choice of R0 and the minimum sample threshold re-quired for a valid estimate are discussed in the protocol section below (Sec. II.D).  
+
+> II.C. Energy-based Sampling with GFlowNets
+
+Now that we have established that SPIB can learn a CV that has minimum position-dependence of associated entropy while still being predictive of future metastable states, we still need a method to sample along this CV. Given an energy function E(z) over a low-dimensional latent space, sampling from the Boltzmann distribution 
+
+p(z) ∝ exp[ −βE (z)] is straightforward in principle. The most direct approach would be to run Langevin dynam-ics in latent space 29 , but this inherits the same barrier-crossing limitations as physical simulations — even a low-dimensional CV can exhibit free energy barriers too high for equilibration within reasonable time. Rejection sam-pling with Monte Carlo 30 avoids dynamics altogether, but its acceptance rate decays exponentially with dimen-sion since the latent space becomes sparse. Markov-chain Monte Carlo 19 mitigates this by focusing on populated regions, yet still struggles to jump between well-separated metastable basins when no prior knowledge of their rel-ative positions is available. We need a sampler that can leverage existing trajectory data to focus on relevant re-gions while retaining the global coverage of rejection sam-pling. This niche is met by Generative Flow Networks (GFlowNets). GFlowNets are generative models trained to sample objects from an unnormalized target distribution 14,15 .In the reinforcement-learning formulation, each object is constructed step-by-step, and a reward is assigned only upon completion. By setting this reward to 
+
+R(z) = exp[ −β ˆE(z)], the GFlowNet learns to sample latent configurations proportional to the Boltzmann distribution, effectively acting as an energy-based sampler 16 . For low-dimensional CV spaces (1–2D), tra-ditional Markov-chain Monte Carlo methods can achieve equivalent sampling, but their convergence time grows exponentially with dimension. GFlowNets circumvent this by amortizing the sampling cost into a learned policy, making free-energy estimation tractable in 3–5 dimensional latent spaces where classical enhanced-sampling techniques typically struggle 15,31 .A critical advantage of energy-based GFlowNets is population independence: the output distribution de-pends only on the reward function, not on the distri-bution of the training data. For an entropy-free CV, 
+
+F (z) ≈ ˆE(z) + C. ˆE(z) is tractable from MD snapshots, calculated as described in Eq. 3 using samples from the neighborhood of the chosen point z. Thus, this ˆE(z) can be chosen as the reward for generating any coordinate z
+
+which will allow the GFlowNet to reproduce the Boltz-mann distribution. This lets us reweight multiple short, unbiased trajecto-ries with incorrect starting populations and still recover the correct thermodynamic distribution, for all reason-ably populated regions of z where enough samples exist to estimate ˆE(z). This contrasts sharply with standard reweighting methods (WHAM, MBAR), which require substantial overlap between sampled regions of different states, and with diffusion models, which faithfully repro-duce their training distribution but are difficult to steer toward a target distribution 32 . The only requirement is local ergodicity within each metastable state: if the CV separates the key states and the neighborhood around each z is adequately sampled, then ˆE(z) can be reliably estimated from nearby configurations.  
+
+> II.D. Complete SPIBER protocol
+
+We are now in a position to combine the various indi-vidual threads introduced so far and discuss the protocol of this work, which we call SPIBER (State Predictive In-formation Bottleneck-based Energy Reweighting), sum-marized in Fig. 1. In Sec. II.A, we have shown a theoreti-cal basis to expect well-regularized SPIB latent spaces to behave as entropy-free CVs and in Sec. II.B and II.C we described how such CVs can be used to perform energy-based reweighting by training GFlowNets only on exist-ing MD data. However, the theoretical framework above and SPIB itself (See Appendix A.2) leave several prac-tical decisions to be specified. We describe our choices below.  
+
+> II.D.1. Learning an entropy-free CV with SPIB
+
+As can be seen in Fig. 1, our starting point is a collec-tion of relatively short, typically unconverged simulation trajectories collected in full resolution x ∈ R3N . We col-late these trajectories and learn a low-dimensional (1-4D) SPIB as a function of input features. While recent work using Graph Neural Networks 33 allows learning SPIB di-rectly from all-atom coordinates, here we work with a subset of the input features such as dihedrals. The only requirement of providing this curated input is that all degrees of freedom that can disproportionately affect the entropy between different metastable states must be in-cluded. For example, bond vibrations in any molecule contribute almost exactly identically to all states and thus bond lengths can safely be excluded. With this in-put, SPIB is trained as usual except with high regular-ization (high βIB in Eq. 9). See Appendix A.2 for more details on this process. Once the SPIB is learnt, our next step is to utilize this entropy-free CV for energy-based reweighting using the potential energy along z given by 6              
+
+> FIG. 1: Summarizing different steps of the SPIBER protocol. Given available input data consisting of short, unbiased MD simulations, we (1) Use SPIB as an information compression algorithm to construct an entropy-free, low-dimensional CV
+> z:R3N→Rk. (2) Use ˆE(z) as defined in Eq. 3, to sample points in zwith the probability distribution p(z)∼e−βˆE(z). (3) Backmap samples in zto the nearest MD frames. (4) Repeat the SPIB and GFlowNet training processes multiple times to eliminate training error, and aggregate frames from all repeats to calculate the free energy along any feature (here we show
+> ϕ). Free energies by SPIBER (green plot) are accurate even when the input data distribution (red plot) is far from equilibrium (black)
+
+Eq. 12. Using this definition of ˆE(z), sampling points on the latent space, z with probability p(z) ∼ e−β ˆE(z) re-produces the Boltzmann distribution under the assump-tions underlined in Sec. II.A. This is done here using GFlowNets.  
+
+> II.D.2. Training GFlowNets on SPIB CVs using simulation data
+
+Traditionally, GFlowNets are designed for discrete ob-ject construction. To sample continuous latent coordi-nates, we follow the established binary discretization pro-tocol where each dimension is represented by 16 bits, and constructing a k-dimensional point requires 16 k sequen-tial binary decisions 16 . After training, sampling is linear in k, demonstrating how amortization enables tractable high-dimensional exploration. Training requires careful balancing. Much of the latent space contains no nearby data, yielding sparse rewards that can cause mode collapse. To prevent this, we con-struct a balanced training set by sampling approximately 150 points uniformly from each SPIB-predicted state. GFlowNets can be trained on both forward trajecto-ries (generated by the policy and then scored) and back-ward trajectories (sampled from a target configuration backward to the root) 34 . Forward trajectories repre-sent exploration, while backward trajectories represent exploitation in the Reinforcement Learning framework. Our training proceeds using this TRajectory Balance loss in two phases: 
+
+Equilibration phase. For the first 30,000 batches (batch size 64), only 20% of trajectories are backward samples drawn from known data points. The remaining 80% are forward explorations, allowing the policy to learn the global structure of the latent space with minimal bias. 
+
+Focusing phase. For the subsequent 30,000 batches, we increase the fraction of backward trajectories to 60%, anchoring the policy around regions with known popu-lations. This prevents drift while preserving enough for-ward exploration to cover the full distribution. Together, these phases transform biased input data into correctly reweighted thermodynamic distributions.  
+
+> II.D.3. Back-mapping to input features/physical observables
+
+The GFlowNet generates samples in the SPIB latent space. To connect these back to physically interpretable quantities, which could be the input features used in SPIB or some other features desired by the user of SPIBER, we locate the nearest MD frames (in latent-space distance) for each generated sample and use their full atomic coordinates to compute any observable of in-terest. Specifically, we project our results onto: radial distance r for the double-well particle; backbone dihe-dral angles ( ϕ, ψ ) for alanine dipeptide; and ζ (the sum of five internal ϕ dihedrals) for (Aib) 9.7 
+
+> II.D.4. Repeating SPIBER over multiple replicates
+
+Because SPIB operates on finite trajectory data, in-dividual training runs can yield slightly different latent spaces depending on the random initialization. To ensure robustness against such variability, we train 5–12 inde-pendent SPIB models from distinct random seeds and carry each through the full SPIBER pipeline — ˆE(z) es-timation, GFlowNet training, and sampling — indepen-dently. From the resulting ensemble of GFlowNet out-puts, we draw an equal number of samples per replicate and pool them into a single backmapped population. The FES is then computed from this combined distribution, which averages out run-to-run fluctuations while preserv-ing the underlying thermodynamic signal.  
+
+> III. RESULTS
+
+We benchmark SPIBER on three systems of increasing complexity: an analytical asymmetric radial double-well potential, alanine dipeptide in vacuum, and the oligopep-tide (Aib) 9 in vacuum. For each system, we demonstrate that SPIB-learned latent spaces enable accurate free en-ergy reweighting via GFlowNets, while conventional CVs (PCA, tICA, and human-chosen dihedrals) fail to pro-duce meaningful corrections. Throughout, we compare against MBAR as a baseline to verify that other sim-ilar energy-based frame reweighting approaches cannot achieve the same result. All FESs are optimally aligned to the reference by adding a constant offset.  
+
+> III.A. Asymmetric Radial Double-well Potential
+
+As a proof of principle, we simulate a single particle in a radial double-well potential (Fig. 2): 
+
+V (r) = 6 {(r − 2) 2 − 1}, r2 = x2 + y2 + z2.
+
+The two wells sit at r = 1 and r = 3. Because the outer well has ∼ 9× more configurational volume, it is entropically favored despite identical potential depths. The expected free energy difference is 
+
+F (r = 3) − F (r = 1) ≈ kB T ln 
+
+ 32
+
+12
+
+
+
+≈ 2.19 kB T. 
+
+We ran 120 independent Langevin dynamics simulations 29 using the BAOAB integrator 35 of 250 time units each ( γ = 50, dt = 10 −4, frames every 100 steps). Individual trajectories are short enough that most particles undergo ≤ 2 transitions between wells, but the ensemble converges to the correct FES and serves as our reference. To test SPIBER’s reweighting capability, we selected four trajectories with deliberately biased sampling: each had 1–2 transitions, and the combined distribution was nearly uniform across both wells (shown in red in Fig. 3A).                    
+
+> FIG. 2: Radial double-well potential and free energy profiles along r. The upper panel shows the potential energy
+> V(r) along r— a symmetric double-well with wells at r= 1 and r= 3, and a barrier at r= 2. The lower panel shows the true free energy computed from an ensemble average of 120 long, independent trajectories, with the horizontal red line roughly indicating the free energy minima value at r= 1. The outer well ( r= 3) is entropically favored by ≈2.19 kBT.
+
+SPIB was trained on a 6D input ( x, y, z, x 2, y 2, z 2) with a 1024-neuron encoder and decoder, lag time 7.5, and 
+
+βIB = 0 .1 (the highest value before state prediction ac-curacy dropped). Despite the biased input, SPIBER re-covers the correct FES by leveraging equilibrium sam-pling within each metastable state combined with coor-dinate information (Fig. 3A, green). MBAR, applied to the same four trajectories, produces no correction, as ex-pected when all samples come from the same unbiased Hamiltonian at a single temperature.  
+
+> III.B. Alanine Dipeptide in Vacuum
+
+Alanine dipeptide is a benchmark biomolecular sys-tem with three well-characterized metastable states in vacuum at 450 K: C7 eq (β-sheet-like extended confor-8      
+
+> FIG. 3: Reweighting results from SPIBER for all systems using SPIB-learned CVs projected along human-interpretable CVs: A) Radial Double-Well along r, B) Alanine Dipeptide along ϕand C) (Aib) 9along ζ. The true free energies (black, dashed) near the minima are reproduced by SPIBER (green), despite biased input (dashed, red). MBAR (blue) shows no correction.
+
+mation, ϕ ≈ − 2.5 rad), C 5 (extended 5-member ring state, ϕ ≈ − 1.9 rad), and C7 ax (left-handed helical turn, 
+
+ϕ ≈ +1 rad) 36 . The ground-truth free energy surface from a 1 μs MD simulation is shown in Fig. S4 of the Supporting Information. To test reweighting from biased input, we selected 12 contiguous segments from the long trajectory that over-represent C7 ax and under-represent the true global minima.  
+
+> III.B.1. Using SPIB in 2D
+
+As a first test, SPIB was trained with an 8D input (sine and cosine of ϕ, ψ, θ, ω), a 256-neuron encoder and de-coder, lag time 0.3 ps, and βIB = 0 .25. Initial state labels followed our original SPIB protocol 13 (10 states based on 
+
+ϕ). The short lag time captures rapid transitions between C7 eq and C 5. As shown in Fig. 3B, SPIBER faithfully reproduces the free energies of all three minima along ϕ,despite the artificially biased input. MBAR again shows no correction capacity. A similar comparison projected onto ψ is shown in Fig. S5 of the Supporting Information.  
+
+> III.B.2. Using known collective variables
+
+As a control, we tested whether human-chosen CVs work for energy-based sampling with GFlowNets. The standard choice of backbone dihedrals ϕ and ψ accounts for nearly all relevant conformational transitions in Ala-nine Dipeptide. With these as latent variables, most relevant degrees of freedom are captured, and reweight-ing near metastable states is reasonable (Fig. S7A of the Supporting Information), but this setup in energy-based sampling still fails to perform as well as SPIBER. Replacing ϕ with θ as the second CV ( ψ, θ ) leads to complete failure: since entropy now depends non-trivially on the unobserved ϕ, reweighting cannot recover correct free energy differences even at local minima (Fig. S7B of the Supporting Information). This illustrates that not all state-distinguishing CVs are suitable for energy-based reweighting.  
+
+> III.C. Conformers of (Aib) 9
+
+(Aib) 9 is a 9-residue oligopeptide composed entirely of non-chiral 2-aminoisobutyric acid (Fig. 4A). It forms two stable helical structures, right-handed and left-handed, with multiple metastable intermediates containing par-tial helices. The standard CV is ζ, defined as the sum of five internal ϕ dihedrals (Fig. 4C), which peaks at +5 and −5 for complete right- and left-handed helices, respectively 37,38 . Transitions between these forms are rare at 300 K, so we obtained the ground-truth FES from a 2.5 μs simulation at 500 K (Fig. 4D).        
+
+> FIG. 4: (Aib) 9overview: A) Chemical structure of AIB, B) Right- and left-handed helical forms, C) Definition of ζ(sum of five internal dihedrals, bonds highlighted in orange), D) Ground-truth FES along ζfrom 2.5 μs MD at 500 K.
+
+9   
+
+> III.C.1. Using ζas a 1D CV
+
+Unlike ϕ, ψ for Alanine Dipeptide, ζ is a degenerate CV: many distinct conformations share the same ζ value. While it separates metastable states qualitatively, the large conditional entropy H(X|ζ) violates the assump-tion behind Eq. 2. As shown in Fig. S8 of the Support-ing Information, reweighting with ζ alone fails to recover the correct FES. This reinforces a broader point: most human-designed CVs excel at state discrimination but are unsuitable for free energy estimation.  
+
+> III.C.2. Using SPIB in 3D
+
+Following previous work on (Aib) 924 , we binarize the five internal dihedrals (left- vs. right-handed, ϕ > 0 or 
+
+ϕ < 0), yielding 32 initial states. SPIB isolates 15– 16 stable states depending on βIB (the state count as a function of βIB is shown in Fig. S3C of the Supporting Information). We used a lag time of 100 ps, a 512-neuron encoder and 256-neuron decoder. Due to sparse sampling even at 500 K, we lowered the neighborhood threshold, accepting regions with just 42 points. As shown in Fig. 3C, SPIBER recovers free ener-gies close to the ground truth across all resolved states.  
+
+> III.C.3. Using SPIB in 4D
+
+To test whether higher-dimensional latent spaces im-prove results, we repeated the (Aib) 9 analysis with a 4D SPIB latent space (all other parameters unchanged). The more expressive representation does yield improved ac-curacy (Fig. 5), demonstrating that GFlowNets remain tractable in higher dimensions where traditional Monte Carlo methods struggle. However, beyond 4D the effec-tive volume of latent space grows rapidly, making ˆE(z)estimates unreliable due to sparse MD frame coverage. Reweighting with a 5D latent variable obscures sparsely populated intermediates: projecting a fixed number of frames into a higher-dimensional space increases the to-tal volume without adding data, making the latent repre-sentation sparser. Performance may improve with more samples, though we have not validated this here.  
+
+> III.D. Comparison with PCA and tICA
+
+To confirm that the quality of the latent space — not the GFlowNet sampler — determines reweighting suc-cess, we repeated all three benchmarks using PCA and tICA as CVs instead of SPIB. Inputs, lag times (where applicable), and GFlowNet hyperparameters were held identical across methods. In every case, PCA and tICA failed to recover meaningful free energy corrections: en-tropically favored states had average energies too high to be sampled by the GFlowNet, causing entire minima to   
+
+> FIG. 5: Reweighting results for (Aib) 9using SPIB-learned 4D CVs. The much improved accuracy over the 3D case highlights the benefit of higher-dimensional latent spaces when GFlowNets are used for sampling.
+
+disappear from the reweighted distribution. As shown in Fig. 6, neither PCA nor tICA could accurately reproduce the free energies for the metastable states. PCA per-forms the worst, failing almost immediately while tICA is relatively better, managing to approximately recover the intermediate states for (Aib) 9, but missing the global minimum by more than 1 kB T , and completely missing a metastable state for alanine dipeptide. Neither method outperforms SPIBER on any system. These results are consistent with the theoretical analysis in Sec. II.A.1: PCA maximizes I(X; z) (the opposite of what SPIB does), and fails almost instantly once dimensionality in-creases even slightly. tICA performs like unregularized SPIB, producing sharp state boundaries which cannot be used for accurate reweighting.  
+
+> III.E. Comparison with Other Reweighting Methods
+
+MBAR was applied alongside SPIBER in all three benchmarks. In every case, MBAR produced no correc-tion beyond the raw histogram (blue curves in Fig. 3). This is expected: MBAR requires either Hamiltonian perturbations or substantial overlap between state popu-lations, neither of which holds for short unbiased trajec-tories at a single temperature. We also tested DHAM (Dynamic Histogram Analy-sis Method) 39 , which estimates free energies from tran-sition counts between states along a collective variable. Because our trajectories contain no added bias, DHAM effectively reduces to fitting a Markov state model and extracting free energies from the detailed balance con-dition. The MSM was constructed by dividing the ob-servable CV ( r for the radial double-wells, ϕ for Alanine Dipeptide, and ζ for (Aib) 9) into 100 equal-width bins; the initial transition matrix was built from raw transi-tion counts and then iteratively converged following the 10  
+
+> FIG. 6: Results using PCA and tICA for A) Radial Double-Well B) Alanine Dipeptide and C) (Aib) 9. PCA begins missing states as the dimensionality increases. tICA performs better, but it is still inconsistent.
+
+DHAM procedure 40 . As shown in Fig. S6 of the Support-ing Information, DHAM yields only marginal improve-ment over the raw histogram, and the results are inconsis-tent across systems — for (Aib) 9, the estimate is actually degraded due to the oversampling of transitions inherent in our short-trajectory design. We found no improvement even on changing the number of states for DHAM. Even under more realistic sampling conditions (radial double-wells and Alanine Dipeptide), DHAM fails to meaning-fully correct population imbalances. To our knowledge, no existing method consistently corrects population im-balances in such data.  
+
+> IV. CONCLUSIONS AND DISCUSSION
+
+Short molecular dynamics trajectories can reveal sev-eral metastable conformations while providing a mis-leading picture of their relative thermodynamic stability. Here, we developed SPIBER, an energy-based sampling method for reconstructing free energy landscapes from short, unconverged trajectories. SPIBER combines col-lective variables learned through the State Predictive In-formation Bottleneck (SPIB), conditional mean potential energies, and Generative Flow Networks (GFlowNets), without requiring additional molecular dynamics. The key idea is that energy-based sampling does not re-quire converged global state populations when condi-tional mean potential energies can be estimated accu-rately along an entropy-free CV. For such a CV, condi-tional entropy is approximately independent of position, allowing these energies to determine approximate equilib-rium probabilities. We show how well-regularized SPIB CVs can naturally achieve this property by compressing configurational information while preserving predictions of future metastable states. Across a radial double-well model, alanine dipeptide, and (Aib) 9, SPIBER improves projected free energy pro-files, particularly near represented minima. It is also able to scale to four-dimensional latent spaces, a regime in which traditional Monte Carlo sampling becomes com-putationally prohibitive 17 . The 4D representation of (Aib) 9 shows marked improvement over its 3D coun-terpart, and the framework likely remains feasible in even higher dimensions given sufficient sampling cover-age. Comparisons with PCA, tICA, and manually se-lected CVs demonstrate the importance of the SPIB-based representation for this energy-based estimator. A promising future application is to ensembles ob-tained from short MD simulations initialized from diverse AI-predicted structures 41–44 . These simulations can ex-plore different regions of the conformational landscape without establishing their relative equilibrium popula-tions, providing a natural setting for SPIBER. Further validation, particularly for larger biomolecules and ex-plicit solvent, will be needed to establish its accuracy in this setting. 
+
+> SUPPORTING INFORMATION
+
+The Supporting Information contains details on the SPIBERalgorithm, such as the choice of neighborhood radius, minimum sample threshold, and βIB , as well as hyperparameter values for all benchmark systems, and 11 stability tests for the FES predictions. It also reports other results with projections of the Ala2 FES along ψ,comparisons with DHAM reweighting, and demonstra-tions of energy-based reweighting using hand-chosen col-lective variables. 
+
+ACKNOWLEDGMENTS 
+
+This research was entirely supported by the US De-partment of Energy, Office of Science, Basic Energy Sci-ences, CPIMS Program, under Award DE-SC0021009. We thank UMD HPC’s Zaratan and NSF ACCESS (project CHE180027P) for computational resources. P.T. is an investigator at the University of Maryland-Institute for Health Computing, which is supported by funding from Montgomery County, Maryland, and the Univer-sity of Maryland Strategic Partnership: MPowering the State, a formal collaboration between the University of Maryland, College Park, and the University of Maryland, Baltimore. We also thank Nicholas Hattrup and Dedi Wang for their insightful comments and careful review of the manuscript. 
+
+CODE AVAILABILITY STATEMENT 
+
+All the code used for this work along with an easy-to-implement solution for a general system will be made available on our group GitHub before formal submission to a journal for peer review. 
+
+CONFLICT OF INTEREST 
+
+The authors have no conflict of interest to report. 
+
+REFERENCES 
+
+> 1
+
+A. Amadei, A. B. M. Linssen, and H. J. C. Berend-sen, “Essential dynamics of proteins,” Proteins: Struc-ture, Function, and Bioinformatics 17 , 412–425 (1993), https://onlinelibrary.wiley.com/doi/pdf/10.1002/prot.340170408. 
+
+> 2
+
+G. P´ erez-Hern´ andez, F. Paul, T. Giorgino, G. De Fabritiis, and F. No´ e, “Identification of slow molecular order parameters for markov model construction,” Journal of Chemical Physics 139 
+
+(2013). 
+
+> 3
+
+S. Mehdi, Z. Smith, L. Herron, Z. Zou, and P. Tiwary, “Enhanced sampling with machine learning,” Annual Re-view of Physical Chemistry 75 , null (2024), pMID: 38382572, https://doi.org/10.1146/annurev-physchem-083122-125941. 
+
+> 4
+
+G. M. Torrie and J. P. Valleau, “Nonphysical sampling distribu-tions in monte carlo free-energy estimation: Umbrella sampling,” Journal of Computational Physics 23 , 187–199 (1977). 
+
+> 5
+
+A. Laio and M. Parrinello, “Escaping free-energy minima,” Pro-ceedings of the National Academy of Sciences 99 , 12562–12566 (2002). 
+
+> 6
+
+S. Kumar, J. M. Rosenberg, D. Bouzida, R. H. Swendsen, and P. A. Kollman, “The weighted histogram analysis method for free-energy calculations on biomolecules. i. the method,” Journal of Computational Chemistry 13 , 1011–1021 (1992). 
+
+> 7
+
+C. H. Bennett, “Efficient estimation of free energy differences from monte carlo data,” Journal of Computational Physics 22 ,245–268 (1976). 
+
+> 8
+
+M. R. Shirts and J. D. Chodera, “Statistically optimal analy-sis of samples from multiple equilibrium states,” The Journal of Chemical Physics 129 , 124105 (2008). 
+
+> 9
+
+L. Wang, R. A. Friesner, and B. J. Berne, “Replica exchange with solute scaling: A more efficient version of replica exchange with solute tempering (rest2),” The Journal of Physical Chemistry B 
+
+115 , 9431–9438 (2011). 
+
+> 10
+
+E. Olehnovics, Y. M. Liu, N. Mehio, A. Y. Sheikh, M. R. Shirts, and M. Salvalaglio, “Assessing the accuracy and efficiency of free energy differences obtained from reweighted flow-based prob-abilistic generative models,” Journal of Chemical Theory and Computation 20 , 5913–5922 (2024), pMID: 38984825. 
+
+> 11
+
+Y. Wang, C. Chi, and A. R. Dinner, “Mitigating mode collapse in normalizing flows by annealing with an adaptive schedule: Ap-plication to parameter estimation,” Journal of Computational Physics 564 , 115115 (2026). 
+
+> 12
+
+O. Valsson and M. Parrinello, “Thermodynamical description of a quasi-first-order phase transition from the well-tempered ensem-ble,” Journal of chemical theory and computation 9, 5267–5276 (2013). 
+
+> 13
+
+D. Wang and P. Tiwary, “State predictive information bottle-neck,” The Journal of Chemical Physics 154 , 134111 (2021). 
+
+> 14
+
+E. Bengio, M. Jain, M. Korablyov, D. Precup, and Y. Ben-gio, “Flow network based generative models for non-iterative di-verse candidate generation,” arXiv (Cornell University) (2021), 10.48550/arxiv.2106.04399. 
+
+> 15
+
+Y. Bengio, S. Lahlou, T. Deleu, E. J. Hu, M. Tiwari, and E. Ben-gio, “Gflownet foundations,” arXiv (Cornell University) (2021), 10.48550/arxiv.2111.09266. 
+
+> 16
+
+D. Zhang, N. Malkin, Z. Liu, A. Volokhova, A. Courville, and Y. Bengio, “Generative flow networks for discrete probabilistic modeling,” in International Conference on Machine Learning 
+
+(PMLR, 2022). 
+
+> 17
+
+D. J. C. MacKay, “Stream codes,” in Information Theory, In-ference and Learning Algorithms (Cambridge University Press, Cambridge, UK, 2003) Chap. 6, pp. 110–136. 
+
+> 18
+
+M. Jain, T. Deleu, J. Hartford, C.-H. Liu, A. Hernandez-Garcia, and Y. Bengio, “Gflownets for ai-driven scientific discovery,” Dig-ital Discovery 2, 557–577 (2023). 
+
+> 19
+
+N. Metropolis, A. W. Rosenbluth, M. N. Rosenbluth, A. H. Teller, and E. Teller, “Equation of state calculations by fast com-puting machines,” J. Chem. Phys. 21 (1953). 
+
+> 20
+
+M. N. Rosenbluth and A. W. Rosenbluth, “Monte carlo calcu-lation of the average extension of molecular chains,” J. Chem. Phys. 23 (1955). 
+
+> 21
+
+T. M. Cover and J. A. Thomas, Elements of Information Theory ,2nd ed. (Wiley-Interscience, 2006). 
+
+> 22
+
+R. Bhatia and C. Davis, “A better bound on the variance,” The American Mathematical Monthly , 353–357 (2000). 
+
+> 23
+
+P. Joshi, “Python machine learning cookbook,” (Packt Publish-ing Ltd, 2016) Chap. Chapter 4. 
+
+> 24
+
+S. Mehdi, D. Wang, S. Pant, and P. Tiwary, “Accelerating all-atom simulations and gaining mechanistic understanding of bio-physical systems through state predictive information bottle-neck,” Journal of Chemical Theory and Computation 18 , 3231– 3238 (2022), pMID: 35384668. 
+
+> 25
+
+D. P. Kingma and M. Welling, “Auto-encoding variational bayes,” arXiv preprint arXiv:1312.6114 (2013). 
+
+> 26
+
+A. A. Alemi, I. Fischer, J. V. Dillon, and K. Murphy, “Deep varia-tional information bottleneck,” arXiv preprint arXiv:1612.00410 (2016). 
+
+> 27
+
+A. L. Rezaabad and S. Vishwanath, “Learning representations by maximizing mutual information in variational autoencoders,” 12 
+
+arXiv preprint arXiv:1912.13361v2 (2019). 
+
+> 28
+
+Y. Naritomi and S. Fuchigami, “Slow dynamics in protein fluctu-ations revealed by time-structure based independent component analysis,” The Journal of Chemical Physics 134 , 065101 (2011). 
+
+> 29
+
+D. L. Ermak and J. A. McCammon, “Brownian dynamics with hydrodynamic interactions,” The Journal of Chemical Physics 
+
+69 , 1352–1360 (1978). 
+
+> 30
+
+J. von Neumann, “Various techniques used in connection with random digits,” National Bureau of Standards Applied Mathe-matics Series 12 , 36–38 (1951). 
+
+> 31
+
+A. Volokhova, M. Koziarski, A. Hern´ andez-Garc´ ıa, C.-H. Liu, S. Miret, P. Lemos, L. Thiede, Z. Yan, A. Aspuru-Guzik, and Y. Bengio, “Towards equilibrium molecular conformation gener-ation with gflownets,” Digital Discovery 3, 1038–1047 (2024). 
+
+> 32
+
+Y. Song, J. Sohl-Dickstein, D. P. Kingma, A. Kumar, S. Ermon, and B. Poole, “Score-based generative modeling through stochas-tic differential equations,” arXiv abs/2011.13456 (2020), 2011.13456. 
+
+> 33
+
+Z. Zou, D. Wang, and P. Tiwary, “A graph neural network-state predictive information bottleneck (gnn-spib) approach for learn-ing molecular thermodynamics and kinetics,” Digital Discovery 
+
+4, 211–221 (2025). 
+
+> 34
+
+M. Jain, E. Bengio, C. Sun, Y. Bengio, and N. Malkin, “Tra-jectory balance: Improved credit assignment in gflownets,” Ad-vances in Neural Information Processing Systems (NeurIPS) 35 ,5955–5967 (2022). 
+
+> 35
+
+B. Leimkuhler and C. Matthews, “Robust and efficient configura-tional molecular sampling via langevin dynamics,” The Journal of Chemical Physics 138 , 174102 (2013). 
+
+> 36
+
+D. S. Chekmarev, T. Ishida, and R. M. Levy, “Long time con-formational transitions of alanine dipeptide in aqueous solution: Continuous and discrete state kinetic models,” The Journal of Physical Chemistry B 108 , 19487–19495 (2004). 
+
+> 37
+
+M. Biswas, B. Lickert, and G. Stock, “Metadynamics enhanced markov modeling of protein dynamics,” The Journal of Physical Chemistry B 122 , 5508–5514 (2018). 
+
+> 38
+
+V. Botan, E. H. G. Backus, R. Pfister, A. Moretto, M. Crisma, C. Toniolo, P. H. Nguyen, G. Stock, and P. Hamm, “En-ergy transport in peptide helices,” Proceedings of the National Academy of Sciences 104 , 12749–12754 (2007). 
+
+> 39
+
+E. Rosta and G. Hummer, “Free energies from dynamic weighted histogram analysis using unbiased markov state model,” Journal of Chemical Theory and Computation 11 , 276–285 (2014). 
+
+> 40
+
+H. Wan and V. A. Voelz, “Adaptive markov state model estima-tion using short reseeding trajectories,” The Journal of Chemical Physics 152 , 024103 (2020). 
+
+> 41
+
+J. Jumper, R. Evans, A. Pritzel, T. Green, M. Figurnov, O. Ronneberger, K. Tunyasuvunakool, R. Bates, A. ˇZ´ ıdek, A. Potapenko, et al. , “Highly accurate protein structure predic-tion with alphafold,” Nature 596 , 583–589 (2021). 
+
+> 42
+
+L. Herron, Y. Qiu, A. Verma, V. S. Sreyas Adury, R. John, S. Lee, S. Mehdi, D. Sanwal, J. S. Schneekloth, and P. Tiwary, “Ab initio prediction of rna structure ensembles with rnanneal,” bioRxiv (2026), 10.64898/2026.02.01.703098. 
+
+> 43
+
+S. Passaro, G. Corso, J. Wohlwend, M. Reveiz, S. Thaler, V. R. Somnath, N. Getz, T. Portnoi, J. Roy, H. Stark, D. Kwabi-Addo, D. Beaini, T. Jaakkola, and R. Barzilay, “Boltz-2: Towards ac-curate and efficient binding affinity prediction,” bioRxiv (2025), 10.1101/2025.06.14.659707. 
+
+> 44
+
+C. D. team, J. Boitreaud, J. Dent, M. McPartlon, J. Meier, V. Reis, A. Rogozhonikov, and K. Wu, “Chai-1: Decod-ing the molecular interactions of life,” bioRxiv (2024), 10.1101/2024.10.10.615955. 
+
+> 45
+
+C. E. Shannon, “A mathematical theory of communication,” Bell System Technical Journal 27 , 379–423 (1948). 
+
+> 46
+
+A. Alemi, B. Poole, I. Fischer, J. Dillon, R. A. Saurus, and K. Murphy, “An information-theoretic analysis of deep latent-variable models,” ICLR (2018). 
+
+> 47
+
+J. M. Tomczak and M. Welling, “Vae with vampprior,” arXiv (2017), arXiv:1705.07120. 
+
+> 48
+
+V. Nair and G. E. Hinton, “Rectified linear units improve re-stricted boltzmann machines,” in Proceedings of the 27th inter-national conference on machine learning (ICML-10) (2010) pp. 807–814. 
+
+> 49
+
+D. P. Kingma and J. Ba, “Adam: A method for stochastic opti-mization,” arXiv (2014). 
+
+APPENDIX A.1. Proof that the constraint H(X|z = zi) ≤ H(X) holds as I(X; z) → 0
+
+Since z is a deterministic function of X, the conditional entropy H(z|X) = 0, which gives 
+
+ϵ = I(X; z) = H(z) − H(z|X) = H(z) ≥ 0 (13) since mutual information is non-negative. Define deviations from the mean conditional entropy 
+
+di ≡ μ − hi, hi ≡ H(X | z = zi),
+
+> M
+
+X
+
+> i=1
+
+p(zi)di = 0 .
+
+(14) Since hi ≥ 0, we have di ≤ μ, and for any region with 
+
+p(zi) > 0, 0 = p(zi)di + X 
+
+> j̸=i
+
+p(zj )dj ≤ p(zi)di + μ[1 − p(zi)] , (15) which gives 
+
+∀i, di ≥ μ
+
+
+
+1 − 1
+
+p(zi)
+
+
+
+=⇒ ln 
+
+ hi
+
+μ
+
+
+
+≤ − ln p(zi). (16) using di ≡ μ − hi as defined in Eq. 14 Let 
+
+K ≡ { i : hi ≥ H(X)}
+
+denote the regions that violate the upper bound. Since 
+
+H(X) = μ + ϵ, each term ln( hi/μ ) is nonnegative for 
+
+i ∈ K . A p(z)-weighted sum of Eq. 16 over these regions gives 0 ≤ X
+
+> i∈K
+
+p(zi) ln 
+
+ hi
+
+μ
+
+
+
+≤ − X
+
+> i∈K
+
+p(zi) ln p(zi) ≤ H(z) = ϵ. 
+
+(17) Consequently, for every i ∈ K ,
+
+hi ≤ μ exp 
+
+ ϵp(zi)
+
+
+
+. (18) For any region satisfying ϵ/p (zi) → 0, this gives 0 ≤ hi − H(X) ≤ μ exp 
+
+ ϵp(zi)
+
+
+
+− (μ + ϵ) −→ 0.
+
+This condition holds whenever p(zi) remains nonzero as ϵ → 0, and more generally whenever p(zi) vanishes 13 more slowly than ϵ. Thus, upper-bound violations van-ish throughout the populated regions of CV space. No pointwise conclusion follows for rare regions with 
+
+p(zi) = O(ϵ) or smaller; however, their combined con-tribution to the sampling domain vanishes faster than 
+
+O(ϵ2), namely, 
+
+X
+
+> i∈R
+
+p(zi) ∼ O(ϵ2), whenever X
+
+> i∈R
+
+p(zi)( hi−μ)2 > 0for any collection R of rare regions.  
+
+> A.2. State Predictive Information Bottleneck method
+
+State Predictive Information Bottleneck (SPIB) 13 is a deep learning framework for extracting low-dimensional collective variables from high-dimensional trajectory data and is particularly suited for SPIBERbecause part of its optimization objective — minimizing I(X; z) sub-ject to predictive constraints — directly produces the near-constant conditional entropy required for energy-based reweighting (Sec. II.A.1). 
+
+a. Optimization Objective. Based on Rate-distortion theory 45,46 , SPIB formulates CV learning as a constrained information bottleneck problem 26 . Its loss function is given by Eq. 9 in the main text. The first term I(y; z) ensures that the latent representation retains predictive power for future metastable states, making it a physically meaningful CV. The second term 
+
+I(X; z), weighted by βIB , compresses away information about instantaneous configurations that is irrelevant to state prediction. 
+
+b. Variational Implementation. Following the Deep Variational Information Bottleneck 26 , SPIB parameter-izes the encoder as a Gaussian: 
+
+pθ (z|X) = N  μθ (X), diag( σθ (X))  , (19) where μθ and σθ are outputs of fully connected neu-ral networks. The reparameterization trick 25 enables gradient-based optimization: z = μθ (X)+ σθ (X)⊙ϵ with 
+
+ϵ ∼ N (0, I). The decoder is a softmax classifier that pre-dicts state-label probabilities from the latent code: 
+
+pϕ(y|z) = softmax  Wϕ z + bϕ
+
+ , (20) where y is one-hot encoded over D discrete states, and the mutual information terms in Eq. 9 are estimated variationally. The latent-prior used for SPIB is multi-Gaussian rθ (z), constructed via the VampPrior tech-nique 47 .
+
+c. Iterative State Refinement. A distinctive feature of SPIB is its iterative self-training scheme, which elimi-nates the need for a priori knowledge of state identities. The algorithm proceeds as follows: 1. Initialization: Assign arbitrary state labels {yn}
+
+to trajectory frames. This can be done by discretiz-ing an intuitive CV (e.g., binning a dihedral angle), or by assigning random labels. 2. Training cycle: Optimize the loss using mini-batch gradient descent. 3. State relabeling: After each training cycle, up-date state labels using the decoder’s output. This relabeling step also merges configurations with sim-ilar dynamical futures and discards labels for states that no longer have support. 4. Convergence: Repeat steps 2–3 until the latent representation, state-transition density, and dis-crete state labels stabilize. The converged number of states is determined self-consistently by the data and the lag-time ∆ t.This iterative design means that SPIB automatically dis-covers both the number and location of metastable states from trajectory dynamics alone, with minimal human in-tervention. 
+
+d. Role of the Lag Time ∆t. The lag time ∆ t is the principal user-controlled hyperparameter and serves as a time resolution for the coarse-grained description. Physically, it exploits timescale separation: if tfast ≪
+
+∆t ≪ tslow , where tfast is the intra-state relaxation time and tslow is the inter-state transition time, then ∆ t fil-ters out fast fluctuations while preserving slow transi-tions. A shorter ∆ t resolves finer state structure; a longer ∆t merges rapidly exchanging substates into broader metastable basins. 
+
+e. Network Architecture and Training Details. For all benchmarks in this work, both encoder and decoder use fully connected networks with two hidden layers and ReLU activation 48 . Layer widths are system-dependent (see main text for specifics). Training uses the Adam op-timizer 49 with learning rate 10 −5 and batch size 256. The hyperparameter βIB is tuned by monitoring the number of resolved states as a function of regularization strength; we select the largest βIB before state count drops sharply (Fig. S3 of the Supporting Information), ensuring max-imal compression compatible with faithful state separa-tion. Supporting Information for: SPIBER: Reconstructing Free Energy Landscapes from Short, Unconverged Trajectories with Generative Flow Networks 
+
+# Venkata Sai Sreyas Adury † and Pratyush Tiwary ∗,‡,¶
+
+†Chemical Physics Program and Institute for Physical Science and Technology, University of Maryland, College Park 20742, USA. 
+
+‡Department of Chemistry and Biochemistry and Institute for Physical Science and Technology, University of Maryland, College Park 20742, USA. 
+
+¶University of Maryland Institute for Health Computing, Bethesda 20852, USA. 
+
+E-mail: ptiwary@umd.edu 
+
+# Methods 
+
+The following analyses were used to self-consistently determine any tunable hyperparameters for this method. All adjustable parameters can be determined without any prior knowledge beyond a rough understanding of the state classifications for the system of interest. 1SPIBER algorithmic details 
+
+The SPIBER pipeline involves a few tunable choices: the neighborhood radius used to es-timate ˆE(z), the minimum sample threshold for numerical stability, and the SPIB regu-larization strength βIB along with model size. Below we describe how each is determined self-consistently from the data alone, without requiring prior knowledge of the system. 
+
+Defining the neighborhood of a point 
+
+Since MD frames will almost never share identical latent coordinates, the estimator requires a finite neighborhood around each query point z∗ as shown in Eqn 12 of the main manuscript. We define this neighborhood as a hypersphere of radius R0 in the k-dimensional latent space. To avoid manual tuning, we set 
+
+R0 = D
+
+50 , where D =
+
+> k
+
+X
+
+> d=1
+
+L2
+
+> d
+
+!1/2
+
+, (1) and Ld is the range (maximum minus minimum) of dimension d. An example is graphically shown in Figure S1 below. The quantity D corresponds to the length of the longest diagonal of the axis-aligned bounding box spanning the latent space, providing a natural scale for what constitutes a neighborhood. For all systems studied here, R0 = D/ 50 yields stable results; we additionally demonstrate robustness by varying this denominator in Fig. S2 later. 
+
+Minimum sample threshold 
+
+To maintain numerical stability during GFlowNet training, regions with insufficient data must be excluded from the energy landscape. We set ˆE(z) = ∞ whenever fewer than 512 simulation frames fall within the R0 neighborhood of z. For systems where even this threshold is too stringent (e.g., when a metastable state is poorly represented with fewer than Nmin =100 points), we fall back to using a neighborhood with just 42 or more points, where Nmin 
+
+2Figure S1: Practical energy-based sampling depicted on Alanine dipeptide’s ϕ, ψ plot for simplicity. (A) While training, points (red star) are generated randomly in CV space. A small neighborhood (magenta circle) around each such point is considered. D is the longest diagonal as shown by a green line. The radius of the magenta circle is D/ 50 (B) A zoomed-in depiction of a neighborhood of a selected point. All points inside the shaded area are used to calculate the average energy. If there aren’t enough points the energy is set to ∞
+
+is the frame count of the least-populated SPIB-predicted state. Higher thresholds improve fidelity but risk excluding valid regions when input data is sparse; our choice represents a practical compromise. 
+
+Choosing βIB and model size 
+
+The entire method hinges on SPIB driving I(X; z) sufficiently close to zero. This requires large values of βIB , but the optimal value is system-dependent. The trade-off in the SPIB loss, LIB ≡ I(z; y) − βIB I(X; z), implies that excessive regularization will degrade state-prediction accuracy: if too much information is compressed away, z can no longer distinguish metastable states. We exploit this by gradually increasing βIB and monitoring the number of distinct states predicted by SPIB. For all test systems (Fig. S3 below), there is a sharp drop in the predicted state count once βIB crosses a critical threshold. We select the largest 
+
+βIB just before this transition — the maximum regularization compatible with faithful state separation. 3Achieving strong compression sometimes requires larger neural networks. Counterintu-itively, the smallest system (the 3D double-well) required the largest model, likely because compressing already low-dimensional data to near-zero mutual information represents a more constrained optimization problem. Table 1 below summarizes the model sizes and βIB values used for each system. In all cases, a 2-layer MLP encoder and decoder are used with ReLU as the activation function. 4Stability of predicted FES over different neighborhood thresholds 
+
+To compute the average potential energy of the system at a certain value of the CV, we define a neighborhood radius R0 such that 
+
+ˆE(z∗) ≈ Ex∼data 
+
+E(x) |z(x) − z∗|2 ≤ R20
+
+ . (2) We test stability against variations in R0 by evaluating multiple thresholds on our first test system, the radial double-well potential: 
+
+V (r) = 6 {(r − 2) 2 − 1}, r2 = x2 + y2 + z2.
+
+The potential energy is radially symmetric and has minima at r = 1 and r = 3 , which have a total free energy difference of ln (9) ≈ 2.19 kT due to volume differences alone. 
+
+Figure S2: Error in the predicted free energy difference between r = 1 and r = 3 wells. The selected threshold ( D/ 50 , as described in the main manuscript) is marked with a red cross. 
+
+5Choice of best βIB 
+
+For the free energy approximation ( F (z) ≈ ˆE(z) + C) to hold, we require I(X, z) to be small, achieved by strong regularization of the SPIB loss. However, excessive regularization degrades state prediction, rendering the resulting CV useless. To identify an optimal trade-off, we scan increasing βIB values and select the value just before the number of predicted states suddenly drops. In the first two systems shown, excessive regularization collapses all      
+
+> Figure S3: βIB was varied from 10 −4to 0.5. At low values, state prediction dominates, yielding the best state separation. At high values, the number of states sharply drops, as the least confident states merge.
+
+states into a single cluster, which is uninformative. We therefore use the βIB value just before this collapse. 6Metastable state classification for Alanine Dipeptide 
+
+Shown below is the ground truth free energy surface of Alanine Dipeptide in ϕ, ψ space. The three metastable states identified by SPIB are highlighted and labelled. 
+
+Figure S4: Ground-truth free energy surface of Alanine Dipeptide at 450 K, showing the three metastable minima: C7 eq , C5, and C7 ax .
+
+7Model sizes and βIB values 
+
+Using the βIB selection procedure described above, the following hyperparameters were used across all systems. The βIB values are obtained systematically; model sizes were kept minimal and increased only as needed for accurate state prediction.  
+
+> Table 1: Hyperparameters used for all benchmark systems
+
+System βIB value Model size (Encoder, Decoder) 
+
+Radial Double-Wells 0.1 1024,1024 Alanine Dipeptide 0.25 256,256 (Aib) 9 0.05 512,256 8Additional results 
+
+Additional results are shown below. 
+
+# Projecting Alanine Dipeptide FES along ψ
+
+Although ϕ was the primary coordinate used for state labeling during SPIB training, the GFlowNet samples can also be projected onto ψ, reproducing the FES with high accuracy. 
+
+Figure S5: FES projected from SPIBER samples along ψ. The agreement with ground truth is strong, particularly near the minima. 
+
+9Comparing SPIBER against DHAM 
+
+See Section IIIE of the main manuscript for a description of the DHAM procedure. As shown in Figure S6, DHAM yields only marginal improvement over the raw histogram, and the results are inconsistent across systems. For (Aib) 9(panel C), the estimate is degraded relative to the raw FES due to the oversampling of transitions inherent in our short-trajectory design. Even under more realistic sampling conditions (panels A and B), DHAM fails to meaningfully correct population imbalances.  
+
+> Figure S6: FES computed by SPIBER compared to DHAM for A) Radial Double-Wells B) Alanine Dipeptide and C) (Aib) 9.
+
+10 Energy-based reweighting using traditional Collective Variables for Alanine Dipeptide 
+
+When systems of interest have major metastable states defined also by well-characterized degrees of freedom such ϕ, ψ for Alanine Dipeptide, using these collective variables might result in efficient energy-based reweighting. In this case, the residual entropy after specifying 
+
+ϕ, ψ is nearly constant, and so this set forms a reasonable basis for energy-based reweighting. However, utilizing a CV that is not entropy-free can result in poor or no reweighting at all, as in the case of ( ψ, θ ).             
+
+> Figure S7: (A) Reweighting with ϕ, ψ as CVs works reasonably near metastable states, since these dihedrals capture nearly all conformational freedom and F(z)≈ˆE(z) + Capproximately holds. (B) Using ψ, θ instead fails, because entropy depends on the unobserved ϕ.
+
+11 Poor performance of reweighting (Aib) 9 with ζ
+
+ζ is a known variable that is able to separate key metastable regions of (Aib) 9 as shown in Figure S8 below (black curve). However, this CV is not entropy-free. Demonstrably, states with ζ ≈ ± 5 have much lower entropy since the helix is fully formed. States with ζ ≈ ± 1
+
+have the highest entropy where all but one of dihedrals in (Aib) 9 are unconstrained. This results in missing entropic corrections for the intermediate well, resulting in the predicted free energy being much higher than the true value. This illustrates that intuitively chosen CVs are often unsuitable for energy-based reweighting.      
+
+> Figure S8: Reweighting with ζas a 1D CV fails, because the degeneracy of ζleads to large, state-dependent conditional entropy.
+
+12

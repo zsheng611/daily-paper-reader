@@ -1,0 +1,477 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-22T17:56:24.507336+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 4,
+    "deep_cap": 7,
+    "deep_selected": 4,
+    "quick_candidates": 7,
+    "quick_skim_target": 12,
+    "quick_selected": 7
+  },
+  "deep_dive": [
+    {
+      "id": "2609.23134v1",
+      "source": "arxiv",
+      "title": "ECENet: An Edge Cluster Expansion Line-Graph Neural Network",
+      "abstract": "Machine-learned interatomic potentials (MLIPs) have emerged as a promising alternative to classical force fields and first-principles theory for predicting the properties of chemical and material systems. Many MLIPs are graph neural networks with O(3)-equivariant features, whose accuracy comes at substantial computational cost. Here we introduce the edge cluster expansion (ECE), an analogue of the atomic cluster expansion in which the environment is expanded around edges between atom pairs rather than single atoms, and build upon it to develop the line-graph neural network ECENet. ECENet uses O(2)-equivariant features that persist on the edges between atoms, giving it natural access to O(2) operations that are cheaper and less restrictive than their O(3) counterparts. ECENet performs at the state of the art on the MD22 benchmark and lies on the accuracy-cost Pareto frontier when trained on the SPICE-MACE-OFF dataset. Furthermore, with long-range electrostatics implemented via latent Ewald summation, ECENet accurately predicts molecular dipole moments and the infrared spectrum of liquid water. The frontier ECENet architecture establishes equivariant edge-centered representations as an efficient and physically expressive foundation for equivariant MLIPs.",
+      "authors": [
+        "R. Allen LaCour",
+        "Teresa Head-Gordon"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-19T16:59:42+00:00",
+      "link": "https://arxiv.org/pdf/2609.23134v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "machine-learned interatomic potentials with equivariant line-graph neural network",
+      "llm_evidence_cn": "等变线图神经网络构建机器学习原子间势",
+      "llm_evidence": "等变线图神经网络构建机器学习原子间势",
+      "canonical_evidence": "等变线图神经网络构建机器学习原子间势",
+      "llm_tldr_en": "Machine-learned interatomic potentials are accurate but O(3)-equivariant graph networks are costly. The paper introduces an edge cluster expansion and the ECENet line-graph neural network with O(2)-equivariant edge features, offering cheaper yet accurate potentials for materials simulation.",
+      "llm_tldr_cn": "针对现有机器学习原子间势虽精度高但O(3)等变图神经网络计算代价昂贵的问题，本文提出边团簇展开，将环境围绕原子对之间的边而非单个原子展开，并据此构建线图神经网络ECENet。该模型在原子间的边上保留O(2)等变特征，从而能够使用比O(3)更廉价且限制更少的操作进行建模。研究表明这种边中心表示在保持材料体系性质预测精度的同时显著降低了计算开销，为高效机器学习势函数与原子尺度模拟提供了新思路。",
+      "llm_tldr": "针对现有机器学习原子间势虽精度高但O(3)等变图神经网络计算代价昂贵的问题，本文提出边团簇展开，将环境围绕原子对之间的边而非单个原子展开，并据此构建线图神经网络ECENet。该模型在原子间的边上保留O(2)等变特征，从而能够使用比O(3)更廉价且限制更少的操作进行建模。研究表明这种边中心表示在保持材料体系性质预测精度的同时显著降低了计算开销，为高效机器学习势函数与原子尺度模拟提供了新思路。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "MACE, NequIP, CHGNet and related machine learning potentials for materials simulation",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.23957v1",
+      "source": "arxiv",
+      "title": "Divergent strategies and convergent outcomes in autonomous materials discovery",
+      "abstract": "Scientific agents are mostly evaluated on whether they complete tasks or recover known results; we instead study variation across repeated open-ended campaigns. Sixteen separately initialized sessions of one model-harness configuration received a frozen database of 12,499 metal-organic frameworks, a methane-storage objective, a pinned protocol and a one-week budget. Strategies diverged into four approaches spanning 100--5,000 screened structures, and eight built 2,253 hypothetical structures. Yet the agents recovered the same materials frontier near 200 cm^3/cm^3, and an independent calculation of the database's porous region found its nine best structures all among their reports. Enforced checks on half the agents raised fresh-run reproduction from one of eight to eight of eight but could not detectably improve conclusion validity, because fifteen of sixteen agents selected the same audit-excluded entry, an incomplete structure whose missing anions created artificial pore volume. Replicated agents thus reveal both robust conclusions and common-mode errors from shared inputs.",
+      "authors": [
+        "Jihan Kim"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-21T00:06:57+00:00",
+      "link": "https://arxiv.org/pdf/2609.23957v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "autonomous scientific agents for materials discovery",
+      "llm_evidence_cn": "面向材料发现的自主科学智能体",
+      "llm_evidence": "面向材料发现的自主科学智能体",
+      "canonical_evidence": "面向材料发现的自主科学智能体",
+      "llm_tldr_en": "Sixteen autonomous agent sessions tackled a methane-storage MOF screening campaign, diverging in strategy yet converging on the same materials frontier.",
+      "llm_tldr_cn": "以往科学智能体多以是否完成任务或复现已知结果来评估，本文转而研究重复开放式实验中的策略差异。十六个独立初始化的模型-框架会话获得12499个金属有机框架数据库、甲烷存储目标、固定协议与一周预算。各会话策略分化为四种路径，筛选规模从100到5000不等，其中八个还构建了2253个假设结构，但最终都收敛到约200 cm3/cm3的同一材料前沿。独立计算也确认数据库多孔区最优的九个结构均在其报告中，表明自主智能体结果具有稳健性。",
+      "llm_tldr": "以往科学智能体多以是否完成任务或复现已知结果来评估，本文转而研究重复开放式实验中的策略差异。十六个独立初始化的模型-框架会话获得12499个金属有机框架数据库、甲烷存储目标、固定协议与一周预算。各会话策略分化为四种路径，筛选规模从100到5000不等，其中八个还构建了2253个假设结构，但最终都收敛到约200 cm3/cm3的同一材料前沿。独立计算也确认数据库多孔区最优的九个结构均在其报告中，表明自主智能体结果具有稳健性。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery",
+      "matched_requirement_id": "req-15",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.24293v1",
+      "source": "arxiv",
+      "title": "Small-supercell and Small-dataset Training Strategy of Machine Learning Interatomic Potentials for Point Defects",
+      "abstract": "Machine learning interatomic potentials (MLIPs) can treat large-scale material systems with near first-principles accuracy and have been widely used to accelerate point-defect simulations. However, the training of MLIPs usually relies on large amounts of DFT data. This issue is particularly pronounced for charged defects, for which DFT calculations of large supercells are required to avoid long-range Coulomb interactions and finite-size effects, making the construction of datasets computationally expensive. In this work, we propose an efficient MLIP training scheme for neutral and lowly charged point defects based on small supercells (less than 100 atoms) and limited number of DFT calculations. The scheme requires only four DFT structural relaxations to construct the training dataset and the trained MLIPs dedicated for the defect can predict the defect formation energies in larger supercells (over 200 atoms) with small errors (mostly smaller than 0.3 eV). Using defects in GaN, SiO$_2$, and $\\mathrm{Cu}_2\\mathrm{ZnSnS}_4$ as representative examples, we evaluate the extrapolation capability of this scheme for predicting defect total energies and structural relaxations across different supercell sizes. The results show that an MLIP trained only on single small defect supercell produces severe errors when treating large supercells. Incorporating defect data from multiple supercell sizes improves the predictive performance of the MLIP, while adding pristine defect-free bulk supercells further enhances the accuracy. These results provide practical guidance for training MLIP models of defect systems with low computational costs.",
+      "authors": [
+        "Zhenxing Dai",
+        "Mingjue Ni",
+        "Xinpeng Li",
+        "Menglin Huang",
+        "Anderson Janotti",
+        "Shiyou Chen"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-21T08:52:08+00:00",
+      "link": "https://arxiv.org/pdf/2609.24293v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "training strategy for machine learning interatomic potentials to accelerate defect simulations",
+      "llm_evidence_cn": "机器学习原子间势训练策略加速缺陷模拟",
+      "llm_evidence": "机器学习原子间势训练策略加速缺陷模拟",
+      "canonical_evidence": "机器学习原子间势训练策略加速缺陷模拟",
+      "llm_tldr_en": "A small-supercell, small-dataset training scheme for machine learning interatomic potentials is proposed for neutral and lowly charged point defects, using supercells under 100 atoms and limited DFT data while retaining near first-principles accuracy.",
+      "llm_tldr_cn": "机器学习原子间势能以近第一性原理精度处理大尺度材料体系，但其训练通常依赖大量DFT数据，带电缺陷更需大超胞以规避有限尺寸效应，数据构建代价高昂。本文提出面向中性及低电荷点缺陷的高效训练方案，仅使用小于100原子的小超胞和有限DFT计算。结果表明该策略在显著降低数据与计算成本的同时保持模拟精度。这为低成本构建MLIP数据集、加速点缺陷原子模拟提供了实用路径。",
+      "llm_tldr": "机器学习原子间势能以近第一性原理精度处理大尺度材料体系，但其训练通常依赖大量DFT数据，带电缺陷更需大超胞以规避有限尺寸效应，数据构建代价高昂。本文提出面向中性及低电荷点缺陷的高效训练方案，仅使用小于100原子的小超胞和有限DFT计算。结果表明该策略在显著降低数据与计算成本的同时保持模拟精度。这为低成本构建MLIP数据集、加速点缺陷原子模拟提供了实用路径。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.24720v1",
+      "source": "arxiv",
+      "title": "Colour me shocked: Exact Molecular Hessians from local MLIPs in O(N) time using sparse differentiation!",
+      "abstract": "The Hessian of the energy with respect to the nuclear positions is indispensable in atomistic modelling. However, constructing this matrix requires $O(N)$ Hessian vector products, traditionally limiting high-accuracy Hessians to small systems. Machine learning interatomic potentials (MLIPs) have accelerated atomistic modelling by providing highly accurate energies and forces at $O(N)$ cost, yet the resulting $O(N^2)$ cost of Hessians remains a practical bottleneck for large systems. Based on the insight that we can derive the sparsity pattern for an MLIP's Hessians in closed form, we show in this paper how to use techniques from sparse automatic differentiation to reduce the cost of a local MLIP's Hessians to a system-size-independent number of Hessian-vector products, yielding overall $O(N)$ total cost without any approximations. We benchmark our approach on a variety of systems ranging from alkane chains to water clusters to $A\\beta40$ conformers. Depending on the MLIP configuration, we achieve the linear scaling regime already on relatively small systems, resulting in large runtime reductions between 2$\\times$-15$\\times$ for these systems. This opens up the possibility of scaling high-accuracy MLIP Hessians to very large systems, such as proteins that were previously inaccessible.",
+      "authors": [
+        "Luca Thiede",
+        "Andreas Burger",
+        "Alán Aspuru-Guzik"
+      ],
+      "primary_category": "cs.CE",
+      "categories": [
+        "cs.CE"
+      ],
+      "published": "2026-09-21T14:56:56+00:00",
+      "link": "https://arxiv.org/pdf/2609.24720v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "exact molecular Hessians from local MLIPs in O(N) time",
+      "llm_evidence_cn": "基于局部机器学习原子间势的 O(N) 精确 Hessian",
+      "llm_evidence": "基于局部机器学习原子间势的 O(N) 精确 Hessian",
+      "canonical_evidence": "基于局部机器学习原子间势的 O(N) 精确 Hessian",
+      "llm_tldr_en": "Energy Hessians are vital for atomistic modelling but cost O(N^2) with machine learning interatomic potentials. The authors derive the sparsity pattern of local MLIP Hessians in closed form and use sparse automatic differentiation to compute exact Hessians in O(N) time.",
+      "llm_tldr_cn": "能量 Hessian 在原子建模中不可或缺，但用机器学习原子间势计算 Hessian 的 O(N^2) 成本限制了大体系应用。本文推导出局部 MLIP Hessian 的稀疏模式闭式表达，并借助稀疏自动微分技术将其计算成本降至 O(N)。该方法能在保持精确性的同时处理大规模体系，为高精度 Hessian 计算扫清瓶颈。这一结果使 MLIP 在振动与稳定性分析中的可用性大幅提升。",
+      "llm_tldr": "能量 Hessian 在原子建模中不可或缺，但用机器学习原子间势计算 Hessian 的 O(N^2) 成本限制了大体系应用。本文推导出局部 MLIP Hessian 的稀疏模式闭式表达，并借助稀疏自动微分技术将其计算成本降至 O(N)。该方法能在保持精确性的同时处理大规模体系，为高精度 Hessian 计算扫清瓶颈。这一结果使 MLIP 在振动与稳定性分析中的可用性大幅提升。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "MACE, NequIP, CHGNet and related machine learning potentials for materials simulation",
+      "matched_requirement_id": "req-9",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.22411v1",
+      "source": "arxiv",
+      "title": "AutoRASOR: Autonomous Rapid Scanning Electron Microscope Operator",
+      "abstract": "Scanning Electron Microscopy (SEM) is a foundational technique for characterizing material microstructure, which dictates many fundamental physical and chemical properties. With the rise of Self-Driving Labs (SDLs), samples are now synthesized in large batches, demanding equally high-throughput, autonomous characterization. Existing automated electron microscopy pipelines are task-specific: they detect pre-defined features, optimize known properties, or require prior knowledge of the sample, restricting each pipeline to the material system it was built for. We introduce AutoRASOR, a task-agnostic autonomous SEM pipeline that captures the multi-scale morphology of an unknown sample without domain-specific pre-training, fine-tuning, or human prompting. AutoRASOR embeds micrographs in real time with a vision foundation model (VFM), DINOv3, and selects regions of interest (ROIs) through two complementary policies: Latent Farthest Point Sampling (LFPS) and active learning on morphological ambiguity, which is the conditional variance of unresolved fine-scale features given lower magnification appearance. Active learning on ambiguity consistently captures more diverse and rare morphologies than random ROI selection, while LFPS reliably recovers the specimen's morphological distribution within a limited capture budget, tested both on real SEM micrographs and synthetic phase-field images. By shifting autonomous characterization from pre-defined, task-specific targeting of features to morphological survey, AutoRASOR generates information-rich multi-scale datasets for diverse downstream tasks. Without the need for domain-specific pre-training or prior material assumptions, this framework can be deployed out-of-the-box to characterize novel materials produced by SDLs.",
+      "authors": [
+        "Kevin Zhang",
+        "Mohammad Taha",
+        "Rafael Espinosa Castañeda",
+        "Yutong Liu",
+        "Yin Zhu",
+        "Lotan Portal",
+        "Robert A. Mcleod",
+        "Vahid Attari",
+        "Jane Y. Howe",
+        "Jason Hattrick-Simpers"
+      ],
+      "primary_category": "eess.IV",
+      "categories": [
+        "eess.IV",
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-18T17:06:01+00:00",
+      "link": "https://arxiv.org/pdf/2609.22411v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "autonomous SEM operator for high-throughput self-driving labs",
+      "llm_evidence_cn": "面向自驱动实验室高通量表征的自主扫描电镜操作",
+      "llm_evidence": "面向自驱动实验室高通量表征的自主扫描电镜操作",
+      "canonical_evidence": "面向自驱动实验室高通量表征的自主扫描电镜操作",
+      "llm_tldr_en": "AutoRASOR is a task-agnostic autonomous SEM pipeline that captures multi-scale morphology of unknown samples without domain-specific pretraining, fine-tuning or human prompting, enabling high-throughput characterization for self-driving labs.",
+      "llm_tldr_cn": "针对自驱动实验室大批量合成样品后缺乏高通量、任务无关自主表征手段的问题，论文提出AutoRASOR自主扫描电镜操作流程。该系统无需领域专用预训练、微调或人工提示，即可捕获未知样品的多尺度形貌，克服了现有电镜管线只适用于特定材料系统的限制。研究为自驱动实验室中通用化、自动化的材料表征提供了可行路径，推动实验闭环的自主化。",
+      "llm_tldr": "针对自驱动实验室大批量合成样品后缺乏高通量、任务无关自主表征手段的问题，论文提出AutoRASOR自主扫描电镜操作流程。该系统无需领域专用预训练、微调或人工提示，即可捕获未知样品的多尺度形貌，克服了现有电镜管线只适用于特定材料系统的限制。研究为自驱动实验室中通用化、自动化的材料表征提供了可行路径，推动实验闭环的自主化。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "self-driving laboratory",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.15898v1",
+      "source": "arxiv",
+      "title": "Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions",
+      "abstract": "Accurate prediction of transition-metal hydride (TM-H) bond dissociation energies (BDEs) remains challenging because of strong electron correlation, relativistic effects, and nuclear quantum contributions. Here, we assess the performance of neural-network variational Monte Carlo (NN-VMC) based on the Psiformer ansatz for systems with increasing complexity (LiH, OH, TiH and NiH), and compare it against CCSDT(Q)/CBS as well as available theoretical and experimental data. Throughout this study, both NN-VMC and ab initio calculations employ a common ccECP Hamiltonian to enable tractable and consistent comparisons. To reduce finite-training errors, we introduce complementary zero-variance and infinite-step extrapolation schemes. For LiH and OH systems, NN-VMC yields total energies that differ within sub-milli Hartree compared to CBS extrapolated ab initio results and the BDE differences remain under 2$σ$. In case of Ti and TiH, the variational NN-VMC energies at the end of training are already consistent with CCSD(T)/CBS, while post-training extrapolation systematically closes the gap towards the CCSDT(Q)/CBS results. In contrast, NiH provides a stringent test of wavefunction expressivity, where increasing the number of determinants in NN-wavefunction ansatz improves the recovered correlation energy. The comparison of NiH BDE reveals that, while the existing theoretical predictions cluster into distinct high and low BDE groups, the broad scatter in available experimental data prevents a definitive assessment of the most accurate theoretical approach. This work demonstrates that NN-VMC with ccECPs Hamiltonian provides a competitive framework for quantitative prediction of main-group and early TM-H energetics, while identifying late TM-H as an important benchmark for future developments in neural-network wavefunctions and electronic structure theory.",
+      "authors": [
+        "Aqsa Shaikh",
+        "Lubos Mitas",
+        "P. Ganesh",
+        "Jaron T. Krogel"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "cond-mat.mtrl-sci",
+        "physics.class-ph",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-14T17:18:03+00:00",
+      "link": "https://arxiv.org/pdf/2609.15898v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "neural-network wavefunctions for molecular energetics",
+      "llm_evidence_cn": "神经网络波函数用于分子能量学",
+      "llm_evidence": "神经网络波函数用于分子能量学",
+      "canonical_evidence": "神经网络波函数用于分子能量学",
+      "llm_tldr_en": "Neural-network variational Monte Carlo with the Psiformer ansatz is benchmarked against high-level ab initio for transition-metal hydride bond dissociation energies.",
+      "llm_tldr_cn": "过渡金属氢化物键解离能的精确预测因强电子相关、相对论效应与核量子贡献而困难。作者评估基于Psiformer拟设的神经网络变分蒙特卡洛在LiH、OH、TiH与NiH等逐渐复杂体系上的表现，并与CCSDT(Q)/CBS及实验数据对比。为降低有限训练误差，引入零方差与无限步外推方案，且所有计算采用统一ccECP哈密顿量以保证一致性。结果展示了神经网络波函数在分子能量学预测上的潜力。",
+      "llm_tldr": "过渡金属氢化物键解离能的精确预测因强电子相关、相对论效应与核量子贡献而困难。作者评估基于Psiformer拟设的神经网络变分蒙特卡洛在LiH、OH、TiH与NiH等逐渐复杂体系上的表现，并与CCSDT(Q)/CBS及实验数据对比。为降低有限训练误差，引入零方差与无限步外推方案，且所有计算采用统一ccECP哈密顿量以保证一致性。结果展示了神经网络波函数在分子能量学预测上的潜力。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.20519v1",
+      "source": "arxiv",
+      "title": "SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness",
+      "abstract": "As coding agents move from supervised code completion to unattended, around-the-clock exploration, their work expands from isolated predictions into long trajectories of reasoning, tool use, and feedback. Token efficiency therefore becomes important for scaling recursive self-improvement. We take an RSI-inspired approach at the harness layer, scaling auto-research loops across increasingly numerous and diverse environments for harness rollouts. At this scale, the process yields reusable improvements that transfer beyond their development setting, moving automated harness discovery toward production-level outcomes. Four mechanisms survive selection and form SoL-Pi, spanning action execution, context compaction, observation handling, and delegated reading. On the 51-task EdgeBench evaluation, SoL-Pi achieves performance comparable to Pi across GPT-5.6 Sol and Opus 5 while reducing recorded token traffic by 44.7-49.0% and API cost by about one third. In other words, estimated hourly savings are \\$8.75-\\$13.50 relative to native Codex and Claude Code harnesses, and \\$4.36-\\$5.71 relative to Pi.",
+      "authors": [
+        "Haozhe Liu",
+        "Tian Ye",
+        "Sensen Gao",
+        "Qihang Cao",
+        "Yitong Li",
+        "Mingchen Zhuge",
+        "Duomin Wang",
+        "Ruihua Zhang",
+        "Ping Luo",
+        "Jiawang Bian",
+        "Lei Zhu",
+        "Ligeng Zhu",
+        "Enze Xie",
+        "Song Han"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-17T14:58:29+00:00",
+      "link": "https://arxiv.org/pdf/2609.20519v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "scaling auto-research loops for agent harness",
+      "llm_evidence_cn": "为智能体框架扩展自动科研循环",
+      "llm_evidence": "为智能体框架扩展自动科研循环",
+      "canonical_evidence": "为智能体框架扩展自动科研循环",
+      "llm_tldr_en": "SoL-Pi scales auto-research loops across diverse environments to discover reusable agent-harness improvements, boosting token efficiency for recursive self-improvement.",
+      "llm_tldr_cn": "随着编码智能体从监督式补全走向无人值守的持续探索，其工作扩展为包含推理、工具使用与反馈的长轨迹，令牌效率成为递归自我改进的关键。作者在框架层面采用受递归自我改进启发的思路，在日益多样化的环境中扩展自动科研循环以进行框架rollout。在此规模下，该过程产生可迁移到开发环境之外的可复用改进，推动自动化框架发现走向生产级。最终四种机制存活筛选并构成SoL-Pi，涵盖动作执行、上下文压缩、观测处理与委托等。",
+      "llm_tldr": "随着编码智能体从监督式补全走向无人值守的持续探索，其工作扩展为包含推理、工具使用与反馈的长轨迹，令牌效率成为递归自我改进的关键。作者在框架层面采用受递归自我改进启发的思路，在日益多样化的环境中扩展自动科研循环以进行框架rollout。在此规模下，该过程产生可迁移到开发环境之外的可复用改进，推动自动化框架发现走向生产级。最终四种机制存活筛选并构成SoL-Pi，涵盖动作执行、上下文压缩、观测处理与委托等。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.21032v1",
+      "source": "arxiv",
+      "title": "Scaling Discovery through Test-Time Communication",
+      "abstract": "Science advances not in isolation but through collaboration, yet existing agentic systems capture little of this. Whether communicating agents help remains an open question with mixed prior results. We show that test-time communication can substantially outperform independent parallel attempts on challenging tasks, where sharing a breakthrough can push the whole group forward. We first study the effect of scaling multi-agent test-time communication, where agents have no predefined roles and communicate via a shared directory, on ARC-AGI-3, a benchmark requiring novel problem solving. We find that a team of $k$ communicating agents, team@$k$, matches the success rate of $4k$ independent agents, and this advantage grows with $k$, suggesting gains compound with scale. The effect is not merely efficiency: a task that no single agent can solve, a team of agents can solve reliably. Furthermore, these gains transfer to research-oriented tasks, given sufficient compute. On polyomino packing, communicating agents outperform best@$k$ and exceed the prior best-known score. On MNIST classifier compression, communication surpasses the best-known human solution. A team of four agents produced a 1,957-byte classifier submission achieving 99.4% test accuracy, smaller than both the best-known human solution and the best single-agent result. These gains are not unconditional. Independent agents may outperform communication when compute is limited or when a clear measure of progress is absent. However, under sufficient compute and clear feedback, multi-agent communication consistently yields stronger results.",
+      "authors": [
+        "Jongho Park",
+        "Vasilis Kontonis",
+        "Shivam Garg",
+        "Akshay Krishnamurthy",
+        "Dimitris Papailiopoulos"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI",
+        "cs.CL"
+      ],
+      "published": "2026-09-17T19:38:04+00:00",
+      "link": "https://arxiv.org/pdf/2609.21032v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "multi-agent test-time communication for collaborative discovery",
+      "llm_evidence_cn": "多智能体测试时通信实现协作式发现",
+      "llm_evidence": "多智能体测试时通信实现协作式发现",
+      "canonical_evidence": "多智能体测试时通信实现协作式发现",
+      "llm_tldr_en": "Test-time communication among role-free agents via a shared directory is shown to outperform independent parallel attempts on ARC-AGI-3, with k communicating agents matching 4k independent ones and gains compounding with scale.",
+      "llm_tldr_cn": "针对科学发现依赖协作而现有智能体系统鲜有体现的问题，论文提出测试时通信机制，让无预设角色的多个智能体通过共享目录交换突破性进展。在需要新颖问题求解的ARC-AGI-3基准上，k个通信智能体的成功率相当于4k个独立智能体，且优势随规模持续扩大。研究说明通信式多智能体协作可显著提升困难任务表现，为规模化自主发现提供了新思路。",
+      "llm_tldr": "针对科学发现依赖协作而现有智能体系统鲜有体现的问题，论文提出测试时通信机制，让无预设角色的多个智能体通过共享目录交换突破性进展。在需要新颖问题求解的ARC-AGI-3基准上，k个通信智能体的成功率相当于4k个独立智能体，且优势随规模持续扩大。研究说明通信式多智能体协作可显著提升困难任务表现，为规模化自主发现提供了新思路。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.22663v1",
+      "source": "arxiv",
+      "title": "SPIBER: Reconstructing Free Energy Landscapes from Short, Unconverged Trajectories with Generative Flow Networks",
+      "abstract": "Molecular systems have many degrees of freedom, but their metastable behavior can often be described by a few collective variables. Identifying these variables and estimating free energies along them from limited simulation data remains a challenging, important problem. Separate short trajectories may sample different metastable states without capturing transitions or establishing their relative equilibrium populations. For unbiased trajectories generated with the same Hamiltonian at a single temperature, alternate methods based on histogram reweighting cannot correct this imbalance. Here we present SPIBER, which combines the State Predictive Information Bottleneck (SPIB) with Generative Flow Networks (GFlowNets). SPIB uses deep learning to approximate slow degrees of freedom through a past-future information bottleneck, retaining information needed to predict future metastable states. We show that this compression limits conditional entropy variations in populated regions, allowing conditional mean potential energies, which are much easier to calculate, to be used to approximate free energy differences. Given sufficient local sampling to estimate these energies, they define the target distribution for GFlowNets, energy-based generative samplers that sample according to estimated thermodynamic stability rather than observed populations. For a particle in a radial double-well potential, for alanine dipeptide, and for the nine-residue peptide AIB9, SPIBER recovers free energy differences between sampled metastable states to within one thermal energy unit of reference values. The method combines collective-variable learning and free energy estimation in up to four latent dimensions, without requiring converged state populations or additional molecular dynamics simulations.",
+      "authors": [
+        "Venkata Sai Sreyas Adury",
+        "Pratyush Tiwary"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "cs.LG",
+        "physics.data-an"
+      ],
+      "published": "2026-09-19T00:37:45+00:00",
+      "link": "https://arxiv.org/pdf/2609.22663v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "deep learning reconstructs free energy landscapes from short molecular dynamics trajectories",
+      "llm_evidence_cn": "用深度生成模型从短分子动力学轨迹重建自由能景观",
+      "llm_evidence": "用深度生成模型从短分子动力学轨迹重建自由能景观",
+      "canonical_evidence": "用深度生成模型从短分子动力学轨迹重建自由能景观",
+      "llm_tldr_en": "SPIBER combines the State Predictive Information Bottleneck with GFlowNets to identify collective variables and reconstruct free energy landscapes from short, unconverged molecular dynamics trajectories.",
+      "llm_tldr_cn": "分子体系自由能估计常受限于短轨迹难以覆盖亚稳态间跃迁，直方图重加权方法无法纠正这种不平衡。作者提出SPIBER，将状态预测信息瓶颈与生成流网络结合，从多条短且未收敛的轨迹中学习集变量并重建自由能景观。该方法为有限模拟数据下的自由能估计提供了深度生成建模途径，对机器学习加速分子动力学分析具有价值。",
+      "llm_tldr": "分子体系自由能估计常受限于短轨迹难以覆盖亚稳态间跃迁，直方图重加权方法无法纠正这种不平衡。作者提出SPIBER，将状态预测信息瓶颈与生成流网络结合，从多条短且未收敛的轨迹中学习集变量并重建自由能景观。该方法为有限模拟数据下的自由能估计提供了深度生成建模途径，对机器学习加速分子动力学分析具有价值。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.22992v1",
+      "source": "arxiv",
+      "title": "From Local Atomic Motifs to Thermodynamic State: An Interpretable Physics-Informed Framework for Cu-Zr Metallic Glasses",
+      "abstract": "Machine-learning models that relate local atomic structure to the thermodynamic state of metallic glasses typically assess physical consistency after training rather than enforcing it during learning. Here, we develop a multi-task physics-informed neural network (PINN) that predicts temperature directly from Voronoi-motif population histograms while incorporating autograd-derived gradient constraints representing physically motivated relationships between structural motifs, quench rate, and temperature. The model simultaneously classifies each configuration as liquid, supercooled/transition, or glass through an auxiliary classification head. The classification task achieves 96.6% test accuracy with a macro-F1 score of 0.95, while the regression head yields a mean absolute error of 23.4 K on a trajectory-disjoint held-out test set. Five-fold trajectory-grouped cross-validation, deep-ensemble predictions, and Monte Carlo dropout are used to assess model robustness and predictive uncertainty. Sensitivity analyses demonstrate that physics constraints can be incorporated over a broad range of loss weights without compromising predictive accuracy, while substantially improving compliance with the prescribed physical trends. Benchmarking against conventional machine-learning regressors further demonstrates competitive predictive performance. SHAP analysis across the cross-validation ensemble identifies the coupled near-icosahedral motif family, particularly the full icosahedral motif and its single-atom-perturbed counterpart, as the dominant structural fingerprints of the glassy state. These results demonstrate that physically motivated constraints can be embedded directly into motif-based structure-property models, providing a pathway from post-hoc interpretability toward physically constrained machine learning for metallic glasses.",
+      "authors": [
+        "Prashil S. Joshi"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-19T12:53:58+00:00",
+      "link": "https://arxiv.org/pdf/2609.22992v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "physics-informed neural network links local atomic motifs to thermodynamic state of metallic glasses",
+      "llm_evidence_cn": "物理信息神经网络关联局域原子基元与金属玻璃热力学状态",
+      "llm_evidence": "物理信息神经网络关联局域原子基元与金属玻璃热力学状态",
+      "canonical_evidence": "物理信息神经网络关联局域原子基元与金属玻璃热力学状态",
+      "llm_tldr_en": "A multi-task physics-informed neural network predicts temperature from Voronoi-motif histograms and classifies liquid, supercooled and glass states in Cu-Zr metallic glasses with 96.6% accuracy.",
+      "llm_tldr_cn": "机器学习模型通常只在训练后检验物理一致性，而非在学习过程中施加约束。作者提出多任务物理信息神经网络，从Voronoi基元分布直方图直接预测温度，并用自动微分梯度约束编码结构基元、淬火速率与温度间的物理关系，同时用辅助分类头区分液态、过冷态与玻璃态。该模型在分类任务上达到96.6%测试准确率，为金属玻璃结构-热力学关系提供可解释建模。",
+      "llm_tldr": "机器学习模型通常只在训练后检验物理一致性，而非在学习过程中施加约束。作者提出多任务物理信息神经网络，从Voronoi基元分布直方图直接预测温度，并用自动微分梯度约束编码结构基元、淬火速率与温度间的物理关系，同时用辅助分类头区分液态、过冷态与玻璃态。该模型在分类任务上达到96.6%测试准确率，为金属玻璃结构-热力学关系提供可解释建模。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.23735v1",
+      "source": "arxiv",
+      "title": "ScholarStack: Layered Research Asset Orchestration and Cross-Task Reuse for Scientific Agents",
+      "abstract": "Scientific agents support a range of literature-based research tasks, such as retrieval, question answering, evidence-grounded generation, and claim assessment. Most existing systems, however, are organized around individual tasks: the same papers are repeatedly retrieved, segmented, and interpreted, and the understanding built in one task is difficult to reuse in the next. We present ScholarStack, a layered research asset framework that compiles a paper collection into reusable, versioned, and provenance-preserving assets at three complementary levels: source-grounded paper-level statements, domain-level organization, and evidence-grounded cross-paper syntheses. A common access interface returns task-specific views at the evidence granularity each task requires, preserving study conditions, source traceability, and verification status. We instantiate the framework on four task families spanning ten task settings, comparing agents that use the compiled assets with task-specific baselines under matched base models. Quality gains concentrate on tasks that require cross-paper evidence, such as multi-paper question answering and literature review generation, and query-time token cost falls on every task where it is measured, with assets compiled once and reused across tasks. These results suggest that layered research assets can serve as shared infrastructure for scientific agents, shifting literature-based assistance from isolated document processing toward cumulative, evidence-grounded workflows.",
+      "authors": [
+        "ScholarSeed AI Team",
+        "Ao Zhang",
+        "Caoqinwei Gong",
+        "Guanglei Wang",
+        "Haifan Zhang",
+        "Hanwei Zhang",
+        "Jiayi Sheng",
+        "Jihai Zhang",
+        "Kai Ying",
+        "Liyun Dai",
+        "Tingyu Zhu",
+        "Wei Chen",
+        "Wei Luo",
+        "Wenkai Fang",
+        "Xiaoyu Qiu",
+        "Xue Jiang",
+        "Yi Wang",
+        "Yuan Cao",
+        "Zheng Yu",
+        "Wotao Yin"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-20T16:25:06+00:00",
+      "link": "https://arxiv.org/pdf/2609.23735v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "layered research asset orchestration and reuse for scientific agents",
+      "llm_evidence_cn": "面向科研智能体的分层研究资产编排与复用",
+      "llm_evidence": "面向科研智能体的分层研究资产编排与复用",
+      "canonical_evidence": "面向科研智能体的分层研究资产编排与复用",
+      "llm_tldr_en": "Scientific agents repeatedly retrieve and interpret the same papers across tasks. The paper presents ScholarStack, a layered framework compiling a paper collection into reusable, versioned, provenance-preserving assets for literature-based research tasks.",
+      "llm_tldr_cn": "针对科研智能体围绕单一任务组织、导致同一批论文被反复检索与解读、跨任务理解难以复用的问题，本文提出ScholarStack分层研究资产框架。该框架将论文集合编译为可复用、带版本且保留来源的可信资产，分为论文级陈述、领域级组织和跨论文证据综合三个互补层次，并通过统一访问接口返回任务特定视图。系统支持检索、问答、证据支撑生成与论断评估等文献类研究任务。该工作提升了科研智能体的资产复用效率，为文献驱动的研究流程提供了基础设施，但未涉及实验执行或材料模拟。",
+      "llm_tldr": "针对科研智能体围绕单一任务组织、导致同一批论文被反复检索与解读、跨任务理解难以复用的问题，本文提出ScholarStack分层研究资产框架。该框架将论文集合编译为可复用、带版本且保留来源的可信资产，分为论文级陈述、领域级组织和跨论文证据综合三个互补层次，并通过统一访问接口返回任务特定视图。系统支持检索、问答、证据支撑生成与论断评估等文献类研究任务。该工作提升了科研智能体的资产复用效率，为文献驱动的研究流程提供了基础设施，但未涉及实验执行或材料模拟。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
