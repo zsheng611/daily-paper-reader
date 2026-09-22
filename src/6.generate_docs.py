@@ -1763,16 +1763,16 @@ def ensure_reading_content(paper, section, md_path, txt_path, client, *, require
     if missing and require_complete:
         raise RuntimeError('论文内容未生成完整：' + ', '.join(missing))
 
-    if section == 'deep' and not extract_section_tail(text, '论文详细总结（自动生成）'):
-        ensure_text_content(paper.get('pdf_url') or paper.get('link') or '', txt_path)
-        summary = generate_deep_summary(md_path, txt_path, client=client)
-        if not summary or '（完）' not in summary:
-            if require_complete:
-                raise RuntimeError('论文精读总结未完整生成')
-        if summary:
-            upsert_auto_block(md_path, '论文详细总结（自动生成）', summary)
-            with open(md_path, encoding='utf-8') as handle:
-                text = handle.read()
+    # if section == 'deep' and not extract_section_tail(text, '论文详细总结（自动生成）'):
+    #     ensure_text_content(paper.get('pdf_url') or paper.get('link') or '', txt_path)
+    #     summary = generate_deep_summary(md_path, txt_path, client=client)
+    #     if not summary or '（完）' not in summary:
+    #         if require_complete:
+    #             raise RuntimeError('论文精读总结未完整生成')
+    #     if summary:
+    #         upsert_auto_block(md_path, '论文详细总结（自动生成）', summary)
+    #         with open(md_path, encoding='utf-8') as handle:
+    #             text = handle.read()
     field('reading_section', section)
     persist()
     paper['canonical_evidence'] = meta.get('evidence') or paper.get('canonical_evidence', '')
@@ -1974,26 +1974,28 @@ def process_paper(
                     f.write(updated)
                 existing = updated
 
-        if glance_only:
-            # 只生成速览：不拉取 PDF、不做精读总结
-            return paper_id, title
+        # if glance_only:
+        #     # 只生成速览：不拉取 PDF、不做精读总结
+        #     return paper_id, title
 
-        if section == "deep":
-            # 精读区：检查是否已有详细总结
-            tail = extract_section_tail(existing, "论文详细总结（自动生成）")
-            if tail:
-                return paper_id, title
+        # # if section == "deep":
+        # #     # 精读区：检查是否已有详细总结
+        # #     tail = extract_section_tail(existing, "论文详细总结（自动生成）")
+        #     if tail:
+        #         return paper_id, title
 
-            # 生成详细总结
-            pdf_url = str(paper.get("pdf_url") or paper.get("link") or "").strip()
-            ensure_text_content(pdf_url, txt_path)
-            summary = generate_deep_summary(md_path, txt_path, client=paper_llm_client)
-            if summary:
-                upsert_auto_block(md_path, "论文详细总结（自动生成）", summary)
-            return paper_id, title
-        else:
-            # 速读区：不生成详细总结，只保留速览和摘要
-            return paper_id, title
+        #     # 生成详细总结
+        #     pdf_url = str(paper.get("pdf_url") or paper.get("link") or "").strip()
+        #     ensure_text_content(pdf_url, txt_path)
+        #     summary = generate_deep_summary(md_path, txt_path, client=paper_llm_client)
+        #     if summary:
+        #         upsert_auto_block(md_path, "论文详细总结（自动生成）", summary)
+        #     return paper_id, title
+        # else:
+        #     # 速读区：不生成详细总结，只保留速览和摘要
+        #     return paper_id, title
+    
+        return paper_id, title
 
     # 新文件：如果只需要速览，则不拉取 PDF/Jina 文本，直接用元数据生成页面
     if glance_only:
@@ -2048,11 +2050,11 @@ def process_paper(
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(content)
 
-    # 精读区：生成详细总结
-    if section == "deep":
-        summary = generate_deep_summary(md_path, txt_path, client=paper_llm_client)
-        if summary:
-            upsert_auto_block(md_path, "论文详细总结（自动生成）", summary)
+    # # 精读区：生成详细总结
+    # if section == "deep":
+    #     summary = generate_deep_summary(md_path, txt_path, client=paper_llm_client)
+    #     if summary:
+    #         upsert_auto_block(md_path, "论文详细总结（自动生成）", summary)
     # 速读区：不生成额外的总结，只保留速览和摘要
 
     return paper_id, title
