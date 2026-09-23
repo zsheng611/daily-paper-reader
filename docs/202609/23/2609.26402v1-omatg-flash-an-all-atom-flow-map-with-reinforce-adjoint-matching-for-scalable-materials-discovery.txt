@@ -1,0 +1,1010 @@
+Title: OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery
+
+URL Source: https://arxiv.org/pdf/2609.26402v1
+
+Published Time: Wed, 23 Sep 2026 01:47:22 GMT
+
+Number of Pages: 27
+
+Markdown Content:
+# OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery 
+
+Thomas Egg 1, Harry Winston Sullivan 2, Ellad B. Tadmor 2, Stefano Martiniani 1
+
+> 1
+
+New York University, 2University of Minnesota 
+
+Abstract: The discovery of novel inorganic materials drives technological breakthroughs in critical fields such as computing and energy storage. Generative AI has promised to accelerate the materials discovery pipeline, but state-of-the-art flow and diffusion models remain bottlenecked by the cost of proposing candidate materials. To address this, we introduce OMatG-flash, an all-atom flow map for inorganic crystal structure prediction (CSP) and de novo generation (DNG). OMatG-flash is a Pareto-optimal inference engine for materials, sampling candidate materials with an order of magnitude fewer inference steps and less wall-clock time than existing flow and diffusion models while demonstrating benchmark performance on par with the state-of-the-art. To enable post-training fine-tuning we apply Reinforce Adjoint Matching to flow maps, further improving match rates and RMSE on the unconditional CSP task. OMatG-flash showcases the potential of flow maps to accelerate generation of high-quality candidate inorganic materials and demon-strates a step forward in sample throughput necessary for data-hungry materials discovery workflows. 
+
+Code: https://github.com/FERMat-ML/OMatG 
+
+# 1 Introduction 
+
+A central goal in materials discovery is that of proposing candidate inorganic crystalline materials with desired properties. This has implications in critical fields such as computing [1], energy storage [2], and sustainability [3]. Traditional materials discovery pipelines involve repeated synthesis and experimentation loops which are time-consuming and costly to perform [4]. This has inspired the creation of computational algorithms which leverage molecular dynamics and electronic structure to propose materials without the need for lab-based synthesis [5]. Such algorithms aim to solve this problem via repeated first-principles quantum chemical calculations which yield accurate results but are computationally expensive and often impractical at scale [6]. De-spite unfavorable scaling, the deployment of such methods has culminated in the aggregation of large materials science datasets [7–9] along with a wealth of computational tools [10, 11] for analyzing them. These tools, coupled with advances in machine learning and artificial intelligence, have spurred the de-velopment of highly accurate machine learning models for applications in chemistry and physics which can approximate energies and forces with chemical accuracy [12–14] or propose candidate compositions and crystal structures [15, 16]. In the domain of generative modeling for materials, diffusion- and flow-1arXiv:2609.26402v1 [cs.LG] 22 Sep 2026 1 10 100 1000 10000    
+
+> Throughput (structures /sec)
+> 5% 10% 15% 20% 25%
+> S.U.N.  + M.S.U.N.
+> MatterGen OMatG DiffCSP Crystalite
+> NFE=4 NFE=8 NFE=16
+
+Figure 1: Pareto-Optimal Inference . Pareto frontier of combined S.U.N. and M.S.U.N. vs. through-put is shown for existing models. OMatG-flash is Pareto-optimal, surpassing existing models by an order of magnitude in terms of throughput while maintaining competitive raw performance on the DNG task. Solid points indicate OMatG-flash under several number of function evaluation (NFE) budgets. based generative models have shown particularly dominant performance [17–21]. Nevertheless, there is an ever-present need to accelerate the rate at which candidate structures can be proposed. As continued effort and innovation flow into scaling autonomous labs [22, 23] and accelerated downstream processing [24], so too must the scalability of generative algorithms grow to saturate these systems. Flow and diffusion models are fundamentally limited by the need to numerically integrate differential equations to propose candidate materials. To address this we introduce OMatG-flash, a transformer-based flow map for CSP and DNG of inorganic materials. OMatG-flash boasts an order of magnitude faster wall-clock inference time and far fewer neural network evaluations than existing flow and diffusion model architectures while maintaining equivalent performance. Furthermore, we extend post-training reinforcement learning methods developed for flow matching to flow maps, attaining performance com-petitive with respect to the state-of-the-art on the CSP task with few function evaluations. In contrast to conventional flow map distillation methods, OMatG-flash is trained directly from data unlike teacher-distilled flow maps which require access to a pretrained generative model. Furthermore, OMatG-flash can be optimized for a target reward via Reinforce Adjoint Matching while retaining its low inference cost. 
+
+Our Contributions: 
+
+• We introduce OMatG-flash, a Pareto-optimal all-atom flow map that rivals existing flow- and diffusion-based models on materials-generation benchmarks while substantially improving inference-time scal-ability via few-step sampling (Figure 1). 
+
+• We show that post-training OMatG-flash with Reinforce Adjoint Matching (RAM)—to our knowl-edge, its first application to flow maps—achieves state-of-the-art performance on polymorph-aware CSP benchmarks compared to existing diffusion- and flow-based models. 
+
+• We characterize the key limitations of flow map training for scientific applications and outline prospec-tive future directions for how they may be applied to other problems in materials design. 22 Related Work 
+
+Flows and Diffusions Diffusion and flow models formulate generative modeling as a transport prob-lem; mapping a tractable easy-to-sample base distribution to a target distribution that is accessible only through data samples [25]. The diffusion model approach uses a noising stochastic differential equation (SDE) to construct a regression target for estimating the drift of a reverse denoising SDE. With this learned drift, generation proceeds by sampling an initial noisy state and numerically integrating in time to produce an approximate data sample from the target [26, 27]. In flow models the transport is framed deterministically in terms of an instantaneous velocity field which satisfies the probability flow ordinary differential equation (ODE) describing the probability path of the distribution ρt [25, 28, 29]. This velocity field is numerically integrated via deterministic dynamics to draw approximate samples from the target. 
+
+Flow Maps and Consistency Models Unfortunately, the iterative numerical integration required to draw samples with flow- and diffusion-based models requires repeated model evaluations, hindering time-sensitive performance. This has inspired the creation of flow maps which learn a transport that requires few neural network evaluations per generated sample [30–32]. Flow maps have demonstrated performance matching both diffusion and flow models in various domains at a greatly reduced cost [33, 34]. Flow maps exhibit success in language [35], biochemistry [34], and physics [36] while retaining the ability to be learned directly from data. Furthermore, flow maps are being applied for drawing Boltzmann-distributed data in thermodynamic ensembles [37, 38]. 
+
+Generative Models for Materials Discovery Improvement in the performance and scalability of generative AI has inspired the creation of machine learning models which can rapidly propose physically stable and novel crystalline materials. Diffusion- and flow-based methods have demonstrated particu-larly strong performance in this domain [17–20, 39, 40]. Subsequent advances in both the underlying algorithms and network architectures further improved generative accuracy [21, 41, 42], while condi-tioning strategies have enabled the generation of materials with targeted properties [43, 44]. Current CSP and DNG generative models have thus shifted focus to post-training algorithms with reinforcement learning [45, 46], enabling the generative process to push beyond the underlying dataset it was trained on. Parallel to this, substantial effort has been devoted to training large language models to generate text-based representations of crystal structures [47–49]. Despite these advances, existing work for inorganic crystals has largely emphasized improvement in sample quality while giving less attention to generation time. For large-scale materials screening, the relevant objective is not necessarily the accuracy of any individual prediction, but the number of viable candidates produced within a fixed computational budget. A model that generates thousands of can-didates in the time another requires to generate tens may therefore prove more useful in data-driven materials discovery, even if its per-sample success rate is lower. This trade-off is becoming increasingly important as autonomous agents enable high-throughput downstream validation and screening work-flows to operate with far less manual intervention [50]. As these workflows scale, generative throughput may become the limiting factor, motivating methods capable of rapidly supplying candidates and sat-urating downstream screening capacity. 
+
+# 3 Methods 
+
+Unit Cell Representation We represent an N -atom periodic unit cell as an element c ∈ M of the product manifold 
+
+c = ( A, F, y) ∈ M := RN ×dA × TN ×3[0 ,1) × R6, (1) where A is the atomic descriptor matrix with embedding dimension dA, F represents the fractional coordinates, and y is a rotation-invariant unit-cell representation obtained from the Cholesky decom-position of the lattice metric tensor G = LL ⊤ (Appendix A). We define the Riemannian stochastic 3interpolant and its endpoint-conditional velocity as 
+
+ct = exp c0
+
+ βt log c0 (c1) , ˙ct = ˙βt 
+
+> 1−βt
+
+log ct (c1). (2) The exponential and logarithm maps act componentwise on M [51], with their definitions and further details regarding the crystal representation provided in Appendix A. We take βt = t to obtain a geodesic interpolant and use a standard normal base distribution c0 ∼ ρ0, while c1 ∼ ρ1 is sampled from the dataset. 
+
+Flow Matching The corresponding velocity field which bridges ρ0 and ρ1 is given by a conditional expectation vt(c) = E[ ˙ ct | ct = c] . Under suitable regularity conditions, this velocity field generates the marginal probability path ρt induced by the stochastic interpolant [29]. An approximation vθt is learned by minimizing 
+
+Lvel (θ) = 
+
+Z 10
+
+E
+
+h
+
+vθt (ct) − ˙ct
+
+> 2
+
+i
+
+dt (3) where the expectation is taken over c1 ∼ ρ1 and c0 ∼ ρ0. Samples are generated by integrating ˙ct = vθt (ct), c0 ∼ ρ0, t ∈ [0 , 1] , (4) giving terminal samples c1 ∼ ρθ 
+
+> 1
+
+≈ ρ1 approximating the dataset. 
+
+## 3.1 Flow Maps 
+
+A two-time flow map Cs,u directly transports samples from the marginal ρs to ρu. For cs ∼ ρs, it is defined as the solution to the ODE over the interval [ s, u ]: 
+
+Cs,u (cs) := cs +
+
+Z us
+
+vτ (cτ ) d τ. (5) Rather than learning only the velocity through Equation (3), a flow map model directly approximates the solution operator Cθs,u ≈ Cs,u in Equation (5) [31, 52]. This enables sampling from ρ1 using a small number of composed function evaluations: 
+
+ctK =
+
+
+
+CθtK−1,t K ◦ · · · ◦ Cθt0,t 1
+
+
+
+(ct0 ), ct0 ∼ ρ0, 0 = t0 < t 1 < · · · < t K = 1 . (6) The terminal sample still satisfies ctK ∼ ρθ 
+
+> 1
+
+≈ ρ1 using only K function evaluations compared to a typical numerical discretization of Equation (4). In theory K = 1 is sufficient to draw samples from the target but, in practice, this is often too error-prone. The flow map must satisfy a tangency condition :˙Ct,t (ct) := ∂∂u Ct,u (ct) u=t = vt(ct). (7) This condition ensures that, in the instantaneous limit, the flow map evolves according to the velocity field that generates the marginal probability path ρt. To enable few-step sampling it must also satisfy a consistency condition :
+
+Cs,w (cs) = Cv,w (Cs,v (cs)) , s < v < w. (8) This ensures that a composition of steps from time s to v, then v to w is equivalent to a single step over the interval s to w.4½0  
+
+> ½1
+> Ltang
+> _ct
+> _Cμt; t (ct)
+> ct
+> tangency
+> ½0
+> ½1
+> Lcons
+> Cμ
+> 0; v (c0)
+> Cμ
+> 0;1(c0)
+> Cμv; 1
+> ¡Cμ
+> 0; v (c0)¢consistency
+
+Figure 2: Flow Map Training. OMatG-flash training minimizes a tangency loss ( Left ) which, similar to standard flow matching, ensures that, at diagonal time t, the velocity associated with the instantaneous flow map is aligned with the ground truth velocity field. This is done by drawing an interpolant (dotted gray line) between noise and data and regressing onto the analytical velocity (bold gray arrow) ˙ ct. In tandem, a consistency loss ( Right ) enforces that flow map steps can be properly composed to cover any given time range in a consistent fashion such that few-step sampling properly transports samples from base to target using an average velocity field. 
+
+Riemannian Flow Maps We employ a Riemannian MeanFlow [30] to parameterize the flow map jump Cθs,u . Specifically, we use an endpoint prediction network ˆ cθ 
+
+> 1
+
+so that the jump from time s to 
+
+u > s becomes 
+
+Cθs,u (cs) = exp cs
+
+ u − s
+
+1 − s log cs
+
+ ˆcθ
+
+> 1
+
+(cs, s, u )
+
+. (9) To compute ˆ cθ
+
+> 1
+
+, we apply Crystalite’s neural network architecture [42]. We combine each atomic de-scriptor with its corresponding fractional coordinate to form one token per atom and encode the lattice as a separate token, producing N + 1 tokens in total. These tokens are then processed by a two-time scalable interpolant transformer (SiT) backbone, foregoing equivariance for speed [53, 54]. A Riemannian flow map [30] is learned by substituting its diagonal velocity ˙Cθt,t for the learned velocity in Equation (3) to enforce tangency. We then add a consistency loss Lcons to enforce Equation (8). The total training objective is finally given by a weighted linear combination of a tangency loss, 
+
+Ltang (θ) = 
+
+Z 10
+
+E
+
+
+
+γt ˙Cθt,t (ct) − ˙ct
+
+> 2
+
+
+
+dt, (10) and a consistency loss 
+
+Lcons (θ) = 
+
+Z 10
+
+Z w
+
+> 0
+
+Z ws
+
+E
+
+ γs
+
+(w − s)2 log cs
+
+ Cθs,w (cs) − sg  log cs
+
+ Cθv,w 
+
+ Cθs,v (cs) 2
+
+
+
+dv ds dw. (11) A weighted combination of these yields a flow map objective for crystalline unit cells: 
+
+Ltotal (θ) = λT Ltang (θ) + λC Lcons (θ). (12) Here, λT and λC are per-field weights controlling the relative contributions of the tangency and consis-tency losses, respectively, and sg denotes the stop-gradient operator. γ is a time-dependent weighting 5function chosen for stability [30] (Appendix B.3). The expectations are taken over endpoints c0 ∼ ρ0
+
+and c1 ∼ ρ1 sampled independently. We illustrate flow map training conceptually in Figure 2. The above losses can be viewed as self-distillation objectives. However, flow maps can also be trained using a student–teacher framework with a pretrained flow-matching velocity model. In this setting, the velocity predicted by the pretrained model at time t for a noisy sample ct replaces ˙ ct as the regression target in Equation (3). Our method, OMatG-flash, is self-distilled and does not rely on a teacher model, demonstrating that strong flow map performance does not require prior access to a pretrained generative model. For more background on flow maps, see Appendix B.3. 
+
+Data Augmentation OMatG-flash is not translation invariant nor is it rotation equivariant. We learn translation invariance by data augmentation while our canonicalized choice of a cell representation 
+
+y obviates the need for data augmentation via randomly sampled rotations as the frame is fixed. More on the architecture of OMatG-flash and the chosen data augmentation strategies are given in Appendix C. 
+
+## 3.2 Reinforce Adjoint Matching 
+
+Reinforce Adjoint Matching (RAM) is a method for performing RL to fine-tune flow-based generative models [55]. The objective is to simulate data from a tilted distribution 
+
+ρ⋆
+
+> 1
+
+(c1) ∝ ρ1(c1)er(c1) (13) given access only to a scalar-valued reward, r, and a reference velocity field, vref  
+
+> t
+
+, which can be used to draw samples from ρ1. The core learning task is to estimate the optimally controlled velocity field, 
+
+v⋆t (c) = vref  
+
+> t
+
+(c) + σ2 
+
+> t
+> 2
+
+∇cVt(c) where ∇cVt(c) is the gradient of a value function [56, 57]. RAM proposes to learn an approximate optimal control using an expression for this value function gradient minus a kinetic term, 
+
+∇cVt(c) ≈ Er(c1)∇ct log ρ1|t(c1 | ct) ct = c , (14) where ρ1|t is the conditional distribution of a clean crystal structure c1 given a noisy intermediate ct.This approximation yields a numerically stable and low-variance objective. Under this approximation, we can take a pretrained vθt and post-train it by minimizing the following RAM loss to approximate the controlled v⋆t ,
+
+LRAM (θ) = 
+
+Z 10
+
+E
+
+h
+
+vθt (ct) − sg  vref  
+
+> t
+
+(ct) + r(c1)   ˙ct − vθt (ct) 2i
+
+dt (15) where vref  
+
+> t
+
+is a frozen copy of vθt before any optimization. Illustrated in Figure 3, this objective is estimated by generating data, c1, under the current model vθt and noising it analytically via the inter-polant in Equation (2) to a randomly sampled uniform time t ∈ [0 , 1]. Unlike policy gradient variants applied to diffusion- and flow-based generative models, RAM is formulated to work with deterministic 
+
+inference. More background on RAM is given in Appendix E. 
+
+RAM for All-Atom Flow Maps Flow map inference is not naturally compatible with standard policy-optimization methods such as DDPO [58], PPO [59], and GRPO [60]. Flow maps define determin-istic generative dynamics and learn finite-time transport rather than a stochastic policy. Policy-gradient methods require a stochastic process to formulate generation as a Markov decision process. Existing methods for applying such methods to flow matching navigate around this hurdle by either convert-ing the ODE in Equation (4) to an SDE via the score or by artificially injecting noise into this ODE [46, 61]. While these approaches have shown promising results, they do not transfer naturally to flow maps, which do not admit a straightforward score-based reformulation as an SDE except for in the instantaneous limit. RAM, however, provides a path for fine-tuning a learned flow map. We adapt RAM to enable flow map reinforcement learning. By exploiting the tangent condition in Equation (7), we replace the instantaneous velocity vθt in Equation (15) with the diagonal derivative 6c1 = Cμ 
+
+> 0;1
+
+(c0) 
+
+> ct1
+> ct2
+
+⋮              
+
+> ctN
+> t=0t=1
+> ½(c)½⋆(c)
+> £Nr(c1)
+> LFM RAM
+> 0.100 0.105 0.110 0.115 0.120 0.125 0.130 0.135
+> RMSE
+> RMSE match rate 0100 200 300 400 500 600
+> post-training step
+> 0.04 0.06 0.08 0.10 0.12 0.14
+> relative  energy  (eV  / atom)
+> 0.640 0.645 0.650 0.655 0.660 0.665 0.670 0.675
+> match  rate
+
+Figure 3: OMatG-flash-RAM Post-Training. A conceptual overview ( Left ) of RAM post-training for OMatG-flash is presented. OMatG-flash is used to generate a sample, c1, using few NFE. N replicas of this structure are made and independently renoised. Renoised samples {cti }Ni=1 and the reward signal 
+
+r(c1) are used to update the model via the RAM objective in Equation (16). ( Right ) The evolution of relative energy with respect to known crystal structures, RMSE, and match rate all trend desirably during fine-tuning. Relative energies are reported after relaxation, indicating that RAM post-training enables the model to produce structures which minimize to lower energies. Match rate and RMSE are computed before any relaxation. of the flow map ˙Cθt,t . We jointly maintain consistency away from the diagonal via a consistency loss, 
+
+Lcons (θ), to enforce the semigroup property in Equation (8). This gives the flow map RAM loss 
+
+LFM RAM (θ) = λ⋆
+
+> RAM
+
+Z 10
+
+E
+
+
+
+˙Cθt,t (ct) − sg 
+
+ ˙Cref  
+
+> t,t
+
+(ct) + r(c1)
+
+
+
+˙ct − ˙Cθt,t (ct)
+
+ 2
+
+dt + λ⋆C Lcons (θ) (16) with chosen weights λ⋆ 
+
+> RAM
+
+and λ⋆C indicated with a star to denote post-training. Minimizing this objective requires no reparameterization of the learned flow map nor does it require any sort of noise injection which would corrupt the generative dynamics. We implement RAM post-training only for the CSP task using the energy E as a reward model 
+
+r(c1) = −λE E(c1). (17) where λE is a hyperparameter. This reward pushes the generated distribution towards more stable regions of the energy surface, improving performance at the CSP task. We use the MACE-MPA-0 foundational machine learned interatomic potential (MLIP) as the chosen energy model for this task to balance high-fidelity energy evaluation with speed [13]. To stabilize post-training we compute the reward in Equation (17) after taking 50 relaxation steps for each generated structure c1. More detail on the OMatG-flash-RAM implementation is provided in Appendix E. 
+
+# 4 Experiments 
+
+We train OMatG-flash on two inorganic materials datasets to benchmark performance on CSP and DNG: MP-20 , which comprises 45,231 crystal structures curated from the Materials Project [7], and 
+
+Alex-MP-20 , which is a larger dataset comprising 675,204 structures from the Materials Project and the Alexandria database [9]. Each dataset contains crystals with at most 20 atoms in the unit cell and covers a diverse set of compositions and structures. We evaluate OMatG-flash (pretrained) for both CSP 7Table 1: CSP Performance on MP-20 and Alex-MP-20. OMatG-flash and OMatG-flash-RAM demonstrate strong performance on one-to-one match rate where the subscript indicates the NFE used for inference. Values unavailable in the literature are indicated with dashes. k indicates that inference was performed k times and the best match from each generated set is taken. Each slash-separated entry reports valid or invalid / valid , where the first value is computed over all generated structures and the second only over structures classified as valid. Bold indicates best overall and underlined indicates best on a k = 1 budget. MP-20 Alex-MP-20 Method k MR (%) ↑ RMSE ↓ MR (%) ↑ RMSE ↓
+
+DiffCSP 1 57.82 / 52.51 0.0627 / 0.0600 – –FlowMM 1 66.22 / 59.98 0.0661 / 0.0629 – –MCFlow 1 70.38 / 64.08 0.0592 / 0.0561 – –OMatG 1 69.83 / 63.75 0.0741 / 0.0720 72.50 / 64.71 0.1261 / 0.1251 Crystalite 1 – / 66.09 – / 0.0337 – / 68.26 – / 0.0317 
+
+OMatG-flash 16 
+
+1 67.15 / 60.79 0.1172 / 0.1136 66.19 / 59.05 0.1356 / 0.1342 3 75.47 / 68.62 0.0954 / 0.0930 80.76 / 72.39 0.1055 / 0.1042 5 78.27 / 71.19 0.0878 / 0.0860 85.68 / 76.91 0.0961 / 0.0948 OMatG-flash 16 -RAM 1 68.90 / 62.55 0.0881 / 0.0858 70.52 / 62.87 0.0955 / 0.0939 3 75.76 / 68.89 0.0743 / 0.0728 81.05 / 72.55 0.0807 / 0.0792 5 78.30 / 71.30 0.0713 / 0.0702 84.84 / 76.08 0.0764 / 0.0749 and DNG of inorganic materials and OMatG-flash-RAM (post-trained) for CSP. All reported metrics for competing models are given as reported in existing work [62, 63]. OMatG-flash is trained on the canonical data splits for both of these datasets [17, 20] as well as the new polymorph-split MP-20-ps [64]. Results with respect to the original data splits are given solely to provide a fair comparison to existing work and we strongly urge future generative modeling efforts to train, evaluate, and compare to the polymorph split (ps) versions of this data using appropriate polymorph-aware metrics as plain MP-20 has known leakage across splits [64]. 
+
+## 4.1 Crystal Structure Prediction 
+
+A central challenge in inorganic materials design is to predict crystal structure given only the constituent elements of atoms in the unit cell. The performance of OMatG-flash at CSP is primarily assessed via match rates and root-mean-squared-error (RMSE) between generated and reference crystals using Pymatgen’s StructureMatcher algorithm which is used to report the fraction of generated crystal structures which match an index-paired test-set structure up to a chosen tolerance. While informative, match rates depend on arbitrary indexing which is flawed when considering the polymorphism inherent to crystalline materials [64]. We therefore report and highlight our results on METRe (match-everyone-to-reference) and cRMSE, recently proposed polymorph-aware metrics which improve upon the flawed match rate benchmark. METRe addresses the failures of one-to-one match rate by instead searching for a match among all generated structures for each test set structure to remove any dependence on arbitrary indexing. The associated RMSE values measure the similarity between two matched structures in terms of a unitless distance whereas corrected RMSE (cRMSE) adds a tolerance-based penalty for each non-matching case (Appendix F). For completeness we report both one-to-one match rates and RMSE along with METRe and cRMSE, but strongly urge wider adoption of polymorph-aware METRe and cRMSE. We report the performance of OMatG-flash and OMatG-flash-RAM in Tables 1 and 2. Post-training curves of the match rate, RMSE, and relative energy are shown in Figure 3. 84.2 De Novo Generation 
+
+DNG is the most general materials design problem, requiring proposal of not only the crystal structure but also the composition of elements within a crystal. We benchmark OMatG-flash’s performance at this task by computing stability, uniqueness, and novelty (S.U.N.) and metastability, uniqueness, and novelty (M.S.U.N.) with respect to a known corpus of reference data [63, 65]. We rely on LeMat-GenBench [63] — an open-source leaderboard of generative models for inorganic materials generation — to compute S.U.N. and M.S.U.N. on 2500 sampled structures in Table 3. Stability and metastability are determined by comparing the energy of each generated structure to a convex hull of stable phases. Uniqueness measures the proportion of generated structures which are distinct chemically or structurally from all other generated structures whereas novelty identifies if a structure is distinct with respect to a chosen reference dataset of inorganic crystals. To identify matching crystals for uniqueness and novelty we use pymatgen’s StructureMatcher algorithm. More information on the definition and practical calculation of these metrics is given in Appendix F. We report metrics for models trained on the MP-20 dataset as this dataset has the most reported entries on the LeMat-GenBench leaderboard. 
+
+# 5 Discussion 
+
+## 5.1 Results 
+
+For both CSP and DNG we compare OMatG-flash to unconditional all-atom diffusion- and flow-based models operating on crystalline unit cells. This is done to show how such models for materials can be amortized via a flow map. There are a variety of models which condition on space group to generate more symmetric structures [66–68]. Generative models utilizing different representations such as asymmetric units [69] or learned latent spaces [70] have also been shown to yield promising performance for materials. Lastly, language models and unmasking transformer architectures have also demonstrated success for CSP and DNG [43, 47, 62]. MaskGXT [62] is of this kind and is the current state-of-the-art overall for CSP on MP-20 and MP-20-ps with benchmark performance that exceeds ours. Their inference algorithm performs a double rollout, conditioning the second on the space group representation produced by the first, resulting in improved performance over other CSP models. For DNG Crystalite [42] is the current state-of-the-art and is reported as it is an unconditional diffusion model. A consensus on which architecture, crystal representation, and choice of conditioning signal is most advantageous for CSP and DNG is still an open question and deserves dedicated study which is out of the scope of this work. Table 2: CSP Performance on MP-20-ps. OMatG-flash-RAM demonstrates state-of-the-art performance on polymorph-aware METRe with respect to existing flow and diffusion models while improving cRMSE. Best is bolded and second-best is underlined. Method METRe (%) ↑ cRMSE ↓
+
+DiffCSP 53.14 0.279 FlowMM 65.18 0.226 MCFlow 70.70 0.195 OMatG 70.50 0.187 Crystalite 70.87 0.174 
+
+OMatG-flash 16 68.56 0.250 OMatG-flash 16 -RAM 71.10 0.221 
+
+CSP Results Among existing un-conditional diffusion- and flow-based generative models OMatG-flash-RAM is state-of-the-art on METRe for MP-20-ps while the base OMatG-flash model is competitive with these meth-ods. Post-training OMatG-flash proves remarkably effective for the CSP task overall, simultaneously improving ME-TRe and cRMSE (Table 2) as well as RMSE in every case (Table 1), demon-strating the effectiveness of the pro-posed RAM extension and underscor-ing the potential for flow maps to ac-celerate high-quality CSP. While our results for k > 1 are not meant to be an apples-to-apples comparison with existing results against k = 1, we argue that our findings emphasize the benefit of rapid, high-quality inference over more expensive inference with slightly improved raw performance. On MP-20, perform-9Table 3: DNG Performance. OMatG-flash matches or exceeds all but Crystalite [42] on S.U.N. (all NFE budgets) and combined S.U.N. and M.S.U.N. (8 or 16 NFE). Novelty is second only to MatterGen for 4 NFE [20]. Quality of proposed crystals is robust even to very few inference steps. OMatG-flash metrics are computed using LeMat-GenBench code for 2500 structures. Metrics for all other models appear as reported on the leaderboard. Best is bolded and second-best is underlined. An asterisk indicates that samples were not prerelaxed before benchmarking according to LeMat-GenBench. Method Valid ↑ Novel ↑ Stable ↑ S.U.N. ↑ S.U.N. + M.S.U.N. ↑
+
+DiffCSP* 95.7 66.2 2.3 0.1 8.6 MatterGen 95.7 70.5 2.0 0.2 15.2 OMatG 96.4 51.2 11.6 1.0 19.0 MCFlow 97.2 52.2 11.9 0.7 19.6 Crystalite 97.2 53.2 12.7 1.5 24.1 
+
+OMatG-flash 4 96.4 66.9 7.2 1.4 18.2 OMatG-flash 8 96.8 63.4 7.8 1.0 21.5 OMatG-flash 16 96.8 61.0 8.8 1.2 22.6 ing k-inference greatly enhances the one-to-one match rates of OMatG-flash. OMatG-flash enjoys an order of magnitude speedup over existing models. Consequently, k > 1 inference can be done faster than k = 1 for conventional flow and diffusion models to yield stronger numbers. Despite high METRe and match rates, the cRMSE and RMSE between ground truth polymorphs and samples produced by OMatG-flash is systematically high for both polymorph-aware and one-to-one matching indicating that, while many structures can be successfully matched to a test set structure, their error relative to that reference is higher than that of a diffusion- or flow-based generative model. We argue that this can be attributed to compounding errors in the model exacerbated by performing very few inference steps, a trend that has been observed in few-step inference for physical science applications [30]. We also highlight that post-training greatly improves cRMSE and k-inference RMSE which suggests that reinforcement with respect to domain-specific rewards can correct for the heightened sensitivity to model error that standard flow maps incur to perform amortized inference. Furthermore, assuming that production inference for materials discovery is always followed by MLIP relaxation as in DNG with LeMat-GenBench, we argue that generating structures within the appropriate basin of attraction is of more immediate concern than completely resolving structure. 
+
+DNG Results OMatG-flash exhibits high-quality performance that remains robust with as few as four model calls per inference. The novelty of structures proposed by OMatG-flash is high on average, trailing only MatterGen [20] at 4 NFE while exceeding MatterGen’s stability rate by a large margin. The S.U.N. and combined S.U.N. and M.S.U.N. rates of structures generated by OMatG-flash rival the state of the art at a fraction of the inference cost. Except for DiffCSP, competing results given in Table 3 are among those which are denoted as prerelaxed on LeMat-GenBench to provide a fair comparison between OMatG-flash and existing models. We highlight that OMatG-flash-RAM is not benchmarked on this task. As identified in previous work, the S.U.N. and M.S.U.N. metrics are capable of being “hacked” by the naive application of RL [45, 46, 71]. A model can quickly learn that certain compositions and classes of structures are broadly stable or metastable, focusing generation on repetitive materials to maximize the reward. For CSP this is less of an issue, as every proposed material is conditioned on a fixed chemical composition which imposes structure on the energy surface that is difficult to exploit. We argue that S.U.N. and M.S.U.N. are more relevant for assessing performance during pretraining but that post-training reinforcement should be targeted to chemical and structural features to target a specific physical property as opposed to stability or novelty in the broadest sense. We do not consider RAM post-training for DNG in this work and leave post-training of OMatG-flash and reward design to this end as future work. 10 5.2 Pareto-Optimal Materials Generation 
+
+Flow and diffusion-based models for materials design have demonstrated remarkable capability for sam-pling stable and novel materials, but the primary advantage of OMatG-flash is scalability at inference time. OMatG-flash demonstrates performance competitive with the state-of-the-art but with massively improved inference-time throughput. In Figure 1 we construct a Pareto frontier of performance vs. inference speed for the DNG task to illustrate this. OMatG-flash exhibits Pareto-optimal performance with respect to existing flow and diffusion models, surpassing all except Crystalite in terms of accuracy on LeMat-GenBench with at least an order of magnitude speedup over existing models. Advances in generative AI for science continue to push existing benchmarks further. While improvement in these raw performance indicators is crucial, advancement along other axes such as inference and training speed as well as cost is necessary for scaling high-quality sampling either through hardware or new algorithms. OMatG-flash sets the state-of-the-art in balancing rapid inference with high-quality generation. Conventionally, human judgment and expensive quantum mechanical calculations for property estima-tion and relaxation have been the bottleneck in materials-discovery as they were often integrated in the proposal engine. As agentic workflows, GPU-accelerated scientific algorithms, and high-accuracy MLIPs are increasingly amortizing and accelerating these downstream filters [50, 62, 72, 73], effort should similarly be focused on amortizing the generation mechanism itself. With this in mind, OMatG-flash is the most capable tool for truly saturating such automated systems and is well-suited to the modern materials science workflow. 
+
+## 5.3 Limitations and Future Work 
+
+A key limitation of OMatG-flash is the high reported RMSE between generated samples from the base model and ground truth data. This, coupled with high METRe rates, indicates that, while OMatG-flash is quite capable of isolating stable crystalline motifs, it struggles to resolve fine-grained structure. While post-training notably improves the quality of generated samples in terms of RMSE for the CSP task, improving the quality of the base model is of immediate importance. On this note, a possible future direction is to better understand and stabilize RAM post-training for the flow map setting (Appendix E). An application for OMatG-flash is as an engine for inference time steering where the aim is to take a pretrained generative model and guide it towards desired rewards without changing the weights themselves [74, 75]. Recently, there has been increased interest in using flow maps in conjunction with diffusion or flow-based generative models to “look ahead” to t = 1, compute a reward, and to use the reward or its gradient to bias inference towards regions of feature space with high rewards [57, 76, 77]. A conditional version of OMatG-flash could be developed which would open the possibility of guidance methods which are grounded in stochastic optimal control [57, 76]. 
+
+# 6 Conclusion 
+
+In this work we introduced OMatG-flash as an all-atom flow map for materials generation and show-cased its capability for rapid inference of high-quality inorganic material candidates. Furthermore, we demonstrated post-training capability to facilitate fine-tuning of OMatG-flash based on desired rewards. Benchmarking on Materials Project data, we show that OMatG-flash is a Pareto-optimal materials gen-erator and pushes the boundaries of inference-time speed while maintaining raw performance on par with the state-of-the-art. As materials discovery shifts toward fully automated agentic workflows and accelerated postprocessing, generation time can no longer be treated as a secondary metric. When one model can generate thousands of candidates in the time another generates one, small differences in per-sample accuracy are overwhelmed by the difference in throughput. 11 7 Code and Data Availability 
+
+The code associated with this work will be released as part of the OMatG package. Relevant model checkpoints will be uploaded to Hugging Face at https://huggingface.co/OMatG. The MP-20 and Alex-MP-20 datasets used for training and evaluating OMatG-flash are all open source. 
+
+# 8 Acknowledgments 
+
+The authors thank the NYU IT High Performance Computing team for their provision of computational resources and general support. The authors acknowledge funding from NSF Grant OAC-2311632. S. M. acknowledges support from the Simons Center for Computational Physical Chemistry (Simons Foundation grant 839534, MT). The authors gratefully acknowledge use of the research computing resources of the Empire AI Consortium, Inc., with support from the State of New York, the Simons Foundation, and the Secunda Family Foundation. Large language models assisted with manuscript drafting and editing and research code development; the authors verified all results and claims and take full responsibility for the work. 12 References 
+
+[1] Wei Chen et al. “High-throughput computational discovery of In2Mn2O7 as a high Curie tem-perature ferromagnetic semiconductor for spintronics”. en. In: npj Computational Materials 5.1 (July 2019), p. 72. issn : 2057-3960. doi : 10.1038/s41524- 019- 0208- x . url : https://www. nature.com/articles/s41524-019-0208-x (visited on 08/28/2026). [2] Kinga Pielichowska and Krzysztof Pielichowski. “Phase Change Materials for Thermal Energy Storage”. In: Progress in Materials Science 65 (Aug. 2014), pp. 67–123. issn : 0079-6425. doi :
+
+10.1016/j.pmatsci.2014.03.005 . (Visited on 08/27/2026). [3] Peter G. Boyd et al. “Data-driven design of metal–organic frameworks for wet flue gas CO2 capture”. en. In: Nature 576.7786 (Dec. 2019), pp. 253–256. issn : 1476-4687. doi : 10 . 1038 / s41586-019-1798-7 . url : https://www.nature.com/articles/s41586-019-1798-7 (visited on 08/28/2026). [4] Radislav Potyrailo et al. “Combinatorial and High-Throughput Screening of Materials Libraries: Review of State of the Art”. In: ACS Combinatorial Science 13.6 (June 2011), pp. 579–633. issn :2156-8952. doi : 10.1021/co200007w . (Visited on 08/27/2026). [5] Pierre-Paul De Breuck et al. “Generative AI for crystal structures: a review”. en. In: npj Compu-tational Materials 11.1 (Dec. 2025), p. 370. issn : 2057-3960. doi : 10.1038/s41524-025-01881-2 .
+
+url : https://www.nature.com/articles/s41524-025-01881-2 (visited on 08/29/2026). [6] Chris J. Pickard and R. J. Needs. “Ab Initio Random Structure Searching”. In: Journal of Physics: Condensed Matter 23.5 (Feb. 2011), p. 053201. issn : 0953-8984, 1361-648X. doi : 10.1088/0953-8984/23/5/053201 . arXiv: 1101.3987 [cond-mat.mtrl-sci] . (Visited on 08/13/2026). [7] Anubhav Jain et al. “The Materials Project: A materials genome approach to accelerating ma-terials innovation”. In: APL Materials 1.1 (2013), p. 011002. issn : 2166532X. doi : 10.1063/1. 4812323 . url : http://link.aip.org/link/AMPADS/v1/i1/p011002/s1%5C&Agg=doi .[8] D. Zagorac et al. “Recent Developments in the Inorganic Crystal Structure Database: Theoretical Crystal Structure Data and Related Features”. In: Journal of Applied Crystallography 52.5 (2019), pp. 918–925. issn : 1600-5767. doi : 10.1107/S160057671900997X . (Visited on 08/16/2026). [9] Th´ eo Cavignac et al. “AI-Driven expansion and application of the Alexandria database”. In: 
+
+Journal of Physics: Materials 9.2 (2026), p. 025014. doi : 10.1088/2515- 7639/ae6620 . url :
+
+https://doi.org/10.1088/2515-7639/ae6620 .[10] Shyue Ping Ong et al. “Python Materials Genomics (Pymatgen): A Robust, Open-Source Python Library for Materials Analysis”. In: Computational Materials Science 68 (Feb. 2013), pp. 314–319. 
+
+issn : 0927-0256. doi : 10.1016/j.commatsci.2012.10.028 . (Visited on 08/16/2026). [11] Ask Hjorth Larsen et al. “The Atomic Simulation Environment—a Python Library for Working with Atoms”. In: Journal of Physics: Condensed Matter 29.27 (June 2017), p. 273002. issn : 0953-8984. doi : 10.1088/1361-648X/aa680e . (Visited on 08/16/2026). [12] Simon Batzner et al. “E(3)-Equivariant Graph Neural Networks for Data-Efficient and Accurate Interatomic Potentials”. In: Nature Communications 13.1 (May 2022), p. 2453. issn : 2041-1723. 
+
+doi : 10.1038/s41467-022-29939-5 . (Visited on 03/22/2024). [13] Ilyes Batatia et al. “A foundation model for atomistic materials chemistry”. In: (2023). arXiv: 
+
+2401.00096 [physics.chem-ph] .[14] Brandon M. Wood et al. UMA: A Family of Universal Models for Atoms . June 2025. doi : 10. 48550/arXiv.2506.23971 . arXiv: 2506.23971 [cs] . (Visited on 01/20/2026). [15] Geoffroy Hautier et al. “Data Mined Ionic Substitutions for the Discovery of New Compounds”. In: Inorganic Chemistry 50.2 (Dec. 2010), pp. 656–663. issn : 0020-1669. doi : 10.1021/ic102031h .(Visited on 08/16/2026). [16] Amil Merchant et al. “Scaling Deep Learning for Materials Discovery”. In: Nature 624.7990 (Dec. 2023), pp. 80–85. issn : 1476-4687. doi : 10.1038/s41586-023-06735-9 . (Visited on 08/15/2026). [17] Tian Xie et al. Crystal Diffusion Variational Autoencoder for Periodic Material Generation . Mar. 2022. doi : 10.48550/arXiv.2110.06197 . arXiv: 2110.06197 [cs] . (Visited on 01/17/2025). [18] Rui Jiao et al. Crystal Structure Prediction by Joint Equivariant Diffusion . Mar. 2024. arXiv: 
+
+2309.04475 [cond-mat] . (Visited on 04/17/2024). 13 [19] Benjamin Kurt Miller et al. FlowMM: Generating Materials with Riemannian Flow Matching .June 2024. arXiv: 2406.04713 [cond-mat, physics:physics, stat] . (Visited on 06/18/2024). [20] Claudio Zeni et al. MatterGen: A Generative Model for Inorganic Materials Design . Jan. 2024. arXiv: 2312.03687 [cond-mat] . (Visited on 04/17/2024). [21] Philipp Hoellmer et al. Open Materials Generation with Stochastic Interpolants . July 2025. doi :
+
+10.48550/arXiv.2502.02582 . arXiv: 2502.02582 [cs] . (Visited on 01/20/2026). [22] Connor W. Coley et al. “A Robotic Platform for Flow Synthesis of Organic Compounds Informed by AI Planning”. In: Science 365.6453 (Aug. 2019), eaax1566. doi : 10.1126/science.aax1566 .(Visited on 08/27/2026). [23] B. P. MacLeod et al. “Self-Driving Laboratory for Accelerated Discovery of Thin-Film Materials”. In: Science Advances 6.20 (May 2020), eaaz8867. doi : 10.1126/sciadv.aaz8867 . (Visited on 08/27/2026). [24] Orion Cohen et al. TorchSim: An Efficient Atomistic Simulation Engine in PyTorch . Aug. 2025. 
+
+doi : 10 . 48550 / arXiv . 2508 . 06628 . arXiv: 2508 . 06628 [physics.comp-ph] . (Visited on 08/27/2026). [25] Michael S. Albergo, Nicholas M. Boffi, and Eric Vanden-Eijnden. Stochastic Interpolants: A Uni-fying Framework for Flows and Diffusions . Nov. 2023. arXiv: 2303.08797 [cond-mat] . (Visited on 05/28/2024). [26] Jascha Sohl-Dickstein et al. Deep Unsupervised Learning Using Nonequilibrium Thermodynamics .Nov. 2015. arXiv: 1503.03585 [cond-mat, q-bio, stat] . (Visited on 03/20/2024). [27] Yang Song et al. Score-Based Generative Modeling through Stochastic Differential Equations . Feb. 2021. arXiv: 2011.13456 [cs, stat] . (Visited on 04/17/2024). [28] Xingchao Liu, Chengyue Gong, and Qiang Liu. Flow Straight and Fast: Learning to Generate and Transfer Data with Rectified Flow . Sept. 2022. doi : 10.48550/arXiv.2209.03003 . arXiv: 
+
+2209.03003 [cs.LG] . (Visited on 08/13/2026). [29] Yaron Lipman et al. Flow Matching for Generative Modeling . Feb. 2023. arXiv: 2210.02747 [cs, stat] . (Visited on 04/14/2024). [30] Dongyeop Woo et al. Riemannian MeanFlow . May 2026. doi : 10.48550/arXiv.2602.07744 .arXiv: 2602.07744 [cs.LG] . (Visited on 07/03/2026). [31] Nicholas M. Boffi, Michael S. Albergo, and Eric Vanden-Eijnden. Flow Map Matching . June 2024. arXiv: 2406.07507 [cs, math] . (Visited on 06/15/2024). [32] Nicholas M. Boffi, Michael S. Albergo, and Eric Vanden-Eijnden. How to Build a Consistency Model: Learning Flow Maps via Self-Distillation . Oct. 2025. doi : 10.48550/arXiv.2505.18825 .arXiv: 2505.18825 [cs.LG] . (Visited on 08/13/2026). [33] Jaehoon Yoo et al. Self-Conditioned Flow Map Language Models via Fixed-point Flows . July 2026. 
+
+doi : 10.48550/arXiv.2607.00714 . arXiv: 2607.00714 [cs.CL] . (Visited on 08/29/2026). [34] Gianluca Scarpellini et al. Few-Step Cofolding with All-Atom Flow Maps . June 2026. doi : 10. 48550/arXiv.2606.08375 . arXiv: 2606.08375 [cs.LG] . (Visited on 08/13/2026). [35] Chanhyuk Lee et al. Flow Map Language Models: One-step Language Modeling via Continuous Denoising . arXiv:2602.16813 [cs.CL]. May 2026. doi : 10.48550/arXiv.2602.16813 . url : http: //arxiv.org/abs/2602.16813 (visited on 08/28/2026). [36] Winfried Ripken et al. Learning Hamiltonian Flow Maps: Mean Flow Consistency for Large-Timestep Molecular Dynamics . arXiv:2601.22123 [cs.LG]. June 2026. doi : 10 . 48550 / arXiv . 2601.22123 . url : http://arxiv.org/abs/2601.22123 (visited on 08/28/2026). [37] Danyal Rehman et al. FALCON: Few-step Accurate Likelihoods for Continuous Flows . Dec. 2025. 
+
+doi : 10.48550/arXiv.2512.09914 . arXiv: 2512.09914 [cs.LG] . (Visited on 08/26/2026). [38] RuiKang OuYang et al. Few-Step Boltzmann Generators via Scalable Likelihood Flow Maps . June 2026. doi : 10.48550/arXiv.2606.29110 . arXiv: 2606.29110 [cs.LG] . (Visited on 08/26/2026). [39] Cheng Zeng et al. MolCrystalFlow: Molecular Crystal Structure Prediction via Flow Matching .arXiv:2602.16020 [cs.LG]. Mar. 2026. doi : 10.48550/arXiv.2602.16020 . url : http://arxiv. org/abs/2602.16020 (visited on 08/28/2026). 14 [40] Alston Lo et al. Fast Organic Crystal Structure Prediction with Unit Cell Flow Matching . en. arXiv:2606.03199 [cs.LG]. June 2026. doi : 10.48550/arXiv.2606.03199 . url : http://arxiv. org/abs/2606.03199 (visited on 08/28/2026). [41] Fran¸ cois Cornet et al. Kinetic Langevin Diffusion for Crystalline Materials Generation . July 2025. 
+
+doi : 10.48550/arXiv.2507.03602 . arXiv: 2507.03602 [cs.LG] . (Visited on 08/13/2026). [42] Tin Hadˇ zi Veljkovi´ c et al. Crystalite: A Lightweight Transformer for Efficient Crystal Model-ing . July 2026. doi : 10.48550/arXiv.2604.02270 . arXiv: 2604.02270 [cs.LG] . (Visited on 08/13/2026). [43] Nikita Kazeev et al. Wyckoff Transformer: Generation of Symmetric Crystals . June 2025. doi : 10. 48550/arXiv.2503.02407 . arXiv: 2503.02407 [cond-mat.mtrl-sci] . (Visited on 08/13/2026). [44] Pawan Prakash et al. “Guided Diffusion for the Discovery of New Superconductors”. In: npj Computational Materials (May 2026). issn : 2057-3960. doi : 10.1038/s41524- 026- 02117- 7 .(Visited on 08/13/2026). [45] Hyunsoo Park and Aron Walsh. Guiding Generative Models to Uncover Diverse and Novel Crystals via Reinforcement Learning . Nov. 2025. doi : 10.48550/arXiv.2511.07158 . arXiv: 2511.07158 [cs.LG] . (Visited on 08/15/2026). [46] Philipp Hoellmer and Stefano Martiniani. Open Materials Generation with Inference-Time Rein-forcement Learning . June 2026. doi : 10.48550/arXiv.2602.00424 . arXiv: 2602.00424 [cs.LG] .(Visited on 07/04/2026). [47] Luis M. Antunes, Keith T. Butler, and Ricardo Grau-Crespo. “Crystal Structure Generation with Autoregressive Large Language Modeling”. In: Nature Communications 15.1 (Dec. 2024), p. 10570. issn : 2041-1723. doi : 10.1038/s41467-024-54639-7 . (Visited on 08/13/2026). [48] Andy Xu et al. PLaID++: A Preference Aligned Language Model for Targeted Inorganic Materials Design . June 2026. doi : 10.48550/arXiv.2509.07150 . arXiv: 2509.07150 [cs.LG] . (Visited on 08/13/2026). [49] Cyprien Bone et al. Discovery and Recovery of Crystalline Materials with Property-Conditioned Transformers . June 2026. doi : 10.48550/arXiv.2511.21299 . arXiv: 2511.21299 [cond-mat.mtrl-sci] .(Visited on 08/13/2026). [50] Ferdous Nasri et al. Deterministic access to global viral sequence data enables robust agentic scientific discovery . arXiv:2606.06749 [q-bio.QM]. June 2026. doi : 10.48550/arXiv.2606.06749 .
+
+url : http://arxiv.org/abs/2606.06749 (visited on 08/28/2026). [51] Louis Grenioux et al. Boltzmann Generators for Amorphous Particle Systems . July 2026. doi :
+
+10.48550/arXiv.2512.16607 . arXiv: 2512.16607 [stat.ML] . (Visited on 08/27/2026). [52] Yang Song et al. Consistency Models . May 2023. doi : 10 . 48550 / arXiv . 2303 . 01469 . arXiv: 
+
+2303.01469 [cs.LG] . (Visited on 08/13/2026). [53] Nanye Ma et al. SiT: Exploring Flow and Diffusion-based Generative Models with Scalable Inter-polant Transformers . arXiv:2401.08740 [cs.CV]. Sept. 2024. doi : 10.48550/arXiv.2401.08740 .
+
+url : http://arxiv.org/abs/2401.08740 (visited on 08/28/2026). [54] William Peebles and Saining Xie. Scalable Diffusion Models with Transformers . Mar. 2023. arXiv: 
+
+2212.09748 [cs] . (Visited on 05/30/2024). [55] Andreas Bergmeister et al. Reinforce Adjoint Matching: Scaling RL Post-Training of Diffusion and Flow-Matching Models . arXiv:2605.10759 [cs.LG]. May 2026. doi : 10.48550/arXiv.2605.10759 .
+
+url : http://arxiv.org/abs/2605.10759 (visited on 08/29/2026). [56] Carles Domingo-Enrich et al. Adjoint Matching: Fine-tuning Flow and Diffusion Generative Mod-els with Memoryless Stochastic Optimal Control . Jan. 2025. doi : 10.48550/arXiv.2409.08861 .arXiv: 2409.08861 [cs.LG] . (Visited on 08/28/2026). [57] Peter Potaptchik et al. Meta Flow Maps Enable Scalable Reward Alignment . June 2026. doi :
+
+10.48550/arXiv.2601.14430 . arXiv: 2601.14430 [stat.ML] . (Visited on 08/26/2026). [58] Kevin Black et al. Training Diffusion Models with Reinforcement Learning . arXiv:2305.13301 [cs.LG]. Jan. 2024. doi : 10.48550/arXiv.2305.13301 . url : http://arxiv.org/abs/2305. 13301 (visited on 08/29/2026). [59] John Schulman et al. Proximal Policy Optimization Algorithms . Aug. 2017. doi : 10 . 48550 / arXiv.1707.06347 . arXiv: 1707.06347 [cs.LG] . (Visited on 08/27/2026). 15 [60] Zhihong Shao et al. DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Lan-guage Models . en. arXiv:2402.03300 [cs]. Apr. 2024. doi : 10.48550/arXiv.2402.03300 . url :
+
+http://arxiv.org/abs/2402.03300 (visited on 03/30/2026). [61] Jie Liu et al. Flow-GRPO: Training Flow Matching Models via Online RL . Oct. 2025. doi : 10. 48550/arXiv.2505.05470 . arXiv: 2505.05470 [cs.CV] . (Visited on 07/03/2026). [62] Kiyoung Seong, Nayoung Kim, and Sungsoo Ahn. Discovering Crystal Structure Prediction Al-gorithms with an AI Co-Scientist . June 2026. doi : 10.48550/arXiv.2606.22866 . arXiv: 2606. 22866 [cs.LG] . (Visited on 08/13/2026). [63] Siddharth Betala et al. LeMat-GenBench: A Unified Evaluation Framework for Crystal Generative Models . Jan. 2026. doi : 10.48550/arXiv.2512.04562 . arXiv: 2512.04562 [cs.LG] . (Visited on 08/13/2026). [64] Maya M. Martirossyan et al. All That Structure Matches Does Not Glitter . Sept. 2025. doi :
+
+10.48550/arXiv.2509.12178 . arXiv: 2509.12178 [cs] . (Visited on 10/05/2025). [65] Martin Siron et al. LeMat-Bulk: Aggregating, and de-Duplicating Quantum Chemistry Materials Databases . Nov. 2025. doi : 10.48550/arXiv.2511.05178 . arXiv: 2511.05178 [cond-mat.mtrl-sci] .(Visited on 08/29/2026). [66] Daniel Levy et al. SymmCD: Symmetry-Preserving Crystal Generation with Diffusion Models .https://arxiv.org/abs/2502.03638v3. Feb. 2025. (Visited on 08/27/2026). [67] Rees Chang et al. Space Group Equivariant Crystal Diffusion . Oct. 2025. doi : 10.48550/arXiv. 2505.10994 . arXiv: 2505.10994 [cond-mat.mtrl-sci] . (Visited on 08/27/2026). [68] Omri Puny, Yaron Lipman, and Benjamin Kurt Miller. Space Group Conditional Flow Match-ing . Sept. 2025. doi : 10.48550/arXiv.2509.23822 . arXiv: 2509.23822 [cs.LG] . (Visited on 08/27/2026). [69] Rees Chang et al. SLayerGen: A Crystal Generative Model for All Space and Layer Groups . May 2026. doi : 10.48550/arXiv.2605.08262 . arXiv: 2605.08262 [cond-mat.mtrl-sci] . (Visited on 08/29/2026). [70] Chaitanya K. Joshi et al. All-Atom Diffusion Transformers: Unified Generative Modelling of Molecules and Materials . May 2025. doi : 10 . 48550 / arXiv . 2503 . 03965 . arXiv: 2503 . 03965 [cs] . (Visited on 08/23/2025). [71] Junwu Chen et al. Accelerating Inverse Materials Design Using Generative Diffusion Models with Reinforcement Learning . Nov. 2025. doi : 10 . 48550 / arXiv . 2511 . 03112 . arXiv: 2511 . 03112 [physics.chem-ph] . (Visited on 08/15/2026). [72] Ali E. Ghareeb et al. “A multi-agent system for automating scientific discovery”. en. In: Nature 
+
+655.8122 (July 2026), pp. 497–505. issn : 1476-4687. doi : 10.1038/s41586-026-10652-y . url :
+
+https://www.nature.com/articles/s41586-026-10652-y (visited on 08/29/2026). [73] Ilyes Batatia et al. MACE-POLAR-1: A Polarisable Electrostatic Foundation Model for Molecular Chemistry . arXiv:2602.19411 [physics.chem-ph]. Feb. 2026. doi : 10.48550/arXiv.2602.19411 .
+
+url : http://arxiv.org/abs/2602.19411 (visited on 08/29/2026). [74] Luhuan Wu et al. Practical and Asymptotically Exact Conditional Sampling in Diffusion Models .Nov. 2024. doi : 10 . 48550 / arXiv . 2306 . 17775 . arXiv: 2306 . 17775 [stat.ML] . (Visited on 08/26/2026). [75] Marta Skreta et al. Feynman-Kac Correctors in Diffusion: Annealing, Guidance, and Product of Experts . June 2025. doi : 10.48550/arXiv.2503.02819 . arXiv: 2503.02819 [cs] . (Visited on 10/13/2025). [76] Peter Holderrieth et al. Diamond Maps: Efficient Reward Alignment via Stochastic Flow Maps .May 2026. doi : 10 . 48550 / arXiv . 2602 . 05993 . arXiv: 2602 . 05993 [cs.LG] . (Visited on 08/26/2026). [77] Sam McCallum et al. Strong Stochastic Flow Maps . May 2026. doi : 10.48550/arXiv.2606.01086 .arXiv: 2606.01086 [cs.LG] . (Visited on 08/26/2026). [78] Brian D. O. Anderson. “Reverse-Time Diffusion Equation Models”. In: Stochastic Processes and their Applications 12.3 (May 1982), pp. 313–326. issn : 0304-4149. doi : 10.1016/0304-4149(82) 90051-5 . (Visited on 08/26/2026). 16 [79] Aapo Hyv¨ arinen. “Estimation of Non-Normalized Statistical Models by Score Matching”. In: 
+
+Journal of Machine Learning Research 6.24 (2005), pp. 695–709. issn : 1533-7928. (Visited on 08/26/2026). [80] G. E. Uhlenbeck and L. S. Ornstein. “On the Theory of the Brownian Motion”. In: Physical Review 36.5 (Sept. 1930), pp. 823–841. doi : 10.1103/PhysRev.36.823 . url : https://link. aps.org/doi/10.1103/PhysRev.36.823 (visited on 08/29/2026). [81] Oscar Davis et al. Generalised Flow Maps for Few-Step Generative Modelling on Riemannian Manifolds . Feb. 2026. doi : 10.48550/arXiv.2510.21608 . arXiv: 2510.21608 [cs.LG] . (Visited on 08/28/2026). [82] Richard Liaw et al. “Tune: A Research Platform for Distributed Model Selection and Training”. In: arXiv preprint arXiv:1807.05118 (2018). [83] Daniel W. Davies et al. “SMACT: Semiconducting Materials by Analogy and Chemical Theory”. In: Journal of Open Source Software 4.38 (June 2019), p. 1361. issn : 2475-9066. doi : 10.21105/ joss.01361 . (Visited on 09/01/2026). [84] Mark Neumann et al. Orb: A Fast, Scalable Neural Network Potential . Oct. 2024. doi : 10.48550/ arXiv.2410.22570 . arXiv: 2410.22570 [cond-mat.mtrl-sci] . (Visited on 08/29/2026). [85] Christopher J. Bartel et al. “A Critical Examination of Compound Stability Predictions from Machine-Learned Formation Energies”. In: npj Computational Materials 6.1 (July 2020), p. 97. 
+
+issn : 2057-3960. doi : 10.1038/s41524-020-00362-y . (Visited on 08/29/2026). 17 A Unit Cell Representation 
+
+As introduced in Section 3, we consider the materials proposal problem as inference on crystalline unit cells c = ( A, F, y). The atomic descriptor matrix A is obtained by passing the raw atom types a ∈ ZN
+
+> +
+
+through a chosen featurization map (Appendix C). F denotes fractional coordinates derived from 3-D Cartesian atomic coordinates X ∈ RN ×3 using the unit cell LF = XL −1. (18) Given any valid cell matrix L′ ∈ GL +(3 , R), we first construct its metric tensor 
+
+G = L′L′⊤ .
+
+We then compute the lower-triangular Cholesky factor L such that 
+
+G = LL ⊤.
+
+The corresponding six-dimensional latent representation y is then defined by 
+
+L(y) = 
+
+
+
+ey1 0 0
+
+y2 ey3 0
+
+y4 y5 ey6
+
+ ,
+
+or equivalently, 
+
+y(L) = [log L11 , L 21 , log L22 , L 31 , L 32 , log L33 ] ∈ R6.
+
+Manifold Operations for Unit Cell Transport We treat the generation of all components of the crystal unit cell as taking place in continuous space. For y and A we operate in Euclidean space with simple Riemannian exp and log maps which, for elements x and y, are given by exp x(y) = x + y and log x(y) = y − x. (19) For F we consider generation on the periodic flat torus, TN ×3[0 ,1) := ( R/Z)N ×3 with exp x(y) = wrap (x + y) and log x(y) = wrap (y − x + 0 .5) − 0.5 (20) and wrap operation as wrap (z) = z mod 1.0. These operations allow us to write a Riemannian stochastic interpolant for each component of the crystalline unit cell c.
+
+# B Generative Modeling as Dynamical Transport 
+
+## B.1 Diffusions 
+
+Diffusion models consider bridging a Gaussian base distribution ρT with a target distribution ρ0 by a stochastic process whose time evolution is given by a forward SDE dxt = ft(xt)d t + σtd−→
+
+W t. (21) Here ft is a linear drift ft(x) = Atx + bt, σt is a chosen diffusion coefficient, and d −→
+
+W t is an infinites-imal Wiener increment where the arrow indicates that this process moves forward in time. This SDE gradually applies noise to data, approaching an isotropic Gaussian as T grows to infinity. The objective in score-based diffusion models is to learn a reverse-time SDE which generates clean data from noise which, subject to mild conditions on ft and σt, takes the form [26, 27, 78]. dxt = ft(xt) − σ2 
+
+> t
+
+∇xt log ρt(xt) dt + σtd←−
+
+W t. (22) 18 This is generally done by minimizing a score matching objective [79]. If we parameterize a neural network sθt approximating the score sθt ≈ ∇ x log ρt then we can write the objective 
+
+LSM (θ) = 
+
+Z T
+
+> 0
+
+E
+
+h
+
+sθt (xt) − ∇ xt log ρt(xt|x0) 2i
+
+dt (23) Since the forward SDE has an affine-linear drift and a state-independent diffusion coefficient, its transi-tion kernel ρt(xt|x0) is Gaussian and given by the usual solution to the SDE in Equation (21) [80]. With access to an estimator for the score, Equation (22) can be integrated backwards in time to generate data from independent realizations of ρT .
+
+## B.2 Flows 
+
+Following the success of diffusion models, methods have been formulated to learn a deterministic trans-port between noise and clean data. In this flow-based generative modeling framework a coupling between a base distribution ρ0 and a target ρ1 is given by a velocity field [25, 28, 29]. 1 The typical approach is to bridge noise and data with an interpolant as in Section 3, 
+
+xt = αtx0 + βtx1, (24) where x1 is sampled from the target and x0 is sampled from noise. Both αt and βt are scheduling functions which determine how data is noised in time. Interpolation between noise and data allows for the construction of the flow matching algorithm which aims to learn an instantaneous velocity field vt. The desired velocity is that which solves a transport equation ∂ρ t
+
+∂t + ∇ · (vtρt) = 0 . (25) This transport equation describes the evolution of a time-dependent density from t = 0 to t = 1. It can be shown that this velocity can be written in terms of the interpolant in Equation (24) 
+
+vt(x) = E[ ˙ xt|xt = x] (26) We approximate this velocity with a neural network vθt by minimizing the conditional flow matching loss 
+
+LCFM (θ) = 
+
+Z 10
+
+E
+
+h
+
+vθt (xt) − ˙xt
+
+> 2
+
+i
+
+dt (27) where the expectation is taken over ( x0, x 1) pairs. Access to an approximate vt allows for the generation of new data samples through integration of an ODE forwards in time dx
+
+dt = vt, s.t. x0 ∼ ρ0. (28) Flows and diffusions are closely related paradigms for generative modeling [25]. If ρ0 is a standard Gaussian, it is possible to simulate data via a diffusion SDE similar to Equation (22) given access to a flow velocity field vt using the following relation 
+
+∇x log ρt(x) = α−1
+
+> t
+
+βtvt(x) − ˙βtx
+
+˙βtαt − βt ˙αt
+
+. (29) This relationship is used for deriving Flow-GRPO [61]. The relationship between the score and the velocity is similarly used in the derivation of RAM (Appendix E).             
+
+> 1Literature on flows and diffusions is often inconsistent in terms of which direction in time points from noise to data. In diffusion model literature, noise is also attributed to a steady-state realized at T=∞whereas T= 0 is a clean initial condition that is progressively noised. In flow-based models, t= 0 often corresponds to noise and t= 1 to data. We choose this convention throughout the paper as our method is more directly related to flow models.
+
+19 B.3 Flow Maps 
+
+The success of flows and diffusions has inspired exploration into flow maps and consistency models [31, 32, 52]. Given a base and target distribution bridged by Equation (25) a flow map is a two-time map 
+
+Xs,u which satisfies 
+
+Xs,u (xs) = xu (30) where s, u ∈ [0 , 1]. A flow map must satisfy a tangent and consistency condition. The tangent condition enforces that, in the instantaneous limit, the flow map velocity matches the velocity in Equation (28) ˙Xs,s (xs) := ∂∂u Xs,u (xs)
+
+> u=s
+
+= vs(xs). (31) A flow map must also be consistent through time. There are three conditions that can be used to enforce consistency: 
+
+• Lagrangian 
+
+∂X s,u (xs)
+
+∂u = vu(Xs,u (xs)) (32) 
+
+• Eulerian ∂X s,u (xs)
+
+∂s + ∇Xs,u (xs)vs(xs) = 0 (33) 
+
+• Semigroup 
+
+Xv,w (Xs,v (xs)) = Xs,w (xs) (34) where s < v < w . Flow maps have been successfully generalized for generative modeling on Riemannian manifolds [30, 81]. As outlined in Section 3 we employ Riemannian MeanFlow with a semigroup consis-tency objective for training OMatG-flash. Following this prescription [30], we parameterize OMatG-flash as a two-time map 
+
+Xs,u (xs) = exp xs (( u − s)vs,u (xs)) (35) where exp x y is the exponential map associated with a manifold M and s < u . We find strong perfor-mance by parameterizing the average velocity field vs,u with endpoint prediction. Specifically, given xs
+
+and an estimator of the endpoint x1(xs, s, u ) we write the two-time velocity 
+
+vs,u (xs) = log xs x1(xs, s, u )1 − s (36) where log x y is the logarithm map on M. Composing these two equations above we arrive at the parameterization of OMatG-flash in Equation (9). For both tangency and consistency losses we employ weighting functions to stabilize the loss γt = 1−t 
+
+> max(1 −t,ϵ )
+
+. We set ϵ = 0 .1. 
+
+# C OMatG-flash Architecture 
+
+Atom Type Encoding OMatG-flash applies Crystalite’s subatomic tokenization scheme [42]. For atomic number Zi, Crystalite constructs the 34-dimensional descriptor 
+
+d(Zi) = 
+
+h
+
+e(7)  
+
+> r(Zi)
+
+e(19)  
+
+> g(Zi)
+
+e(4) 
+
+> b(Zi)
+
+  ns 
+
+> 2
+
+, np 
+
+> 6
+
+, nd 
+
+> 10
+
+, nf
+
+> 14
+
+i
+
+, (37) where e(k) denotes a k-dimensional one-hot encoding, r, g, and b denote the element’s period, group, and block, and ( ns, n p, n d, n f ) are its ground-state valence-shell occupancies. After standardization, 20 group weighting, PCA projection, and normalization, each descriptor is mapped to a(Zi) ∈ RdA with 
+
+dA = 24. The atomic descriptor matrix is formed by stacking these vectors: 
+
+A =
+
+
+
+a(Z1)⊤
+
+...
+
+a(ZN )⊤
+
+ ∈ RN ×dA . (38) This representation effectively describes the space of elements and circumvents the need for a discrete diffusion because the state is part of a continuous manifold. 
+
+Atom Type Decoding After integration is complete, each generated atomic descriptor is snapped to the closest valid element descriptor in PCA space. Specifically, for a generated descriptor ˆAi, 1, we assign the atomic number ˆZi = arg max 
+
+> Z∈{ 1,..., 100 }
+
+D ˆAi, 1, a(Z)
+
+E
+
+ˆAi, 1 2
+
+∥a(Z)∥2
+
+. (39) Decoding is just a nearest-neighbor projection under cosine similarity to the set of valid PCA-projected element descriptors. 
+
+Neural Network Architecture We parameterize OMatG-flash as an all-atom transformer, again building off of the Crystalite architecture to do so [42]. The atoms in a unit cell c are tokenized into N tokens, one per atom, with one additional token for the lattice. The tokenization of an atom indexed i is a linear combination of a coordinate and atom type embedding 
+
+hatom  
+
+> i
+
+= Ecomp (Ai) + Ecoord (SinEmb( Fi; N coord freq )) (40) where SinEmb featurizes the coordinates via a Fourier expansion, SinEmb( x; Nfreq ) = [sin(2 πkx ), cos(2 πkx )] Nfreq  
+
+> k=1
+
+, (41) and Ecomp , E coord are two-layer MLPs with a SiLU activation. The lattice token is similarly obtained by passing y through a two-layer MLP embedding layer 
+
+hlattice   
+
+> N+1
+
+(y) = Elattice (y) (42) yielding a sequence of tokens t(0) = [ hatom 1 , . . . , hatom  
+
+> N
+
+, hlattice   
+
+> N+1
+
+] which the all-atom transformer processes through layers of self-attention. The superscript indicates that this is the initial tokenized embedding before any transformer layers are applied. OMatG-flash is adapted from the diffusion transformer architecture [54]. Our conditioning vector is derived using the left and right foot times. For a source time s and a destination time u this conditioning vector is predicted via a two-layer MLP on s and ∆ = u − s
+
+hconditioning (s, u ) = Econd 
+
+ SinEmb( s; N time freq ), SinEmb(∆; N time freq ) (43) 
+
+hconditioning along with t(0) are passed into the model. hconditioning is used to predict scale and shift parameters which normalize the tokens via adaptive layer normalization (adaLN) over the course of several transformer layers. We enable physics-informed self-attention within the model using Crystalite’s geometry enhancement module. This module computes a block-diagonal bias mask, B(c), that modulates attention only between atom tokens i and j by first computing the approximate minimum-image displacement using ∆fij (r) = fj − fi + r,
+
+r⋆ij = arg min  
+
+> r∈{− 1,0,1}3
+
+∆fij (r)G(y)∆ f ⊤ 
+
+> ij
+
+(r), (44) 21 then ∆f mi  
+
+> ij
+
+= fj − fi + r⋆ij . (45) The normalized minimum-image Cartesian distance becomes 
+
+dmi  
+
+> ij
+
+= ∥∆f mi  
+
+> ij
+
+L(y)∥2
+
+s(y) (46) which is normalized by a cell scale divisor s(y) = ( a + b + c)/3 derived from the lattice vector lengths. The pairwise geometry is featurized as 
+
+eij =
+
+h
+
+SinEmb(∆ f mi  
+
+> ij
+
+; N edge freq ) exp[ −γ(dmi  
+
+> ij
+
+− μq )2] Nrbf  
+
+> q=1
+
+yY1 (y)
+
+i
+
+. (47) Here, N edge freq and Nrbf are the numbers of Fourier and radial basis features, respectively; μq are uniformly spaced radial centers, γ is their inverse squared spacing, and yY1 (y) denotes the Y1 lattice features computed from y.The bias for attention head h is [B(c)] hij = gh(s)  − softplus( wh)dmi  
+
+> ij
+
++ [ Eedge (eij )] h
+
+ , (48) where wh is a learned head-specific distance parameter, Eedge is a two-layer MLP with hidden dimension 
+
+dedge , and 
+
+gh(s) = sigmoid (softplus( αh)[ − log(max( s, ϵ ))] + βh) . (49) Here, s is the left-foot time supplied to the DiT/SiT backbone, αh and βh are learned head-specific parameters, and ϵ > 0 is a numerical-stability constant. The diagonal of the edge bias and all entries involving padded atoms or the lattice token are set to zero. The geometry bias is added directly to the scaled dot-product attention logits. For attention head h,Attn h = softmax 
+
+ QhK⊤
+
+> h
+
+√dh
+
++ Bh(c) + M
+
+
+
+Vh, (50) where Qh, Kh, and Vh are the query, key, and value projections, dh is the head dimension, and M is the key-padding mask, taking value −∞ for padded key tokens and zero otherwise. The remainder of the architecture follows standard SiT/DiT token-based setups, using adaLN-conditioned self-attention and MLP residual blocks. For predicting endpoints which are periodic in the domain [0 , 1) we parameterize the endpoint prediction of denoised fractional coordinates, ˆF1 = atan2(ˆ u1, ˆv1)2π mod 1.0, (51) Here, ˆ u1 and ˆ v1 are predicted by the fractional-coordinate head. We use this so-called circular prediction mode for all realizations of OMatG-flash. ˆA1 and ˆ y1 are predicted by linear layer output heads. 
+
+Data Augmentation OMatG-flash is not rotation-equivariant nor is it translation invariant however, since F and A are naturally rotation invariant, we need only the lattice in handling rotations. Our choice of modeling y is rotation-invariant and, thus, we do not consider data augmentation for global rotations of the crystal. OMatG-flash is, however, not translation-invariant and F is sensitive to this. We therefore augment the data with random translations in 3D during training. 22 D Hyperparameter Selection 
+
+Table 4: OMatG-flash hyperparameters. 
+
+Hyperparameter Value Architecture 
+
+Atomic descriptor dimension dA 24 Supported atomic numbers Z 1–100 Transformer width d 512 Transformer layers 18 Attention heads 16 Coordinate Fourier frequencies 32 Time-embedding dimension 256 
+
+Flow map objective 
+
+Atomic weights ( λT,A , λ C,A ) (2 .5, 2.5) Coordinate weights ( λT,F , λ C,F ) (1 .0, 1.0) Lattice weights ( λT,y , λ C,y ) (0 .05 , 0.05) 
+
+Optimization 
+
+Batch size 256 Optimizer AdamW Learning rate 5 × 10 −4
+
+AdamW coefficients ( β1, β 2) (0 .9, 0.999) AdamW ϵopt 10 −8
+
+Weight decay 10 −2
+
+EMA decay 0.999 Gradient clipping threshold 1.0 
+
+RAM post-training 
+
+Atomic weights ( λRAM ,A , λ C,A ) (−, −)Coordinate weights ( λRAM ,F , λ C,F ) (0.520, 0.002) Lattice weights ( λRAM ,y , λ C,y ) (0.074, 0.002) RAM energy weight λE 0.2 RAM number groups 16 RAM group size 64 RAM noising replicas per sample 4RAM learning rate 1.0 × 10 −4
+
+RAM training steps 250 
+
+OMatG-flash’s hyperparameters are summarized in Table 4. We minimize flow map and RAM losses per-field using the weights specified. The channel-specific tangency and consistency weights are normalized internally, so only their relative values matter. Hyperparameters for RAM were fine-tuned using Ray Tune [82]; initialization for pretraining was derived from intuition. We use a standard normal base distribution which, after wrapping the fractional coordinate onto the flat torus, is effectively uniform. At inference time we use a uniform time grid. 
+
+# E Reinforce Adjoint Matching 
+
+Reinforce adjoint matching frames fine-tuning an ODE velocity field in terms of stochastic optimal control. The central objective is to draw samples from a tilted distribution 
+
+ρ⋆(x) ∝ ρ(x)er(x) (52) 23 where r is a scalar-valued reward function [57]. In the stochastic dynamical transport setting, samples from ρ⋆ can be drawn by sampling random Gaussian noise x0 and integrating an SDE similar to Equation (22) but written forwards in time 
+
+dx t = ft(xt) + σ2 
+
+> t
+
+∇xt log ρt(xt) + σ2 
+
+> t
+
+u⋆t (xt) dt + σtd−→
+
+W t. (53) where u⋆t is a control field which, to sample from Equation (52), should be chosen to maximize a terminal reward regularized by a path cost term 
+
+u⋆ = arg max 
+
+> u
+
+E
+
+
+
+r(x1) − 12
+
+Z 10
+
+σ2 
+
+> t
+
+∥uτ (xτ )∥2 dτ
+
+
+
+. (54) We write the optimal controller as u⋆t (x) = ∇xVt(x) where Vt is the value function [56] 
+
+∇xVt(x) = E
+
+h
+
+r(x1)∇xt log ρ1|t(xu⋆ 
+
+> 1
+
+|xt) xt = x
+
+i
+
+− 12 E
+
+
+
+∇
+
+Z 1
+
+> t
+
+σ2 
+
+> t
+
+∥u⋆τ (xτ )∥2 dτ xt = x
+
+
+
+. (55) Dropping the path cost term, we arrive at an approximate value function gradient used in RAM: 
+
+∇xVt(x) ≈ E
+
+h
+
+r(x1)∇xt log ρ1|t(xu⋆ 
+
+> 1
+
+|xt) xt = x
+
+i
+
+. (56) The superscript u⋆ indicates that the sample was generated using the controller. 
+
+RAM Fixed Point Objective In order to estimate the control in Equation (56) we recall the uncontrolled SDE drift 
+
+bt(x) = vt(x) + σ2
+
+> t
+
+2 ∇x log ρt(x), (57) and controlled SDE drifts 
+
+bt(x) + σ2 
+
+> t
+
+u⋆t (x) = v⋆t (x) + σ2
+
+> t
+
+2 ∇x log ρ⋆t (x), (58) Subtracting gives 
+
+σ2 
+
+> t
+
+u⋆t (x) = ( v⋆t (x) − vt(x)) + σ2
+
+> t
+
+2 (∇x log ρ⋆t (x) − ∇ x log ρt(x)) . (59) Provided that ρ0 is Gaussian and that we use a memoryless schedule, we can write ∇x log ρt(x) = 2σ−2 
+
+> t
+
+(vt(x) − ˙βtβ−1 
+
+> t
+
+x). Using this score identity, one can show that v⋆t satisfies a fixed point 
+
+σ2 
+
+> t
+
+u⋆t (x) = 2( v⋆t (x) − vt(x)) (60) 
+
+v⋆t (x) ≈ vt(x) + σ2
+
+> t
+
+2 E
+
+h
+
+r(x1)∇xt log ρ1|t(xu⋆ 
+
+> 1
+
+|xt) xt = x
+
+i
+
+(61) The last step is to invoke the Bayes bridge score identity shown in the RAM derivation for the linear interpolant schedule ( αt = 1 − t, β t = t) [55], 
+
+∇xt log ρ1|t(x1|xt) = t
+
+1 − t (( x1 − x0) − v⋆t (xt)) , (62) and to enforce σ2 
+
+> t
+
+/2 = (1 − t)/t giving the RAM fixed point condition 2.
+
+v⋆t (x) − vt(x) = E [r(x1)( ˙ xt − v⋆t (xt)) |xt = x] . (63)    
+
+> 2We emphasize that, in the original RAM literature, the problem is framed in reverse time where ρ0is clean data and
+> ρ1is noise. Thus, many of the relations in their text have been adjusted to reflect our time convention.
+
+24 Figure 4: Instability in RAM Minimization Early during post-training optimization with no relaxation applied the energy of generated samples decreases by over 0.2 eV/atom on average as shown in the inset. The one-to-one match rate trends slightly upward. Later, the RAM and consistency losses become unstable and model performance collapses. 
+
+Application to OMatG-flash We highlight that the application of RAM to our OMatG-flash flow map improves performance notably (Section 4). We do note, however, that in the limit of long training times, we encounter instability and reward collapse and we illustrate this effect in Figure 4. Apply-ing relaxation steps to the generated structure before reward computation improved stability of the algorithm. The numbers for OMatG-flash-RAM reported in Tables 1 and 2 are obtained using the checkpoint which exhibited the lowest average relative energy during training with relaxation applied before reward computation. We do note that on TN ×3[0 ,1) the application of the velocity-score reparameterization given in Equation (29) is heuristic and we do not claim an extension of RAM to arbitrary manifolds is theoretically rigorous nor efficacious. Rewards are normalized to group-relative advantages following [55]. 
+
+# F Benchmark Metrics 
+
+## F.1 Crystal Structure Prediction 
+
+Match Rate and RMSE Match rate and RMSE are two canonical methods for measuring the performance of generative models on the CSP task. Both rely on the pymatgen StructureMatcher 
+
+algorithm which determines a match within some specified tolerance by performing translations, rota-tions, and unimodular lattice operations. If a match is found, an RMSE can be computed which is then normalized by 3
+
+pV /N atoms with V the volume of the cell and Natoms the number of atoms. For CSP metrics we use the settings most often used in the generative modeling literature: stol =0.5, ltol =0.3, 
+
+angle tol =10.0. This metric is generally computed one-to-one where each generated structure is com-pared to its index-matched test set reference. 
+
+METRe and cRMSE It has been observed that one-to-one match rate is a suboptimal metric for determining CSP performance [64]. This is due to the phenomenon of polymorphism in crystal structures, where a single composition can yield many diverse crystal structures. METRe attempts to 25 generated reference                         
+
+> one-to-one match rate
+> i=1i=2i=3
+> 0/3matched
+> METRe
+> i=1i=2i=3
+> 2/3matched
+> match non-match
+
+✓ ✓Figure 5: Concept of METRe vs. One-To-One Matching The one-to-one method ( Left ) counts three non-matches despite the presence of two pairs of structures that could indeed be matched. METRe (Right ) correctly scans the generated set for each reference structure, determining that two matches are present in the generated set. combat this by instead comparing each reference structure against every generated structure. cRMSE is then a corrected version of RMSE where non-matched structures appear as an explicit penalty in the cRMSE computation cRMSE 
+
+
+
+{cgen ,j }Ngen  
+
+> j=1
+
+; {cref ,i }Nref 
+
+> i=1
+
+
+
+= 1
+
+Nref 
+
+X
+
+> i∈X
+
+min 
+
+> j∈J i
+
+RMSE( cgen ,j , cref ,i ) + stol ·
+
+ Nref − N match ref 
+
+
+
+Nref 
+
+(64) where cgen is a generated crystal, cref is a reference crystal, Nref is the number of reference test set structures, and N match ref is the number of matched structures. We consider X as 
+
+X = {i ∈ { 1, ..., N ref } : Ji̸ = ∅} (65) where we have Ji as 
+
+Ji = {j ∈ { 1, ..., N gen } : cgen ,j matches cref ,i }. (66) We illustrate METRe vs. one-to-one matching in Figure 5. 
+
+Validity For Table 1 we report results for all structures ( valid or invalid ) along with values re-stricted to only those passing certain validity checks ( valid ). Validity is assessed first via structural assessment followed by SMACT chemical validity. Structural checks ensure that no interparticle dis-tances are less than 0.5˚ A, the cell volume is greater than 0.1˚ A3, and that a polar sine cutoff 
+
+V / (a × b × c) ≥ 10 −3 (67) is not violated where V is the volume of the cell and a, b, c are lattice vector lengths. If these are satisfied, a crystal structure must then pass a SMACT compositional validity check [83] followed by a chemical fingerprint validity check. 26 Table 5: DNG Raw Numbers. LeMat-GenBench reports public leaderboard results using one decimal place. For transparency we report the raw numbers computed by the LeMat-GenBench evaluator and extractor scripts. Numbers are computed for an initial pool of 2500 structures. We take numbers for competing models from the public LeMat-GenBench leaderboard. Method Valid ↑ Novel ↑ Stable ↑ S.U.N. ↑ S.U.N. + M.S.U.N. ↑
+
+DiffCSP 2392 1654 58 3 215 MatterGen 2392 1762 49 6 380 OMatG 2361 1255 284 24 464 MCFlow 2429 1306 298 18 490 Crystalite 2430 1331 317 38 604 OMatG-flash 4 2409 1672 180 34 455 OMatG-flash 8 2420 1584 196 26 537 OMatG-flash 16 2420 1524 221 29 564 
+
+## F.2 De Novo Generation 
+
+All DNG benchmark metrics are computed with code provided by LeMat-GenBench in their open source implementation using the scripts/run benchmarks.py script with comprehensive multi mlip hull 
+
+configuration flag and structure-matcher fingerprinting [63]. The subsequent results are extracted with scripts/extract benchmark metrics.py . We prerelax our 2500 generated structures using MACE for up to 1000 steps with a force tolerance of 0.02 eV/˚ A before benchmarking with LeMat-GenBench. To expand on our results in Table 3 we include raw numbers as reported by LeMat for all DNG metrics in Table 5 
+
+Stability Stability is computed using a series of foundation model interatomic potentials. In order to determine if a material is stable or not it is input to UMA [14], ORB [84], and MACE [13]. The average energy-above-hull returned by these models is compared with the LeMat convex hull of stable phases corresponding to that reduced composition [85]. A material is stable if and only if its energy-above-hull, Ehull ≤ 0.0 eV/atom. Metastability for the purposes of M.S.U.N. computation is similarly defined, triggering if 0 .0 < E hull ≤ 0.1 eV/atom. Additionally, a material can only be considered if at least two of the three MLIPs in the ensemble return an energy for that entry. 
+
+Uniqueness and Novelty Uniqueness and novelty are computed in the same way but using different reference data. For both metrics pymatgen’s StructureMatcher algorithm is used. The tolerances used by LeMat-GenBench are stricter than we use for computing CSP and are set stol =0.3, ltol =0.1, 
+
+angle tol =5.0. Uniqueness is determined by comparison to all structures in the generated set. Novelty, on the other hand, is determined against a held-out LeMat-Bulk reference set [65]. 
+
+## F.3 Wall-Clock Inference Speed 
+
+We measure sampling speed using the conventions established in the literature. To measure results in accordance with the literature, we use one NVIDIA H100 GPU choosing a batch size of 8192 structures for the DNG task with the hyperparameters as reported in Appendix C. We use bfloat16 inference which is consistent with how OMatG-flash was trained. We define generation time as the time required to sample c0, perform inference with OMatG-flash, and decode the data into a standard unit cell representation, excluding I/O. For reporting the Pareto frontier in Figure 1 we use baseline timing measurements as computed by Crystalite [42]. For reporting Crystalite itself we use their “standard” inference setting as they indicate that this is the primary timing one should consider. We emphasize that, even with their reported optimized inference time of 5.14 seconds per thousand structures, our model at NFE=16 is an order of magnitude faster, recording 0.535 seconds per thousand structures. 27

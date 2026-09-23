@@ -1,0 +1,419 @@
+Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent 
+ 
+Brandon Bauer1, Matthew Whalen1, Kenji Watanabe2, Takashi Taniguchi2, John Q. Xiao1, Tao 
+E. Li1*, Wenjin Zhao1* 
+ 
+1Department of Physics and Astronomy, University of Delaware, Newark, DE, USA 
+2National Institute for Materials Science, 1-1 Namiki, 305-0044 Tsukuba, Japan  
+ 
+Email: wzhao@udel.edu; taoeli@udel.edu 
+ 
+Abstract: 
+Artificial-intelligence (AI) agents are beginning to enter experimental laboratories, automating 
+experiments and accelerating scientific discovery. Herein, we introduce an AI-driven workflow in 
+which an AI agent performs multi-step, multi-day quantum transport measurements end-to-end. 
+Specifically, given brief instructions, the agent starts by planning the multi-step measurements, 
+then safely operates the cryogenic instruments, analyzes the data, and concludes with a final report. 
+We demonstrate this AI workflow on multiple monolayer and bilayer MoS₂ devices. Through 
+autonomous measurement campaigns lasting up to six days, the agent determined the conduction-
+band spin–orbit coupling energy in monolayer MoS₂, and mapped a layer- and valley-resolved 
+phase diagram in bilayer MoS₂. This experimental workflow is implemented through the 
+FermiLink agent harness, which emphasizes instrumental safety and the reliability of the 
+measurement and analysis.  The framework is general and can be readily adapted to other types of 
+experiments, representing a step toward self-driving laboratories. 
+ 
+Introduction 
+Quantum transport measurements are central to the discovery of electronic phases in quantum 
+materials, including superconductors, topological insulators, and strongly correlated insulators 1–4. 
+Understanding these materials often requires high-dimensional datasets, which typically depend 
+on experimental parameters ranging from multiple gate voltages and magnetic fields to 
+temperature.  Acquiring and interpreting such datasets is time-consuming and requires substantial 
+expertise in condensed-matter physics. The advance of large-language models (LLMs) and 
+artificial intelligence (AI) agents raises the possibility of automating tasks normally performed by 
+experimentalists 5–16. However, important barriers remain. Specifically, as quantum material 
+devices are delicate and cryogenic instruments are fragile and valuable, unreliable agent actions 
+can compromise both the experiment and equipment. While literature for reporting single-step or 
+human-in-the-loop experimental measurements is emerging, end-to-end AI-enabled multi-step 
+quantum transport measurements in the absence of human intervention are still missing 15,16.  
+
+
+Here, we introduce a design principle for robust, agent-enabled, multistep, end-to-end quantum 
+transport measurements. We start by examining the capacity of our agent workflow on simulated 
+measurements of two-dimensional (2D) materials. With satisfactory performance, we utilized this 
+agent framework by measuring two different types of MoS₂ devices from end-to-end with 
+cryogenic instruments. For monolayer MoS2 devices, the agent successfully determined the 
+conduction-band spin–orbit coupling (SOC) energy, whereas for bilayer MoS2 devices, it mapped 
+the layer- and valley-resolved phase diagram. As this agent workflow directly generates high-
+quality quantum transport measurement reports from very brief initial instruction, we believe this 
+AI automation attempt may provide a valuable resource for the quantum materials community. 
+ 
+Autonomous Experimentation Framework 
+Published papers and commercially available LLMs usually do not contain detailed information 
+on how to perform a quantum transport study and the associated decision tree regarding when to 
+pursue or abandon an experimental step. Moreover, because one quantum transport measurement 
+may take hours or days to finish, this duration may exceed a typical session of an agent run using 
+Codex or Claude Code, leading to unstable outcomes during multi-step measurements using 
+commercially available AI agents. Aiming for autonomous agent-enabled multi-step quantum 
+transport measurements, we first established an experimental loop workflow within the recently 
+developed FermiLink agent harness 17. This agent harness robustly enables multi-step 
+experimental measurements, where the harness fully controls polling of instrumental status during 
+long-waiting measurements, while the underlying AI agents, such as Codex and Claude Code, 
+determine the next measurement commands and post-processing for each experimental step. 
+Then, we create an initial template for hypothesis-driven Agent Skills based on our experience, 
+which provides detailed domain knowledge and hard-coded controlling and post-processing scripts 
+for previous transport measurements on 2D quantum materials. Since the initial template is not 
+robust enough to enable multi-step agent measurements, we use a small set of existing 
+measurement data and apply the FermiLink harness to perform simulated measurements (which 
+we call dry runs) and update the Agent Skills iteratively (Fig. 1b), until the Agent Skills become 
+sufficiently stable for enabling end-to-end multi-step autonomous measurements (Supplementary 
+Figure 1).  
+Fig. 1a provides a detailed multi-step workflow for autonomous quantum transport measurements, 
+given the established FermiLink harness and converged Agent Skills. After a 2D materials device 
+is loaded in a dilution refrigerator and the user provides a brief measurement instruction (e.g., 
+“Measure the conduction-band spin-orbit coupling energy of monolayer MoS2”), the FermiLink 
+harness (i) assigns a measurement agent to design a detailed parameter sweep for a focused task 
+on the dilution refrigerator and electronics. After the measurement agent submits a single-step 
+
+
+long-duration measurement, FermiLink (ii) polls the experimental status in the absence of AI 
+agents and (iii) then handles the finished experimental data and project memory to a new analysis 
+agent for reasoning and post-processing. Each complete step from (i) to (iii) answers a focused 
+scientific question, and the iterative loop of procedures ensures that the multi-step, multi-day 
+quantum transport measurement, which ends with a comprehensive report, can be accomplished 
+autonomously without human intervention. In this work, Codex with the LLM model gpt-5.5-
+xhigh is used as the underlying measurement and analysis agent, although the FermiLink harness 
+can also connect to other AI agents such as Claude Code and OpenCode. 
+One key feature of our agent framework is protecting both the 2D materials devices and the 
+instrument. For example, all hardware access is mediated by a frozen acquisition Python script 
+rather than controlled directly by AI agents. Hardware safety constraints such as gate voltage limits, 
+sweep rates, magnetic field, and temperature range are hard-coded in the Python script, prohibiting 
+the agent from modifying them. This hard safety gate increases our confidence in using AI agents 
+for end-to-end experiments. 
+ 
+MoS2 Devices and Electronic Structure 
+We use MoS2 devices to demonstrate the agent-enabled autonomous quantum transport 
+measurements. MoS2 belongs to group-VI transition metal dichalcogenides (TMDs), MX₂ (M = 
+Mo or W; X = S, Se, or Te) 18–20. As shown in Fig. 2a, TMDs have a hexagonal crystal structure 
+consisting of a transition metal layer sandwiched between two chalcogen layers in trigonal 
+prismatic coordination geometry. These materials are semiconductors with band gaps typically in 
+the range of 1–2 eV. Monolayer TMDs are direct-gap semiconductors, with band edges located at 
+the K and K' valleys 21 (Fig. 2b). Near these valley extrema, the conduction and valence band edges 
+exhibit parabolic dispersions. Because inversion symmetry is broken in monolayer TMDs, SOC 
+lifts the spin degeneracy. The spin polarization is out-of-plane, with spin splitting typically on the 
+order of hundreds of meV in the valence band and several to tens of meV in the conduction band 
+22. We focus on the conduction band in the rest of the study.  
+In bilayer MoS2, the top layer stacks antiparallel to the bottom layer, and the inversion symmetry 
+is recovered. At K and K′ valleys, the spin-up and spin-down bands become degenerate. In addition, 
+the six Q valleys, located roughly midway between Γ and K, can approach or even drop below the 
+K and K′ valleys in the conduction band 23–25.  Moreover, the interlayer tunneling at the K and K′ 
+valleys is small due to the momentum mismatch of the band with the same spin, so the layer degree 
+of freedom enters. At a small perpendicular electric field, the K and K′ valleys of both layers are 
+nearly degenerate, whereas a finite electric field polarizes carriers onto one layer 26,27. 
+Distinguishing these scenarios from quantum transport requires combining quantum oscillation 
+frequencies, Hall densities, and their evolution with gate voltages 28–32.  
+
+
+The MoS2 device has a Hall bar shape with four gates as shown in Figs. 2c and 2d. The top and 
+bottom gates control the carrier density and electric field independently. The combination of 
+contact and split gates enables transport measurements at low perpendicular electric field and 
+carrier density. To form low-resistance ohmic contacts to the conduction band of MoS2, we use 
+silver for the electrode because it has a low work function of about 4.2 eV and matches well with 
+the conduction band 33. Fig. 2e shows a representative I-V characteristic at the base temperature 
+(10 mK) of the dilution refrigerator. A clear metal-to-insulator transition is also observed 
+(Supplementary Figure 2). Unless otherwise specified, all measurements reported below were 
+performed at 10 mK. 
+ 
+Monolayer MoS2 Device Campaign 
+We first demonstrate the end-to-end autonomous experimentation framework using a monolayer 
+MoS₂ device campaign.  Overall, as shown in Fig. 3, the whole process aims to address scientific 
+questions about which carrier density populates the upper band in K and K′ valleys and the 
+conduction-band SOC energy.  
+Constrained by the hypothesis-driven Agent Skills, the first measurement agent aims to answer a 
+focused question: what is the conducting gate-voltage window? (Fig. 3a). It then decides to 
+measure the 𝑅!! dependence of 𝑉"# and generates the measurement commands. After the 
+measurement is completed, the analysis agent analyzes the gate dependence to determine the turn-
+on voltage by tracking the most negative value of 
+$%!!
+$&"#. Then the analysis agent evaluates the result 
+against the acceptance criteria and decides whether to proceed to the next step, redo the gate-
+dependence measurement, or conclude with a low-quality device by skipping further 
+measurements. With sufficient evidence in the previous step, the second measurement agent tries 
+to answer a different question: Where do quantum oscillations appear in the plane of 𝑉"# and 𝐵? 
+To address this question, the agent decides to perform the Landau fan measurement (Fig. 3b). In 
+detail, it chooses the range of 𝑉"# starting from the turn-on voltage based on the previous-step 
+outcome. After the measurement is finished, a new agent analyzes the data by performing the Fast 
+Fourier Transform (FFT) against 1/𝐵 for each 𝑉"#and defines 12 provisional frequency branches 
+and 2 provisional fundamental frequencies (𝐹' and 𝐹() for further analysis (Supplementary Figure 
+1). 
+After these two rounds of agent loops, a new measurement agent (Fig. 3c) answers the question of 
+whether the FFT frequencies obtained at the previous step are reliable. Specifically, the agent 
+decides to sweep 𝐵 continuously at selected 𝑉"#. Following this experiment, a new analysis agent 
+analyzes the fundamental FFT frequency and compares it with the provisional fundamental 
+frequency. After gathering this information, a new measurement agent focuses on addressing what 
+
+
+is the degeneracy of band corresponding to each fundamental FFT frequency, which can be 
+answered by performing the Hall resistance measurement shown in Fig. 3d. A new analysis agent 
+follows this measurement and compares the Hall density with fundamental FFT frequency and 
+concludes that there exists only one fundamental frequency (𝐹') with degeneracy of 2 below 𝑉"# =
+1.4 𝑉, while the second fundamental frequency (𝐹() starts from 𝑉"# = 1.4 𝑉with degeneracy of 2.  
+To conclude this autonomous agent workflow, a new agent provides the final assignment of the 
+branches in the FFT map with four confidential levels: accepted, rejected, ambiguous, or 
+unassigned. This agent concludes that only the lower conduction band is occupied below the carrier 
+density 𝑛≈3.4 × 10'( 𝑐𝑚)(, and the associated SOC splitting energy is 13 meV with the given 
+effective mass 31 (Supplementary Figure 3).  
+To examine the robustness of this monolayer MoS2 agent workflow, we repeat this autonomous 
+agent campaign on a second, low-quality monolayer device. Very interestingly, after step 2 
+(Supplementary Figure 4), the agent fails to assign clear FFT peaks, but it still tries to scan 𝐵 at 
+two 𝑉"# values. Because the results from this step are still negative, the agent skips the rest of the 
+measurement and jumps to the last step to generate a report stating that no peak is accepted in the 
+FFT map. This negative test case clearly demonstrates that our hypothesis-driven AI agent harness 
+behaves more like a condensed-matter experimentalist than a simple deterministic experimental 
+workflow. 
+ 
+Bilayer MoS2 Device Campaign 
+Compared to monolayer MoS2 devices, performing quantum transport measurements on bilayer 
+MoS2 devices poses a qualitatively harder challenge for AI agents. The phase diagram of bilayer 
+MoS2 devices is sensitive to both the carrier density (𝑛) and electric field (𝐸). For the bilayer MoS2 
+measurements, as demonstrated in Fig. 4, the agents collectively address the scientific problem of 
+which layer and valley components are occupied in the plane of 𝑛 and 𝐸. 
+As in the monolayer MoS2 measurements, at each round of the experimental loop, the agent aims 
+to answer a focused question through experimental measurements.  For example, the first 
+measurement agent concentrates on: what is the ratio of top/bottom hBN thickness (Fig. 4a). To 
+resolve this question, the agent measures the 𝑅!! as a function of 𝑉"# and 𝑉*# at 𝐵= 0. Then, an 
+analysis agent tracks the constant resistance in the contour plot and captures the ratio of top and 
+bottom hBN thickness, followed by plotting the 𝑅!! as a function of 𝐸 and a provisional 𝑛.  
+What are the thicknesses of top and bottom hBN? To answer this second question, a new 
+measurement agent subsequently measures the Hall resistance 𝑅!+  at 𝐵= ±6 T and 𝑉"# = 2 V 
+by sweeping the 𝑉*# for calibration (Fig. 4b). After this measurement, an analysis agent fits the 
+Hall density dependence with 𝑉*# and calculates the hBN thicknesses. For the third round, the 
+
+
+agent now focuses on a new question: where are layer-polarized and layer-shared boundaries in 
+the plane of 𝑛 and 𝐸. To resolve this issue, the agent measures the 𝑅!! map of 𝑉"# and 𝑉*# at 𝐵=
+6, 9, 13 T. Then, a new analysis agent plots the data and extracts the phase boundaries by 
+determining the point at which the strips from the quantum oscillation of 𝑅!! becomes diagonal in 
+the 𝑛−𝐸 phase space. It analyses the maps at different magnetic fields and concludes with a 
+schematic showing the layer-polarized and layer-shared regions (Fig. 4c and Supplementary Figure 
+5). After this step, a final measurement agent answers: what is the valley occupation in each region? 
+The Agent Skills have background knowledge that the degeneracy is 2 for the K valley lower and 
+upper bands and 12 for the Q valley, while in the charge-shared region, the degeneracy doubles 
+due to layer degeneracy. With this background knowledge, the agent decides to choose three 
+electric fields that cut through three regions and measures the Landau fan diagram. After the 
+measurements finish, a new agent extracts the fundamental frequency and assigns them to 
+degeneracy and valleys (Fig. 4d). Finally, a new agent draws the phase diagram in the plane of 𝑛 
+and 𝐸 to show the layer and valley occupations (Fig. 4e). The autonomous agent campaign on a 
+second bilayer device is included in Supplementary Figure 6. 
+ 
+Discussion and Outlook 
+In conclusion, we developed a multi-step agent harness for autonomously studying 2D materials 
+devices. Using experimentally validated Agent Skills for monolayer and bilayer TMD devices, the 
+agent can reliably run multi-step experiments end-to-end over many days within the FermiLink 
+harness.  
+Three design choices appear essential for the reliability of experimental outcomes. First, the 
+decision-tree structure of Agent Skills, which contains one narrow question per step with 
+quantitative acceptance criteria, converts open-ended experimentation into a sequence of verifiable 
+decisions. Second, multiple measurement and analysis agents working under the same file system 
+allow a coherent experimental campaign to span many days via shared memory documents and 
+experimental data. Third, the separation between the agent-writable surface and the hardware 
+safety layer provides a hard safety gate for protecting both the valuable TMD devices and 
+cryogenic equipment, increasing our confidence in using AI agents for quantum transport 
+measurements. 
+Despite these insights, the limitations of this work are equally instructive. At this moment, for 
+every new type of 2D device, human experts must collaborate with AI agents to develop robust 
+Agent Skills for autonomous multi-step measurements using the existing dataset via dry runs (Fig. 
+1b). Thus, the autonomy demonstrated here primarily concerns the execution and adaptation of 
+expert-defined experimental workflows, and it would be more appealing for AI agents to 
+
+
+independently formulate measurement strategies from first principles. To this end, an important 
+future direction is to develop AI agents that can construct and validate new Agent Skills from prior 
+experimental datasets and a library of established workflows. As such a library expands across 
+materials and device architectures, agents may be able to identify reusable measurement and 
+analysis patterns while retaining safety constraints. Moreover, beyond performing human-defined 
+experimental workflows, future agents could simultaneously propose scientific questions, design 
+discriminating experiments, perform theoretical calculations for cross-validation, and search for 
+large experimental parameter spaces for novel phases. While achieving broader scientific 
+autonomy remains challenging, our work represents a step toward self-driving laboratories of 
+quantum materials discovery 11,14,34. 
+ 
+References 
+1. 
+Klitzing, K. V., Dorda, G. & Pepper, M. New method for high-accuracy determination of 
+the fine-structure constant based on quantized hall resistance. Phys. Rev. Lett. 45, 494–497 
+(1980). 
+2. 
+König, M. et al. Quantum Spin Hall Insulator State in HgTe Quantum Wells. Science 318, 
+766–771 (2007). 
+3. 
+Lee, P. A., Nagaosa, N. & Wen, X. G. Doping a Mott insulator: Physics of high-
+temperature superconductivity. Rev. Mod. Phys. 78, 17–85 (2006). 
+4. 
+Cao, Y. et al. Unconventional superconductivity in magic-angle graphene superlattices. 
+Nature 556, 43–50 (2018). 
+5. 
+Boiko, D. A., Macknight, R., Kline, B. & Gomes, G. Autonomous chemical research with 
+large language models. Nature 624, 570–578 (2023). 
+6. 
+Merchant, A. et al. Scaling deep learning for materials discovery. Nature 624, 80–85 
+(2023). 
+7. 
+Staab, M. et al. Electronic and chemical phase identification in photoemission 
+experiments using unsupervised machine learning. arXiv: 2608.19503 (2026). 
+8. 
+Zwolak, J. P. & Taylor, J. M. Colloquium : Advances in automation of quantum dot 
+devices control. Rev. Mod. Phys. 95, 011006 (2023). 
+9. 
+Gottweis, J. et al. Accelerating scientific discovery with Co-Scientist. Nature 655, 487–
+496 (2026). 
+10. 
+Ghareeb, A. E. et al. A multi-agent system for automating scientific discovery. Nature 
+655, 497–505 (2026). 
+11. 
+Qiu, S. et al. AIMS: An uncertainty-aware AI experimentalist for quantum matter. arXiv: 
+2607.16544 (2026). 
+12. 
+Isogawa, T., Okabe, R., Phadetsuwannukun, N., Li, M. & Cappellaro, P. Agentic AI for 
+Scientific Reasoning in Autonomous Quantum Sensing Experiments. arXiv: 2607.25145 
+
+
+(2026). 
+13. 
+Li, X. et al. An AI-driven robotic system for two-dimensional hetero-assemblies. arXiv: 
+2605.20420 (2026). 
+14. 
+Shi, L. et al. Qumus: Realization of An Embodied AI Quantum Material Experimentalist 
+Lihan. arXiv: 2605.18407 (2026). 
+15. 
+Li, S. et al. Large Language Model-Assisted Superconducting Qubit Experiments. arXiv: 
+2603.08801 (2026). 
+16. 
+Wang, D., Qi, L., Xie, Y., Linke, N. M. & Brown, K. R. A hardware-safety-gated system 
+for LLM-written native ARTIQ control code on a trapped-ion platform. arXiv: 
+2606.27231 (2026). 
+17. 
+Meng, G. et al. FermiLink: A Unified Agent Framework for Multidomain Autonomous 
+Scientific Simulations. arXiv: 1, 2604.03460 (2026). 
+18. 
+Mak, K. F., Lee, C., Hone, J., Shan, J. & Heinz, T. F. Atomically Thin MoS 2 : A New 
+Direct-Gap Semiconductor. Phys. Rev. Lett. 105, 136805 (2010). 
+19. 
+Splendiani, A. et al. Emerging Photoluminescence in Monolayer MoS2. Nano Lett. 10, 
+1271–1275. (2010). 
+20. 
+Xu, X., Yao, W., Xiao, D. & Heinz, T. F. Spin and pseudospins in layered transition metal 
+dichalcogenides. Nat. Phys. 10, 343–350 (2014). 
+21. 
+Xiao, D., Liu, G., Feng, W., Xu, X. & Yao, W. Coupled Spin and Valley Physics in 
+Monolayers of MoS2 and Other Group-VI Dichalcogenides. Phys. Rev. Lett. 108, 196802 
+(2012). 
+22. 
+Liu, G. Bin, Shan, W. Y., Yao, Y., Yao, W. & Xiao, D. Three-band tight-binding model 
+for monolayers of group-VIB transition metal dichalcogenides. Phys. Rev. B 88, 085433 
+(2013). 
+23. 
+Kormányos, A. et al. k · p theory for two-dimensional transition metal dichalcogenide 
+semiconductors. 2D Mater. 2, 022001 (2015). 
+24. 
+Nguyen, P. V. et al. Visualizing electrostatic gating effects in two-dimensional 
+heterostructures. Nature 572, 220–223. 
+25. 
+Wu, Z. et al. Even-odd layer-dependent magnetotransport of high-mobility Q-valley 
+electrons in transition metal disulfides. Nat. Commun. 7, 12955 (2016). 
+26. 
+Lee, J., Mak, K. F. & Shan, J. Electrical control of the valley Hall effect in bilayer MoS 2 
+transistors. Nat. Nanotechnol. 11, 421–425 (2016). 
+27. 
+Wu, S. et al. Electrical tuning of valley magnetic moment through symmetry control in 
+bilayer MoS 2. Nat. Phys. 9, 149–153 (2013). 
+28. 
+Masseroni, M. et al. Gate-Tunable Band Edge in Few-Layer MoS2. Nano Lett. 25, 10472–
+10477 (2025). 
+29. 
+Fallahazad, B. et al. Shubnikov-de Haas oscillations of high-mobility holes in monolayer 
+and bilayer WSe2: Landau level degeneracy, effective mass, and negative compressibility. 
+Phys. Rev. Lett. 116, 086601 (2016). 
+
+
+30. 
+Movva, H. C. P. et al. Density-Dependent Quantum Hall States and Zeeman Splitting in 
+Monolayer and Bilayer WSe2. Phys. Rev. Lett. 118, 247701 (2017). 
+31. 
+Pisoni, R. et al. Interactions and Magnetotransport through Spin-Valley Coupled Landau 
+Levels in Monolayer MoS 2. Phys. Rev. Lett. 121, 247701 (2018). 
+32. 
+Lin, J. et al. Determining Interaction Enhanced Valley Susceptibility in Spin- Valley-
+Locked MoS2. Nano Lett. 19, 1736−1742 (2019). 
+33. 
+Liu, Y. et al. Approaching the Schottky–Mott limit in van der Waals metal–semiconductor 
+junctions. Nature 557, 696–700 (2018). 
+34. 
+Burger, B. et al. A mobile robotic chemist. Nature 583, 237–241 (2020). 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+
+
+ 
+Figure 1. Autonomous experimentation framework. a, End-to-end agent operation. Given a 
+user-supplied brief instruction, the FermiLink agent harness launches a measurement agent that 
+plans the scan and decides the parameters (e.g., carrier density n, electric field E, and magnetic 
+field B), followed by submitting the measurement to the experimental hardware through a parser-
+controlled acquisition interface. When the measurement finishes, an analysis agent post-processes 
+the data and decides whether to proceed to the next step or skip to the final step based on the 
+acceptance criteria. The measurement-analysis loop repeats until all sub-questions predefined in 
+Agent Skills are answered and a final Report is generated. b, Development of hypothesis-driven 
+Agent Skills. Starting from a measurement dataset and provisional Agent Skills, the AI agents 
+simulate the experimental measurements and analysis against the dataset, while a human expert 
+determines whether to further modify the Agent Skills for more robust performance. The 
+converged Agent Skills are provided for the FermiLink harness for real experiments. 
+
+
+ 
+Fig. 2 | MoS₂ devices and electronic structure. a, Top view of the TMD lattice, with the transition 
+metal (blue) and chalcogen (grey) sublattices. Right inset: the hexagonal Brillouin zone, indicating 
+the Γ, K, and K′ points and the Q valleys. b, Schematic band structure at the K and K′ valleys of 
+monolayer MoS₂. Red and blue denote spin-up and spin-down bands. c, Schematic cross-section 
+of the dual-gated Hall bar device. The MoS₂ channel (red) is encapsulated in hBN, with graphite 
+top (TG) and bottom (BG) gates, Pd contact/split gates (CG/SG), and Ag electrodes. d, Optical 
+image of the device, with the MoS₂ flake outlined in red and the gate electrodes labeled as in c. 
+Scale bar, 10 μm. e, Representative two-terminal I–V characteristic measured at 10 mK. 
+ 
+ 
+ 
+
+
+ 
+Figure 3. Autonomous monolayer MoS₂ campaign. Each row is one round of the experiment 
+loop, labeled by the sub-question the agent set out to answer. The left figures present the raw data, 
+and the right figures show the agent analysis. a, 𝑅!! as a function of 𝑉"# at 𝐵= 0. The turn-on 
+voltage 𝑉"#_-. = 0.43 V is marked by the black dotted line. b, 𝑅!! as a function of 𝑉"# and 𝐵 (left) 
+and its gate-resolved FFT in 1/𝐵 (right). The provisional frequency branches (𝐹', 𝐹(, 2𝐹', 𝐹' −
+𝐹() and the 𝐹( onset are marked. c, A representative continuous field sweep at 𝑉"# = 1.73 𝑉 (left) 
+and its FFT (right). The fundamental frequency 𝐹' and its harmonics 2𝐹' and 3𝐹' are marked. d, 
+Hall resistance 𝑅!+ at 𝐵= 1 T (left) and the Hall density 𝑛/ as a function of 𝑉"# (right). The 
+orange circles compare 𝑛/ with the density calculated from the FFT frequencies after assigning 
+the degeneracy of each band. e, Extracted frequencies 𝐹' and 𝐹( versus 𝑉"# , each assigned 
+degeneracy 𝑔 = 2, yielding a conduction-band SOC splitting energy ∆0-1≈13 meV. 
+
+
+ 
+Fig. 4. Autonomous bilayer MoS₂ campaign. Each row is one round of the experiment loop, 
+labeled by the sub-question the agent set out to answer. a, 𝑅!! as a function of 𝑉"# and 𝑉*# (left) 
+and 𝑛 and 𝐸 (right). b, 𝑅!+ at 𝐵= 6 T (left) and Hall density 𝑛/ (right) versus 𝑛. The fit window 
+used to calibrate the thickness of top and bottom hBNs is shown by the blue dashed line. c, Left: 
+𝑅!! contour map at 𝐵 = 13 T. Right: provisional layer boundaries assigned by the agent. d, 𝑅!! 
+as a function of 𝑛 and 𝐵 at 𝐸 = −0.275 V/nm (left) and its normalized gate-resolved FFT (right). 
+e, Top: fundamental frequencies 𝐹' and 𝐹( with degeneracy and valley assignments. Right: the 
+final annotated phase diagram, showing the layer-polarized and layer-shared regions together with 
+the valley boundaries. 

@@ -1,0 +1,417 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-23T18:17:38.449922+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 3,
+    "deep_cap": 7,
+    "deep_selected": 3,
+    "quick_candidates": 7,
+    "quick_skim_target": 12,
+    "quick_selected": 7
+  },
+  "deep_dive": [
+    {
+      "id": "2609.26657v1",
+      "source": "arxiv",
+      "title": "Agent-E2MD: Autonomous Translation of Interatomic Potential Equations into Physically Validated Pair Styles for Molecular Dynamics in LAMMPS",
+      "abstract": "Interatomic potentials underpin MD and govern predictive atomistic-model fidelity for metals, semiconductors, oxides, liquids, and reactive systems. A potential has limited practical value until reliably implemented in production MD code. Slow, expertise-intensive implementation requires more than equation-to-C++ translation: it must select the neighbor-list architecture, evaluate and distribute many-body derivatives, manage interprocessor communication, and preserve host-code energy, force, and virial conventions. We introduce Agent-E2MD, a knowledge-guided agentic workflow that translates user-specified interatomic models into executable LAMMPS pair styles. It combines architectural classification, code generation, autonomous build-test-fix cycles, simulation execution, and hierarchical physical validation. We test Agent-E2MD on seven material-potential pairs: Lennard--Jones Ar, EAM/FS Ag, MEAM Bi, Tersoff Si, GAP Ni, ReaxFF C/H/N/O, and a recently developed Symbolic Regression EAM (Symb EAM) model for Al, currently unavailable in LAMMPS. Single-point results match reference energies and forces for all seven models. Five crystalline many-body benchmarks recover reference relaxed lattice properties, vacancy formation energies, and elastic constants. Ag, Bi, Si, and Ni are stable at finite temperature in nanosecond-scale simulations; ReaxFF extends validation to reactive dynamics with evolving bond order and charge equilibration. Results demonstrate that the software architecture for an interatomic potential can be inferred from its physical and mathematical structure. Agent-E2MD does not replace scientific judgment; it shifts users' effort from routine implementation to model definition, rigorous validation, and physical interpretation. The framework provides a practical, traceable bridge between emerging AI-driven potential discovery methods and production-scale atomistic simulations.",
+      "authors": [
+        "Bilvin Varughese",
+        "Orcun Yildiz",
+        "Aditya Koneru",
+        "Henry Chan",
+        "Tom Peterka",
+        "Subramanian Sankaranarayanan"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-22T16:22:48+00:00",
+      "link": "https://arxiv.org/pdf/2609.26657v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "agentic translation of interatomic potential equations into validated LAMMPS MD pair styles",
+      "llm_evidence_cn": "将原子间势方程自动转化为经物理验证的LAMMPS分子动力学配对样式",
+      "llm_evidence": "将原子间势方程自动转化为经物理验证的LAMMPS分子动力学配对样式",
+      "canonical_evidence": "将原子间势方程自动转化为经物理验证的LAMMPS分子动力学配对样式",
+      "llm_tldr_en": "Introduces a knowledge-guided agentic workflow that translates user-specified interatomic potential models into executable, physically validated LAMMPS pair styles for molecular dynamics.",
+      "llm_tldr_cn": "原子间势是分子动力学的核心，但将其可靠实现到生产级MD代码中耗时且高度依赖专家经验，远不止方程到C++的翻译。本文提出Agent-E2MD，一种知识引导的智能体工作流，可将用户指定的原子间模型自动转换为可执行的LAMMPS配对样式，并处理邻居列表、多体导数以及能量力维里约定。该工作显著降低了原子间势落地部署的门槛，为AI加速原子模拟提供了自动化工具链。",
+      "llm_tldr": "原子间势是分子动力学的核心，但将其可靠实现到生产级MD代码中耗时且高度依赖专家经验，远不止方程到C++的翻译。本文提出Agent-E2MD，一种知识引导的智能体工作流，可将用户指定的原子间模型自动转换为可执行的LAMMPS配对样式，并处理邻居列表、多体导数以及能量力维里约定。该工作显著降低了原子间势落地部署的门槛，为AI加速原子模拟提供了自动化工具链。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.26661v1",
+      "source": "arxiv",
+      "title": "Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent",
+      "abstract": "Artificial-intelligence (AI) agents are beginning to enter experimental laboratories, automating experiments and accelerating scientific discovery. Herein, we introduce an AI-driven workflow in which an AI agent performs multi-step, multi-day quantum transport measurements end-to-end. Specifically, given brief instructions, the agent starts by planning the multi-step measurements, then safely operates the cryogenic instruments, analyzes the data, and concludes with a final report. We demonstrate this AI workflow on multiple monolayer and bilayer MoS2 devices. Through autonomous measurement campaigns lasting up to six days, the agent determined the conduction-band spin-orbit coupling energy in monolayer MoS2, and mapped a layer- and valley-resolved phase diagram in bilayer MoS2. This experimental workflow is implemented through the FermiLink agent harness, which emphasizes instrumental safety and the reliability of the measurement and analysis. The framework is general and can be readily adapted to other types of experiments, representing a step toward self-driving laboratories.",
+      "authors": [
+        "Brandon Bauer",
+        "Matthew Whalen",
+        "Kenji Watanabe",
+        "Takashi Taniguchi",
+        "John Q. Xiao",
+        "Tao E. Li",
+        "Wenjin Zhao"
+      ],
+      "primary_category": "cond-mat.mes-hall",
+      "categories": [
+        "cond-mat.mes-hall"
+      ],
+      "published": "2026-09-22T16:24:49+00:00",
+      "link": "https://arxiv.org/pdf/2609.26661v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "AI agent autonomously plans, runs and analyzes multi-day quantum transport experiments",
+      "llm_evidence_cn": "AI智能体自主规划并完成多天量子输运实验",
+      "llm_evidence": "AI智能体自主规划并完成多天量子输运实验",
+      "canonical_evidence": "AI智能体自主规划并完成多天量子输运实验",
+      "llm_tldr_en": "An AI agent autonomously plans, operates cryogenic instruments, analyzes data and reports multi-day quantum transport measurements on MoS2 devices, determining spin-orbit coupling and mapping valley-resolved transport.",
+      "llm_tldr_cn": "针对多步骤、多天的量子输运测量仍依赖人工操作的局限，本文提出由AI智能体驱动的端到端实验工作流，可自主规划测量流程、安全操作低温仪器、分析数据并输出报告。作者在多个单层与双层MoS2器件上开展最长六天的自主测量，成功确定单层MoS2导带自旋轨道耦合能并绘制层与谷分辨的输运图。该工作展示了AI智能体在真实凝聚态实验中独立完成复杂测量闭环的能力。",
+      "llm_tldr": "针对多步骤、多天的量子输运测量仍依赖人工操作的局限，本文提出由AI智能体驱动的端到端实验工作流，可自主规划测量流程、安全操作低温仪器、分析数据并输出报告。作者在多个单层与双层MoS2器件上开展最长六天的自主测量，成功确定单层MoS2导带自旋轨道耦合能并绘制层与谷分辨的输运图。该工作展示了AI智能体在真实凝聚态实验中独立完成复杂测量闭环的能力。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
+      "matched_requirement_id": "req-18",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.26457v1",
+      "source": "arxiv",
+      "title": "Recursive self-improvement of AI research agents",
+      "abstract": "AI agents are beginning to automate research and development across the AI stack, from improving training efficiency to optimizing inference. A natural next step is to improve the research efficiency of the agents themselves. When an AI research agent's own code is the object of optimization, each accepted rewrite becomes the agent that the next round edits. We refer to this loop as recursive self-improvement. Its significance lies in a long-standing trend, in which increased cumulative spending on R&D yields diminishing returns. Sustained self-improvement offers a way to counter this trend. We present AIDE^2, a system that implements this loop for a frontier AI research agent. It proposes changes to its own code, benchmarks modified versions of itself on a suite of AI R&D tasks, and keeps the changes that perform best on hidden evaluations. In an autonomous 8-day run, AIDE^2 discovered seven successive improvements, ranging from a new search policy to memory mechanisms that compress and manage the agent's growing context. These gains generalize to four held-out benchmarks spanning machine learning engineering, heuristic algorithm engineering, and physics-based weather forecasting, the last of which is out of distribution from the selection tasks. On all four, the strongest discovered agent matches or exceeds a human-engineered production research agent that ranks among the strongest on FML-Bench. On a separate held-out task family, the discovered agents also exhibit reduced reward hacking, a property the loop never explicitly optimized for: the rate falls from 55% to 32% during the run, 7 percentage points below the human-engineered agent. Together, these results show that an AI research agent can improve its own research efficiency through recursive self-improvement, and that these gains transfer to tasks and domains the loop never encountered.",
+      "authors": [
+        "Dhruv Srikanth",
+        "Bingchen Zhao",
+        "Dixing Xu",
+        "Yuxiang Wu",
+        "Zhengyao Jiang"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.LG",
+        "cs.SE"
+      ],
+      "published": "2026-09-22T14:12:13+00:00",
+      "link": "https://arxiv.org/pdf/2609.26457v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "AI research agent recursively rewrites its own code to improve research efficiency",
+      "llm_evidence_cn": "AI研究智能体递归改写自身代码以提升研究效率",
+      "llm_evidence": "AI研究智能体递归改写自身代码以提升研究效率",
+      "canonical_evidence": "AI研究智能体递归改写自身代码以提升研究效率",
+      "llm_tldr_en": "AI agents increasingly automate R&D, so improving the agents themselves is a natural next step. The authors formalize recursive self-improvement and present AIDE^2, which proposes and benchmarks edits to its own code, yielding sustained improvement on AI R&D tasks.",
+      "llm_tldr_cn": "AI智能体已能自动完成研发任务，但如何提升研究智能体自身的效率仍待探索。作者提出递归自我改进概念，即智能体以自身代码为优化对象，每轮被接受的重写都成为下一轮的编辑者，并实现了系统AIDE^2。该系统能提出对自身代码的修改并在AI研发基准上评测改进版本，展示了可持续的自我提升能力，为对抗研发投入边际收益递减提供了思路。",
+      "llm_tldr": "AI智能体已能自动完成研发任务，但如何提升研究智能体自身的效率仍待探索。作者提出递归自我改进概念，即智能体以自身代码为优化对象，每轮被接受的重写都成为下一轮的编辑者，并实现了系统AIDE^2。该系统能提出对自身代码的修改并在AI研发基准上评测改进版本，展示了可持续的自我提升能力，为对抗研发投入边际收益递减提供了思路。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.25421v1",
+      "source": "arxiv",
+      "title": "Beyond Natural Language: An Agent-Native Language for Autonomous Science",
+      "abstract": "As autonomous AI agents take on every stage of scientific inquiry, research output is expanding far beyond human review capacity. Yet scientific communication still relies on natural-language prose: an informal medium prone to ambiguity, hidden assumptions, and untracked limitations that machines cannot reliably audit. We introduce Lara, a machine-checkable language and protocol for checking and revising support for research claims. By turning research arguments into executable artifacts, Lara provides an epistemic kernel for autonomous science: it enables automated validation pipelines for research agents, lets declared bridges connect arguments across papers into an auditable network, and allows both humans and machines to recheck the standing of an encoded claim in milliseconds. In a Lara program, authors explicitly declare their claims, supporting evidence and assumptions, and known objections or limitations. A lightweight, deterministic checker adjudicates these interactions, assigning each claim a reproducible status: \"justified\", \"defeated\", \"contested\", or \"gap\", which marks a claim whose support is incomplete and locates the unanswered question. Case studies cover empirical review, a philosophical debate without measurements, and the loss of support when an assumed axiom is withdrawn. We establish the metatheory of claim checking and cross-context argument transport, and mechanize the semantic guarantees in Lean 4 (roughly 117,000 lines), leaving three arguments on paper. The audited public metatheory is \"sorry\"-free and uses only Lean's three standard axioms; some executable examples additionally trust native evaluation.",
+      "authors": [
+        "Yifeng He",
+        "Jiachen Liu"
+      ],
+      "primary_category": "cs.PL",
+      "categories": [
+        "cs.PL",
+        "cs.AI"
+      ],
+      "published": "2026-09-21T21:19:46+00:00",
+      "link": "https://arxiv.org/pdf/2609.25421v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "machine-checkable language and protocol for validating research claims in autonomous science",
+      "llm_evidence_cn": "面向自主科学、可机器校验的研究论断语言与协议",
+      "llm_evidence": "面向自主科学、可机器校验的研究论断语言与协议",
+      "canonical_evidence": "面向自主科学、可机器校验的研究论断语言与协议",
+      "llm_tldr_en": "Lara is a machine-checkable language and protocol that turns research arguments into executable artifacts, enabling automated validation pipelines and auditable claim networks for autonomous science.",
+      "llm_tldr_cn": "随着自主AI智能体承担科学探究各环节，研究产出已远超人工审阅能力，但科学交流仍依赖易含歧义与隐含假设的自然语言散文。本文提出Lara，一种可机器校验的语言与协议，用于检查与修订研究论断的支持关系。它把研究论证转化为可执行产物，为自主科学提供认知内核：支持面向研究智能体的自动验证流水线，让跨论文的论证通过声明式桥接形成可审计网络。该工作为自主科研的可验证性与可信度提供基础设施。",
+      "llm_tldr": "随着自主AI智能体承担科学探究各环节，研究产出已远超人工审阅能力，但科学交流仍依赖易含歧义与隐含假设的自然语言散文。本文提出Lara，一种可机器校验的语言与协议，用于检查与修订研究论断的支持关系。它把研究论证转化为可执行产物，为自主科学提供认知内核：支持面向研究智能体的自动验证流水线，让跨论文的论证通过声明式桥接形成可审计网络。该工作为自主科研的可验证性与可信度提供基础设施。",
+      "llm_tags": [
+        "query:ar:composite"
+      ],
+      "matched_query_tag": "query:ar:composite",
+      "matched_query_text": "Papers central to 自动科研与 AI Scientist：追踪 Research Agent、自动假设生成、实验设计、代码执行、自主迭代和科学发现闭环。, especially work that connects or combines: self-driving laboratory; autonomous experimentation; automated hypothesis generation; research agent; AI scientist; autonomous scientific discovery; self driving laboratories and autonomous experimentation for materials science, chemistry, and scientific discovery; autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning; AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments; LLM agents that autonomously perform scientific research from literature review and hypothesis generation to experimentation and result analysis.",
+      "matched_requirement_id": "req-composite-ar",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.23512v1",
+      "source": "arxiv",
+      "title": "AgentBetta: Verification-Driven Adaptive Configuration of an AI Nano-Agent through Selective Expansion and Verified Contraction",
+      "abstract": "Large language model agents are typically deployed with predefined configurations, although the required model capability, context, tools, permissions, memory, and computational resources can vary substantially across tasks. This study develops and evaluates AgentBetta, an adaptive AI Nano-Agent framework that represents these factors as an executable configuration and updates them through verification-driven diagnosis, selective expansion, and verification-based counterfactual contraction. The evaluation distinguishes controlled mechanism validation from external agent comparisons. On the AB-ConfigBench benchmark, AgentBetta achieved 91.38% verified success while reducing median context allocation from 64,000 to 8,000 context characters and median tool exposure from five tools to zero compared with the fully provisioned configuration. The configuration-deficiency diagnosis achieved a macro-F1 score of 0.819 with precision of 1.000 across the evaluated dimensions, and selective expansion avoided unnecessary changes to unrelated configuration dimensions. Post-success contraction preserved verification outcomes in 56.41% of evaluated one-dimension contraction probes, indicating that some successful configurations contained removable capability under the tested conditions. External evaluations indicate that adaptive configuration can improve the balance between verified task completion and capability exposure; however, the results vary across benchmarks and agent families. In particular, the cross-family replication did not reproduce the primary-backbone accuracy ordering, and specialized systems remained advantageous for certain task domains. These results support interpreting AgentBetta as a configuration-adaptation mechanism that regulates capability allocation and inference expenditure rather than as a universal replacement for specialized agent architectures.",
+      "authors": [
+        "Md. Ashraful Babu"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-20T09:56:10+00:00",
+      "link": "https://arxiv.org/pdf/2609.23512v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "verification-driven adaptive configuration of a tool-using LLM agent",
+      "llm_evidence_cn": "工具使用型LLM智能体的验证驱动自适应配置",
+      "llm_evidence": "工具使用型LLM智能体的验证驱动自适应配置",
+      "canonical_evidence": "工具使用型LLM智能体的验证驱动自适应配置",
+      "llm_tldr_en": "AgentBetta adaptively configures an LLM nano-agent via verification-driven diagnosis, selective expansion and verified contraction, achieving 91.38% verified success while cutting context use.",
+      "llm_tldr_cn": "针对大语言模型智能体通常以固定配置部署、而不同任务对能力、上下文、工具与资源需求差异很大的问题，本文提出AgentBetta自适应AI纳米智能体框架。该方法将模型能力、上下文、工具、权限、记忆与计算资源表示为可执行配置，并通过验证驱动诊断、选择性扩展与验证式反事实收缩进行更新。在AB-ConfigBench基准上，AgentBetta取得91.38%的验证成功率并降低中位上下文分配。该工作为智能体配置的自适应优化提供了新方案。",
+      "llm_tldr": "针对大语言模型智能体通常以固定配置部署、而不同任务对能力、上下文、工具与资源需求差异很大的问题，本文提出AgentBetta自适应AI纳米智能体框架。该方法将模型能力、上下文、工具、权限、记忆与计算资源表示为可执行配置，并通过验证驱动诊断、选择性扩展与验证式反事实收缩进行更新。在AB-ConfigBench基准上，AgentBetta取得91.38%的验证成功率并降低中位上下文分配。该工作为智能体配置的自适应优化提供了新方案。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery using multi agent systems, tool use, code execution, and automated reasoning",
+      "matched_requirement_id": "req-17",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.26402v1",
+      "source": "arxiv",
+      "title": "OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery",
+      "abstract": "The discovery of novel inorganic materials drives technological breakthroughs in critical fields such as computing and energy storage. Generative AI has promised to accelerate the materials discovery pipeline, but state-of-the-art flow and diffusion models remain bottlenecked by the cost of proposing candidate materials. To address this, we introduce OMatG-flash, an all-atom flow map for inorganic crystal structure prediction (CSP) and de novo generation (DNG). OMatG-flash is a Pareto-optimal inference engine for materials, sampling candidate materials with an order of magnitude fewer inference steps and less wall-clock time than existing flow and diffusion models while demonstrating benchmark performance on par with the state-of-the-art. To enable post-training fine-tuning we apply Reinforce Adjoint Matching to flow maps, further improving match rates and RMSE on the unconditional CSP task. OMatG-flash showcases the potential of flow maps to accelerate generation of high-quality candidate inorganic materials and demonstrates a step forward in sample throughput necessary for data-hungry materials discovery workflows.",
+      "authors": [
+        "Thomas Egg",
+        "Harry Winston Sullivan",
+        "Ellad B. Tadmor",
+        "Stefano Martiniani"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-09-22T13:36:33+00:00",
+      "link": "https://arxiv.org/pdf/2609.26402v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "All-atom flow map generative model for crystal structure prediction and materials discovery",
+      "llm_evidence_cn": "面向晶体结构预测与材料发现的全原子流映射生成模型",
+      "llm_evidence": "面向晶体结构预测与材料发现的全原子流映射生成模型",
+      "canonical_evidence": "面向晶体结构预测与材料发现的全原子流映射生成模型",
+      "llm_tldr_en": "Proposes OMatG-flash, an all-atom flow map with reinforce adjoint matching, for inorganic crystal structure prediction and de novo generation with an order of magnitude fewer inference steps.",
+      "llm_tldr_cn": "针对生成式材料发现中流与扩散模型提出候选晶体结构成本高的问题，作者提出全原子流映射模型OMatG-flash，并引入强化伴随匹配训练策略，用于晶体结构预测与从头生成。实验表明其推理步数和墙钟时间比现有方法少一个数量级，性能仍与最先进模型相当，显著加速了无机材料发现流程。",
+      "llm_tldr": "针对生成式材料发现中流与扩散模型提出候选晶体结构成本高的问题，作者提出全原子流映射模型OMatG-flash，并引入强化伴随匹配训练策略，用于晶体结构预测与从头生成。实验表明其推理步数和墙钟时间比现有方法少一个数量级，性能仍与最先进模型相当，显著加速了无机材料发现流程。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.24038v1",
+      "source": "arxiv",
+      "title": "From Heuristics to Machine Learning: The Performance Ceiling for Single-Ion Magnets and Its Electronic Origin",
+      "abstract": "Machine learning (ML) is expected to speed up the discovery of single-ion magnets (SIMs), but does the structural information available before synthesis allow such predictions? For 1215 lanthanide complexes from the SIMDAVIS 1.2.1 database we compared three increasing levels of structural description: tabular features of the coordination site, continuous symmetry measures of the coordination polyhedron, and the complete 3D arrangement of atoms. All three converge to an accuracy near 76%, only slightly above the 71% of the single rule \"predict SIM for Dy3+\". To explain the failures, we combined multireference ab initio calculations with an inspection of the structures behind the high-confidence errors. The SIMs missed by the geometric models are field-induced relaxers whose ground Kramers doublets are prone to tunnelling, a property invisible to geometric descriptors. Many false positives contain several lanthanide centers or radicals, so their relaxation is collective and outside the single-ion picture. The electronic-structure and connectivity information needed to identify SIMs is therefore not accessible to geometric methods alone. Geometric models remain useful: restricting the screening to compounds with high prediction confidence raises the accuracy to 88% while retaining 48% of the dataset. Building on the analysis of the failures, we propose a strategy that combines simple filters for nuclearity and for radicals with ligand-field descriptors from ab initio calculations.",
+      "authors": [
+        "Federico Zahariev",
+        "Regina Pereyra",
+        "Vassiliki-Alexandra Glezakou",
+        "Durga Paudyal"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph",
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-21T03:06:12+00:00",
+      "link": "https://arxiv.org/pdf/2609.24038v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "machine learning on structural descriptors for materials discovery",
+      "llm_evidence_cn": "用结构描述符做材料发现的机器学习",
+      "llm_evidence": "用结构描述符做材料发现的机器学习",
+      "canonical_evidence": "用结构描述符做材料发现的机器学习",
+      "llm_tldr_en": "ML may accelerate single-ion magnet discovery, but can pre-synthesis structural information suffice? On 1215 lanthanide complexes, tabular, symmetry, and full 3D descriptors all converge near 76 percent, barely above a simple Dy3+ rule.",
+      "llm_tldr_cn": "机器学习被寄望加速单离子磁体发现，但合成前可用的结构信息是否足以支撑预测仍存疑。本文对 SIMDAVIS 数据库中 1215 个镧系配合物比较了配位点表格特征、连续对称性度量和完整三维原子排布三种结构描述。三者准确率均收敛在约 76%，仅略高于仅凭 Dy3+ 判定的 71% 规则。结合多参考从头算与错误结构分析，揭示了该预测性能上限的电子结构根源。",
+      "llm_tldr": "机器学习被寄望加速单离子磁体发现，但合成前可用的结构信息是否足以支撑预测仍存疑。本文对 SIMDAVIS 数据库中 1215 个镧系配合物比较了配位点表格特征、连续对称性度量和完整三维原子排布三种结构描述。三者准确率均收敛在约 76%，仅略高于仅凭 Dy3+ 判定的 71% 规则。结合多参考从头算与错误结构分析，揭示了该预测性能上限的电子结构根源。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.26547v1",
+      "source": "arxiv",
+      "title": "Topology-Stratified Materials Discovery with A Flow-Based Generative Model",
+      "abstract": "Accurate generation of crystal structures is the foundation to the discovery of high-performance materials for extreme-environment applications, such as aerospace, additive manufacturing, and fusion energy systems. Although generative modeling has emerged as a promising approach for crystal design, its performance remains limited by the complex crystal structures and diverse chemical compositions. In this work, we develop UFO-MGen, a universal flow-based generative model that learns topological features of Wyckoff representations and leverages this information to accurately generate crystals across vast structural and chemical spaces. Compared with state-of-the-art generative models, UFO-MGen achieves the highest crystal generation success rate under a rigorous multi-stability evaluation framework, the highest SUN (stable, unique, novel) rate, and a remarkable extrapolation capability that has not been reported by previous models. Furthermore, a fine-tuning module is implemented to UFO-MGen for property-constrained crystal generation, enabling the inverse materials design toward target properties. The UFO-MGen opens a new avenue for accelerated materials discovery and providing a foundation for universal materials intelligence.",
+      "authors": [
+        "Jingyi Zhou",
+        "Oyshee Chowdhury",
+        "Noah Oyeniran",
+        "Chongze Hu"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.AI"
+      ],
+      "published": "2026-09-22T15:02:50+00:00",
+      "link": "https://arxiv.org/pdf/2609.26547v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "generative model for crystal structure design and materials discovery",
+      "llm_evidence_cn": "用于晶体结构设计与材料发现的生成模型",
+      "llm_evidence": "用于晶体结构设计与材料发现的生成模型",
+      "canonical_evidence": "用于晶体结构设计与材料发现的生成模型",
+      "llm_tldr_en": "UFO-MGen is a universal flow-based generative model that learns topological features of Wyckoff representations to generate crystals with the highest success rate across structural and chemical spaces.",
+      "llm_tldr_cn": "针对复杂晶体结构与多样化学组成导致生成模型晶体设计性能受限的问题，本文提出通用流式生成模型UFO-MGen。该模型学习Wyckoff表示的拓扑特征，并利用这些信息在广阔的结构与化学空间中准确生成晶体。与当前最先进的生成模型相比，UFO-MGen取得最高的晶体生成成功率。该工作为航空航天、增材制造与聚变能源等极端环境所需的高性能材料发现提供了更可靠的生成手段。",
+      "llm_tldr": "针对复杂晶体结构与多样化学组成导致生成模型晶体设计性能受限的问题，本文提出通用流式生成模型UFO-MGen。该模型学习Wyckoff表示的拓扑特征，并利用这些信息在广阔的结构与化学空间中准确生成晶体。与当前最先进的生成模型相比，UFO-MGen取得最高的晶体生成成功率。该工作为航空航天、增材制造与聚变能源等极端环境所需的高性能材料发现提供了更可靠的生成手段。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.25804v1",
+      "source": "arxiv",
+      "title": "The Tasteful Agent: Measuring and Improving Taste in Long-Horizon Tasks",
+      "abstract": "LLM agents increasingly work on long-horizon tasks, and the decisions they make along the way, such as which hypothesis to test or which implementation to build on, determine the outcome of the whole run. Making these decisions well is becoming a key capability for both engineering and research agents. We refer to the ability to make good long-horizon decisions as the taste of an agent. While existing benchmarks measure the end-to-end success of agents on long-horizon tasks, none of them measures the taste of an agent. To address this problem, we build Taste-Bench, a benchmark of taste questions constructed automatically from trajectories that agents produced in engineering and research tasks. Each question presents a decision fork, a point in a trajectory where multiple directions are available and one of them leads to a better outcome, and the evaluated model chooses among these directions without seeing what happens after the fork. We mine these forks automatically from parallel attempts at the same task and from detours inside a single trajectory, without needing human annotation. We evaluate frontier models on Taste-Bench and find that the best model answers only 59.7% of the questions correctly. We further find that forks whose deciding evidence appears later in the trajectory are much harder for every model, and that a larger reasoning budget does not improve the accuracy. Finally, we show that taste can be trained. We distill the judgment of a teacher that has seen the outcome into a student model, and the student makes better decisions on unseen tasks and improves end-to-end success on held-out SWE-bench Pro tasks.",
+      "authors": [
+        "Wenbo Pan",
+        "Zhichao Liu",
+        "Shujie Liu",
+        "Jingying Zeng",
+        "Chin-Yew Lin",
+        "Xianfeng Tang",
+        "Yan Lu",
+        "Qi He",
+        "Xiaohua Jia"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-22T07:36:04+00:00",
+      "link": "https://arxiv.org/pdf/2609.25804v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "benchmark measuring taste of long-horizon research and engineering agents at decision forks",
+      "llm_evidence_cn": "度量长时程科研与工程智能体在决策分叉处的品味基准",
+      "llm_evidence": "度量长时程科研与工程智能体在决策分叉处的品味基准",
+      "canonical_evidence": "度量长时程科研与工程智能体在决策分叉处的品味基准",
+      "llm_tldr_en": "Taste-Bench measures an LLM agent's long-horizon decision quality, such as which hypothesis to test, by auto-constructing decision forks from engineering and research trajectories.",
+      "llm_tldr_cn": "长时程LLM智能体在科研与工程任务中需不断做出关键决策，例如测试哪个假设、基于哪个实现继续推进，这些决策质量决定整体成败。现有基准只衡量端到端成功率，缺乏对智能体决策品味能力的度量。本文提出Taste-Bench，从智能体真实轨迹中自动构造决策分叉问题，用于测量和提升智能体的品味。该工作为研究型智能体的长时程决策能力评估提供了新范式。",
+      "llm_tldr": "长时程LLM智能体在科研与工程任务中需不断做出关键决策，例如测试哪个假设、基于哪个实现继续推进，这些决策质量决定整体成败。现有基准只衡量端到端成功率，缺乏对智能体决策品味能力的度量。本文提出Taste-Bench，从智能体真实轨迹中自动构造决策分叉问题，用于测量和提升智能体的品味。该工作为研究型智能体的长时程决策能力评估提供了新范式。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.26030v1",
+      "source": "arxiv",
+      "title": "Intrinsic switching leads to oxygen diffusion and breakdown in hafnia ferroelectrics",
+      "abstract": "Conventional ferroelectrics exhibit well-defined polarization states linked through electric switching. In fluorite-structured ferroelectrics like hafnia, though, switching and oxygen diffusion seem to coexist, enriching the nature of ferroelectricity. Here we address the intrinsic, room-temperature switching and diffusion kinetics of hafnia ferroelectrics using machine-learning molecular dynamics. We identify two distinct switching mechanisms that are both active at realistic time scales. Critically, our simulations reveal that, because the lattice does not dissipate fast enough the heat originating from localized switching events, these two processes concatenate in an avalanche-like manner leading to oxygen conduction. Our results thus show that intrinsic switching leads to breakdown in hafnia ferroelectrics. They also suggest how this outcome might be avoided through suitably designed field pulses.",
+      "authors": [
+        "Xabier Diaz de Cerio",
+        "Iñigo Robredo-Magro",
+        "Jorge Íñiguez-González"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-22T11:32:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.26030v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "machine-learning molecular dynamics simulations of hafnia ferroelectrics switching and oxygen diffusion",
+      "llm_evidence_cn": "使用机器学习分子动力学模拟铪基铁电体翻转与氧扩散",
+      "llm_evidence": "使用机器学习分子动力学模拟铪基铁电体翻转与氧扩散",
+      "canonical_evidence": "使用机器学习分子动力学模拟铪基铁电体翻转与氧扩散",
+      "llm_tldr_en": "Using machine-learning molecular dynamics, the study finds two distinct switching mechanisms in hafnia ferroelectrics whose heat-driven concatenation triggers avalanche-like oxygen conduction and breakdown.",
+      "llm_tldr_cn": "萤石结构铪基铁电体中极化翻转与氧扩散似乎共存，但其微观动力学机制尚不清楚。本文采用机器学习分子动力学方法，在室温下模拟铪基铁电体的本征翻转与扩散过程，识别出两种在真实时间尺度上同时活跃的翻转机制。模拟表明，局域翻转事件产生的热量来不及耗散，两种过程以雪崩方式串联，最终引发氧导电与器件击穿。该结果揭示了铁电翻转与氧迁移的耦合机理，为理解并抑制铪基器件的失效提供了新视角。",
+      "llm_tldr": "萤石结构铪基铁电体中极化翻转与氧扩散似乎共存，但其微观动力学机制尚不清楚。本文采用机器学习分子动力学方法，在室温下模拟铪基铁电体的本征翻转与扩散过程，识别出两种在真实时间尺度上同时活跃的翻转机制。模拟表明，局域翻转事件产生的热量来不及耗散，两种过程以雪崩方式串联，最终引发氧导电与器件击穿。该结果揭示了铁电翻转与氧迁移的耦合机理，为理解并抑制铪基器件的失效提供了新视角。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}

@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-22</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-23</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 11 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 10 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>4</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>3</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>7</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-22 17:59:33 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-23 18:19:06 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,7 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>2026</p>
+<p>今日日报成功收录10篇，精读3篇、速读7篇，重点聚焦AI Agent自主科研与材料发现。</p>
+<p>最值得看的是两篇9.0分精读：Agent-E2MD实现原子间势方程到LAMMPS合法pair style的自主翻译验证，另一篇用AI Agent自主完成二维半导体量子输运测量。</p>
+<p>普通读者可先读这两篇精读，再扫速读中的agent-native language及OMatG-flash、拓扑分层材料生成模型，把握自主科学与生成式材料发现趋势。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -78,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">4 篇</strong>
+    <strong class="dpr-home-dashboard-count">3 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="ECENet: An Edge Cluster Expansion Line-Graph Neural Network">ECENet: An Edge Cluster Expansion Line-Graph Neural Network</span></li><li><span class="dpr-home-dashboard-paper-title" title="Divergent strategies and convergent outcomes in autonomous materials discovery">Divergent strategies and convergent outcomes in autonomous materials discovery</span></li><li><span class="dpr-home-dashboard-paper-title" title="Small-supercell and Small-dataset Training Strategy of Machine Learning Interatomic Potentials for Point Defects">Small-supercell and Small-dataset Training Strategy of Machine Learning Interatomic Potentials for Point Defects</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Agent-E2MD: Autonomous Translation of Interatomic Potential Equations into Physically Validated Pair Styles for Molecular Dynamics in LAMMPS">Agent-E2MD: Autonomous Translation of Interatomic Potential Equations into Physically Validated Pair Styles for Molecular Dynamics in LAMMPS</span></li><li><span class="dpr-home-dashboard-paper-title" title="Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent">Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent</span></li><li><span class="dpr-home-dashboard-paper-title" title="Recursive self-improvement of AI research agents">Recursive self-improvement of AI research agents</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span><span class="dpr-home-dashboard-tag">ar <strong>1</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span><span class="dpr-home-dashboard-tag">ai-materials <strong>1</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -94,9 +96,9 @@
     <strong class="dpr-home-dashboard-count">7 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="AutoRASOR: Autonomous Rapid Scanning Electron Microscope Operator">AutoRASOR: Autonomous Rapid Scanning Electron Microscope Operator</span></li><li><span class="dpr-home-dashboard-paper-title" title="Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions">Toward Predictive Hydride Bond Energetics with Neural-Network Wavefunctions</span></li><li><span class="dpr-home-dashboard-paper-title" title="SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness">SoL-Pi: Recursively Scaling Auto-Research Loops for Efficient Agent Harness</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Beyond Natural Language: An Agent-Native Language for Autonomous Science">Beyond Natural Language: An Agent-Native Language for Autonomous Science</span></li><li><span class="dpr-home-dashboard-paper-title" title="OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery">OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery</span></li><li><span class="dpr-home-dashboard-paper-title" title="Topology-Stratified Materials Discovery with A Flow-Based Generative Model">Topology-Stratified Materials Discovery with A Flow-Based Generative Model</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ar <strong>4</strong></span><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>4</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
 </section>
 </div>
 

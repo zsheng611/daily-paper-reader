@@ -1,0 +1,169 @@
+{
+  "date": "20260923",
+  "date_label": "",
+  "generated_at": "2026-09-23 18:19:06 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.26657v1",
+      "route": "202609/23/2609.26657v1-agent-e2md-autonomous-translation-of-interatomic-potential-equations-into-physically-validated-pair-styles-for-molecular-dynamics-in-lammps",
+      "title": "Agent-E2MD: Autonomous Translation of Interatomic Potential Equations into Physically Validated Pair Styles for Molecular Dynamics in LAMMPS",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "将原子间势方程自动转化为经物理验证的LAMMPS分子动力学配对样式",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.26661v1",
+      "route": "202609/23/2609.26661v1-autonomous-quantum-transport-measurements-of-2d-semiconductors-by-an-ai-agent",
+      "title": "Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "AI智能体自主规划并完成多天量子输运实验",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.26457v1",
+      "route": "202609/23/2609.26457v1-recursive-self-improvement-of-ai-research-agents",
+      "title": "Recursive self-improvement of AI research agents",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "AI研究智能体递归改写自身代码以提升研究效率",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.25421v1",
+      "route": "202609/23/2609.25421v1-beyond-natural-language-an-agent-native-language-for-autonomous-science",
+      "title": "Beyond Natural Language: An Agent-Native Language for Autonomous Science",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向自主科学、可机器校验的研究论断语言与协议",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.26402v1",
+      "route": "202609/23/2609.26402v1-omatg-flash-an-all-atom-flow-map-with-reinforce-adjoint-matching-for-scalable-materials-discovery",
+      "title": "OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向晶体结构预测与材料发现的全原子流映射生成模型",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.26547v1",
+      "route": "202609/23/2609.26547v1-topology-stratified-materials-discovery-with-a-flow-based-generative-model",
+      "title": "Topology-Stratified Materials Discovery with A Flow-Based Generative Model",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "用于晶体结构设计与材料发现的生成模型",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.23512v1",
+      "route": "202609/23/2609.23512v1-agentbetta-verification-driven-adaptive-configuration-of-an-ai-nano-agent-through-selective-expansion-and-verified-contraction",
+      "title": "AgentBetta: Verification-Driven Adaptive Configuration of an AI Nano-Agent through Selective Expansion and Verified Contraction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "工具使用型LLM智能体的验证驱动自适应配置",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.24038v1",
+      "route": "202609/23/2609.24038v1-from-heuristics-to-machine-learning-the-performance-ceiling-for-single-ion-magnets-and-its-electronic-origin",
+      "title": "From Heuristics to Machine Learning: The Performance Ceiling for Single-Ion Magnets and Its Electronic Origin",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用结构描述符做材料发现的机器学习",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.25804v1",
+      "route": "202609/23/2609.25804v1-the-tasteful-agent-measuring-and-improving-taste-in-long-horizon-tasks",
+      "title": "The Tasteful Agent: Measuring and Improving Taste in Long-Horizon Tasks",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "度量长时程科研与工程智能体在决策分叉处的品味基准",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    },
+    {
+      "paper_id": "2609.26030v1",
+      "route": "202609/23/2609.26030v1-intrinsic-switching-leads-to-oxygen-diffusion-and-breakdown-in-hafnia-ferroelectrics",
+      "title": "Intrinsic switching leads to oxygen diffusion and breakdown in hafnia ferroelectrics",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "使用机器学习分子动力学模拟铪基铁电体翻转与氧扩散",
+      "first_seen_at": "2026-09-23 18:19:06 UTC",
+      "updated_at": "2026-09-23 18:19:06 UTC"
+    }
+  ]
+}
