@@ -1,0 +1,153 @@
+{
+  "date": "20260924",
+  "date_label": "",
+  "generated_at": "2026-09-24 18:39:44 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.27132v1",
+      "route": "202609/24/2609.27132v1-exact-equivariance-from-ordinary-neural-networks-for-lattice-many-body-dynamics",
+      "title": "Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "面向晶格多体动力学的精确等变机器学习代理与力预测",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.28013v1",
+      "route": "202609/24/2609.28013v1-solid26-a-first-principles-solid-liquid-interface-dataset-for-machine-learned-interatomic-potentials",
+      "title": "SoLiD26: A First Principles Solid-Liquid Interface Dataset for Machine-learned Interatomic Potentials",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "基于DFT与AIMD的固液界面第一性原理数据集，用于训练机器学习原子间势",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.25421v1",
+      "route": "202609/24/2609.25421v1-beyond-natural-language-an-agent-native-language-for-autonomous-science",
+      "title": "Beyond Natural Language: An Agent-Native Language for Autonomous Science",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向自主科学的可机器校验语言与协议",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.27036v1",
+      "route": "202609/24/2609.27036v1-an-open-benchmark-for-machine-learning-based-polymer-property-prediction",
+      "title": "An open benchmark for machine learning-based polymer property prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向聚合物性质预测的机器学习开放基准，含 DFT 与 MD 数据",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.27108v1",
+      "route": "202609/24/2609.27108v1-towards-extended-active-learning-for-modelling-ferroelectric-switching-the-need-for-gold-standards",
+      "title": "Towards Extended Active Learning for Modelling Ferroelectric Switching: the Need for 'Gold Standards'",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "比较DFT方法以筛选训练机器学习原子间势的最优泛函",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.27302v1",
+      "route": "202609/24/2609.27302v1-unmodeled-states-and-uncertain-action-outcomes-in-agentic-scanning-tunneling-microscopy",
+      "title": "Unmodeled states and uncertain action outcomes in agentic scanning tunneling microscopy",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "将LLM置于仪器反馈回路以实现自主STM实验的智能体框架",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.23611v1",
+      "route": "202609/24/2609.23611v1-uni-macro-frpn-full-resolution-and-cross-scale-learning-for-polymers",
+      "title": "Uni-Macro-FRPN: Full-Resolution and Cross-Scale Learning for Polymers",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向聚合物性质预测的跨尺度机器学习模型",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.27490v1",
+      "route": "202609/24/2609.27490v1-whatworkedbench-benchmarking-experimental-understanding-in-ai-agents",
+      "title": "WhatWorkedBench: Benchmarking Experimental Understanding in AI Agents",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "评测AI智能体理解实验变化影响的基准",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    },
+    {
+      "paper_id": "2609.28010v1",
+      "route": "202609/24/2609.28010v1-optimal-bias-potentials-via-ergodic-optimal-control-and-generator-learning",
+      "title": "Optimal Bias Potentials via Ergodic Optimal Control and Generator Learning",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用数据驱动生成元学习计算最优偏置势，加速分子动力学跃迁",
+      "first_seen_at": "2026-09-24 18:39:44 UTC",
+      "updated_at": "2026-09-24 18:39:44 UTC"
+    }
+  ]
+}

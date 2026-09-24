@@ -1,0 +1,1033 @@
+Title: Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics
+
+URL Source: https://arxiv.org/pdf/2609.27132v1
+
+Published Time: Thu, 24 Sep 2026 00:25:07 GMT
+
+Number of Pages: 11
+
+Markdown Content:
+Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics 
+
+Ho Jang, Sankha Subhra Bakshi, and Gia-Wei Chern 
+
+Department of Physics, University of Virginia, Charlottesville, Virginia, 22904, USA 
+
+(Dated: September 24, 2026) Large-scale simulations of correlated electron systems require repeated evaluations of the electronic forces and transition energies driving collective dynamics. Machine-learning surrogates alleviate this bottleneck, but incorporating symmetry often involves carefully designed descriptors or specialized network architectures. We show that ordinary multilayer perceptrons equipped with finite-group averaging provide exactly equivariant surrogates directly from microscopic configurations. The con-struction separates symmetry enforcement from the internal network architecture and applies to both discrete and continuous lattice degrees of freedom. In the Falicov–Kimball model, it predicts directional hopping free-energy differences; in the Holstein model, its invariant limit generates con-servative lattice forces. Benchmarks against exact diagonalization establish microscopic accuracy and agreement of dynamical correlations, while large-scale simulations recover multiscale charge or-dering and charge-density-wave coarsening. These results demonstrate an accessible, reusable route to symmetry-preserving many-body dynamics for systems with finite lattice point groups. 
+
+I. INTRODUCTION 
+
+Spatially inhomogeneous states arise throughout cor-related electron systems, from charge stripes, electronic liquid-crystal and intertwined orders, pair-density waves, and coexisting metallic and insulating phases to non-collinear spin order and magnetic skyrmions [1–9]. Their formation and evolution reflect the interplay between microscopic electronic interactions and collective order-parameter fields over a wide range of length and time scales. Understanding processes such as domain growth, competition between nearly degenerate orders, and the relaxation or coarsening of complex textures therefore requires real-space simulations that can access systems much larger and time scales much longer than those typ-ically available to direct electronic calculations [10–12]. A central difficulty is that the effective forces, local en-ergy changes, and transition rates governing these collec-tive degrees of freedom are themselves determined by the underlying fermions. Repeated solution of the electronic problem can consequently become the dominant compu-tational bottleneck, even when the microscopic Hamilto-nian is tractable for any fixed configuration. Machine learning (ML) provides a natural route around this bottleneck by replacing repeated electronic calculations with efficient surrogate models. Machine-learned interatomic potentials exemplify this strategy, reproducing potential-energy surfaces and atomic forces from electronic-structure training data at greatly reduced computational cost and thereby extending first-principles accuracy to much larger-scale simulations [13–21]. Re-lated ideas have more recently been applied to correlated lattice systems, enabling large-scale simulations of phase separation and charge ordering, orbital ordering in Jahn– Teller systems, and nonequilibrium spin dynamics in itin-erant magnets [22–30]. In these settings the learned ob-ject need not be a scalar energy or a conventional force. More generally, one seeks a map from a microscopic con-figuration X to a physical quantity Y —for example a local energy, a generalized force, a transition-energy vec-tor, or another dynamical quantity—while preserving the symmetry relations between the corresponding input and output representations. An essential requirement is that such predictions re-spect the symmetries of the microscopic problem. Scalar energies must be invariant, whereas outputs carrying spa-tial, directional, or internal indices must transform equiv-ariantly. For invariant targets, a successful strategy is to encode the local environment using symmetry-invariant descriptors and supply these features to a conventional learning model [31–37]. This approach cleanly separates symmetry handling from the regression problem and has proved highly effective in both atomistic and lattice ap-plications. Its practical difficulty is that an informa-tive descriptor must retain enough information to distin-guish physically inequivalent environments while discard-ing only symmetry-related redundancy. Constructing such descriptors can require substantial system-specific choices involving basis functions, correlation order, refer-ence environments, or feature truncation. The problem becomes still more involved for directional outputs, be-cause the representation must retain enough orientation information to reconstruct the required transformation law rather than eliminate it altogether. Equivariant neural networks address this issue by in-corporating prescribed transformation laws directly into the architecture, often together with graph-based mes-sage passing [38–45]. By organizing intermediate fea-tures into symmetry representations and combining them through operations such as group convolutions and ten-sor products, these methods can learn highly expressive symmetry-adapted representations and have achieved re-markable success, particularly for systems with contin-uous spatial symmetries. For many lattice problems, however, the situation is considerably simpler. The ge-ometry is fixed, the relevant point group is finite and usually small, and each symmetry operation acts as a known permutation or linear transformation of the mi-croscopic variables. This raises a more elementary pos-sibility: rather than redesigning the hidden layers of the arXiv:2609.27132v1 [cond-mat.str-el] 22 Sep 2026 2network, can one impose the exact transformation law di-rectly on the input-output map while leaving the internal learning model completely unrestricted? Here we introduce an equivariant projection network (EPN) framework that realizes precisely this idea for lat-tice many-body dynamics. An EPN evaluates an or-dinary multilayer perceptron (MLP) on all symmetry-related versions of a local microscopic configuration, transforms the corresponding predictions back to acommon frame, and averages them. The resulting map is exactly equivariant by construction, indepen-dently of the parameters or architecture of the under-lying MLP. Thus symmetry is imposed at the level of the physical input-output relation rather than through symmetry-engineered descriptors or equivariant hidden features. The underlying group-averaging construction has precedents in frame averaging, equivariant fine-tuning, Reynolds networks, and related applications in-cluding lattice-Boltzmann models [46–51]. Our empha-sis here is on its particularly direct use for fixed-lattice many-body problems, where the relevant symmetry ac-tion is known exactly and the full finite-group average is inexpensive. We develop this construction into a general surro-gate framework for fermion-mediated dynamics, where repeated electronic calculations otherwise limit accessible system sizes and evolution times. The learned maps may represent observables, generalized forces, local transition energies, or other quantities entering a dynamical update, with the appropriate transformation law imposed by the same finite-group projection. We first consider Falicov– Kimball dynamics, where a local hop is characterized by four directional free-energy differences and therefore pro-vides a nontrivial equivariant output. We then consider the Holstein model, where the invariant special case of the construction is combined with the Behler–Parrinello (BP) decomposition of the total energy into local contri-butions [13, 31]. Differentiation of the resulting invari-ant energy yields a symmetry-preserving and conserva-tive force field. Together, these examples show that both invariant and directional lattice surrogates can be con-structed from ordinary MLPs without invariant descrip-tors, canonical local frames, or symmetry-constrained hidden representations. The Falicov–Kimball and Holstein models are useful here because closely related dynamics have already been studied with descriptor-based ML surrogates [23, 24, 37]. They provide complementary benchmarks for assessing whether direct symmetry projection can reproduce mi-croscopic electronic calculations and established collec-tive dynamics with substantially simpler input process-ing. Section II presents the general construction, fol-lowed by the directional FK application in Sec. III and the invariant-energy Holstein application in Sec. IV. We discuss the scope and practical advantages of the frame-work in Sec. V.  
+
+> II. EQUIVARIANT PROJECTION NETWORKS
+
+To formulate the EPN, let Xi denote the configuration in a finite neighborhood of site i and Yi a local target obtained from a microscopic calculation. Motivated by electronic nearsightedness [52, 53], we approximate this calculation by Xi 7 → Yi; the accuracy of the finite cutoff must be checked for the regime of interest. The neigh-borhood is chosen to be closed under a finite symmetry group G, with input and output representations DX (g)and DY (g). Equivariance requires 
+
+F [DX (g)X] = DY (g)F (X). (1) Starting from an unrestricted network f , we evaluate ev-ery symmetry-related input, transform its output back to the original frame, and average: 
+
+F (X) = 1
+
+|G|
+
+X
+
+> g∈G
+
+DY (g−1) f [DX (g)X] . (2) The inverse output transformation is essential for a di-rectional target. Each evaluation f [DX (g)X] predicts components in the orientation of the transformed input, and DY (g−1) returns those components to the original frame. The average therefore combines predictions for the same physical directions. Simply averaging the un-transformed outputs would instead produce an invariant map and generally erase the directional dependence one seeks to retain. Unlike data augmentation, which encour-ages symmetry through examples, the projection imposes the transformation law for every choice of network pa-rameters, including before training. An input symmetry merely relabels the terms in this average. Explicitly, for h ∈ G,
+
+F [DX (h)X] = 1
+
+|G|
+
+X
+
+> g∈G
+
+DY (g−1)f [DX (gh )X]= 1
+
+|G|
+
+X
+
+> k∈G
+
+DY (h)DY (k−1)f [DX (k)X]= DY (h)F (X), (3) where k = gh . Thus the transformation law holds inde-pendently of the internal architecture and the trained network parameters. The average is a projection: it leaves every equivariant map unchanged. Consequently, universal MLP approximation of continuous maps on compact, G-invariant input domains carries over to the equivariant maps on those domains [46, 48, 54–56]. To see why expressivity is preserved, consider an MLP ap-proximating a desired equivariant map. Applying the projection leaves that target unchanged and averages the transformed approximation errors. The symmetry con-straint therefore does not exclude any continuous equiv-ariant target from the approximation class. Implementation requires only the input and output group actions and |G| evaluations of a shared MLP; the 3<latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit> 
+
+> · · ·
+
+<latexit sha1_base64="LRMD8mubNxXPlC4/5pef3S8jI7U=">AAAB8XicbVA9SwNBEJ2LX/H8ilraLAbBKtxZJDZi0ELLCOYDkyPsbfaSJXt7x+6eEI78CxsLRbT0h9jbiP/GvSSFJj4YeLw3w7wZP+ZMacf5tnJLyyura/l1e2Nza3unsLvXUFEiCa2TiEey5WNFORO0rpnmtBVLikOf06Y/vMz85j2VikXiVo9i6oW4L1jACNZGuuuEWA/8IL0adwtFp+RMgBaJOyPF8w/7LH77smvdwmenF5EkpEITjpVqu06svRRLzQinY7uTKBpjMsR92jZU4JAqL50kHqMjo/RQEElTQqOJ+nsixaFSo9A3nVlCNe9l4n9eO9HBqZcyESeaCjJdFCQc6Qhl56Mek5RoPjIEE8lMVkQGWGKizZNs8wR3/uRF0jgpueVS+cYpVi9gijwcwCEcgwsVqMI11KAOBAQ8wBM8W8p6tF6s12lrzprN7MMfWO8/FeyUMw==</latexit> 
+
+G <latexit sha1_base64="5hGbxWRBs6P1oPH/FmVTGSP7vMo=">AAAB+HicbVC7SgNBFL0bX3F9ZNXSZjAINoZdi2gjBi20jGAekMQwO5lNhsw+mJkV4rJfYiOoiK0/YW8j/o2zSQpNPDBwOOde7pnjRpxJZdvfRm5hcWl5Jb9qrq1vbBasre26DGNBaI2EPBRNF0vKWUBriilOm5Gg2Hc5bbjDi8xv3FEhWRjcqFFEOz7uB8xjBCstda1C28dq4HrJZXqbHDpp1yraJXsMNE+cKSmefZin0dOXWe1an+1eSGKfBopwLGXLsSPVSbBQjHCamu1Y0giTIe7TlqYB9qnsJOPgKdrXSg95odAvUGis/t5IsC/lyHf1ZBZTznqZ+J/XipV30klYEMWKBmRyyIs5UiHKWkA9JihRfKQJJoLprIgMsMBE6a5MXYIz++V5Uj8qOeVS+douVs5hgjzswh4cgAPHUIErqEINCMTwAM/wYtwbj8ar8TYZzRnTnR34A+P9B/M1lko=</latexit> 
+
+G→1<latexit sha1_base64="8cjX8UOFMWjYGXZxO/Lf9aLdDmc=">AAAB6nicbVDLSgMxFL3js9ZX1aWbYBFclZmCj2XRjQuFivYB7SCZ9E4bmskMSUYoQz/BjQtF3PpF7vwb03YW2nogcDjnXHLvCRLBtXHdb2dpeWV1bb2wUdzc2t7ZLe3tN3WcKoYNFotYtQOqUXCJDcONwHaikEaBwFYwvJr4rSdUmsfywYwS9CPalzzkjBor3d/e1B9LZbfiTkEWiZeTMuSw+a9uL2ZphNIwQbXueG5i/Iwqw5nAcbGbakwoG9I+diyVNELtZ9NVx+TYKj0Sxso+achU/T2R0UjrURTYZETNQM97E/E/r5Oa8MLPuExSg5LNPgpTQUxMJneTHlfIjBhZQpnidlfCBlRRZmw7RVuCN3/yImlWK95Z5fSuWq5d5nUU4BCO4AQ8OIcaXEMdGsCgD8/wCm+OcF6cd+djFl1y8pkD+APn8wfe3I2J</latexit> 
+
+MLP 
+
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+
+<latexit sha1_base64="J6BSX6MyMun5OlB/X1BOivsUv8s=">AAAB/3icbVC7SgNBFJ2Nrxhfq0Iam8EgWIVdi2gZooJlAuYB2bDMTmaTIbMPZu4qYU3hr9hY+MDW3i+ws/FbnDwKTTxw4XDOvdx7jxcLrsCyvozM0vLK6lp2PbexubW9Y+7uNVSUSMrqNBKRbHlEMcFDVgcOgrViyUjgCdb0Budjv3nDpOJReA3DmHUC0gu5zykBLblm3rlgAgi+dFNH8l4fiJTR7cg1C1bRmgAvEntGCuV87Zu/VD6qrvnpdCOaBCwEKohSbduKoZMSCZwKNso5iWIxoQPSY21NQxIw1Ukn94/wkVa62I+krhDwRP09kZJAqWHg6c6AQF/Ne2PxP6+dgH/WSXkYJ8BCOl3kJwJDhMdh4C6XjIIYakKo5PpWTPtEEgo6spwOwZ5/eZE0Top2qViq6TQqaIosOkCH6BjZ6BSV0RWqojqi6A49oCf0bNwbj8ar8TZtzRizmX30B8b7DwbBmdY=</latexit> 
+
+!E→
+
+<latexit sha1_base64="LP/G/MdpZLxK5FRzgtH/YXcn/WE=">AAAB/HicbVDLSsNAFJ3UV219RLt0M1gFVyVxUV0WH+Cygn1AE8JkOmmHTiZhZlIJof6KGxeKuO0P+Afu/BBdO30stPXAhcM593LvPX7MqFSW9WnkVlbX1jfym4Xi1vbOrrm335RRIjBp4IhFou0jSRjlpKGoYqQdC4JCn5GWP7ic+K0hEZJG/E6lMXFD1OM0oBgpLXlmybkiTCF47WVOEiMhovuRZ5atijUFXCb2nJRrR1/j92Hxu+6ZH043wklIuMIMSdmxrVi5GRKKYkZGBSeRJEZ4gHqkoylHIZFuNj1+BI+10oVBJHRxBafq74kMhVKmoa87Q6T6ctGbiP95nUQF525GeZwowvFsUZAwqCI4SQJ2qSBYsVQThAXVt0LcRwJhpfMq6BDsxZeXSfO0Ylcr1VudxgWYIQ8OwCE4ATY4AzVwA+qgATBIwSN4Bi/Gg/FkvBpvs9acMZ8pgT8wxj+JIJkn</latexit> 
+
+!E→
+
+<latexit sha1_base64="ImXcC0i4o/CATERKeO0PT6yy9Yw=">AAAB/nicbVDJSgNBEO1xjXGLil68NAbBU5jxED2GqOAxAbNAEkJPpyZp0rPQXaOEIeCvePGgBK9+gF/gzYvfYmc5aOKDgsd7VVTVcyMpNNr2l7W0vLK6tp7aSG9ube/sZvb2qzqMFYcKD2Wo6i7TIEUAFRQooR4pYL4roeb2r8Z+7R6UFmFwh4MIWj7rBsITnKGR2pnD5jVIZPSmnTQleMiUCh+G7UzWztkT0EXizEi2cFT+FqPiR6md+Wx2Qh77ECCXTOuGY0fYSphCwSUM081YQ8R4n3WhYWjAfNCtZHL+kJ4apUO9UJkKkE7U3xMJ87Ue+K7p9Bn29Lw3Fv/zGjF6l61EBFGMEPDpIi+WFEM6zoJ2hAKOcmAI40qYWynvMcU4msTSJgRn/uVFUj3POflcvmzSKJIpUuSYnJAz4pALUiC3pEQqhJOEPJEX8mo9Ws/WyHqbti5Zs5kD8gfW+w8q45lZ</latexit> 
+
+!E→
+
+<latexit sha1_base64="pq2nu/hnBHX8tCUgIdXPq6Vh5uM=">AAAB/nicbVDLSgMxFM34rK2PUXHlJlgFV2XGRXVZfIDLCvYB7TBk0kwbmkmGJNNShoK/4saFIu7EvX/gzg/Rteljoa0HAodz7uHenCBmVGnH+bQWFpeWV1Yza9nc+sbmlr29U1UikZhUsGBC1gOkCKOcVDTVjNRjSVAUMFILuhcjv9YjUlHBb/UgJl6E2pyGFCNtJN/ea14SphG88tNmS/Q5klL0h76ddwrOGHCeuFOSLx1+vb73ct9l3/4waZxEhGvMkFIN14m1lyKpKWZkmG0misQId1GbNAzlKCLKS8fnD+GRUVowFNI8ruFY/Z1IUaTUIArMZIR0R816I/E/r5Ho8MxLKY8TTTieLAoTBrWAoy5gi0qCNRsYgrCk5laIO0girE1jWVOCO/vleVI9KbjFQvHGtHEOJsiAfXAAjoELTkEJXIMyqAAMUnAPHsGTdWc9WM/Wy2R0wZpmdsEfWG8/IhqaDg==</latexit> 
+
+!E→
+
+<latexit sha1_base64="4A5YB9ogrUVZwDngVvemuif513g=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoPgKeyKr2PQi8eI5gHJEmYns8mQ2dllplcISz7BiwdFvPpF3vwbJ8keNLGgoajqprsrSKQw6LrfTmFldW19o7hZ2tre2d0r7x80TZxqxhsslrFuB9RwKRRvoEDJ24nmNAokbwWj26nfeuLaiFg94jjhfkQHSoSCUbTSw6Dn9coVt+rOQJaJl5MK5Kj3yl/dfszSiCtkkhrT8dwE/YxqFEzySambGp5QNqID3rFU0YgbP5udOiEnVumTMNa2FJKZ+nsio5Ex4yiwnRHFoVn0puJ/XifF8NrPhEpS5IrNF4WpJBiT6d+kLzRnKMeWUKaFvZWwIdWUoU2nZEPwFl9eJs2zqndZvbg/r9Ru8jiKcATHcAoeXEEN7qAODWAwgGd4hTdHOi/Ou/Mxby04+cwh/IHz+QP0+42Z</latexit> 
+
+g1
+
+<latexit sha1_base64="a8iLDZqnl0ofVlrlxAVZcmfIotw=">AAAB6nicbVDLSgNBEOz1GeMr6tHLYBA8hd3g6xj04jGieUCyhNnJ7GbI7Owy0yuEkE/w4kERr36RN//GSbIHTSxoKKq66e4KUikMuu63s7K6tr6xWdgqbu/s7u2XDg6bJsk04w2WyES3A2q4FIo3UKDk7VRzGgeSt4Lh7dRvPXFtRKIecZRyP6aREqFgFK30EPWqvVLZrbgzkGXi5aQMOeq90le3n7As5gqZpMZ0PDdFf0w1Cib5pNjNDE8pG9KIdyxVNObGH89OnZBTq/RJmGhbCslM/T0xprExoziwnTHFgVn0puJ/XifD8NofC5VmyBWbLwozSTAh079JX2jOUI4soUwLeythA6opQ5tO0YbgLb68TJrVindZubg/L9du8jgKcAwncAYeXEEN7qAODWAQwTO8wpsjnRfn3fmYt644+cwR/IHz+QP2f42a</latexit> 
+
+g2
+
+<latexit sha1_base64="Hxsj8YZ//fk+XnBpZTuQ+pLE+Y0=">AAAB7nicbVDLSgNBEOyNrxhfUY9eBoPgKeyKr2PQgx4jmAckS5iddJIhs7PLzKwQNvkILx4U8er3ePNvnCR70MSChqKqm+6uIBZcG9f9dnIrq2vrG/nNwtb2zu5ecf+grqNEMayxSESqGVCNgkusGW4ENmOFNAwENoLh7dRvPKHSPJKPZhSjH9K+5D3OqLFSo99Jx3fjSadYcsvuDGSZeBkpQYZqp/jV7kYsCVEaJqjWLc+NjZ9SZTgTOCm0E40xZUPax5alkoao/XR27oScWKVLepGyJQ2Zqb8nUhpqPQoD2xlSM9CL3lT8z2slpnftp1zGiUHJ5ot6iSAmItPfSZcrZEaMLKFMcXsrYQOqKDM2oYINwVt8eZnUz8reZfni4bxUucniyMMRHMMpeHAFFbiHKtSAwRCe4RXenNh5cd6dj3lrzslmDuEPnM8foX2Pxw==</latexit> 
+
+g|G| <latexit sha1_base64="UrM6ENeFBaNshYdgqjloX+Ax6i8=">AAAB83icbVDLSsNAFL2pr1pfUZduBovgxpKIr2XRhS4r2Ae0sUymk3boZBJmJkJJ8xtuXCji1p9x5984bbPQ1gMXDufcy733+DFnSjvOt1VYWl5ZXSuulzY2t7Z37N29hooSSWidRDySLR8rypmgdc00p61YUhz6nDb94c3Ebz5RqVgkHvQopl6I+4IFjGBtpE7/MT1xs246vh1nXbvsVJwp0CJxc1KGHLWu/dXpRSQJqdCEY6XarhNrL8VSM8JpVuokisaYDHGftg0VOKTKS6c3Z+jIKD0URNKU0Giq/p5IcajUKPRNZ4j1QM17E/E/r53o4MpLmYgTTQWZLQoSjnSEJgGgHpOUaD4yBBPJzK2IDLDERJuYSiYEd/7lRdI4rbgXlfP7s3L1Oo+jCAdwCMfgwiVU4Q5qUAcCMTzDK7xZifVivVsfs9aClc/swx9Ynz/+7ZGt</latexit> 
+
+g→1
+
+|G|
+
+<latexit sha1_base64="dlFCrwfzfZZMH1WZx6mj8sIk994=">AAAB73icbVDLSgNBEOz1GeMr6tHLYBC8GHaDr2PQi8cI5gHJGmYnk2TI7Ow60yuEJT/hxYMiXv0db/6Nk2QPmljQUFR1090VxFIYdN1vZ2l5ZXVtPbeR39za3tkt7O3XTZRoxmsskpFuBtRwKRSvoUDJm7HmNAwkbwTDm4nfeOLaiEjd4yjmfkj7SvQEo2ilZv8hPfXGnXKnUHRL7hRkkXgZKUKGaqfw1e5GLAm5QiapMS3PjdFPqUbBJB/n24nhMWVD2uctSxUNufHT6b1jcmyVLulF2pZCMlV/T6Q0NGYUBrYzpDgw895E/M9rJdi78lOh4gS5YrNFvUQSjMjkedIVmjOUI0so08LeStiAasrQRpS3IXjzLy+SernkXZTO786KlessjhwcwhGcgAeXUIFbqEINGEh4hld4cx6dF+fd+Zi1LjnZzAH8gfP5A00Gj4A=</latexit> 
+
+g→12
+
+<latexit sha1_base64="iPIhScmGmwYobJj/JemeR/Uz3as=">AAAB73icbVDJSgNBEK2JW4xb1KOXxiB4McyI2zHoxWMEs0Ayhp5OT9Kkp2fsrhHCkJ/w4kERr/6ON//GznLQxAcFj/eqqKoXJFIYdN1vJ7e0vLK6ll8vbGxube8Ud/fqJk414zUWy1g3A2q4FIrXUKDkzURzGgWSN4LBzdhvPHFtRKzucZhwP6I9JULBKFqp2XvITrxRx+sUS27ZnYAsEm9GSjBDtVP8andjlkZcIZPUmJbnJuhnVKNgko8K7dTwhLIB7fGWpYpG3PjZ5N4RObJKl4SxtqWQTNTfExmNjBlGge2MKPbNvDcW//NaKYZXfiZUkiJXbLooTCXBmIyfJ12hOUM5tIQyLeythPWppgxtRAUbgjf/8iKpn5a9i/L53Vmpcj2LIw8HcAjH4MElVOAWqlADBhKe4RXenEfnxXl3PqatOWc2sw9/4Hz+AEuCj38=</latexit> 
+
+g→11
+
+<latexit sha1_base64="Age47FzHBvUqYGPEEfH8g0BXt4k=">AAAB6HicbVDLSgNBEOyNrxhfUY9eBoMgCGFXfB2DXjwmYB6QhDA76U3GzM4uM7NCWPIFXjwo4tVP8ubfOEn2oIkFDUVVN91dfiy4Nq777eRWVtfWN/Kbha3tnd294v5BQ0eJYlhnkYhUy6caBZdYN9wIbMUKaegLbPqju6nffEKleSQfzDjGbkgHkgecUWOl2lmvWHLL7gxkmXgZKUGGaq/41elHLAlRGiao1m3PjU03pcpwJnBS6CQaY8pGdIBtSyUNUXfT2aETcmKVPgkiZUsaMlN/T6Q01Hoc+rYzpGaoF72p+J/XTkxw0025jBODks0XBYkgJiLTr0mfK2RGjC2hTHF7K2FDqigzNpuCDcFbfHmZNM7L3lX5snZRqtxmceThCI7hFDy4hgrcQxXqwADhGV7hzXl0Xpx352PemnOymUP4A+fzB3TFjLk=</latexit> 
+
++
+
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+
+FIG. 1. Equivariant projection network (EPN) for Falicov–Kimball dynamics. Each D4 operation transforms the local f -electron configuration before it enters a shared MLP. The four predicted hopping free-energy differences are transformed back and averaged, yielding an exactly equivariant output. 
+
+group-related inputs can be batched. For the square-lattice point group D4, this means eight evaluations per local prediction, a fixed overhead independent of the sim-ulated lattice size. A scalar output has DY (g) = 1 and requires only invariant averaging. In the examples below the backbone f is an ordinary fully connected MLP with SiLU activations and a linear output layer, trained with AdamW. No hidden layer is symmetry constrained: the loss is evaluated on the projected prediction, and gradi-ents simply propagate through the group average to the shared MLP parameters. Architecture, normalization, and optimization details are collected in the Appendices. 
+
+III. FALICOV–KIMBALL DYNAMICS 
+
+We first consider the spinless Falicov–Kimball (FK) model, a paradigmatic setting for charge ordering, seg-regation, and correlation-driven metal–insulator behav-ior [57–62]: 
+
+H = −t X
+
+⟨ij ⟩
+
+
+
+c†
+
+i cj + H .c.
+
+
+
++ U X
+
+i
+
+nci nfi , (4) Here c†
+
+i creates an itinerant electron, nci = c†
+
+i ci, and 
+
+nfi = 0 , 1 denotes a localized-electron occupation on the square lattice. For a fixed configuration {nfi }, the c elec-trons move in the potential landscape generated by the localized particles. To describe the slow configurational dynamics, we al-low thermally activated nearest-neighbor f -electron hops and assume an adiabatic separation of time scales: the itinerant c electrons equilibrate rapidly for each instanta-neous f -electron configuration [23]. For a proposed hop of an f electron from an occupied site i in direction α, the relevant electronic quantity is the free-energy difference ∆Ei,α between the configurations before and after the hop, evaluated at fixed itinerant-electron number. Hops to occupied destinations are excluded, while an allowed move is accepted with probability 
+
+Pi,α = min 
+
+
+
+1, exp 
+
+
+
+− ∆Ei,α 
+
+T
+
+ 
+
+. (5) Direct evaluation of ∆ Ei,α requires solving the fermionic problem for both configurations. Because such electronic calculations must be repeated for every attempted lo-cal update, they rapidly become the dominant compu-tational cost of a large-scale kinetic Monte Carlo (kMC) simulation. This problem was previously addressed using descriptor-based ML surrogates [23, 37]. There the local occupation pattern is first converted into symmetry-invariant features, while additional reference information is introduced to recover the directional character of a hop. In practice, the construction therefore requires more than choosing a local cutoff: the implementation may involve an invariant basis, relative-orientation in-formation, reference configurations or canonical frames, and separate treatment of symmetry-inequivalent local patterns and their residual point groups. These descrip-tors can accurately reproduce the electronic transition energies, but the machinery is considerably more elabo-rate than the underlying symmetry statement: a lattice point-group operation simply permutes the sites of the local environment and, at the same time, permutes the possible hopping directions. Figure 1 illustrates how the EPN implements this transformation law directly for the four directional hop-ping free-energy differences. For a selected occupied site 
+
+i, let N denote the local neighborhood centered at i. The microscopic input is simply the ordered occupation vec-tor 
+
+Xi =
+
+
+
+nfi+δ
+
+
+
+δ∈N 
+
+, (6) while the output has a fixed component for each of the four nearest-neighbor hopping directions, 
+
+Yi = (∆ Ei,α )α∈D , D = {+x, −x, +y, −y}. (7) 4<latexit sha1_base64="9ftltsCuQxLmlCpkIWwCZxrWRFw=">AAAB8nicbVDLSgNBEJyNryS+oh69DAbBU9gViR6DXjxGMA/cxDA7mU2GzM4sM71iWPIZHvSgiFfBf/Hm1+jkcdDEgoaiqpvuriAW3IDrfjmZpeWV1bVsLr++sbm1XdjZrRuVaMpqVAmlmwExTHDJasBBsGasGYkCwRrB4GLsN+6YNlzJaxjGrB2RnuQhpwSs5LeAR8xgz7096RSKbsmdAC8Sb0aKlVz8ePNx/13tFD5bXUWTiEmgghjje24M7ZRo4FSwUb6VGBYTOiA95lsqid3UTicnj/ChVbo4VNqWBDxRf0+kJDJmGAW2MyLQN/PeWPzP8xMIz9opl3ECTNLpojARGBQe/4+7XDMKYmgJoZrbWzHtE00o2JTyNgRv/uVFUj8ueeVS+cqmcY6myKJ9dICOkIdOUQVdoiqqIYoUekDP6MUB58l5dd6mrRlnNrOH/sB5/wFA6pRS</latexit> 
+
+→10 4
+
+<latexit sha1_base64="Jj7+m5RdYe4ezCOwFfinAVm8giQ=">AAAB6HicbZDJSgNBEIZr4hbHLerRS2MQPIUZkehFDHrxmIBZIBlCT6cmadOz0N0jhJAn8OJBEa/6MN69iG9jZzlo4g8NH/9fRVeVnwiutON8W5ml5ZXVtey6vbG5tb2T292rqTiVDKssFrFs+FSh4BFWNdcCG4lEGvoC637/epzX71EqHke3epCgF9JuxAPOqDZW5bSdyzsFZyKyCO4M8pcf9kXy/mWX27nPVidmaYiRZoIq1XSdRHtDKjVnAkd2K1WYUNanXWwajGiIyhtOBh2RI+N0SBBL8yJNJu7vjiENlRqEvqkMqe6p+Wxs/pc1Ux2ce0MeJanGiE0/ClJBdEzGW5MOl8i0GBigTHIzK2E9KinT5ja2OYI7v/Ii1E4KbrFQrDj50hVMlYUDOIRjcOEMSnADZagCA4QHeIJn6856tF6s12lpxpr17MMfWW8/4kKQAA==</latexit> 
+
+4
+
+<latexit sha1_base64="Wqp8g/VZa+NMcIP1bjDg4OsVDxw=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8EgWIVdi5hGDNpYJmAukCxhdnKSjJm9MDMrhCVPYGOhiK0+jL2N+DZOLoUm/jDw8f/nMOccPxZcacf5tjIrq2vrG9lNe2t7Z3cvt39QV1EiGdZYJCLZ9KlCwUOsaa4FNmOJNPAFNvzh9SRv3KNUPApv9ShGL6D9kPc4o9pY1VInl3cKzlRkGdw55C8/7Iv4/cuudHKf7W7EkgBDzQRVquU6sfZSKjVnAsd2O1EYUzakfWwZDGmAykung47JiXG6pBdJ80JNpu7vjpQGSo0C31QGVA/UYjYx/8taie6VvJSHcaIxZLOPeokgOiKTrUmXS2RajAxQJrmZlbABlZRpcxvbHMFdXHkZ6mcFt1goVp18+QpmysIRHMMpuHAOZbiBCtSAAcIDPMGzdWc9Wi/W66w0Y817DuGPrLcf6FKQBA==</latexit> 
+
+8
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+<latexit sha1_base64="tEfq5oh7D/ZppB3kdY1UGu7vxDE=">AAAB8nicbVDJSgNBEO1xTeIW9eilMQheDDMeosdgFLwIEcyCkyH0dHqSJr0M3T1iGPIZHvSgiFfBf/Hm12hnOWjig4LHe1VU1QtjRrVx3S9nYXFpeWU1k82trW9sbuW3d+paJgqTGpZMqmaINGFUkJqhhpFmrAjiISONsF8Z+Y07ojSV4sYMYhJw1BU0ohgZK/ktxdOL86P+VWXYzhfcojsGnCfelBTK2fjx9uP+u9rOf7Y6EiecCIMZ0tr33NgEKVKGYkaGuVaiSYxwH3WJb6lAnOggHZ88hAdW6cBIKlvCwLH6eyJFXOsBD20nR6anZ72R+J/nJyY6DVIq4sQQgSeLooRBI+Hof9ihimDDBpYgrKi9FeIeUggbm1LOhuDNvjxP6sdFr1QsXds0zsAEGbAH9sEh8MAJKINLUAU1gIEED+AZvDjGeXJenbdJ64IzndkFf+C8/wC+fJSl</latexit> 
+
+ED → kMC 
+
+<latexit sha1_base64="vtG21gHUghDVUu+66cj5/tqMpcM=">AAAB8nicbVC7SgNBFJ31mcRX1NJmMAg2hl2LaBlMY2EggnngZgmzk9lkyDyWmVkxLPkMCy0UsRX8Fzu/RiePQhMPXDiccy/33hPGjGrjul/O0vLK6tp6Jpvb2Nza3snv7jW0TBQmdSyZVK0QacKoIHVDDSOtWBHEQ0aa4aAy9pt3RGkqxY0ZxiTgqCdoRDEyVvLbiqfVq5NBtTLq5Atu0Z0ALhJvRgrlbPx4+3H/XevkP9tdiRNOhMEMae17bmyCFClDMSOjXDvRJEZ4gHrEt1QgTnSQTk4ewSOrdGEklS1h4ET9PZEirvWQh7aTI9PX895Y/M/zExOdBykVcWKIwNNFUcKgkXD8P+xSRbBhQ0sQVtTeCnEfKYSNTSlnQ/DmX14kjdOiVyqWrm0aF2CKDDgAh+AYeOAMlMElqIE6wECCB/AMXhzjPDmvztu0dcmZzeyDP3DefwDXFJS1</latexit> 
+
+ML → kMC 
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+<latexit sha1_base64="tEfq5oh7D/ZppB3kdY1UGu7vxDE=">AAAB8nicbVDJSgNBEO1xTeIW9eilMQheDDMeosdgFLwIEcyCkyH0dHqSJr0M3T1iGPIZHvSgiFfBf/Hm12hnOWjig4LHe1VU1QtjRrVx3S9nYXFpeWU1k82trW9sbuW3d+paJgqTGpZMqmaINGFUkJqhhpFmrAjiISONsF8Z+Y07ojSV4sYMYhJw1BU0ohgZK/ktxdOL86P+VWXYzhfcojsGnCfelBTK2fjx9uP+u9rOf7Y6EiecCIMZ0tr33NgEKVKGYkaGuVaiSYxwH3WJb6lAnOggHZ88hAdW6cBIKlvCwLH6eyJFXOsBD20nR6anZ72R+J/nJyY6DVIq4sQQgSeLooRBI+Hof9ihimDDBpYgrKi9FeIeUggbm1LOhuDNvjxP6sdFr1QsXds0zsAEGbAH9sEh8MAJKINLUAU1gIEED+AZvDjGeXJenbdJ64IzndkFf+C8/wC+fJSl</latexit> 
+
+ED → kMC 
+
+<latexit sha1_base64="vtG21gHUghDVUu+66cj5/tqMpcM=">AAAB8nicbVC7SgNBFJ31mcRX1NJmMAg2hl2LaBlMY2EggnngZgmzk9lkyDyWmVkxLPkMCy0UsRX8Fzu/RiePQhMPXDiccy/33hPGjGrjul/O0vLK6tp6Jpvb2Nza3snv7jW0TBQmdSyZVK0QacKoIHVDDSOtWBHEQ0aa4aAy9pt3RGkqxY0ZxiTgqCdoRDEyVvLbiqfVq5NBtTLq5Atu0Z0ALhJvRgrlbPx4+3H/XevkP9tdiRNOhMEMae17bmyCFClDMSOjXDvRJEZ4gHrEt1QgTnSQTk4ewSOrdGEklS1h4ET9PZEirvWQh7aTI9PX895Y/M/zExOdBykVcWKIwNNFUcKgkXD8P+xSRbBhQ0sQVtTeCnEfKYSNTSlnQ/DmX14kjdOiVyqWrm0aF2CKDDgAh+AYeOAMlMElqIE6wECCB/AMXhzjPDmvztu0dcmZzeyDP3DefwDXFJS1</latexit> 
+
+ML → kMC 
+
+       
+
+       
+
+<latexit sha1_base64="4XaL0A1MP/rwFd4ruFarjhJ/G/Q=">AAAB8HicbVDLSgNBEOyNrxhfUY9eBoMQL2FXfB2DXjxGMA9JljA7O5sMmZldZmaFsOQrvHhQxKuf482/cZLsQRMLGoqqbrq7goQzbVz32ymsrK6tbxQ3S1vbO7t75f2Dlo5TRWiTxDxWnQBrypmkTcMMp51EUSwCTtvB6Hbqt5+o0iyWD2acUF/ggWQRI9hY6bFR7YWUG3zaL1fcmjsDWiZeTiqQo9Evf/XCmKSCSkM41rrruYnxM6wMI5xOSr1U0wSTER7QrqUSC6r9bHbwBJ1YJURRrGxJg2bq74kMC63HIrCdApuhXvSm4n9eNzXRtZ8xmaSGSjJfFKUcmRhNv0chU5QYPrYEE8XsrYgMscLE2IxKNgRv8eVl0jqreZe1i/vzSv0mj6MIR3AMVfDgCupwBw1oAgEBz/AKb45yXpx352PeWnDymUP4A+fzB/2tj+U=</latexit> 
+
+P (ω)
+
+<latexit sha1_base64="GQuMYZhMmwPAndQ0tTFN44pZFYg=">AAAB6HicbVDLSgNBEOz1GeMr6tHLYBA8hV3xdQx68ZiAeUCyhNlJbzJmdnaZmRXCki/w4kERr36SN//GSbIHTSxoKKq66e4KEsG1cd1vZ2V1bX1js7BV3N7Z3dsvHRw2dZwqhg0Wi1i1A6pRcIkNw43AdqKQRoHAVjC6m/qtJ1Sax/LBjBP0IzqQPOSMGivV3V6p7FbcGcgy8XJShhy1Xumr249ZGqE0TFCtO56bGD+jynAmcFLsphoTykZ0gB1LJY1Q+9ns0Ak5tUqfhLGyJQ2Zqb8nMhppPY4C2xlRM9SL3lT8z+ukJrzxMy6T1KBk80VhKoiJyfRr0ucKmRFjSyhT3N5K2JAqyozNpmhD8BZfXibN84p3VbmsX5Srt3kcBTiGEzgDD66hCvdQgwYwQHiGV3hzHp0X5935mLeuOPnMEfyB8/kDfFmMvg==</latexit> 
+
+0 <latexit sha1_base64="G8bqSPj9q+UC2B8GxtQyPeKxTLo=">AAAB7XicbVDLSgNBEOyNrxhfUY9eFoPgKeyKr2PQi8cI5gHJEmZnO8mY2ZllZlYIS/7BiwdFvPo/3vwbJ8keNLGgoajqprsrTDjTxvO+ncLK6tr6RnGztLW9s7tX3j9oapkqig0quVTtkGjkTGDDMMOxnSgkccixFY5up37rCZVmUjyYcYJBTAaC9RklxkrNboTckF654lW9Gdxl4uekAjnqvfJXN5I0jVEYyonWHd9LTJARZRjlOCl1U40JoSMywI6lgsSog2x27cQ9sUrk9qWyJYw7U39PZCTWehyHtjMmZqgXvan4n9dJTf86yJhIUoOCzhf1U+4a6U5fdyOmkBo+toRQxeytLh0SRaixAZVsCP7iy8ukeVb1L6sX9+eV2k0eRxGO4BhOwYcrqMEd1KEBFB7hGV7hzZHOi/PufMxbC04+cwh/4Hz+AJTMjyY=</latexit> 
+
+ω
+
+<latexit sha1_base64="cnUV9uxSLKXLD4NxqgYIpY+1aTw=">AAAB7HicbVBNTwIxEJ31E/EL9eilkZh4kewaUY9ELx4xcYEENqRbZqGh2920XRNC+A1ePGiMV3+QN/+NBfag4Euavrw3k5l5YSq4Nq777aysrq1vbBa2its7u3v7pYPDhk4yxdBniUhUK6QaBZfoG24EtlKFNA4FNsPh3dRvPqHSPJGPZpRiENO+5BFn1FjJP3crbrVbKttvBrJMvJyUIUe9W/rq9BKWxSgNE1TrtuemJhhTZTgTOCl2Mo0pZUPax7alksaog/Fs2Qk5tUqPRImyTxoyU393jGms9SgObWVMzUAvelPxP6+dmegmGHOZZgYlmw+KMkFMQqaXkx5XyIwYWUKZ4nZXwgZUUWZsPkUbgrd48jJpXFS8q0r14bJcu83jKMAxnMAZeHANNbiHOvjAgMMzvMKbI50X5935mJeuOHnPEfyB8/kDNOONpg==</latexit> 
+
+→0.05  <latexit sha1_base64="0Tec8161BzFIGQ+BSn4KWzgpwDo=">AAAB63icbVBNSwMxEJ2tX7V+VT16CRbBU9kVqx6LXjxWcNtCu5Rsmm1Dk+ySZIWy9C948aCIV/+QN/+N2XYP2vog5PHeDDPzwoQzbVz32ymtrW9sbpW3Kzu7e/sH1cOjto5TRahPYh6rbog15UxS3zDDaTdRFIuQ0044ucv9zhNVmsXy0UwTGgg8kixiBJtccutuY1Ct2W8OtEq8gtSgQGtQ/eoPY5IKKg3hWOue5yYmyLAyjHA6q/RTTRNMJnhEe5ZKLKgOsvmuM3RmlSGKYmWfNGiu/u7IsNB6KkJbKbAZ62UvF//zeqmJboKMySQ1VJLFoCjlyMQoPxwNmaLE8KklmChmd0VkjBUmxsZTsSF4yyevkvZF3buqNx4ua83bIo4ynMApnIMH19CEe2iBDwTG8Ayv8OYI58V5dz4WpSWn6DmGP3A+fwDLAo1v</latexit> 
+
+0.05 
+
+<latexit sha1_base64="LISPRHdmq883/DhSI4C5Bdzu6Yg=">AAAB63icbVDLSsNAFL3xWeur6tLNYBHcGJLia1lw02UF+4A2lMl00g6dmYSZiVBCf8GNC0Xc+kPu/BsnbRbaeuDC4Zx7ufeeMOFMG8/7dtbWNza3tks75d29/YPDytFxW8epIrRFYh6rbog15UzSlmGG026iKBYhp51wcp/7nSeqNIvlo5kmNBB4JFnECDa5dOm5tUGl6rneHGiV+AWpQoHmoPLVH8YkFVQawrHWPd9LTJBhZRjhdFbup5ommEzwiPYslVhQHWTzW2fo3CpDFMXKljRorv6eyLDQeipC2ymwGetlLxf/83qpie6CjMkkNVSSxaIo5cjEKH8cDZmixPCpJZgoZm9FZIwVJsbGU7Yh+Msvr5J2zfVv3OuHq2q9UcRRglM4gwvw4Rbq0IAmtIDAGJ7hFd4c4bw4787HonXNKWZO4A+czx/DsY1v</latexit> 
+
+→0.2
+
+<latexit sha1_base64="Iw+ib6HLA0fFKlQj9cNq+R9o7Dg=">AAAB6HicbVDLSgNBEOz1GeMr6tHLYBA8hV3xdQx4yTEB84BkCbOT3mTM7OwyMyuEJV/gxYMiXv0kb/6Nk2QPmljQUFR1090VJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8P/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjnZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxXvpnLduCpXa3kcBTiFM7gAD26hCjWoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfieMxA==</latexit> 
+
+0
+
+<latexit sha1_base64="colKlV6pnSO67724RcHSYfCE2KQ=">AAAB6nicbVDLSgNBEOz1GeMr6tHLYBA8LbvB1zHgJceI5gHJEmYnvcmQ2dllZlYIIZ/gxYMiXv0ib/6Nk2QPmljQUFR1090VpoJr43nfztr6xubWdmGnuLu3f3BYOjpu6iRTDBssEYlqh1Sj4BIbhhuB7VQhjUOBrXB0N/NbT6g0T+SjGacYxHQgecQZNVZ68NxKr1T2XG8Oskr8nJQhR71X+ur2E5bFKA0TVOuO76UmmFBlOBM4LXYzjSllIzrAjqWSxqiDyfzUKTm3Sp9EibIlDZmrvycmNNZ6HIe2M6ZmqJe9mfif18lMdBtMuEwzg5ItFkWZICYhs79JnytkRowtoUxxeythQ6ooMzadog3BX355lTQrrn/tXt1flqu1PI4CnMIZXIAPN1CFGtShAQwG8Ayv8OYI58V5dz4WrWtOPnMCf+B8/gBaDo04</latexit> 
+
+0.2
+
+<latexit sha1_base64="wtuYDw5xoSB6V7T3ZC/l+Znq8vI=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoPgadkVX8eAlxwjmgckS5id9CZDZmeXmVkhhHyCFw+KePWLvPk3TpI9aGJBQ1HVTXdXmAqujed9O4W19Y3NreJ2aWd3b/+gfHjU1EmmGDZYIhLVDqlGwSU2DDcC26lCGocCW+Hobua3nlBpnshHM04xiOlA8ogzaqz04LmXvXLFc705yCrxc1KBHPVe+avbT1gWozRMUK07vpeaYEKV4UzgtNTNNKaUjegAO5ZKGqMOJvNTp+TMKn0SJcqWNGSu/p6Y0FjrcRzazpiaoV72ZuJ/Xicz0W0w4TLNDEq2WBRlgpiEzP4mfa6QGTG2hDLF7a2EDamizNh0SjYEf/nlVdK8cP1r9+r+slKt5XEU4QRO4Rx8uIEq1KAODWAwgGd4hTdHOC/Ou/OxaC04+cwx/IHz+QNdFo06</latexit> 
+
+0.4
+
+<latexit sha1_base64="LISPRHdmq883/DhSI4C5Bdzu6Yg=">AAAB63icbVDLSsNAFL3xWeur6tLNYBHcGJLia1lw02UF+4A2lMl00g6dmYSZiVBCf8GNC0Xc+kPu/BsnbRbaeuDC4Zx7ufeeMOFMG8/7dtbWNza3tks75d29/YPDytFxW8epIrRFYh6rbog15UzSlmGG026iKBYhp51wcp/7nSeqNIvlo5kmNBB4JFnECDa5dOm5tUGl6rneHGiV+AWpQoHmoPLVH8YkFVQawrHWPd9LTJBhZRjhdFbup5ommEzwiPYslVhQHWTzW2fo3CpDFMXKljRorv6eyLDQeipC2ymwGetlLxf/83qpie6CjMkkNVSSxaIo5cjEKH8cDZmixPCpJZgoZm9FZIwVJsbGU7Yh+Msvr5J2zfVv3OuHq2q9UcRRglM4gwvw4Rbq0IAmtIDAGJ7hFd4c4bw4787HonXNKWZO4A+czx/DsY1v</latexit> 
+
+→0.2 <latexit sha1_base64="Iw+ib6HLA0fFKlQj9cNq+R9o7Dg=">AAAB6HicbVDLSgNBEOz1GeMr6tHLYBA8hV3xdQx4yTEB84BkCbOT3mTM7OwyMyuEJV/gxYMiXv0kb/6Nk2QPmljQUFR1090VJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8P/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjnZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxXvpnLduCpXa3kcBTiFM7gAD26hCjWoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfieMxA==</latexit> 
+
+0 <latexit sha1_base64="colKlV6pnSO67724RcHSYfCE2KQ=">AAAB6nicbVDLSgNBEOz1GeMr6tHLYBA8LbvB1zHgJceI5gHJEmYnvcmQ2dllZlYIIZ/gxYMiXv0ib/6Nk2QPmljQUFR1090VpoJr43nfztr6xubWdmGnuLu3f3BYOjpu6iRTDBssEYlqh1Sj4BIbhhuB7VQhjUOBrXB0N/NbT6g0T+SjGacYxHQgecQZNVZ68NxKr1T2XG8Oskr8nJQhR71X+ur2E5bFKA0TVOuO76UmmFBlOBM4LXYzjSllIzrAjqWSxqiDyfzUKTm3Sp9EibIlDZmrvycmNNZ6HIe2M6ZmqJe9mfif18lMdBtMuEwzg5ItFkWZICYhs79JnytkRowtoUxxeythQ6ooMzadog3BX355lTQrrn/tXt1flqu1PI4CnMIZXIAPN1CFGtShAQwG8Ayv8OYI58V5dz4WrWtOPnMCf+B8/gBaDo04</latexit> 
+
+0.2 <latexit sha1_base64="wtuYDw5xoSB6V7T3ZC/l+Znq8vI=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoPgadkVX8eAlxwjmgckS5id9CZDZmeXmVkhhHyCFw+KePWLvPk3TpI9aGJBQ1HVTXdXmAqujed9O4W19Y3NreJ2aWd3b/+gfHjU1EmmGDZYIhLVDqlGwSU2DDcC26lCGocCW+Hobua3nlBpnshHM04xiOlA8ogzaqz04LmXvXLFc705yCrxc1KBHPVe+avbT1gWozRMUK07vpeaYEKV4UzgtNTNNKaUjegAO5ZKGqMOJvNTp+TMKn0SJcqWNGSu/p6Y0FjrcRzazpiaoV72ZuJ/Xicz0W0w4TLNDEq2WBRlgpiEzP4mfa6QGTG2hDLF7a2EDamizNh0SjYEf/nlVdK8cP1r9+r+slKt5XEU4QRO4Rx8uIEq1KAODWAwgGd4hTdHOC/Ou/OxaC04+cwx/IHz+QNdFo06</latexit> 
+
+0.4 <latexit sha1_base64="33pNuRO0U4yvTchfHZLDgIbyr8M=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUdAelsltxFyDrxMtJGXI0BqWv/jBmaYTSMEG17nluYvyMKsOZwFmxn2pMKJvQEfYslTRC7WeLQ2fk0ipDEsbKljRkof6eyGik9TQKbGdEzVivenPxP6+XmvDOz7hMUoOSLReFqSAmJvOvyZArZEZMLaFMcXsrYWOqKDM2m6INwVt9eZ20rytetVJt3pRr9TyOApzDBVyBB7dQgzo0oAUMEJ7hFd6cR+fFeXc+lq0bTj5zBn/gfP4AfnmMxQ==</latexit> 
+
+0
+
+<latexit sha1_base64="RKpBYkEJxpdlNewW2urR2wCTiO0=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqseClx4r2g9oQ9lsJ+3SzSbsboQS+hO8eFDEq7/Im//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJaPZpqgH9GR5CFn1Fjpwa16g3LFrboLkHXi5aQCOZqD8ld/GLM0QmmYoFr3PDcxfkaV4UzgrNRPNSaUTegIe5ZKGqH2s8WpM3JhlSEJY2VLGrJQf09kNNJ6GgW2M6JmrFe9ufif10tNeOtnXCapQcmWi8JUEBOT+d9kyBUyI6aWUKa4vZWwMVWUGZtOyYbgrb68TtpXVa9Wrd1fV+qNPI4inME5XIIHN1CHBjShBQxG8Ayv8OYI58V5dz6WrQUnnzmFP3A+fwBY3I04</latexit> 
+
+0.1
+
+<latexit sha1_base64="xCapYfGzdTbnJZZEW3gffu6AU0A=">AAAB6HicbVDLTgJBEOzFF+IL9ehlIjHxRHaJQY8kXjhCIo8ENmR2aGBkdnYzM2tCNnyBFw8a49VP8ubfOMAeFKykk0pVd7q7glhwbVz328ltbe/s7uX3CweHR8cnxdOzto4SxbDFIhGpbkA1Ci6xZbgR2I0V0jAQ2Amm9wu/84RK80g+mFmMfkjHko84o8ZKzcqgWHLL7hJkk3gZKUGGxqD41R9GLAlRGiao1j3PjY2fUmU4Ezgv9BONMWVTOsaepZKGqP10eeicXFllSEaRsiUNWaq/J1Iaaj0LA9sZUjPR695C/M/rJWZ056dcxolByVaLRokgJiKLr8mQK2RGzCyhTHF7K2ETqigzNpuCDcFbf3mTtCtlr1quNm9KtXoWRx4u4BKuwYNbqEEdGtACBgjP8ApvzqPz4rw7H6vWnJPNnMMfOJ8/gYGMxw==</latexit> 
+
+2 <latexit sha1_base64="UHmqUzgplDqRaL7Yt7Tj2bFWFkQ=">AAAB5HicbVBNS8NAEJ3Urxq/qlcvi0XwVBKR6rHgpccK9gPaUDbbSbt2swm7G6GE/gIvHhSv/iZv/hu3bQ7a+mDg8d4MM/PCVHBtPO/bKW1t7+zulffdg8Oj45OKe9rRSaYYtlkiEtULqUbBJbYNNwJ7qUIahwK74fR+4XefUWmeyEczSzGI6VjyiDNqrPRwM6xUvZq3BNkkfkGqUKA1rHwNRgnLYpSGCap13/dSE+RUGc4Ezt1BpjGlbErH2LdU0hh1kC8PnZNLq4xIlChb0pCl+nsip7HWszi0nTE1E73uLcT/vH5morsg5zLNDEq2WhRlgpiELL4mI66QGTGzhDLF7a2ETaiizNhsXBuCv/7yJulc1/x6rV5tNIswynAOF3AFPtxCA5rQgjYwQHiBN3h3npxX52PVWHKKiTP4A+fzBxn7i58=</latexit> 
+
+4 <latexit sha1_base64="edBvJcHG+LwtIWdwL9gM51MJRRM=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUrA5KZbfiLkDWiZeTMuRoDEpf/WHM0gilYYJq3fPcxPgZVYYzgbNiP9WYUDahI+xZKmmE2s8Wh87IpVWGJIyVLWnIQv09kdFI62kU2M6ImrFe9ebif14vNeGdn3GZpAYlWy4KU0FMTOZfkyFXyIyYWkKZ4vZWwsZUUWZsNkUbgrf68jppX1e8aqXavCnX6nkcBTiHC7gCD26hBnVoQAsYIDzDK7w5j86L8+58LFs3nHzmDP7A+fwBh5GMyw==</latexit> 
+
+6 <latexit sha1_base64="fTjEVep+3kAjzNH8JfhyNag1eYA=">AAAB6HicbVDLTgJBEOzFF+IL9ehlIjHxRHaNQY4kXjhCIo8ENmR2aGBkdnYzM2tCNnyBFw8a49VP8ubfOMAeFKykk0pVd7q7glhwbVz328ltbe/s7uX3CweHR8cnxdOzto4SxbDFIhGpbkA1Ci6xZbgR2I0V0jAQ2Amm9wu/84RK80g+mFmMfkjHko84o8ZKzeqgWHLL7hJkk3gZKUGGxqD41R9GLAlRGiao1j3PjY2fUmU4Ezgv9BONMWVTOsaepZKGqP10eeicXFllSEaRsiUNWaq/J1Iaaj0LA9sZUjPR695C/M/rJWZU9VMu48SgZKtFo0QQE5HF12TIFTIjZpZQpri9lbAJVZQZm03BhuCtv7xJ2jdlr1KuNG9LtXoWRx4u4BKuwYM7qEEdGtACBgjP8ApvzqPz4rw7H6vWnJPNnMMfOJ8/ipmMzQ==</latexit> 
+
+8 <latexit sha1_base64="PZ1IC08+DpzSF142adBVFPNy0No=">AAAB6XicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqseClx6r2A9oQ9lsJ+3SzSbsboQS+g+8eFDEq//Im//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJaPZpqgH9GR5CFn1FjpwXMH5YpbdRcg68TLSQVyNAflr/4wZmmE0jBBte55bmL8jCrDmcBZqZ9qTCib0BH2LJU0Qu1ni0tn5MIqQxLGypY0ZKH+nshopPU0CmxnRM1Yr3pz8T+vl5rw1s+4TFKDki0XhakgJibzt8mQK2RGTC2hTHF7K2FjqigzNpySDcFbfXmdtK+qXq1au7+u1Bt5HEU4g3O4BA9uoA4NaEILGITwDK/w5kycF+fd+Vi2Fpx85hT+wPn8Ae3SjQA=</latexit> 
+
+10 
+
+<latexit sha1_base64="GGT2IDLmH6OjvM/M++ETt70Te8Q=">AAAB+nicbVDLSsNAFJ3UV62vVJduBovgqiQi1WXBFrqsYB/QhDCZTtqhM5MwM1FK7Ke4caGIW7/EnX/jtM1CWw9cOJxzL/feEyaMKu0431ZhY3Nre6e4W9rbPzg8ssvHXRWnEpMOjlks+yFShFFBOppqRvqJJIiHjPTCye3c7z0QqWgs7vU0IT5HI0EjipE2UmCXvQZhGsFmkHmSw2ZjFtgVp+osANeJm5MKyNEO7C9vGOOUE6ExQ0oNXCfRfoakppiRWclLFUkQnqARGRgqECfKzxanz+C5UYYwiqUpoeFC/T2RIa7UlIemkyM9VqveXPzPG6Q6uvEzKpJUE4GXi6KUQR3DeQ5wSCXBmk0NQVhScyvEYyQR1iatkgnBXX15nXQvq26tWru7qtRbeRxFcArOwAVwwTWogxZogw7A4BE8g1fwZj1ZL9a79bFsLVj5zAn4A+vzBx3Hk0w=</latexit> 
+
+!EED 
+
+<latexit sha1_base64="Hq57TjF5149FF7Yy/gnc//Qf8kU=">AAAB+nicbVDLSsNAFJ3UV62vVJduBovgqiQi1WVBhS4UKtgHNCFMppN26MwkzEyUEvspblwo4tYvceffOG2z0NYDFw7n3Mu994QJo0o7zrdVWFldW98obpa2tnd29+zyflvFqcSkhWMWy26IFGFUkJammpFuIgniISOdcHQ59TsPRCoai3s9TojP0UDQiGKkjRTYZe+KMI3gdZB5ksPbm0lgV5yqMwNcJm5OKiBHM7C/vH6MU06Exgwp1XOdRPsZkppiRiYlL1UkQXiEBqRnqECcKD+bnT6Bx0bpwyiWpoSGM/X3RIa4UmMemk6O9FAtelPxP6+X6ujCz6hIUk0Eni+KUgZ1DKc5wD6VBGs2NgRhSc2tEA+RRFibtEomBHfx5WXSPq26tWrt7qxSb+RxFMEhOAInwAXnoA4aoAlaAINH8AxewZv1ZL1Y79bHvLVg5TMH4A+szx82H5Nc</latexit> 
+
+!EML 
+
+<latexit sha1_base64="bH1t3poBDwSGpvxz9X3wrwFmBJI=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUVINS2a24C5B14uWkDDkag9JXfxizNEJpmKBa9zw3MX5GleFM4KzYTzUmlE3oCHuWShqh9rPFoTNyaZUhCWNlSxqyUH9PZDTSehoFtjOiZqxXvbn4n9dLTXjnZ1wmqUHJlovCVBATk/nXZMgVMiOmllCmuL2VsDFVlBmbTdGG4K2+vE7a1xWvWqk2b8q1eh5HAc7hAq7Ag1uoQR0a0AIGCM/wCm/Oo/PivDsfy9YNJ585gz9wPn8A4oGNBw==</latexit> 
+
+r
+
+<latexit sha1_base64="33pNuRO0U4yvTchfHZLDgIbyr8M=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUdAelsltxFyDrxMtJGXI0BqWv/jBmaYTSMEG17nluYvyMKsOZwFmxn2pMKJvQEfYslTRC7WeLQ2fk0ipDEsbKljRkof6eyGik9TQKbGdEzVivenPxP6+XmvDOz7hMUoOSLReFqSAmJvOvyZArZEZMLaFMcXsrYWOqKDM2m6INwVt9eZ20rytetVJt3pRr9TyOApzDBVyBB7dQgzo0oAUMEJ7hFd6cR+fFeXc+lq0bTj5zBn/gfP4AfnmMxQ==</latexit> 
+
+0
+
+<latexit sha1_base64="33pNuRO0U4yvTchfHZLDgIbyr8M=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUdAelsltxFyDrxMtJGXI0BqWv/jBmaYTSMEG17nluYvyMKsOZwFmxn2pMKJvQEfYslTRC7WeLQ2fk0ipDEsbKljRkof6eyGik9TQKbGdEzVivenPxP6+XmvDOz7hMUoOSLReFqSAmJvOvyZArZEZMLaFMcXsrYWOqKDM2m6INwVt9eZ20rytetVJt3pRr9TyOApzDBVyBB7dQgzo0oAUMEJ7hFd6cR+fFeXc+lq0bTj5zBn/gfP4AfnmMxQ==</latexit> 
+
+0
+
+<latexit sha1_base64="RKpBYkEJxpdlNewW2urR2wCTiO0=">AAAB6nicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqseClx4r2g9oQ9lsJ+3SzSbsboQS+hO8eFDEq7/Im//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJaPZpqgH9GR5CFn1Fjpwa16g3LFrboLkHXi5aQCOZqD8ld/GLM0QmmYoFr3PDcxfkaV4UzgrNRPNSaUTegIe5ZKGqH2s8WpM3JhlSEJY2VLGrJQf09kNNJ6GgW2M6JmrFe9ufif10tNeOtnXCapQcmWi8JUEBOT+d9kyBUyI6aWUKa4vZWwMVWUGZtOyYbgrb68TtpXVa9Wrd1fV+qNPI4inME5XIIHN1CHBjShBQxG8Ayv8OYI58V5dz6WrQUnnzmFP3A+fwBY3I04</latexit> 
+
+0.1
+
+<latexit sha1_base64="V1+SJGJifZiaf8VtJwPHig8MWYo=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoMQL2E3h+gx4CXHiOYByRJ6J7PJkNnZZWZWCEs+wYsHRbz6Rd78GyePgyYWNBRV3XR3BYng2rjut5Pb2t7Z3cvvFw4Oj45PiqdnbR2nirIWjUWsugFqJrhkLcONYN1EMYwCwTrB5G7ud56Y0jyWj2aaMD/CkeQhp2is9FDG60Gx5FbcBcgm8VakBCs0B8Wv/jCmacSkoQK17nluYvwMleFUsFmhn2qWIJ3giPUslRgx7WeLU2fkyipDEsbKljRkof6eyDDSehoFtjNCM9br3lz8z+ulJrz1My6T1DBJl4vCVBATk/nfZMgVo0ZMLUGquL2V0DEqpMamU7AheOsvb5J2teLVKrX7aqneWMWRhwu4hDJ4cAN1aEATWkBhBM/wCm+OcF6cd+dj2ZpzVjPn8AfO5w+Na41Z</latexit> 
+
+(a) 
+
+<latexit sha1_base64="SVmmfvzkM6bXMtIHH+MMekEReQI=">AAAB83icbVDLTgJBEOzFF+IL9ehlIpjghexyQC8mJF44YiKPBDZkdpiFCbOPzPSakA2/4cWDxnj1Z7z5Nw6wBwUr6aRS1Z3uLi+WQqNtf1u5re2d3b38fuHg8Oj4pHh61tFRohhvs0hGqudRzaUIeRsFSt6LFaeBJ3nXm94v/O4TV1pE4SPOYu4GdBwKXzCKRhpUvGtSRnJHanZ5WCzZVXsJskmcjJQgQ2tY/BqMIpYEPEQmqdZ9x47RTalCwSSfFwaJ5jFlUzrmfUNDGnDtpsub5+TKKCPiR8pUiGSp/p5IaaD1LPBMZ0Bxote9hfif10/Qv3VTEcYJ8pCtFvmJJBiRRQBkJBRnKGeGUKaEuZWwCVWUoYmpYEJw1l/eJJ1a1alX6w+1UqOZxZGHC7iECjhwAw1oQgvawCCGZ3iFNyuxXqx362PVmrOymXP4A+vzB4iPj28=</latexit> 
+
+(b) t = 20 
+
+<latexit sha1_base64="kPg3SIo0SS0OF2c55RJ3/6G2cig=">AAAB9HicbVDLTgJBEOzFF+IL9ehlIpjghexyQC8mJF44YiKPBDZkdhhgwuzDmV4SsuE7vHjQGK9+jDf/xgH2oGAlnVSqutPd5UVSaLTtbyuztb2zu5fdzx0cHh2f5E/PWjqMFeNNFspQdTyquRQBb6JAyTuR4tT3JG97k/uF355ypUUYPOIs4q5PR4EYCkbRSG6JXZMikjvi2Haxny/YZXsJskmclBQgRaOf/+oNQhb7PEAmqdZdx47QTahCwSSf53qx5hFlEzriXUMD6nPtJsuj5+TKKAMyDJWpAMlS/T2RUF/rme+ZTp/iWK97C/E/rxvj8NZNRBDFyAO2WjSMJcGQLBIgA6E4QzkzhDIlzK2EjamiDE1OOROCs/7yJmlVyk61XH2oFGr1NI4sXMAllMCBG6hBHRrQBAZP8Ayv8GZNrRfr3fpYtWasdOYc/sD6/AH4y4+p</latexit> 
+
+(c) t = 100 
+
+<latexit sha1_base64="rDblxYkhxe/ap2ZReljIty+Akvk=">AAAB7XicbVBNSwMxEJ2tX7V+VT16CRahXsqulOqx2IvHCvYD2qVk02wbm02WJCuUpf/BiwdFvPp/vPlvTNs9aOuDgcd7M8zMC2LOtHHdbye3sbm1vZPfLeztHxweFY9P2lomitAWkVyqboA15UzQlmGG026sKI4CTjvBpDH3O09UaSbFg5nG1I/wSLCQEWys1G4MwrK6HBRLbsVdAK0TLyMlyNAcFL/6Q0mSiApDONa657mx8VOsDCOczgr9RNMYkwke0Z6lAkdU++ni2hm6sMoQhVLZEgYt1N8TKY60nkaB7YywGetVby7+5/USE974KRNxYqggy0VhwpGRaP46GjJFieFTSzBRzN6KyBgrTIwNqGBD8FZfXiftq4pXq9Tuq6X6bRZHHs7gHMrgwTXU4Q6a0AICj/AMr/DmSOfFeXc+lq05J5s5hT9wPn8AqQuOjA==</latexit> 
+
+Cf (r)
+
+FIG. 2. Microscopic and dynamical benchmarks of the EPN for the Falicov–Kimball model. (a) Predicted hopping energy changes ∆ EML versus exact-diagonalization values ∆ EED .The dashed line denotes perfect agreement; the inset shows the distribution of prediction errors δ = ∆ EML −∆EED . (b,c) 
+
+f -electron density correlation function Cf (r) = ⟨nfi nfj ⟩ − ρ2
+
+f ,with r = |ri −rj |, obtained from ED-kMC and EPN-kMC sim-ulations after a thermal quench at (b) t = 20 and (c) t = 100 sweeps. 
+
+In the calculations below, N is a disk of radius Rc = 10, containing 317 sites including the center. A point-group operation g ∈ D4 acts on Xi through a fixed permutation of the occupation variables and on Yi through the cor-responding permutation of the hopping directions. For example, a counterclockwise quarter-turn maps the + x
+
+hopping direction to + y while rotating the occupation pattern around the central site. The inverse output per-mutation returns the corresponding prediction to the + x
+
+component before averaging. Equation (2) thus com-bines eight predictions in a common directional frame. The output always has four components; a separate oc-cupancy mask excludes hops into occupied sites from the training loss and the dynamical updates. The construc-tion requires neither invariant descriptors nor a canonical local orientation. For this benchmark we use a conventional MLP with hidden widths 512, 512, 256, and 128, followed by four linear outputs. The model is trained on 77,520 ED local environments, with 19,380 additional environments re-served for validation, using a masked normalized mean-square loss that includes only physically allowed hops. AdamW optimization is performed for 500 epochs with learning rate 10 −3, weight decay 10 −6, and batches of 1024 local environments; the complete definition is given in Appendix A. These choices are not symmetry specific—the only symmetry operation is the EPN pro-jection itself. Figure 2(a) benchmarks the EPN directly against exact diagonalization using held-out local configurations. The predicted hopping free-energy differences ∆ EML closely follow the ED values ∆ EED over the full range shown, and the error distribution in the inset is narrow and cen-tered near zero. This agreement shows that the micro-scopic occupation pattern within the cutoff contains suf-ficient information to accurately predict the energetics of a local hop. In particular, no symmetry-adapted features <latexit sha1_base64="Q3yXc5k98z4jqCLvcQhaRbBtavA=">AAAB73icbVDLSsNAFL3xWeur6tJNaBEqQklcVJdFNy4r2Ac0oUwmk3bozCTOTIQQ+hMiuFDErb/jrn/j9LHQ1gMXDufcy733BAmjSjvOxFpb39jc2i7sFHf39g8OS0fHbRWnEpMWjlksuwFShFFBWppqRrqJJIgHjHSC0e3U7zwRqWgsHnSWEJ+jgaARxUgbqVv1JM/D8Xm/VHFqzgz2KnEXpNIoexcvk0bW7Je+vTDGKSdCY4aU6rlOov0cSU0xI+OilyqSIDxCA9IzVCBOlJ/P7h3bZ0YJ7SiWpoS2Z+rviRxxpTIemE6O9FAte1PxP6+X6ujaz6lIUk0Eni+KUmbr2J4+b4dUEqxZZgjCkppbbTxEEmFtIiqaENzll1dJ+7Lm1mv1e5PGDcxRgFMoQxVcuIIG3EETWoCBwTO8wbv1aL1aH9bnvHXNWsycwB9YXz/CyZLI</latexit> 
+
+(d) 
+
+Not good 
+
+<latexit sha1_base64="BAiLs6m3pS0hOcv2YE74XaEeVIE=">AAAB+HicbVDLSgMxFM3UV62Pjrp0E1qEilJmXFQ3QtGNywr2AZ2hZNJMG5pkhiQjjEP/wp0bF4q49VPc9W9MHwttPXDhcM693HtPEDOqtONMrNza+sbmVn67sLO7t1+0Dw5bKkokJk0csUh2AqQIo4I0NdWMdGJJEA8YaQej26nffiRS0Ug86DQmPkcDQUOKkTZSzy5WPMkzND71zvW16zg9u+xUnRngKnEXpFwveWfPk3ra6NnfXj/CCSdCY4aU6rpOrP0MSU0xI+OClygSIzxCA9I1VCBOlJ/NDh/DE6P0YRhJU0LDmfp7IkNcqZQHppMjPVTL3lT8z+smOrzyMyriRBOB54vChEEdwWkKsE8lwZqlhiAsqbkV4iGSCGuTVcGE4C6/vEpaF1W3Vq3dmzRuwBx5cAxKoAJccAnq4A40QBNgkIAX8AberSfr1fqwPuetOWsxcwT+wPr6AQmHlQY=</latexit> 
+
+(a) t = 100  <latexit sha1_base64="IhSjA3OTPq6TZVHQuC2mHKJy4Iw=">AAAB+XicbVDLSgMxFM34rPU16tJNaBEqSsm4qG6EohuXFewDOkPJpGkbmmSGJFMYhv6FSzcuFHHrn7jr35g+Ftp64MLhnHu5954w5kwbhCbO2vrG5tZ2bie/u7d/cOgeHTd0lChC6yTikWqFWFPOJK0bZjhtxYpiEXLaDIf3U785okqzSD6ZNKaBwH3JeoxgY6WO65Z8JbJwfO5fmlsPIdRxi6iMZoCrxFuQYrXgXzxPqmmt43773YgkgkpDONa67aHYBBlWhhFOx3k/0TTGZIj7tG2pxILqIJtdPoZnVunCXqRsSQNn6u+JDAutUxHaToHNQC97U/E/r52Y3k2QMRknhkoyX9RLODQRnMYAu0xRYnhqCSaK2VshGWCFibFh5W0I3vLLq6RxVfYq5cqjTeMOzJEDp6AASsAD16AKHkAN1AEBI/AC3sC7kzmvzofzOW9dcxYzJ+APnK8ffaOVQQ==</latexit> 
+
+(b) t = 1000 
+
+<latexit sha1_base64="znt7JqkAhqGo5e7HnzUJCy9QXZU=">AAAB+XicbVDLSgMxFM3UV62vUZduQotQUUpGsLoRim5cVrAP6Awlk2ba0GRmSDKFYehfuHTjQhG3/om7/o3pY6GtBy4czrmXe+/xY86URmhi5dbWNza38tuFnd29/QP78KipokQS2iARj2Tbx4pyFtKGZprTdiwpFj6nLX94P/VbIyoVi8InncbUE7gfsoARrI3Ute2yK0VGxmfuhb69Qgh17RKqoBngKnEWpFQruufPk1pa79rfbi8iiaChJhwr1XFQrL0MS80Ip+OCmygaYzLEfdoxNMSCKi+bXT6Gp0bpwSCSpkINZ+rviQwLpVLhm06B9UAte1PxP6+T6ODGy1gYJ5qGZL4oSDjUEZzGAHtMUqJ5aggmkplbIRlgiYk2YRVMCM7yy6ukeVlxqpXqo0njDsyRByegCMrAAdegBh5AHTQAASPwAt7Au5VZr9aH9TlvzVmLmWPwB9bXD4VNlUY=</latexit> 
+
+(c) t = 5000 
+
+FIG. 3. Large-scale FK phase ordering with EPN-kMC. (a– c) Effective Ising configurations at t = 100, 1000, and 5000 sweeps show coarsening of superclusters. Red and blue dis-tinguish opposite sublattice polarities. (d) Microscopic f -electron configuration in the green square in (c), resolving the disconnected checkerboard clusters underlying the larger domains. 
+
+need to be constructed beforehand: the EPN operates di-rectly on the ordered binary configuration, with the D4
+
+symmetry acting simply as permutations of the micro-scopic input and of the four directional outputs. Accurate prediction of individual ∆ Ei,α , however, does not by itself guarantee accurate dynamics. In kMC, even a small error in a transition energy can alter an accep-tance decision, after which the ML and ED trajectories generally follow different microscopic paths. A meaning-ful dynamical benchmark must therefore compare statis-tical observables rather than individual configurations. We perform EPN-kMC and ED-kMC simulations on a 30 × 30 lattice with ρc = 0 .55, ρf = 0 .187, U = 2 t, and 
+
+T = 0 .05 t, and monitor the equal-time density correla-tion Cf (r) = ⟨nfi nfj ⟩ − ρ2
+
+f during relaxation. As shown in Fig. 2(b,c), the correlation functions obtained from the two approaches are nearly indistinguishable at both 
+
+t = 20 and 100 sweeps, where one sweep corresponds to 
+
+Nf attempted hops. The EPN therefore reproduces not only the local transition energetics but also the evolv-ing spatial correlations generated by many successive stochastic updates. We finally use the EPN to simulate phase ordering on a 150 × 150 square lattice, accessing the same large-scale regime studied in the earlier descriptor-based work [23]. Following a thermal quench, the itinerant c electrons me-diate effective interactions that drive phase separation 5<latexit sha1_base64="PoqQ44WLeZpe33Zkw5Q9AJFSWsk=">AAACAnicbVDLSsNAFJ34rPUVdSVuBovgqiQi1U2hKIIrqWAf0MQwmU7aoTOTMDMRSihu/BU3LhRx61e482+ctllo64ELh3Pu5d57woRRpR3n21pYXFpeWS2sFdc3Nre27Z3dpopTiUkDxyyW7RApwqggDU01I+1EEsRDRlrh4HLstx6IVDQWd3qYEJ+jnqARxUgbKbD3r6qeSnmQ0ao7ur+BHkkUZcahgV1yys4EcJ64OSmBHPXA/vK6MU45ERozpFTHdRLtZ0hqihkZFb1UkQThAeqRjqECcaL8bPLCCB4ZpQujWJoSGk7U3xMZ4koNeWg6OdJ9NeuNxf+8Tqqjcz+jIkk1EXi6KEoZ1DEc5wG7VBKs2dAQhCU1t0LcRxJhbVIrmhDc2ZfnSfOk7FbKldvTUu0ij6MADsAhOAYuOAM1cA3qoAEweATP4BW8WU/Wi/VufUxbF6x8Zg/8gfX5A6cNlvs=</latexit> 
+
+E =
+
+N∑
+
+i=1 
+
+ωi
+
+<latexit sha1_base64="WgbsXNVzk9AfznZFO0bmwKvuugI=">AAACDXicbZDLSgMxFIYz9VbrbdSlm2AV3LTMuKjdiEXxsmzBXqAzDJk004ZmLiQZsQx9ATe+ihsXirh1rTtXvoqZtqC2/hD4+M85Sc7vRowKaRifWmZufmFxKbucW1ldW9/QN7caIow5JnUcspC3XCQIowGpSyoZaUWcIN9lpOn2z9J684ZwQcPgWg4iYvuoG1CPYiSV5eh7Fw49LlgeRzixIsQlRQyeD3+45tCho+eNojESnAVzAvnKydf7baF8WXX0D6sT4tgngcQMCdE2jUjaSXolZmSYs2JBIoT7qEvaCgPkE2Eno22GcF85HeiFXJ1AwpH7eyJBvhAD31WdPpI9MV1Lzf9q7Vh6ZTuhQRRLEuDxQ17MoAxhGg3sUE6wZAMFCHOq/gpxD6lkpAowp0Iwp1eehcZh0SwVSzWVxikYKwt2wC44ACY4AhVwBaqgDjC4Aw/gCTxr99qj9qK9jlsz2mRmG/yR9vYNr9ae/Q==</latexit> 
+
+Fi = → ωE ωQ i
+
+-0.5 00.5 
+
+<latexit sha1_base64="GerGFeV9On4ijfHpEgFR823XNec=">AAAB6HicbVDJSgNBEK2JW4xb1KMijUHwFGY8RI9BLx4zYBZIhtDTqSRteha6e4Qw5OjJiwdFvPoV+Q5vfoM/YWc5aOKDgsd7VVTV82PBlbbtLyuzsrq2vpHdzG1t7+zu5fcPaipKJMMqi0QkGz5VKHiIVc21wEYskQa+wLo/uJn49QeUikfhnR7G6AW0F/IuZ1QbyXXb+YJdtKcgy8SZk0L5eOx+P56MK+38Z6sTsSTAUDNBlWo6dqy9lErNmcBRrpUojCkb0B42DQ1pgMpLp4eOyJlROqQbSVOhJlP190RKA6WGgW86A6r7atGbiP95zUR3r7yUh3GiMWSzRd1EEB2RydekwyUyLYaGUCa5uZWwPpWUaZNNzoTgLL68TGoXRadULLkmjWuYIQtHcArn4MAllOEWKlAFBghP8AKv1r31bL1Z77PWjDWfOYQ/sD5+AJuukIc=</latexit> 
+
+Q
+
+<latexit sha1_base64="toBAEzueonXJtAjwp1yKl3SQj/o=">AAAB6HicbVDLSgNBEOyNryS+oh69DAZBEMKuh+gx6MVjAuaByRJmJ73JmNkHM7NiWPIFXjwokqs/4L9482t0knjQxIKGoqqb7i4vFlxp2/60Miura+sb2Vx+c2t7Z7ewt99QUSIZ1lkkItnyqELBQ6xrrgW2Yok08AQ2veHV1G/eo1Q8Cm/0KEY3oP2Q+5xRbaTaabdQtEv2DGSZOD+kWMnFk9v3h69qt/DR6UUsCTDUTFCl2o4dazelUnMmcJzvJApjyoa0j21DQxqgctPZoWNybJQe8SNpKtRkpv6eSGmg1CjwTGdA9UAtelPxP6+daP/CTXkYJxpDNl/kJ4LoiEy/Jj0ukWkxMoQyyc2thA2opEybbPImBGfx5WXSOCs55VK5ZtK4hDmycAhHcAIOnEMFrqEKdWCA8AjP8GLdWU/WqzWZt2asn5kD+APr7RuUSpCI</latexit> 
+
++
+
+<latexit sha1_base64="MWiFsZMLiBu4ksZHhscoN+ax8Xo=">AAAB6HicbVDLTgJBEOzFF+AL9ehlIjHxItn1gB6JXjxCIo8IGzI79MLI7CMzs0ay4Qu8eNAYrv6A/+LNr9EBPChYSSeVqu50d3mx4Erb9qeVWVldW9/I5vKbW9s7u4W9/YaKEsmwziIRyZZHFQoeYl1zLbAVS6SBJ7DpDa+mfvMepeJReKNHMboB7Yfc54xqI9VOu4WiXbJnIMvE+SHFSi6e3L4/fFW7hY9OL2JJgKFmgirVduxYuymVmjOB43wnURhTNqR9bBsa0gCVm84OHZNjo/SIH0lToSYz9fdESgOlRoFnOgOqB2rRm4r/ee1E+xduysM40Riy+SI/EURHZPo16XGJTIuRIZRJbm4lbEAlZdpkkzchOIsvL5PGWckpl8o1k8YlzJGFQziCE3DgHCpwDVWoAwOER3iGF+vOerJercm8NWP9zBzAH1hv35dSkIo=</latexit> 
+
+## →
+
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+
+<latexit sha1_base64="cT0jFBg5PszUBbXv7aDbkZ6o18g=">AAAB8XicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqseiF48V7Ae2oWy2k3bpZhN2N0IJ/RdePCji1X/jzX/jts1BWx8MPN6bYWZekAiujet+O4W19Y3NreJ2aWd3b/+gfHjU0nGqGDZZLGLVCahGwSU2DTcCO4lCGgUC28H4dua3n1BpHssHM0nQj+hQ8pAzaqz02MNEcxHLPu+XK27VnYOsEi8nFcjR6Je/eoOYpRFKwwTVuuu5ifEzqgxnAqelXqoxoWxMh9i1VNIItZ/NL56SM6sMSBgrW9KQufp7IqOR1pMosJ0RNSO97M3E/7xuasJrP+MySQ1KtlgUpoKYmMzeJwOukBkxsYQyxe2thI2ooszYkEo2BG/55VXSuqh6tWrt/rJSv8njKMIJnMI5eHAFdbiDBjSBgYRneIU3RzsvzrvzsWgtOPnMMfyB8/kD0IORBw==</latexit> 
+
+ωi
+
+<latexit sha1_base64="8cjX8UOFMWjYGXZxO/Lf9aLdDmc=">AAAB6nicbVDLSgMxFL3js9ZX1aWbYBFclZmCj2XRjQuFivYB7SCZ9E4bmskMSUYoQz/BjQtF3PpF7vwb03YW2nogcDjnXHLvCRLBtXHdb2dpeWV1bb2wUdzc2t7ZLe3tN3WcKoYNFotYtQOqUXCJDcONwHaikEaBwFYwvJr4rSdUmsfywYwS9CPalzzkjBor3d/e1B9LZbfiTkEWiZeTMuSw+a9uL2ZphNIwQbXueG5i/Iwqw5nAcbGbakwoG9I+diyVNELtZ9NVx+TYKj0Sxso+achU/T2R0UjrURTYZETNQM97E/E/r5Oa8MLPuExSg5LNPgpTQUxMJneTHlfIjBhZQpnidlfCBlRRZmw7RVuCN3/yImlWK95Z5fSuWq5d5nUU4BCO4AQ8OIcaXEMdGsCgD8/wCm+OcF6cd+djFl1y8pkD+APn8wfe3I2J</latexit> 
+
+MLP 
+
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+
+<latexit sha1_base64="Age47FzHBvUqYGPEEfH8g0BXt4k=">AAAB6HicbVDLSgNBEOyNrxhfUY9eBoMgCGFXfB2DXjwmYB6QhDA76U3GzM4uM7NCWPIFXjwo4tVP8ubfOEn2oIkFDUVVN91dfiy4Nq777eRWVtfWN/Kbha3tnd294v5BQ0eJYlhnkYhUy6caBZdYN9wIbMUKaegLbPqju6nffEKleSQfzDjGbkgHkgecUWOl2lmvWHLL7gxkmXgZKUGGaq/41elHLAlRGiao1m3PjU03pcpwJnBS6CQaY8pGdIBtSyUNUXfT2aETcmKVPgkiZUsaMlN/T6Q01Hoc+rYzpGaoF72p+J/XTkxw0025jBODks0XBYkgJiLTr0mfK2RGjC2hTHF7K2FDqigzNpuCDcFbfHmZNM7L3lX5snZRqtxmceThCI7hFDy4hgrcQxXqwADhGV7hzXl0Xpx352PemnOymUP4A+fzB3TFjLk=</latexit> 
+
+## +
+
+<latexit sha1_base64="Age47FzHBvUqYGPEEfH8g0BXt4k=">AAAB6HicbVDLSgNBEOyNrxhfUY9eBoMgCGFXfB2DXjwmYB6QhDA76U3GzM4uM7NCWPIFXjwo4tVP8ubfOEn2oIkFDUVVN91dfiy4Nq777eRWVtfWN/Kbha3tnd294v5BQ0eJYlhnkYhUy6caBZdYN9wIbMUKaegLbPqju6nffEKleSQfzDjGbkgHkgecUWOl2lmvWHLL7gxkmXgZKUGGaq/41elHLAlRGiao1m3PjU03pcpwJnBS6CQaY8pGdIBtSyUNUXfT2aETcmKVPgkiZUsaMlN/T6Q01Hoc+rYzpGaoF72p+J/XTkxw0025jBODks0XBYkgJiLTr0mfK2RGjC2hTHF7K2FDqigzNpuCDcFbfHmZNM7L3lX5snZRqtxmceThCI7hFDy4hgrcQxXqwADhGV7hzXl0Xpx352PemnOymUP4A+fzB3TFjLk=</latexit> 
+
++
+
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+
+<latexit sha1_base64="1q+pbZeRTC2ru4NRXfD+8dwh+xs=">AAAB6HicbVDLSgNBEOz1GeMr6tHLYBA8hV3xdQx68ZiAeUCyhNlJbzJmdnaZmRXCki/w4kERr36SN//GSbIHTSxoKKq66e4KEsG1cd1vZ2V1bX1js7BV3N7Z3dsvHRw2dZwqhg0Wi1i1A6pRcIkNw43AdqKQRoHAVjC6m/qtJ1Sax/LBjBP0IzqQPOSMGivV271S2a24M5Bl4uWkDDlqvdJXtx+zNEJpmKBadzw3MX5GleFM4KTYTTUmlI3oADuWShqh9rPZoRNyapU+CWNlSxoyU39PZDTSehwFtjOiZqgXvan4n9dJTXjjZ1wmqUHJ5ovCVBATk+nXpM8VMiPGllCmuL2VsCFVlBmbTdGG4C2+vEya5xXvqnJZvyhXb/M4CnAMJ3AGHlxDFe6hBg1ggPAMr/DmPDovzrvzMW9dcfKZI/gD5/MHuPmM5g==</latexit> 
+
+X
+
+<latexit sha1_base64="4A5YB9ogrUVZwDngVvemuif513g=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoPgKeyKr2PQi8eI5gHJEmYns8mQ2dllplcISz7BiwdFvPpF3vwbJ8keNLGgoajqprsrSKQw6LrfTmFldW19o7hZ2tre2d0r7x80TZxqxhsslrFuB9RwKRRvoEDJ24nmNAokbwWj26nfeuLaiFg94jjhfkQHSoSCUbTSw6Dn9coVt+rOQJaJl5MK5Kj3yl/dfszSiCtkkhrT8dwE/YxqFEzySambGp5QNqID3rFU0YgbP5udOiEnVumTMNa2FJKZ+nsio5Ex4yiwnRHFoVn0puJ/XifF8NrPhEpS5IrNF4WpJBiT6d+kLzRnKMeWUKaFvZWwIdWUoU2nZEPwFl9eJs2zqndZvbg/r9Ru8jiKcATHcAoeXEEN7qAODWAwgGd4hTdHOi/Ou/Mxby04+cwh/IHz+QP0+42Z</latexit> 
+
+g1
+
+<latexit sha1_base64="a8iLDZqnl0ofVlrlxAVZcmfIotw=">AAAB6nicbVDLSgNBEOz1GeMr6tHLYBA8hd3g6xj04jGieUCyhNnJ7GbI7Owy0yuEkE/w4kERr36RN//GSbIHTSxoKKq66e4KUikMuu63s7K6tr6xWdgqbu/s7u2XDg6bJsk04w2WyES3A2q4FIo3UKDk7VRzGgeSt4Lh7dRvPXFtRKIecZRyP6aREqFgFK30EPWqvVLZrbgzkGXi5aQMOeq90le3n7As5gqZpMZ0PDdFf0w1Cib5pNjNDE8pG9KIdyxVNObGH89OnZBTq/RJmGhbCslM/T0xprExoziwnTHFgVn0puJ/XifD8NofC5VmyBWbLwozSTAh079JX2jOUI4soUwLeythA6opQ5tO0YbgLb68TJrVindZubg/L9du8jgKcAwncAYeXEEN7qAODWAQwTO8wpsjnRfn3fmYt644+cwR/IHz+QP2f42a</latexit> 
+
+g2
+
+<latexit sha1_base64="Hxsj8YZ//fk+XnBpZTuQ+pLE+Y0=">AAAB7nicbVDLSgNBEOyNrxhfUY9eBoPgKeyKr2PQgx4jmAckS5iddJIhs7PLzKwQNvkILx4U8er3ePNvnCR70MSChqKqm+6uIBZcG9f9dnIrq2vrG/nNwtb2zu5ecf+grqNEMayxSESqGVCNgkusGW4ENmOFNAwENoLh7dRvPKHSPJKPZhSjH9K+5D3OqLFSo99Jx3fjSadYcsvuDGSZeBkpQYZqp/jV7kYsCVEaJqjWLc+NjZ9SZTgTOCm0E40xZUPax5alkoao/XR27oScWKVLepGyJQ2Zqb8nUhpqPQoD2xlSM9CL3lT8z2slpnftp1zGiUHJ5ot6iSAmItPfSZcrZEaMLKFMcXsrYQOqKDM2oYINwVt8eZnUz8reZfni4bxUucniyMMRHMMpeHAFFbiHKtSAwRCe4RXenNh5cd6dj3lrzslmDuEPnM8foX2Pxw==</latexit> 
+
+g|G| <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit> 
+
+> · · ·
+
+<latexit sha1_base64="+IPwycZYMndN8N0alY6lN3GGQzc=">AAACCHicbVDLSgMxFM3UV62vUZcuDBahbspMwcey6MZuygj2Ae1QMmmmjc0kQ5KplNKlG3/FjQtF3PoJ7vwb03YWWj0QOJxzL7nnBDGjSjvOl5VZWl5ZXcuu5zY2t7Z37N29uhKJxKSGBROyGSBFGOWkpqlmpBlLgqKAkUYwuJr6jSGRigp+q0cx8SPU4zSkGGkjdezDCh8iSRHX0JPijmANq0TfCzmAhYpXPenYeafozAD/EjcleZDC69if7a7ASUS4xgwp1XKdWPtjJDXFjExy7USRGOEB6pGWoRxFRPnjWZAJPDZKF4ZCmmcumqk/N8YoUmoUBWYyQrqvFr2p+J/XSnR44Y8pjxNNOJ5/FCYMagGnrcAulSY6GxmCsKTmVoj7SCKsTXc5U4K7GPkvqZeK7lnx9KaUL1+mdWTBATgCBeCCc1AG18ADNYDBA3gCL+DVerSerTfrfT6asdKdffAL1sc3Z6KY7g==</latexit> 
+
+Invariant Project Network (IPN) 
+
+<latexit sha1_base64="OFNFyndzSCwTOHjY1YSYN9yLCbM=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoPgKewGfByDXvQiEc0DkiXMTjrJkNnZZWZWCEs+wYsHRbz6Rd78GyfJHjSxoKGo6qa7K4gF18Z1v53cyura+kZ+s7C1vbO7V9w/aOgoUQzrLBKRagVUo+AS64Ybga1YIQ0Dgc1gdD31m0+oNI/koxnH6Id0IHmfM2qs9HBbu+sWS27ZnYEsEy8jJchQ6xa/Or2IJSFKwwTVuu25sfFTqgxnAieFTqIxpmxEB9i2VNIQtZ/OTp2QE6v0SD9StqQhM/X3REpDrcdhYDtDaoZ60ZuK/3ntxPQv/ZTLODEo2XxRPxHERGT6N+lxhcyIsSWUKW5vJWxIFWXGplOwIXiLLy+TRqXsnZfP7iul6lUWRx6O4BhOwYMLqMIN1KAODAbwDK/w5gjnxXl3PuatOSebOYQ/cD5/ANvQjYc=</latexit> 
+
+IPN 
+
+<latexit sha1_base64="OFNFyndzSCwTOHjY1YSYN9yLCbM=">AAAB6nicbVDLSgNBEOyNrxhfUY9eBoPgKewGfByDXvQiEc0DkiXMTjrJkNnZZWZWCEs+wYsHRbz6Rd78GyfJHjSxoKGo6qa7K4gF18Z1v53cyura+kZ+s7C1vbO7V9w/aOgoUQzrLBKRagVUo+AS64Ybga1YIQ0Dgc1gdD31m0+oNI/koxnH6Id0IHmfM2qs9HBbu+sWS27ZnYEsEy8jJchQ6xa/Or2IJSFKwwTVuu25sfFTqgxnAieFTqIxpmxEB9i2VNIQtZ/OTp2QE6v0SD9StqQhM/X3REpDrcdhYDtDaoZ60ZuK/3ntxPQv/ZTLODEo2XxRPxHERGT6N+lxhcyIsSWUKW5vJWxIFWXGplOwIXiLLy+TRqXsnZfP7iul6lUWRx6O4BhOwYMLqMIN1KAODAbwDK/w5gjnxXl3PuatOSebOYQ/cD5/ANvQjYc=</latexit> 
+
+IPN 
+
+> <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · · <latexit  sha1_base64="r8W2eYnoFQcqPN4bL6QPXfDdmDA=">AAAB7XicbVBNS8NAEJ3Ur1q/qh69BIvgqSQi1WPRi8cK9gPaUDabTbt2sxt2J0Ip/Q9ePCji1f/jzX/jts1BWx8MPN6bYWZemApu0PO+ncLa+sbmVnG7tLO7t39QPjxqGZVpyppUCaU7ITFMcMmayFGwTqoZSULB2uHodua3n5g2XMkHHKcsSMhA8phTglZq9Wik0PTLFa/qzeGuEj8nFcjR6Je/epGiWcIkUkGM6fpeisGEaORUsGmplxmWEjoiA9a1VJKEmWAyv3bqnlklcmOlbUl05+rviQlJjBknoe1MCA7NsjcT//O6GcbXwYTLNEMm6WJRnAkXlTt73Y24ZhTF2BJCNbe3unRINKFoAyrZEPzll1dJ66Lq16q1+8tK/SaPowgncArn4MMV1OEOGtAECo/wDK/w5ijnxXl3PhatBSefOYY/cD5/ALHpjzo=</latexit>
+> · · ·
+
+FIG. 4. Invariant projection network (IPN) for Holstein dynamics. For each lattice site i, the local distortion environment 
+
+Xi is transformed by all g ∈ D4 and evaluated by a shared MLP; averaging the scalar outputs gives an invariant local energy 
+
+ϵi. Applying the same IPN to overlapping local environments throughout the lattice forms the standard Behler–Parrinello construction, EML = P
+
+i ϵi. Differentiating this total energy with respect to the distortions then yields the symmetry-preserving conservative forces Fi = −∂E ML /∂Q i.
+
+and favor local checkerboard charge-density-wave (CDW) order. In a CDW region, the f electrons preferentially oc-cupy one of the two sublattices of the square lattice, pro-ducing one of two symmetry-related checkerboard pat-terns, accompanied by a corresponding modulation of the itinerant-electron density. This microscopic ordering is visible in Fig. 3(d), where small checkerboard clusters have already formed. Because the f -electron filling is low, however, these CDW regions remain largely disconnected and are separated by metallic regions with few or no f
+
+electrons. The ordering on this microscopic scale there-fore consists of many spatially separated charge-ordered clusters rather than a single connected checkerboard do-main. A second, much larger length scale nevertheless emerges because these disconnected clusters interact through the itinerant electrons. Each checkerboard clus-ter carries a sublattice polarity, according to whether its f electrons predominantly occupy the A or B sub-lattice, and spatially separated clusters show a strong tendency to align this polarity. This produces a hidden 
+
+Z2 symmetry breaking in addition to the local CDW or-der. To visualize it, the coarse-grained configurations in Fig. 3(a–c) assign each site an Ising variable accord-ing to whether the nearest f electron belongs to the A
+
+or B sublattice; the red and blue regions therefore rep-resent domains of opposite sublattice polarity, not indi-vidual connected CDW clusters. Each such “superclus-ter” can contain many disconnected checkerboard clus-ters sharing the same polarity. Their progressive growth in Fig. 3(a–c) shows that the EPN reproduces this hid-den, electron-mediated coarsening. Comparing panels (c) and (d) makes the separation between the microscopic CDW scale and the much larger Z2 ordering scale par-ticularly clear. 
+
+IV. HOLSTEIN DYNAMICS AND CONSERVATIVE FORCES 
+
+The second application considers the scalar-output limit of the EPN construction for continuous lattice variables. This case connects naturally to the Behler– Parrinello (BP) decomposition [13, 31], in which an ex-tensive energy is expressed as a sum of local contribu-tions, 
+
+EML = X
+
+i
+
+ϵi. (8) This basic construction also underlies many modern graph-based and equivariant force fields [43, 44]. Set-ting DY (g) = 1 in Eq. (2) gives an invariant projection network (IPN), the scalar special case of the EPN. As illustrated in Fig. 4, the local distortion environment Xi
+
+centered at site i is transformed by every g ∈ D4, and all symmetry-related configurations are evaluated by the same scalar MLP. The resulting local energy is 
+
+ϵi = 1
+
+|G|
+
+X
+
+g∈G
+
+fθ [DX (g)Xi] , (9) 6where θ denotes the shared MLP parameters. The same parameter-sharing IPN is then applied to the overlapping neighborhoods centered on all lattice sites, and Eq. (8) assembles these local contributions into the global energy. The force field follows by differentiating this global po-tential, 
+
+F ML 
+
+i = − ∂E ML 
+
+∂Q i
+
+= − X
+
+j: i∈N j
+
+∂ϵ j
+
+∂Q i
+
+, (10) where Nj is the neighborhood centered on site j. A given displacement Qi belongs to several overlapping neigh-borhoods, so its force receives contributions from ev-ery corresponding local energy. Automatic differentia-tion through the full BP sum accounts for all of these terms. The same local map is used at every site, and a lattice symmetry permutes the neighborhoods while leaving each scalar prediction invariant. The summed en-ergy is therefore invariant, its gradient has the required transformation law, and the force is conservative by con-struction. Exact lattice symmetry and the BP energy de-composition are thus combined without first constructing invariant descriptors. We demonstrate this construction using the semiclas-sical Holstein model, 
+
+H = − t X
+
+⟨ij ⟩
+
+
+
+c†
+
+i cj + H .c.
+
+
+
+− g X
+
+i
+
+Qi(ni − ¯n)+ X
+
+i
+
+P 2
+
+i
+
+2M + K
+
+2
+
+X
+
+i
+
+Q2
+
+i + κ X
+
+⟨ij ⟩
+
+QiQj ,
+
+(11) where Qi and Pi are the classical lattice displacement and momentum, ni = c†
+
+i ci, K is the local elastic constant, and κ couples neighboring distortions. At half filling, ¯n = 1 /2, the low-temperature state develops checker-board charge-density-wave (CDW) order. Descriptor-based MLP and graph-neural-network force fields have previously been used to simulate its adiabatic dynam-ics [24, 63]. As in the FK application, the electrons are assumed to equilibrate rapidly for each instantaneous configura-tion of the slow variables. Here these variables are the continuous distortions {Qi}, and the conservative lattice force derives from the electronic free energy together with the elastic potential at fixed electronic temperature and filling. The ED force labels include both the electronic and elastic contributions, so EML approximates this full effective potential through its derivatives. Langevin evo-lution supplements the learned conservative force with damping and thermal noise, as specified in Appendix B. The IPN construction therefore guarantees a conservative force field, while energy exchange with the bath enters through these additional terms. For the calculations below, each IPN takes a 5 × 5displacement patch as input. The shared scalar MLP contains hidden layers of widths 512, 256, and 128 with SiLU activations, followed by a linear local-energy out-put. The same network parameters are used both for <latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0 <latexit sha1_base64="x+P4YmxTD/CiISW/QGgWwOeLhfs=">AAAB6nicbZDLSsNAFIZP6q3GW9Wlm8EiuAqJi+pGLLpxWdFeoA1lMp20QyeTMDMRSugjuHGhiEt9F/duxLdxmnahrT8MfPz/Ocw5J0g4U9p1v63C0vLK6lpx3d7Y3NreKe3uNVScSkLrJOaxbAVYUc4ErWumOW0lkuIo4LQZDK8mefOeSsVicadHCfUj3BcsZARrY926jtctlV3HzYUWwZtB+eLDPk/evuxat/TZ6cUkjajQhGOl2p6baD/DUjPC6djupIommAxxn7YNChxR5Wf5qGN0ZJweCmNpntAod393ZDhSahQFpjLCeqDms4n5X9ZOdXjmZ0wkqaaCTD8KU450jCZ7ox6TlGg+MoCJZGZWRAZYYqLNdWxzBG9+5UVonDhexancuOXqJUxVhAM4hGPw4BSqcA01qAOBPjzAEzxb3Hq0XqzXaWnBmvXswx9Z7z+2lZBv</latexit> 
+
+0.1
+
+<latexit sha1_base64="vWwPeXMoQDU39tMWc9/0nvmUoo0=">AAAB63icbVC5TgMxEJ3lTMIVoKSxiJBoWO1SBMoIGsogkUMkq8jreBMrtndlexHRKr9AQ8EhWmr+hY6vAecoIOFJIz29N6OZeWHCmTae9+UsLa+srq3n8oWNza3tneLuXl3HqSK0RmIeq2aINeVM0pphhtNmoigWIaeNcHA59ht3VGkWyxszTGggcE+yiBFsxtKJ5/qdYslzvQnQIvFnpFTJJy+3H/ff1U7xs92NSSqoNIRjrVu+l5ggw8owwumo0E41TTAZ4B5tWSqxoDrIJreO0JFVuiiKlS1p0ET9PZFhofVQhLZTYNPX895Y/M9rpSY6DzImk9RQSaaLopQjE6Px46jLFCWGDy3BRDF7KyJ9rDAxNp6CDcGff3mR1E9dv+yWr20aFzBFDg7gEI7BhzOowBVUoQYE+vAAT/DsCOfReXXepq1LzmxmH/7Aef8B3+SRNw==</latexit> 
+
+→0.1
+
+<latexit sha1_base64="qTyqhEqAgjsQN5RyJ7wOt4MQlms=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIXdFNFGDNpYJmAukCxhdnKSjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQxB8GPv7/HOacE8ScKe2631ZmZXVtfSO7aW9t7+zu5fYP6ipKJMUajXgkmwFRyJnAmmaaYzOWSMKAYyMYXk/yxj1KxSJxq0cx+iHpC9ZjlGhjVYudXN4tuFM5y+DNIX/5YV/E7192pZP7bHcjmoQoNOVEqZbnxtpPidSMchzb7URhTOiQ9LFlUJAQlZ9OBx07J8bpOr1Imie0M3V/d6QkVGoUBqYyJHqgFrOJ+V/WSnTv3E+ZiBONgs4+6iXc0ZEz2drpMolU85EBQiUzszp0QCSh2tzGNkfwFldehnqx4JUKpaqbL1/BTFk4gmM4BQ/OoAw3UIEaUEB4gCd4tu6sR+vFep2VZqx5zyH8kfX2A986j/4=</latexit> 
+
+2
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="G8bqSPj9q+UC2B8GxtQyPeKxTLo=">AAAB7XicbVDLSgNBEOyNrxhfUY9eFoPgKeyKr2PQi8cI5gHJEmZnO8mY2ZllZlYIS/7BiwdFvPo/3vwbJ8keNLGgoajqprsrTDjTxvO+ncLK6tr6RnGztLW9s7tX3j9oapkqig0quVTtkGjkTGDDMMOxnSgkccixFY5up37rCZVmUjyYcYJBTAaC9RklxkrNboTckF654lW9Gdxl4uekAjnqvfJXN5I0jVEYyonWHd9LTJARZRjlOCl1U40JoSMywI6lgsSog2x27cQ9sUrk9qWyJYw7U39PZCTWehyHtjMmZqgXvan4n9dJTf86yJhIUoOCzhf1U+4a6U5fdyOmkBo+toRQxeytLh0SRaixAZVsCP7iy8ukeVb1L6sX9+eV2k0eRxGO4BhOwYcrqMEd1KEBFB7hGV7hzZHOi/PufMxbC04+cwh/4Hz+AJTMjyY=</latexit> 
+
+ω
+
+<latexit sha1_base64="9ftltsCuQxLmlCpkIWwCZxrWRFw=">AAAB8nicbVDLSgNBEJyNryS+oh69DAbBU9gViR6DXjxGMA/cxDA7mU2GzM4sM71iWPIZHvSgiFfBf/Hm1+jkcdDEgoaiqpvuriAW3IDrfjmZpeWV1bVsLr++sbm1XdjZrRuVaMpqVAmlmwExTHDJasBBsGasGYkCwRrB4GLsN+6YNlzJaxjGrB2RnuQhpwSs5LeAR8xgz7096RSKbsmdAC8Sb0aKlVz8ePNx/13tFD5bXUWTiEmgghjje24M7ZRo4FSwUb6VGBYTOiA95lsqid3UTicnj/ChVbo4VNqWBDxRf0+kJDJmGAW2MyLQN/PeWPzP8xMIz9opl3ECTNLpojARGBQe/4+7XDMKYmgJoZrbWzHtE00o2JTyNgRv/uVFUj8ueeVS+cqmcY6myKJ9dICOkIdOUQVdoiqqIYoUekDP6MUB58l5dd6mrRlnNrOH/sB5/wFA6pRS</latexit> 
+
+→10 4
+
+<latexit sha1_base64="4XaL0A1MP/rwFd4ruFarjhJ/G/Q=">AAAB8HicbVDLSgNBEOyNrxhfUY9eBoMQL2FXfB2DXjxGMA9JljA7O5sMmZldZmaFsOQrvHhQxKuf482/cZLsQRMLGoqqbrq7goQzbVz32ymsrK6tbxQ3S1vbO7t75f2Dlo5TRWiTxDxWnQBrypmkTcMMp51EUSwCTtvB6Hbqt5+o0iyWD2acUF/ggWQRI9hY6bFR7YWUG3zaL1fcmjsDWiZeTiqQo9Evf/XCmKSCSkM41rrruYnxM6wMI5xOSr1U0wSTER7QrqUSC6r9bHbwBJ1YJURRrGxJg2bq74kMC63HIrCdApuhXvSm4n9eNzXRtZ8xmaSGSjJfFKUcmRhNv0chU5QYPrYEE8XsrYgMscLE2IxKNgRv8eVl0jqreZe1i/vzSv0mj6MIR3AMVfDgCupwBw1oAgEBz/AKb45yXpx352PeWnDymUP4A+fzB/2tj+U=</latexit> 
+
+P (ω)<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0
+
+<latexit sha1_base64="qTyqhEqAgjsQN5RyJ7wOt4MQlms=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIXdFNFGDNpYJmAukCxhdnKSjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQxB8GPv7/HOacE8ScKe2631ZmZXVtfSO7aW9t7+zu5fYP6ipKJMUajXgkmwFRyJnAmmaaYzOWSMKAYyMYXk/yxj1KxSJxq0cx+iHpC9ZjlGhjVYudXN4tuFM5y+DNIX/5YV/E7192pZP7bHcjmoQoNOVEqZbnxtpPidSMchzb7URhTOiQ9LFlUJAQlZ9OBx07J8bpOr1Imie0M3V/d6QkVGoUBqYyJHqgFrOJ+V/WSnTv3E+ZiBONgs4+6iXc0ZEz2drpMolU85EBQiUzszp0QCSh2tzGNkfwFldehnqx4JUKpaqbL1/BTFk4gmM4BQ/OoAw3UIEaUEB4gCd4tu6sR+vFep2VZqx5zyH8kfX2A986j/4=</latexit> 
+
+2
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="7+xCsyLGdSL+Via2MupuKdp2lP8=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdEdRaCMoKEMiDxEcop8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7NZ1nChCayTmsWoGWFPOBK0ZZjhtSkVxFHDaCAYXY79xR5VmsbgxQ0n9CPcECxnBxkrXx16nUHRL7gRokXgzUqzk5Ovtx/13tVP4bHdjkkRUGMKx1i3PlcZPsTKMcDrKtxNNJSYD3KMtSwWOqPbTyaUjdGiVLgpjZUsYNFF/T6Q40noYBbYzwqav572x+J/XSkx45qdMyMRQQaaLwoQjE6Px26jLFCWGDy3BRDF7KyJ9rDAxNpy8DcGbf3mR1E9KXrlUvrJpnMMUWdiHAzgCD06hApdQhRoQCOEBnuDZGTiPzovzNm3NOLOZPfgD5/0HBraQxQ==</latexit> 
+
+→1
+
+<latexit sha1_base64="3iVFQnGGr+/vmBy0coQWWHtwdhM=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdFdikAZQUMZEHmIcIp8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7DZ0nChC6yTmsWoFWFPOBK0bZjhtSUVxFHDaDAbnY795R5Vmsbg2Q0n9CPcECxnBxkpXx+VOoeiW3AnQIvFmpFjNydebj/vvWqfweduNSRJRYQjHWrc9Vxo/xcowwukof5toKjEZ4B5tWypwRLWfTi4doUOrdFEYK1vCoIn6eyLFkdbDKLCdETZ9Pe+Nxf+8dmLCUz9lQiaGCjJdFCYcmRiN30ZdpigxfGgJJorZWxHpY4WJseHkbQje/MuLpFEueZVS5dKmcQZTZGEfDuAIPDiBKlxADepAIIQHeIJnZ+A8Oi/O27Q148xm9uAPnPcfCDqQxg==</latexit> 
+
+→2
+
+<latexit sha1_base64="bW+ziZ7D0cY39Zzvoi2ScGxHp5U=">AAAB8XicbVBNSwMxEJ2tX7V+VT16CRbBU9kVqx4LgvSgUMF+YLuUbJptQ5PskmSFsvRfePGgiFf/jTf/jWm7B219MPB4b4aZeUHMmTau++3kVlbX1jfym4Wt7Z3dveL+QVNHiSK0QSIeqXaANeVM0oZhhtN2rCgWAaetYHQ99VtPVGkWyQczjqkv8ECykBFsrPR400u7SqC720mvWHLL7gxomXgZKUGGeq/41e1HJBFUGsKx1h3PjY2fYmUY4XRS6CaaxpiM8IB2LJVYUO2ns4sn6MQqfRRGypY0aKb+nkix0HosAtspsBnqRW8q/ud1EhNe+SmTcWKoJPNFYcKRidD0fdRnihLDx5Zgopi9FZEhVpgYG1LBhuAtvrxMmmdl76JcuT8vVWtZHHk4gmM4BQ8uoQo1qEMDCEh4hld4c7Tz4rw7H/PWnJPNHMIfOJ8/+fiQfw==</latexit> 
+
+FML 
+
+<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0 <latexit sha1_base64="qTyqhEqAgjsQN5RyJ7wOt4MQlms=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIXdFNFGDNpYJmAukCxhdnKSjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQxB8GPv7/HOacE8ScKe2631ZmZXVtfSO7aW9t7+zu5fYP6ipKJMUajXgkmwFRyJnAmmaaYzOWSMKAYyMYXk/yxj1KxSJxq0cx+iHpC9ZjlGhjVYudXN4tuFM5y+DNIX/5YV/E7192pZP7bHcjmoQoNOVEqZbnxtpPidSMchzb7URhTOiQ9LFlUJAQlZ9OBx07J8bpOr1Imie0M3V/d6QkVGoUBqYyJHqgFrOJ+V/WSnTv3E+ZiBONgs4+6iXc0ZEz2drpMolU85EBQiUzszp0QCSh2tzGNkfwFldehnqx4JUKpaqbL1/BTFk4gmM4BQ/OoAw3UIEaUEB4gCd4tu6sR+vFep2VZqx5zyH8kfX2A986j/4=</latexit> 
+
+2
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="7+xCsyLGdSL+Via2MupuKdp2lP8=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdEdRaCMoKEMiDxEcop8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7NZ1nChCayTmsWoGWFPOBK0ZZjhtSkVxFHDaCAYXY79xR5VmsbgxQ0n9CPcECxnBxkrXx16nUHRL7gRokXgzUqzk5Ovtx/13tVP4bHdjkkRUGMKx1i3PlcZPsTKMcDrKtxNNJSYD3KMtSwWOqPbTyaUjdGiVLgpjZUsYNFF/T6Q40noYBbYzwqav572x+J/XSkx45qdMyMRQQaaLwoQjE6Px26jLFCWGDy3BRDF7KyJ9rDAxNpy8DcGbf3mR1E9KXrlUvrJpnMMUWdiHAzgCD06hApdQhRoQCOEBnuDZGTiPzovzNm3NOLOZPfgD5/0HBraQxQ==</latexit> 
+
+→1
+
+<latexit sha1_base64="3iVFQnGGr+/vmBy0coQWWHtwdhM=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdFdikAZQUMZEHmIcIp8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7DZ0nChC6yTmsWoFWFPOBK0bZjhtSUVxFHDaDAbnY795R5Vmsbg2Q0n9CPcECxnBxkpXx+VOoeiW3AnQIvFmpFjNydebj/vvWqfweduNSRJRYQjHWrc9Vxo/xcowwukof5toKjEZ4B5tWypwRLWfTi4doUOrdFEYK1vCoIn6eyLFkdbDKLCdETZ9Pe+Nxf+8dmLCUz9lQiaGCjJdFCYcmRiN30ZdpigxfGgJJorZWxHpY4WJseHkbQje/MuLpFEueZVS5dKmcQZTZGEfDuAIPDiBKlxADepAIIQHeIJnZ+A8Oi/O27Q148xm9uAPnPcfCDqQxg==</latexit> 
+
+→2 <latexit sha1_base64="zQDLPmLVKmBA2mp4STvxrO+FNII=">AAAB8XicbVDLSgNBEOyNrxhfUY9eBoPgKeyKUY8BH+QYwTwwWcLsZDYZMjO7zMwKYclfePGgiFf/xpt/4yTZgyYWNBRV3XR3BTFn2rjut5NbWV1b38hvFra2d3b3ivsHTR0litAGiXik2gHWlDNJG4YZTtuxolgEnLaC0fXUbz1RpVkkH8w4pr7AA8lCRrCx0uNdL+0qgW5vJr1iyS27M6Bl4mWkBBnqveJXtx+RRFBpCMdadzw3Nn6KlWGE00mhm2gaYzLCA9qxVGJBtZ/OLp6gE6v0URgpW9Kgmfp7IsVC67EIbKfAZqgXvan4n9dJTHjlp0zGiaGSzBeFCUcmQtP3UZ8pSgwfW4KJYvZWRIZYYWJsSAUbgrf48jJpnpW9i3Ll/rxUrWVx5OEIjuEUPLiEKtSgDg0gIOEZXuHN0c6L8+58zFtzTjZzCH/gfP4A4aCQbw==</latexit> 
+
+FED 
+
+<latexit sha1_base64="bCYrb2Fee1dO/5SQecrdMFlbehQ=">AAAB8nicbVDLSgMxFM34rPVVdekmWIS6KTMi1WXRjcsK9gHToWTSTBuaTIbkjlCGfoYbF4q49Wvc+Tdm2llo64HA4Zx7ybknTAQ34Lrfztr6xubWdmmnvLu3f3BYOTruGJVqytpUCaV7ITFM8Ji1gYNgvUQzIkPBuuHkLve7T0wbruJHmCYskGQU84hTAlbya31JYKwlJheDStWtu3PgVeIVpIoKtAaVr/5Q0VSyGKggxviem0CQEQ2cCjYr91PDEkInZMR8S2MimQmyeeQZPrfKEEdK2xcDnqu/NzIijZnK0E7mCc2yl4v/eX4K0U2Q8ThJgcV08VGUCgwK5/fjIdeMgphaQqjmNiumY6IJBdtS2ZbgLZ+8SjqXda9RbzxcVZu3RR0ldIrOUA156Bo10T1qoTaiSKFn9IreHHBenHfnYzG65hQ7J+gPnM8fWj2Qqg==</latexit> 
+
+(a) 
+
+<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="7+xCsyLGdSL+Via2MupuKdp2lP8=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdEdRaCMoKEMiDxEcop8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7NZ1nChCayTmsWoGWFPOBK0ZZjhtSkVxFHDaCAYXY79xR5VmsbgxQ0n9CPcECxnBxkrXx16nUHRL7gRokXgzUqzk5Ovtx/13tVP4bHdjkkRUGMKx1i3PlcZPsTKMcDrKtxNNJSYD3KMtSwWOqPbTyaUjdGiVLgpjZUsYNFF/T6Q40noYBbYzwqav572x+J/XSkx45qdMyMRQQaaLwoQjE6Px26jLFCWGDy3BRDF7KyJ9rDAxNpy8DcGbf3mR1E9KXrlUvrJpnMMUWdiHAzgCD06hApdQhRoQCOEBnuDZGTiPzovzNm3NOLOZPfgD5/0HBraQxQ==</latexit> 
+
+→1
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+<latexit sha1_base64="tEfq5oh7D/ZppB3kdY1UGu7vxDE=">AAAB8nicbVDJSgNBEO1xTeIW9eilMQheDDMeosdgFLwIEcyCkyH0dHqSJr0M3T1iGPIZHvSgiFfBf/Hm12hnOWjig4LHe1VU1QtjRrVx3S9nYXFpeWU1k82trW9sbuW3d+paJgqTGpZMqmaINGFUkJqhhpFmrAjiISONsF8Z+Y07ojSV4sYMYhJw1BU0ohgZK/ktxdOL86P+VWXYzhfcojsGnCfelBTK2fjx9uP+u9rOf7Y6EiecCIMZ0tr33NgEKVKGYkaGuVaiSYxwH3WJb6lAnOggHZ88hAdW6cBIKlvCwLH6eyJFXOsBD20nR6anZ72R+J/nJyY6DVIq4sQQgSeLooRBI+Hof9ihimDDBpYgrKi9FeIeUggbm1LOhuDNvjxP6sdFr1QsXds0zsAEGbAH9sEh8MAJKINLUAU1gIEED+AZvDjGeXJenbdJ64IzndkFf+C8/wC+fJSl</latexit> 
+
+ED → kMC 
+
+<latexit sha1_base64="vtG21gHUghDVUu+66cj5/tqMpcM=">AAAB8nicbVC7SgNBFJ31mcRX1NJmMAg2hl2LaBlMY2EggnngZgmzk9lkyDyWmVkxLPkMCy0UsRX8Fzu/RiePQhMPXDiccy/33hPGjGrjul/O0vLK6tp6Jpvb2Nza3snv7jW0TBQmdSyZVK0QacKoIHVDDSOtWBHEQ0aa4aAy9pt3RGkqxY0ZxiTgqCdoRDEyVvLbiqfVq5NBtTLq5Atu0Z0ALhJvRgrlbPx4+3H/XevkP9tdiRNOhMEMae17bmyCFClDMSOjXDvRJEZ4gHrEt1QgTnSQTk4ewSOrdGEklS1h4ET9PZEirvWQh7aTI9PX895Y/M/zExOdBykVcWKIwNNFUcKgkXD8P+xSRbBhQ0sQVtTeCnEfKYSNTSlnQ/DmX14kjdOiVyqWrm0aF2CKDDgAh+AYeOAMlMElqIE6wECCB/AMXhzjPDmvztu0dcmZzeyDP3DefwDXFJS1</latexit> 
+
+ML → kMC 
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+-0.025 00.05 0.10 0.15 0 2 4 6 8 10 ED ML 
+
+<latexit sha1_base64="tEfq5oh7D/ZppB3kdY1UGu7vxDE=">AAAB8nicbVDJSgNBEO1xTeIW9eilMQheDDMeosdgFLwIEcyCkyH0dHqSJr0M3T1iGPIZHvSgiFfBf/Hm12hnOWjig4LHe1VU1QtjRrVx3S9nYXFpeWU1k82trW9sbuW3d+paJgqTGpZMqmaINGFUkJqhhpFmrAjiISONsF8Z+Y07ojSV4sYMYhJw1BU0ohgZK/ktxdOL86P+VWXYzhfcojsGnCfelBTK2fjx9uP+u9rOf7Y6EiecCIMZ0tr33NgEKVKGYkaGuVaiSYxwH3WJb6lAnOggHZ88hAdW6cBIKlvCwLH6eyJFXOsBD20nR6anZ72R+J/nJyY6DVIq4sQQgSeLooRBI+Hof9ihimDDBpYgrKi9FeIeUggbm1LOhuDNvjxP6sdFr1QsXds0zsAEGbAH9sEh8MAJKINLUAU1gIEED+AZvDjGeXJenbdJ64IzndkFf+C8/wC+fJSl</latexit> 
+
+ED → kMC 
+
+<latexit sha1_base64="vtG21gHUghDVUu+66cj5/tqMpcM=">AAAB8nicbVC7SgNBFJ31mcRX1NJmMAg2hl2LaBlMY2EggnngZgmzk9lkyDyWmVkxLPkMCy0UsRX8Fzu/RiePQhMPXDiccy/33hPGjGrjul/O0vLK6tp6Jpvb2Nza3snv7jW0TBQmdSyZVK0QacKoIHVDDSOtWBHEQ0aa4aAy9pt3RGkqxY0ZxiTgqCdoRDEyVvLbiqfVq5NBtTLq5Atu0Z0ALhJvRgrlbPx4+3H/XevkP9tdiRNOhMEMae17bmyCFClDMSOjXDvRJEZ4gHrEt1QgTnSQTk4ewSOrdGEklS1h4ET9PZEirvWQh7aTI9PX895Y/M/zExOdBykVcWKIwNNFUcKgkXD8P+xSRbBhQ0sQVtTeCnEfKYSNTSlnQ/DmX14kjdOiVyqWrm0aF2CKDDgAh+AYeOAMlMElqIE6wECCB/AMXhzjPDmvztu0dcmZzeyDP3DefwDXFJS1</latexit> 
+
+ML → kMC 
+
+<latexit sha1_base64="3d6phKho1mWbK1fKYoJV1xnzwT0=">AAAB/HicbVDLSgMxFM3UV62v0S7dhBahopQZF9WNUHTjsoJ9QGcomTRtQ5PMkGSEYahf4d6NC0Xc+iHu+jdm2i609UDgcM693JMTRIwq7ThTK7e2vrG5ld8u7Ozu7R/Yh0ctFcYSkyYOWSg7AVKEUUGammpGOpEkiAeMtIPxbea3H4lUNBQPOomIz9FQ0AHFSBupZxcrHkd6JHmKJ6feub52a07PLjtVZwa4StwFKddL3tnztJ40eva31w9xzInQmCGluq4TaT9FUlPMyKTgxYpECI/RkHQNFYgT5aez8BN4YpQ+HITSPKHhTP29kSKuVMIDM5klVcteJv7ndWM9uPJTKqJYE4HnhwYxgzqEWROwTyXBmiWGICypyQrxCEmEtemrYEpwl7+8SloXVbdWrd2bNm7AHHlwDEqgAlxwCergDjRAE2CQgBfwBt6tJ+vV+rA+56M5a7FTBH9gff0ASkuW4A==</latexit> 
+
+(c) t = 160 
+
+<latexit sha1_base64="ioxsG3FzTmaaGpcxBuOwjt9eldM=">AAAB+3icbVDLSsNAFJ3UV62vWJduQotQUUoiUt0IRTcuK9gHNKFMppN26MwkzEzEEPIXrt24UMStP+Kuf+Ok7UKrBwYO59zLPXP8iBKpbHtqFFZW19Y3ipulre2d3T1zv9yRYSwQbqOQhqLnQ4kp4bitiKK4FwkMmU9x15/c5H73AQtJQn6vkgh7DI44CQiCSksDs1xzGVRjwVI/O3ZP1dW5PTCrdt2ewfpLnAWpNivuydO0mbQG5pc7DFHMMFeIQin7jh0pL4VCEURxVnJjiSOIJnCE+5pyyLD00ln2zDrSytAKQqEfV9ZM/bmRQiZlwnw9mQeVy14u/uf1YxVceinhUawwR/NDQUwtFVp5EdaQCIwUTTSBSBCd1UJjKCBSuq6SLsFZ/vJf0jmrO4164063cQ3mKIJDUAE14IAL0AS3oAXaAIFH8AxewZuRGS/Gu/ExHy0Yi50D8AvG5zfQEZai</latexit> 
+
+(b) t = 40 
+
+         
+
+         
+
+<latexit sha1_base64="33pNuRO0U4yvTchfHZLDgIbyr8M=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUdAelsltxFyDrxMtJGXI0BqWv/jBmaYTSMEG17nluYvyMKsOZwFmxn2pMKJvQEfYslTRC7WeLQ2fk0ipDEsbKljRkof6eyGik9TQKbGdEzVivenPxP6+XmvDOz7hMUoOSLReFqSAmJvOvyZArZEZMLaFMcXsrYWOqKDM2m6INwVt9eZ20rytetVJt3pRr9TyOApzDBVyBB7dQgzo0oAUMEJ7hFd6cR+fFeXc+lq0bTj5zBn/gfP4AfnmMxQ==</latexit> 
+
+0 <latexit sha1_base64="xCapYfGzdTbnJZZEW3gffu6AU0A=">AAAB6HicbVDLTgJBEOzFF+IL9ehlIjHxRHaJQY8kXjhCIo8ENmR2aGBkdnYzM2tCNnyBFw8a49VP8ubfOMAeFKykk0pVd7q7glhwbVz328ltbe/s7uX3CweHR8cnxdOzto4SxbDFIhGpbkA1Ci6xZbgR2I0V0jAQ2Amm9wu/84RK80g+mFmMfkjHko84o8ZKzcqgWHLL7hJkk3gZKUGGxqD41R9GLAlRGiao1j3PjY2fUmU4Ezgv9BONMWVTOsaepZKGqP10eeicXFllSEaRsiUNWaq/J1Iaaj0LA9sZUjPR695C/M/rJWZ056dcxolByVaLRokgJiKLr8mQK2RGzCyhTHF7K2ETqigzNpuCDcFbf3mTtCtlr1quNm9KtXoWRx4u4BKuwYNbqEEdGtACBgjP8ApvzqPz4rw7H6vWnJPNnMMfOJ8/gYGMxw==</latexit> 
+
+2 <latexit sha1_base64="UHmqUzgplDqRaL7Yt7Tj2bFWFkQ=">AAAB5HicbVBNS8NAEJ3Urxq/qlcvi0XwVBKR6rHgpccK9gPaUDbbSbt2swm7G6GE/gIvHhSv/iZv/hu3bQ7a+mDg8d4MM/PCVHBtPO/bKW1t7+zulffdg8Oj45OKe9rRSaYYtlkiEtULqUbBJbYNNwJ7qUIahwK74fR+4XefUWmeyEczSzGI6VjyiDNqrPRwM6xUvZq3BNkkfkGqUKA1rHwNRgnLYpSGCap13/dSE+RUGc4Ezt1BpjGlbErH2LdU0hh1kC8PnZNLq4xIlChb0pCl+nsip7HWszi0nTE1E73uLcT/vH5morsg5zLNDEq2WhRlgpiELL4mI66QGTGzhDLF7a2ETaiizNhsXBuCv/7yJulc1/x6rV5tNIswynAOF3AFPtxCA5rQgjYwQHiBN3h3npxX52PVWHKKiTP4A+fzBxn7i58=</latexit> 
+
+4 <latexit sha1_base64="edBvJcHG+LwtIWdwL9gM51MJRRM=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUrA5KZbfiLkDWiZeTMuRoDEpf/WHM0gilYYJq3fPcxPgZVYYzgbNiP9WYUDahI+xZKmmE2s8Wh87IpVWGJIyVLWnIQv09kdFI62kU2M6ImrFe9ebif14vNeGdn3GZpAYlWy4KU0FMTOZfkyFXyIyYWkKZ4vZWwsZUUWZsNkUbgrf68jppX1e8aqXavCnX6nkcBTiHC7gCD26hBnVoQAsYIDzDK7w5j86L8+58LFs3nHzmDP7A+fwBh5GMyw==</latexit> 
+
+6 <latexit sha1_base64="fTjEVep+3kAjzNH8JfhyNag1eYA=">AAAB6HicbVDLTgJBEOzFF+IL9ehlIjHxRHaNQY4kXjhCIo8ENmR2aGBkdnYzM2tCNnyBFw8a49VP8ubfOMAeFKykk0pVd7q7glhwbVz328ltbe/s7uX3CweHR8cnxdOzto4SxbDFIhGpbkA1Ci6xZbgR2I0V0jAQ2Amm9wu/84RK80g+mFmMfkjHko84o8ZKzeqgWHLL7hJkk3gZKUGGxqD41R9GLAlRGiao1j3PjY2fUmU4Ezgv9BONMWVTOsaepZKGqP10eeicXFllSEaRsiUNWaq/J1Iaaj0LA9sZUjPR695C/M/rJWZU9VMu48SgZKtFo0QQE5HF12TIFTIjZpZQpri9lbAJVZQZm03BhuCtv7xJ2jdlr1KuNG9LtXoWRx4u4BKuwYM7qEEdGtACBgjP8ApvzqPz4rw7H6vWnJPNnMMfOJ8/ipmMzQ==</latexit> 
+
+8 <latexit sha1_base64="PZ1IC08+DpzSF142adBVFPNy0No=">AAAB6XicbVBNS8NAEJ3Ur1q/qh69LBbBU0lEqseClx6r2A9oQ9lsJ+3SzSbsboQS+g+8eFDEq//Im//GbZuDtj4YeLw3w8y8IBFcG9f9dgobm1vbO8Xd0t7+weFR+fikreNUMWyxWMSqG1CNgktsGW4EdhOFNAoEdoLJ3dzvPKHSPJaPZpqgH9GR5CFn1FjpwXMH5YpbdRcg68TLSQVyNAflr/4wZmmE0jBBte55bmL8jCrDmcBZqZ9qTCib0BH2LJU0Qu1ni0tn5MIqQxLGypY0ZKH+nshopPU0CmxnRM1Yr3pz8T+vl5rw1s+4TFKDki0XhakgJibzt8mQK2RGTC2hTHF7K2FjqigzNpySDcFbfXmdtK+qXq1au7+u1Bt5HEU4g3O4BA9uoA4NaEILGITwDK/w5kycF+fd+Vi2Fpx85hT+wPn8Ae3SjQA=</latexit> 
+
+10 
+
+<latexit sha1_base64="bH1t3poBDwSGpvxz9X3wrwFmBJI=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vjw0mML9gPaUDbbSbt2swm7G6GE/gIvHhTx6k/y5r9x2+agrQ8GHu/NMDMvSATXxnW/nY3Nre2d3cJecf/g8Oi4dHLa1nGqGLZYLGLVDahGwSW2DDcCu4lCGgUCO8Hkfu53nlBpHssHM03Qj+hI8pAzaqzUVINS2a24C5B14uWkDDkag9JXfxizNEJpmKBa9zw3MX5GleFM4KzYTzUmlE3oCHuWShqh9rPFoTNyaZUhCWNlSxqyUH9PZDTSehoFtjOiZqxXvbn4n9dLTXjnZ1wmqUHJlovCVBATk/nXZMgVMiOmllCmuL2VsDFVlBmbTdGG4K2+vE7a1xWvWqk2b8q1eh5HAc7hAq7Ag1uoQR0a0AIGCM/wCm/Oo/PivDsfy9YNJ585gz9wPn8A4oGNBw==</latexit> 
+
+r
+
+<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="7+xCsyLGdSL+Via2MupuKdp2lP8=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdEdRaCMoKEMiDxEcop8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7NZ1nChCayTmsWoGWFPOBK0ZZjhtSkVxFHDaCAYXY79xR5VmsbgxQ0n9CPcECxnBxkrXx16nUHRL7gRokXgzUqzk5Ovtx/13tVP4bHdjkkRUGMKx1i3PlcZPsTKMcDrKtxNNJSYD3KMtSwWOqPbTyaUjdGiVLgpjZUsYNFF/T6Q40noYBbYzwqav572x+J/XSkx45qdMyMRQQaaLwoQjE6Px26jLFCWGDy3BRDF7KyJ9rDAxNpy8DcGbf3mR1E9KXrlUvrJpnMMUWdiHAzgCD06hApdQhRoQCOEBnuDZGTiPzovzNm3NOLOZPfgD5/0HBraQxQ==</latexit> 
+
+→1
+
+<latexit sha1_base64="tHk/DsmsWQz/6T/SwXZ33U7FsM4=">AAAB7XicbVBNSwMxEJ2tX7V+VT16CRahXsquSPVY7MVjC/YD2qVk02wbm02WJCuUpf/BiwdFvPp/vPlvTNs9aOuDgcd7M8zMC2LOtHHdbye3sbm1vZPfLeztHxweFY9P2lomitAWkVyqboA15UzQlmGG026sKI4CTjvBpD73O09UaSbFg5nG1I/wSLCQEWys1K4PmmV1OSiW3Iq7AFonXkZKkKExKH71h5IkERWGcKx1z3Nj46dYGUY4nRX6iaYxJhM8oj1LBY6o9tPFtTN0YZUhCqWyJQxaqL8nUhxpPY0C2xlhM9ar3lz8z+slJrz1UybixFBBlovChCMj0fx1NGSKEsOnlmCimL0VkTFWmBgbUMGG4K2+vE7aVxWvWqk2r0u1uyyOPJzBOZTBgxuowT00oAUEHuEZXuHNkc6L8+58LFtzTjZzCn/gfP4AiPiOdw==</latexit> 
+
+CQ(r)
+
+FIG. 5. Microscopic and dynamical benchmarks of the IPN for the Holstein model. (a) IPN-predicted forces FML ver-sus exact-diagonalization values FED . The dashed line de-notes perfect agreement; the inset shows the distribution of prediction errors δ = FML − FED . (b,c) Equal-time lattice-distortion correlation function CQ(r) obtained from ED and IPN Langevin dynamics after a thermal quench at (b) t = 40 and (c) t = 160. 
+
+all eight symmetry-related configurations entering each projection and for all lattice sites in the BP sum. Train-ing is performed directly against the total conservative forces evaluated using ED for the electronic contribution and the analytic elastic terms. We use 8000 complete 30 × 30 configurations for training and 1000 for testing, with AdamW optimization and a normalized force mean-square loss. The learning rate is annealed from 10 −4 to 10 −6. Force training does not require assigning a unique target energy to each local neighborhood; it constrains the derivatives of the summed energy directly, while the invariant BP construction guarantees that the learned forces derive from a common potential. Details of the di-mensionless Langevin dynamics, model parameters, loss function, and optimization are given in Appendix B. Figure 5(a) compares the IPN-predicted forces with the ED results over the full test range. The predictions closely follow the diagonal, while the inset shows an er-ror distribution sharply centered near zero. These forces are obtained by differentiating the summed invariant en-ergy, so the agreement tests both the learned local-energy representation and the contributions from overlapping neighborhoods. The benchmark demonstrates that this conservative construction can accurately reproduce the total forces, including their electronic and elastic contri-butions, directly from the microscopic distortion config-urations. We next embed the learned force in the same Langevin dynamics used for the ED reference. Figures 5(b) and 5(c) compare the equal-time connected distortion corre-lation CQ(r) = ⟨QiQj ⟩ − ⟨ Q⟩2, where r = |ri − rj |. The mean displacement vanishes for the checkerboard pat-tern, while the alternating sign of CQ(r) reflects the op-posite displacements on the two sublattices. The ED and IPN curves remain essentially coincident at both t = 40 and 160, reproducing the spatial correlations at different stages of relaxation. This agreement provides a dynam-ical test beyond the accuracy of individual force predic-7<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0
+
+<latexit sha1_base64="JCZEquuK9GK9nbDFLYHLLWVrIog=">AAAB7XicbVC7SgNBFL0bXzG+opaKDAbBKuxaRMugjWUC5gHJEmYns8mY2ZllZlYIS0p7GwtFbP2FfIed3+BPOHkUmnjgwuGce7n3niDmTBvX/XIyK6tr6xvZzdzW9s7uXn7/oK5logitEcmlagZYU84ErRlmOG3GiuIo4LQRDG4mfuOBKs2kuDPDmPoR7gkWMoKNlertuM86rJMvuEV3CrRMvDkplI/H1e/Hk3Glk/9sdyVJIioM4VjrlufGxk+xMoxwOsq1E01jTAa4R1uWChxR7afTa0fozCpdFEplSxg0VX9PpDjSehgFtjPCpq8XvYn4n9dKTHjlp0zEiaGCzBaFCUdGosnrqMsUJYYPLcFEMXsrIn2sMDE2oJwNwVt8eZnUL4peqViq2jSuYYYsHMEpnIMHl1CGW6hADQjcwxO8wKsjnWfnzXmftWac+cwh/IHz8QOAt5LN</latexit> 
+
+ωi
+
+<latexit sha1_base64="qTyqhEqAgjsQN5RyJ7wOt4MQlms=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIXdFNFGDNpYJmAukCxhdnKSjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQxB8GPv7/HOacE8ScKe2631ZmZXVtfSO7aW9t7+zu5fYP6ipKJMUajXgkmwFRyJnAmmaaYzOWSMKAYyMYXk/yxj1KxSJxq0cx+iHpC9ZjlGhjVYudXN4tuFM5y+DNIX/5YV/E7192pZP7bHcjmoQoNOVEqZbnxtpPidSMchzb7URhTOiQ9LFlUJAQlZ9OBx07J8bpOr1Imie0M3V/d6QkVGoUBqYyJHqgFrOJ+V/WSnTv3E+ZiBONgs4+6iXc0ZEz2drpMolU85EBQiUzszp0QCSh2tzGNkfwFldehnqx4JUKpaqbL1/BTFk4gmM4BQ/OoAw3UIEaUEB4gCd4tu6sR+vFep2VZqx5zyH8kfX2A986j/4=</latexit> 
+
+2
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="7+xCsyLGdSL+Via2MupuKdp2lP8=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdEdRaCMoKEMiDxEcop8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7NZ1nChCayTmsWoGWFPOBK0ZZjhtSkVxFHDaCAYXY79xR5VmsbgxQ0n9CPcECxnBxkrXx16nUHRL7gRokXgzUqzk5Ovtx/13tVP4bHdjkkRUGMKx1i3PlcZPsTKMcDrKtxNNJSYD3KMtSwWOqPbTyaUjdGiVLgpjZUsYNFF/T6Q40noYBbYzwqav572x+J/XSkx45qdMyMRQQaaLwoQjE6Px26jLFCWGDy3BRDF7KyJ9rDAxNpy8DcGbf3mR1E9KXrlUvrJpnMMUWdiHAzgCD06hApdQhRoQCOEBnuDZGTiPzovzNm3NOLOZPfgD5/0HBraQxQ==</latexit> 
+
+→1
+
+<latexit sha1_base64="3iVFQnGGr+/vmBy0coQWWHtwdhM=">AAAB6XicbVC7TgMxENwLryS8ApQ0FhESDdFdikAZQUMZEHmIcIp8ji+x4vNZtg8RnfIHNBQgoOUD+Bc6vgacRwEJI600mtnV7k4gOdPGdb+czNLyyupaNpdf39jc2i7s7DZ0nChC6yTmsWoFWFPOBK0bZjhtSUVxFHDaDAbnY795R5Vmsbg2Q0n9CPcECxnBxkpXx+VOoeiW3AnQIvFmpFjNydebj/vvWqfweduNSRJRYQjHWrc9Vxo/xcowwukof5toKjEZ4B5tWypwRLWfTi4doUOrdFEYK1vCoIn6eyLFkdbDKLCdETZ9Pe+Nxf+8dmLCUz9lQiaGCjJdFCYcmRiN30ZdpigxfGgJJorZWxHpY4WJseHkbQje/MuLpFEueZVS5dKmcQZTZGEfDuAIPDiBKlxADepAIIQHeIJnZ+A8Oi/O27Q148xm9uAPnPcfCDqQxg==</latexit> 
+
+→2
+
+<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0 <latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1 <latexit sha1_base64="qTyqhEqAgjsQN5RyJ7wOt4MQlms=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIXdFNFGDNpYJmAukCxhdnKSjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQxB8GPv7/HOacE8ScKe2631ZmZXVtfSO7aW9t7+zu5fYP6ipKJMUajXgkmwFRyJnAmmaaYzOWSMKAYyMYXk/yxj1KxSJxq0cx+iHpC9ZjlGhjVYudXN4tuFM5y+DNIX/5YV/E7192pZP7bHcjmoQoNOVEqZbnxtpPidSMchzb7URhTOiQ9LFlUJAQlZ9OBx07J8bpOr1Imie0M3V/d6QkVGoUBqYyJHqgFrOJ+V/WSnTv3E+ZiBONgs4+6iXc0ZEz2drpMolU85EBQiUzszp0QCSh2tzGNkfwFldehnqx4JUKpaqbL1/BTFk4gmM4BQ/OoAw3UIEaUEB4gCd4tu6sR+vFep2VZqx5zyH8kfX2A986j/4=</latexit> 
+
+2 <latexit sha1_base64="TWPTgEugkGmBdXdJneC9q8dW4o0=">AAAB6HicbZDJSgNBEIZr4hbHLerRS2MQPIUZhehFDHrxmIBZIBlCT6cmadOz0N0jhJAn8OJBEa/6MN69iG9jZzlo4g8NH/9fRVeVnwiutON8W5ml5ZXVtey6vbG5tb2T292rqTiVDKssFrFs+FSh4BFWNdcCG4lEGvoC637/epzX71EqHke3epCgF9JuxAPOqDZW5bSdyzsFZyKyCO4M8pcf9kXy/mWX27nPVidmaYiRZoIq1XSdRHtDKjVnAkd2K1WYUNanXWwajGiIyhtOBh2RI+N0SBBL8yJNJu7vjiENlRqEvqkMqe6p+Wxs/pc1Ux2ce0MeJanGiE0/ClJBdEzGW5MOl8i0GBigTHIzK2E9KinT5ja2OYI7v/Ii1E4KbrFQrDj50hVMlYUDOIRjcOEMSnADZagCA4QHeIJn6856tF6s12lpxpr17MMfWW8/4L6P/w==</latexit> 
+
+3 <latexit sha1_base64="Jj7+m5RdYe4ezCOwFfinAVm8giQ=">AAAB6HicbZDJSgNBEIZr4hbHLerRS2MQPIUZkehFDHrxmIBZIBlCT6cmadOz0N0jhJAn8OJBEa/6MN69iG9jZzlo4g8NH/9fRVeVnwiutON8W5ml5ZXVtey6vbG5tb2T292rqTiVDKssFrFs+FSh4BFWNdcCG4lEGvoC637/epzX71EqHke3epCgF9JuxAPOqDZW5bSdyzsFZyKyCO4M8pcf9kXy/mWX27nPVidmaYiRZoIq1XSdRHtDKjVnAkd2K1WYUNanXWwajGiIyhtOBh2RI+N0SBBL8yJNJu7vjiENlRqEvqkMqe6p+Wxs/pc1Ux2ce0MeJanGiE0/ClJBdEzGW5MOl8i0GBigTHIzK2E9KinT5ja2OYI7v/Ii1E4KbrFQrDj50hVMlYUDOIRjcOEMSnADZagCA4QHeIJn6856tF6s12lpxpr17MMfWW8/4kKQAA==</latexit> 
+
+4
+
+<latexit sha1_base64="+7Y+mbaigftZyW4HrIlyB8Q4C84=">AAAB6HicbVBNS8NAEJ34WetX1aOXxSJ4KolI9Vj04rEF+wFtKJvtpF272YTdjVBCf4EXD4p49Sd589+4bXPQ1gcDj/dmmJkXJIJr47rfztr6xubWdmGnuLu3f3BYOjpu6ThVDJssFrHqBFSj4BKbhhuBnUQhjQKB7WB8N/PbT6g0j+WDmSToR3QoecgZNVZquP1S2a24c5BV4uWkDDnq/dJXbxCzNEJpmKBadz03MX5GleFM4LTYSzUmlI3pELuWShqh9rP5oVNybpUBCWNlSxoyV39PZDTSehIFtjOiZqSXvZn4n9dNTXjjZ1wmqUHJFovCVBATk9nXZMAVMiMmllCmuL2VsBFVlBmbTdGG4C2/vEpalxWvWqk2rsq12zyOApzCGVyAB9dQg3uoQxMYIDzDK7w5j86L8+58LFrXnHzmBP7A+fwBfKuMvw==</latexit> 
+
+0
+
+<latexit sha1_base64="SRPOJb/vKOEqaEWkW3miTwVEWzs=">AAAB6HicbZC7SgNBFIbPxltcb1FLm8UgWIVdi2gjBm0sEzAXSJYwOzmbjJmdXWZmhbDkCWwsFLHVh7G3Ed/GyaXQ6A8DH/9/DnPOCRLOlHbdLyu3tLyyupZftzc2t7Z3Crt7DRWnkmKdxjyWrYAo5ExgXTPNsZVIJFHAsRkMryZ58w6lYrG40aME/Yj0BQsZJdpYNa9bKLoldyrnL3hzKF682+fJ26dd7RY+Or2YphEKTTlRqu25ifYzIjWjHMd2J1WYEDokfWwbFCRC5WfTQcfOkXF6ThhL84R2pu7PjoxESo2iwFRGRA/UYjYx/8vaqQ7P/IyJJNUo6OyjMOWOjp3J1k6PSaSajwwQKpmZ1aEDIgnV5ja2OYK3uPJfaJyUvHKpXHOLlUuYKQ8HcAjH4MEpVOAaqlAHCgj38AhP1q31YD1bL7PSnDXv2Ydfsl6/Ad22j/0=</latexit> 
+
+1
+
+<latexit sha1_base64="qbMfXlcuWaZLQXWisyUjikRK04g=">AAAB6nicbZC7SgNBFIbPxltcb1FLm8EgWC27KRIbMWhjGdFcIFnC7GQ2GTI7u8zMCmHJI9hYKGKp72JvI76Nk0uhiT8MfPz/Ocw5J0g4U9p1v63cyura+kZ+097a3tndK+wfNFScSkLrJOaxbAVYUc4ErWumOW0lkuIo4LQZDK8mefOeSsVicadHCfUj3BcsZARrY926TqlbKLqOOxVaBm8OxYsP+zx5+7Jr3cJnpxeTNKJCE46Vantuov0MS80Ip2O7kyqaYDLEfdo2KHBElZ9NRx2jE+P0UBhL84RGU/d3R4YjpUZRYCojrAdqMZuY/2XtVIdnfsZEkmoqyOyjMOVIx2iyN+oxSYnmIwOYSGZmRWSAJSbaXMc2R/AWV16GRsnxyk75xi1WL2GmPBzBMZyCBxWowjXUoA4E+vAAT/BscevRerFeZ6U5a95zCH9kvf8AuBmQcA==</latexit> 
+
+0.2
+
+<latexit sha1_base64="INNGezvqX4RW+Gi9QQqxfuQtvgA=">AAAB6nicbZDLSsNAFIZP6q3GW9Wlm8EiuAqJSOtGLLpxWdFeoA1lMp20QyeTMDMRSugjuHGhiEt9F/duxLdxello6w8DH/9/DnPOCRLOlHbdbyu3tLyyupZftzc2t7Z3Crt7dRWnktAaiXksmwFWlDNBa5ppTpuJpDgKOG0Eg6tx3rinUrFY3OlhQv0I9wQLGcHaWLeuc9opFF3HnQgtgjeD4sWHfZ68fdnVTuGz3Y1JGlGhCcdKtTw30X6GpWaE05HdThVNMBngHm0ZFDiiys8mo47QkXG6KIyleUKjifu7I8ORUsMoMJUR1n01n43N/7JWqsMzP2MiSTUVZPpRmHKkYzTeG3WZpETzoQFMJDOzItLHEhNtrmObI3jzKy9C/cTxSk7pxi1WLmGqPBzAIRyDB2WowDVUoQYEevAAT/BscevRerFep6U5a9azD39kvf8AuyGQcg==</latexit> 
+
+0.4
+
+<latexit sha1_base64="6x8qlRAA3e7Wbiy9xOjUYKTbsbw=">AAAB6nicbZDLSsNAFIZP6q3GW9Wlm8EiuAqJi+pGLLpxWdFeoA1lMp20QyeTMDMRSugjuHGhiEt9F/duxLdxmnahrT8MfPz/Ocw5J0g4U9p1v63C0vLK6lpx3d7Y3NreKe3uNVScSkLrJOaxbAVYUc4ErWumOW0lkuIo4LQZDK8mefOeSsVicadHCfUj3BcsZARrY926TqVbKruOmwstgjeD8sWHfZ68fdm1bumz04tJGlGhCcdKtT030X6GpWaE07HdSRVNMBniPm0bFDiiys/yUcfoyDg9FMbSPKFR7v7uyHCk1CgKTGWE9UDNZxPzv6yd6vDMz5hIUk0FmX4UphzpGE32Rj0mKdF8ZAATycysiAywxESb69jmCN78yovQOHG8ilO5ccvVS5iqCAdwCMfgwSlU4RpqUAcCfXiAJ3i2uPVovViv09KCNevZhz+y3n8AvimQdA==</latexit> 
+
+0.6
+
+<latexit sha1_base64="L6z04XIG10Lhh4cKP3+NwdvS578=">AAAB6nicbZC7SgNBFIbPxltcb1FLm8EgWC27FkkaMWhjGdFcIFnC7GQ2GTI7u8zMCmHJI9hYKGKp72JvI76Nk0uhiT8MfPz/Ocw5J0g4U9p1v63cyura+kZ+097a3tndK+wfNFScSkLrJOaxbAVYUc4ErWumOW0lkuIo4LQZDK8mefOeSsVicadHCfUj3BcsZARrY926TqVbKLqOOxVaBm8OxYsP+zx5+7Jr3cJnpxeTNKJCE46Vantuov0MS80Ip2O7kyqaYDLEfdo2KHBElZ9NRx2jE+P0UBhL84RGU/d3R4YjpUZRYCojrAdqMZuY/2XtVIcVP2MiSTUVZPZRmHKkYzTZG/WYpETzkQFMJDOzIjLAEhNtrmObI3iLKy9D48zxSk7pxi1WL2GmPBzBMZyCB2WowjXUoA4E+vAAT/BscevRerFeZ6U5a95zCH9kvf8AwTGQdg==</latexit> 
+
+0.8
+
+00.2 0.4 0.6 0.8 10 1 2 3 4 5
+
+00.2 0.4 0.6 0.8 10 1 2 3 4 5t=20 t=100 t=200 t=400 
+
+<latexit sha1_base64="sgXgGc5R9k5rUiwwxmSUHVSzE4w=">AAAB63icbZDLSgMxFIbPeK3jrerSTbAIrspMF9VNsejGZQV7gXYomTRtQ5PMkGSEMvQV3LhQxJ34LO7diG9jOu1CW38IfPz/OeScE8acaeN5387K6tr6xmZuy93e2d3bzx8cNnSUKELrJOKRaoVYU84krRtmOG3FimIRctoMR9fTvHlPlWaRvDPjmAYCDyTrM4JNZlVKXjdf8IpeJrQM/hwKlx9uJX77cmvd/GenF5FEUGkIx1q3fS82QYqVYYTTidtJNI0xGeEBbVuUWFAdpNmsE3RqnR7qR8o+aVDm/u5IsdB6LEJbKbAZ6sVsav6XtRPTvwhSJuPEUElmH/UTjkyEpoujHlOUGD62gIlidlZEhlhhYux5XHsEf3HlZWiUin65WL71CtUrmCkHx3ACZ+DDOVThBmpQBwJDeIAneHaE8+i8OK+z0hVn3nMEf+S8/wClFpD9</latexit> 
+
+t = 20 
+
+0 1 2 3 4 5t=20 t=100 t=200 t=400 
+
+<latexit sha1_base64="xHsTeBaA1dq7BA7J4TJiYLhXOvk=">AAAB7HicbZDLSgMxFIYz9VbHW9Wlm2ARXJWMi+qmWHTjsoLTFtqhZNK0Dc1khuSMUIY+gxsXirgSfBX3bsS3Mb0stPWHwMf/n0POOWEihQFCvp3cyura+kZ+093a3tndK+wf1E2casZ9FstYN0NquBSK+yBA8maiOY1CyRvh8HqSN+65NiJWdzBKeBDRvhI9wShYy4eKR0inUCQlMhVeBm8OxcsPt5K8fbm1TuGz3Y1ZGnEFTFJjWh5JIMioBsEkH7vt1PCEsiHt85ZFRSNugmw67BifWKeLe7G2TwGeur87MhoZM4pCWxlRGJjFbGL+l7VS6F0EmVBJClyx2Ue9VGKI8WRz3BWaM5AjC5RpYWfFbEA1ZWDv49ojeIsrL0P9rOSVS+VbUqxeoZny6Agdo1PkoXNURTeohnzEkEAP6Ak9O8p5dF6c11lpzpn3HKI/ct5/ABJckTY=</latexit> 
+
+t = 100 
+
+1 2 3 4 5t=20 t=100 t=200 t=400 
+
+<latexit sha1_base64="J3MHqHb6kcbCFOFyEejvIMYqbks=">AAAB7HicbZDLSgMxFIbPeK3jrerSTbAIrkqmi+qmWHTjsoLTFtqhZNK0Dc1khiQjlKHP4MaFIq4EX8W9G/FtTC8Lbf0h8PH/55BzTpgIrg3G387K6tr6xmZuy93e2d3bzx8c1nWcKsp8GotYNUOimeCS+YYbwZqJYiQKBWuEw+tJ3rhnSvNY3plRwoKI9CXvcUqMtXxTKWHcyRdwEU+FlsGbQ+Hyw60kb19urZP/bHdjmkZMGiqI1i0PJybIiDKcCjZ226lmCaFD0mcti5JETAfZdNgxOrVOF/ViZZ80aOr+7shIpPUoCm1lRMxAL2YT87+slZreRZBxmaSGSTr7qJcKZGI02Rx1uWLUiJEFQhW3syI6IIpQY+/j2iN4iysvQ71U9MrF8i0uVK9gphwcwwmcgQfnUIUbqIEPFDg8wBM8O9J5dF6c11npijPvOYI/ct5/ABPikTc=</latexit> 
+
+t = 200 
+
+0246810 1 2 3 4 5t=20 t=100 t=200 t=400 
+
+<latexit sha1_base64="kZHu9E2DxveOBpY+FzHflihhJII=">AAAB7HicbZDLSgMxFIYzXut4q7p0EyyCq5IRqW6KRTcuKzhtoR1KJk3b0ExmSM4IZegzuHGhiCvBV3HvRnwb08tCW38IfPz/OeScEyZSGCDk21laXlldW89tuJtb2zu7+b39molTzbjPYhnrRkgNl0JxHwRI3kg0p1EoeT0cXI/z+j3XRsTqDoYJDyLaU6IrGAVr+VA+I6SdL5AimQgvgjeDwuWHW07evtxqO//Z6sQsjbgCJqkxTY8kEGRUg2CSj9xWanhC2YD2eNOiohE3QTYZdoSPrdPB3VjbpwBP3N8dGY2MGUahrYwo9M18Njb/y5opdC+CTKgkBa7Y9KNuKjHEeLw57gjNGcihBcq0sLNi1qeaMrD3ce0RvPmVF6F2WvRKxdItKVSu0FQ5dIiO0Any0DmqoBtURT5iSKAH9ISeHeU8Oi/O67R0yZn1HKA/ct5/ABbukTk=</latexit> 
+
+t = 400 
+
+<latexit sha1_base64="nunVT5M+BRzBBAzblPjdNPImRAc=">AAAB9XicbVDLSgNBEJyNrxhfUY9elgQhooRdkehFCHrxGME8ILuG2ckkGTIzu8z0KsuSv/DgxYMiXv0Xb/kbJ4+DRgsaiqpuuruCiDMNjjO2MkvLK6tr2fXcxubW9k5+d6+hw1gRWichD1UrwJpyJmkdGHDaihTFIuC0GQyvJ37zgSrNQnkHSUR9gfuS9RjBYKT7kqdEikdH3glcnjmdfNEpO1PYf4k7J8VqwTt+GleTWif/5XVDEgsqgXCsddt1IvBTrIARTkc5L9Y0wmSI+7RtqMSCaj+dXj2yD43StXuhMiXBnqo/J1IstE5EYDoFhoFe9Cbif147ht6FnzIZxUAlmS3qxdyG0J5EYHeZogR4YggmiplbbTLAChMwQeVMCO7iy39J47TsVsqVW5PGFZohiw5QAZWQi85RFd2gGqojghR6Rq/ozXq0Xqx362PWmrHmM/voF6zPbyQVlJ4=</latexit> 
+
+(a) t = 40  <latexit sha1_base64="1tV611HpHzInmG0uwppoglCbXYo=">AAAB+HicbVDLSgMxFM3UV62Pjrp0E1qEilJmXFQ3QtGNywr2AZ2hZNJMG5pkhiQjjEP/wp0bF4q49VPc9W9MHwttPXDhcM693HtPEDOqtONMrNza+sbmVn67sLO7t1+0Dw5bKkokJk0csUh2AqQIo4I0NdWMdGJJEA8YaQej26nffiRS0Ug86DQmPkcDQUOKkTZSzy5WPMmzYHzqnetrt+b07LJTdWaAq8RdkHK95J09T+ppo2d/e/0IJ5wIjRlSqus6sfYzJDXFjIwLXqJIjPAIDUjXUIE4UX42O3wMT4zSh2EkTQkNZ+rviQxxpVIemE6O9FAte1PxP6+b6PDKz6iIE00Eni8KEwZ1BKcpwD6VBGuWGoKwpOZWiIdIIqxNVgUTgrv88ippXVTdWrV2b9K4AXPkwTEogQpwwSWogzvQAE2AQQJewBt4t56sV+vD+py35qzFzBH4A+vrBxQylQ0=</latexit> 
+
+(b) t = 160 
+
+<latexit sha1_base64="8kPweKPouE8tlX2chnxUcAst58A=">AAAB+HicbVDLSgMxFM3UV62Pjrp0E1qEilJmBKsboejGZQX7gM5QMmmmDU0yQ5IRxqF/4c6NC0Xc+inu+jemj4VWD1w4nHMv994TxIwq7TgTK7eyura+kd8sbG3v7Bbtvf2WihKJSRNHLJKdACnCqCBNTTUjnVgSxANG2sHoZuq3H4hUNBL3Oo2Jz9FA0JBipI3Us4sVT/IMj4+9U3117jg9u+xUnRngX+IuSLle8k6eJvW00bO/vH6EE06Exgwp1XWdWPsZkppiRsYFL1EkRniEBqRrqECcKD+bHT6GR0bpwzCSpoSGM/XnRIa4UikPTCdHeqiWvan4n9dNdHjpZ1TEiSYCzxeFCYM6gtMUYJ9KgjVLDUFYUnMrxEMkEdYmq4IJwV1++S9pnVXdWrV2Z9K4BnPkwSEogQpwwQWog1vQAE2AQQKewSt4sx6tF+vd+pi35qzFzAH4BevzGxK5lQw=</latexit> 
+
+(c) t = 500  <latexit sha1_base64="Q3yXc5k98z4jqCLvcQhaRbBtavA=">AAAB73icbVDLSsNAFL3xWeur6tJNaBEqQklcVJdFNy4r2Ac0oUwmk3bozCTOTIQQ+hMiuFDErb/jrn/j9LHQ1gMXDufcy733BAmjSjvOxFpb39jc2i7sFHf39g8OS0fHbRWnEpMWjlksuwFShFFBWppqRrqJJIgHjHSC0e3U7zwRqWgsHnSWEJ+jgaARxUgbqVv1JM/D8Xm/VHFqzgz2KnEXpNIoexcvk0bW7Je+vTDGKSdCY4aU6rlOov0cSU0xI+OilyqSIDxCA9IzVCBOlJ/P7h3bZ0YJ7SiWpoS2Z+rviRxxpTIemE6O9FAte1PxP6+X6ujaz6lIUk0Eni+KUmbr2J4+b4dUEqxZZgjCkppbbTxEEmFtIiqaENzll1dJ+7Lm1mv1e5PGDcxRgFMoQxVcuIIG3EETWoCBwTO8wbv1aL1aH9bnvHXNWsycwB9YXz/CyZLI</latexit> 
+
+(d) 
+
+<latexit sha1_base64="p6ujfBUUy2zynnmnPpTeHfXpRN0=">AAAB7XicbVA9SwNBEJ2LXzF+RS1tlgQhIsQ7i2gZtLGwiGASITnC3mYvWbO3e+zuCeHIf7DQQhFb/49d/o2bj0ITHww83pthZl4Qc6aN646dzMrq2vpGdjO3tb2zu5ffP2homShC60RyqR4CrClngtYNM5w+xIriKOC0GQyuJ37ziSrNpLg3w5j6Ee4JFjKCjZUa6uy2ZE46+aJbdqdAy8Sbk2K10D59GVeHtU7+u92VJImoMIRjrVueGxs/xcowwuko1040jTEZ4B5tWSpwRLWfTq8doWOrdFEolS1h0FT9PZHiSOthFNjOCJu+XvQm4n9eKzHhpZ8yESeGCjJbFCYcGYkmr6MuU5QYPrQEE8XsrYj0scLE2IByNgRv8eVl0jgve5Vy5c6mcQUzZOEIClACDy6gCjdQgzoQeIRneIN3RzqvzofzOWvNOPOZQ/gD5+sHna+Rfg==</latexit> 
+
+r/L (t)
+
+<latexit sha1_base64="pvfMJHlhrpPPHmEyIC2GypkKea8=">AAAB8HicbVBNSwMxEJ2tX7V+VT16CRahXsqulOqx2IvHCvZD2qVk02wbmmSXJCuUpb/CiwdFvPpzvPlvTNs9aOuDgcd7M8zMC2LOtHHdbye3sbm1vZPfLeztHxweFY9P2jpKFKEtEvFIdQOsKWeStgwznHZjRbEIOO0Ek8bc7zxRpVkkH8w0pr7AI8lCRrCx0mNj0I/HrKwuB8WSW3EXQOvEy0gJMjQHxa/+MCKJoNIQjrXueW5s/BQrwwins0I/0TTGZIJHtGepxIJqP10cPEMXVhmiMFK2pEEL9fdEioXWUxHYToHNWK96c/E/r5eY8MZPmYwTQyVZLgoTjkyE5t+jIVOUGD61BBPF7K2IjLHCxNiMCjYEb/XlddK+qni1Su2+WqrfZnHk4QzOoQweXEMd7qAJLSAg4Ble4c1Rzovz7nwsW3NONnMKf+B8/gD3PI/h</latexit> 
+
+Cω(r)
+
+FIG. 6. Large-scale phase ordering in the Holstein model after a thermal quench on a 200 × 200 square lattice with periodic boundary conditions. (a–c) Snapshots of the CDW order-parameter field ϕi at t = 40, 160, and 500, showing pro-gressive domain coarsening. (d) Normalized connected order-parameter correlations Cϕ(r, t ) plotted against r/L (t), using the power-law growth L(t) ∼ t0.454 . The close collapse of curves at different times supports dynamical scaling. 
+
+tions: local errors are repeatedly fed back into the evolv-ing displacement field, yet their accumulated effects do not produce appreciable differences in the correlations over the times examined. Having established agreement with ED on the refer-ence system, we apply the IPN to a thermal quench on a 200 × 200 square lattice with periodic boundary con-ditions. To visualize the resulting domain structure, we follow Ref. [24] and define the local CDW order parame-ter ϕi = ( ρi − 14
+
+P
+
+j∈NN( i) ρj )( −1) xi+yi , where ρi = ⟨ni⟩
+
+is the local electron density and NN( i) denotes the four nearest neighbors of site i. This field measures the lo-cal charge modulation, with its sign distinguishing the two checkerboard states related by the broken Z2 sublat-tice symmetry. The snapshots in Fig. 6(a–c), taken at 
+
+t = 40, 160, and 500, show the progressive coarsening of these domains. Numerous small regions of opposite sign give way to larger domains, making the growth of the characteristic spatial scale apparent. We quantify this evolution using the normalized con-nected correlation Cϕ(r, t ) = [ ⟨ϕiϕj ⟩−⟨ ϕ⟩2]/[⟨ϕ2⟩−⟨ ϕ⟩2], with all averages evaluated at time t. The character-istic domain length is extracted from its half-height, 
+
+Cϕ(L(t), t ) = 1 /2. Over the time window studied, this length is well described by a power law L(t) ∼ tα with 
+
+α ≃ 0.454. Using this power-law length scale, the cor-relation curves at different times collapse closely onto a common profile when plotted against r/L (t), as shown in Fig. 6(d). Thus, although the domains grow substan-tially during relaxation, their spatial correlations retain approximately the same form after rescaling by a single evolving length. The observed exponent is smaller than the conven-tional Allen–Cahn value 1 /2, consistent with the slower CDW domain growth reported in earlier descriptor-based MLP and graph-based force-field studies [24, 63]. Here 
+
+α ≃ 0.454 characterizes the accessible simulation win-dow; the correlation collapse supports a scaling descrip-tion within this window without establishing the asymp-totic growth law. For the present methodological bench-mark, the central result is that the IPN reproduces both the microscopic forces and the collective ordering dynam-ics using an ordinary MLP with invariant projection. To-gether with the FK results, these tests demonstrate the applicability of the same finite-group construction to di-rectional transition energies and conservative forces for continuous lattice variables. 
+
+V. DISCUSSION AND CONCLUSIONS 
+
+In conclusion, finite-group projection provides a di-rect route from ordinary neural networks to symmetry-preserving surrogates for lattice many-body dynamics. The FK and Holstein applications illustrate complemen-tary cases: directional transition free energies transform-ing in a nontrivial output representation, and invari-ant local energies whose derivatives generate conservative forces. In both cases, agreement with exact diagonaliza-tion tests the microscopic predictions, while the dynam-ical correlations and recovery of established coarsening behavior test their accumulated consequences in large-scale simulations. These benchmarks show that accurate dynamics can be obtained without handcrafted invariant descriptors or symmetry-constrained hidden representa-tions. This is useful because the standard alternatives each carry their own implementation burden. Descriptor-based approaches can be highly effective, but symme-try alone does not determine which invariants, relative phases, reference frames, truncations, or canonical orien-tations should be used; directional outputs can require still more bookkeeping to restore the orientation infor-mation removed by invariant encoding. Fully equivari-ant neural networks provide a more systematic and of-ten more elegant solution, but implementing them prop-erly generally requires substantially more architectural machinery and group-theoretical structure, including the organization and coupling of symmetry representations throughout the network. The main advantage of the EPN approach is therefore its simplicity. The microscopic configuration remains the input, an otherwise unrestricted network learns the lo-cal map, and a fixed group projection imposes the re-quired transformation law exactly. Changing from scalar 8to directional, vector, or tensor outputs requires the cor-responding output dimension and group representation, while the hidden layers can remain unrestricted. The cost of evaluating the full group average makes this ap-proach especially natural for fixed-lattice problems with small finite symmetry groups; it can also surround more expressive backbones when needed. For many lattice ap-plications, EPNs thus offer a simple, transparent, and reusable route to exact symmetry preservation. 
+
+Appendix A: Falicov–Kimball simulation and training details 
+
+For the FK calculations, a configuration C = {nfi } de-fines a quadratic itinerant-electron problem. We retain the main-text notation ∆ E for the target, although it is an electronic free-energy difference. For an allowed nearest-neighbor hop i → j,∆Ei→j = Fe(Ci→j ) − Fe(C), (A1) with the itinerant-electron number held fixed in the two ED calculations. The kMC acceptance probability is 
+
+P (C → C i→j ) = min 
+
+
+
+1, exp 
+
+
+
+− ∆Ei→j
+
+T
+
+ 
+
+. (A2) One sweep contains Nf attempted moves, including re-jected proposals. The reference parameters used for the ED and EPN benchmarks are listed in Table I. The local input is the occupation pattern in the radius-10 disk centered on the selected occupied site. Including the center, this gives 317 binary variables. The unre-stricted MLP is 317 → 512 → 512 → 256 → 128 → 4, (A3) with SiLU activations after all hidden layers and a lin-ear output layer. The four outputs are ordered as (+ x, −x, +y, −y). The D4 projection in Eq. (2) uses the same MLP parameters for all eight group elements; sym-metry therefore changes neither the number of trainable parameters nor the network architecture. For a training environment a centered on site ia, the mask maα = 1 −nfia+eα removes hops into occupied sites. The loss is the masked normalized mean-square error 
+
+LFK =
+
+X
+
+> a,α
+
+maα 
+
+ ∆EML  
+
+> aα
+
+− ∆EED 
+
+> aα
+
+σtrain ∆E
+
+2
+
+X
+
+> a,α
+
+maα 
+
+, (A4) where σtrain ∆E is the standard deviation of the valid ED labels in the training set and is held fixed during training and evaluation. Forbidden moves neither contribute to the loss nor enter accepted kMC transitions. The reported test MSE corresponds to an RMSE of approximately 0 .0713 σtrain ∆E . This is an aggregate error normalized by the spread of the training labels, rather than a relative error for each individual hop. 
+
+TABLE I. Falicov–Kimball simulation parameters. Ener-gies and temperatures are measured in units of the nearest-neighbor hopping t.Parameter Value Lattice dimensions Lx × Ly 30 × 30 Itinerant-electron density ρc 0.55 
+
+f -electron density ρf 0.187 Interaction strength U/t 2.0Temperature T /t 0.05 Neighborhood radius Rc 10 TABLE II. FK neural-network and optimization details. Property Value Hidden layers 512 , 512 , 256 , 128 Activation SiLU Optimizer AdamW Learning rate 10 −3
+
+Weight decay 10 −6
+
+Batch size 1024 local environments Training environments 77,520 Validation environments 19,380 Training epochs 500 Training normalized MSE 1.767 × 10 −3
+
+Test normalized MSE 5.089 × 10 −3
+
+Appendix B: Holstein simulation and training details 
+
+For the semiclassical Holstein calculations we use the full Hamiltonian 
+
+HHolstein = − t X
+
+> ⟨ij ⟩
+
+(c† 
+
+> i
+
+cj + H .c.) − g X
+
+> i
+
+Qi(ˆ ni − ¯n)+ X
+
+> i
+
+P 2
+
+> i
+
+2M + K
+
+2
+
+X
+
+> i
+
+Q2 
+
+> i
+
++ κ X
+
+> ⟨ij ⟩
+
+QiQj . (B1) For each displacement configuration, the electronic Hamiltonian is diagonalized and the chemical potential is adjusted to maintain the prescribed filling. In units 
+
+E0 = g2/K and t0 = pM/K , we define eQi = KQ i/g ,
+
+et = tphys /t 0, and ePi = d eQi/d et, together with eκ = κ/K ,
+
+eT = kB T /E 0, and eγ = γ/ √M K . The Langevin dynam-ics used in the benchmark can be written 
+
+d eQi
+
+det = ePi, (B2) 
+
+d ePi
+
+det = ( ni − ¯n) − eQi − eκ X
+
+> j∈NN( i)
+
+eQj − eγ ePi + eξi, (B3) with ⟨eξi(et)eξj (et′)⟩ = 2 eγ eT δ ij δ(et − et′). The parameters are summarized in Table III. 9
+
+TABLE III. Holstein simulation parameters in the dimension-less convention used for the Langevin dynamics. Parameter Value Lattice dimensions Lx × Ly 30 × 30 Filling ¯ n 0.5Electron–phonon coupling λ = g2/(4 Kt ) 2.0Elastic coupling eκ = κ/K 0.15 Bath temperature eT 0.1Initial lattice temperature eTinit 1.0Damping eγ 0.64 Time step ∆ et 0.02 Number of time steps 10,000 TABLE IV. Holstein neural-network and optimization details. Property Value Hidden layers 512 , 256 , 128 Activation SiLU Optimizer AdamW Initial learning rate 10 −4
+
+Final learning rate 10 −6
+
+Learning-rate schedule Cosine annealing Weight decay 10 −6
+
+Batch size 24 configurations Gradient-norm cutoff 10 Training configurations 8000 Test configurations 1000 Training normalized MSE 1.021 × 10 −3
+
+Test normalized MSE 1.142 × 10 −3
+
+The scalar MLP takes the 25 displacements in a 5 × 5patch and has architecture 25 → 512 → 256 → 128 → 1, (B4) again with SiLU hidden activations and a linear out-put. After invariant D4 averaging, its local energies are summed according to 
+
+EML = X
+
+> j
+
+ϵj , F ML  
+
+> i
+
+= − ∂E ML 
+
+∂ eQi
+
+. (B5) Automatic differentiation of the full sum includes contri-butions from all overlapping patches that contain site i.The ED force labels include both electronic and elastic contributions, so the learned force represents the full con-servative force entering the Langevin equation. Damping and stochastic noise are added separately during the dy-namics. Training minimizes the normalized force mean-square error 
+
+LHolstein = 1
+
+Nconf N
+
+X
+
+> a,i
+
+ F ML  
+
+> ai
+
+− F ED 
+
+> ai
+
+F train rms 
+
+2
+
+, (B6) where N = 900 for the 30 × 30 reference lattice and 
+
+F train rms =
+
+ 1
+
+Ntrain N
+
+X
+
+> a∈train ,i
+
+(F ED  
+
+> ai
+
+)2
+
+
+
+> 1/2
+
+. (B7) This normalization is determined from the training data and then kept fixed for both optimization and test eval-uation. The Holstein test MSE corresponds to an RMSE of approximately 0 .0338 F train rms . Because the FK and Hol-stein losses use different physical targets and normaliza-tion scales, their numerical loss values should not be com-pared directly. 
+
+[1] E. Dagotto, Complexity in strongly correlated electronic systems, Science 309 , 257 (2005). [2] S. A. Kivelson, E. Fradkin, and V. J. Emery, Electronic liquid-crystal phases of a doped Mott insulator, Nature 
+
+393 , 550 (1998). [3] E. Fradkin, S. A. Kivelson, and J. M. Tranquada, Collo-quium: Theory of intertwined orders in high temperature superconductors, Rev. Mod. Phys. 87 , 457 (2015). [4] M. H. Hamidian, S. D. Edkins, S. H. Joo, A. Kostin, H. Eisaki, S. Uchida, M. J. Lawler, E.-A. Kim, A. P. Mackenzie, K. Fujita, J. Lee, and J. C. S. Davis, Detec-tion of a cooper-pair density wave in Bi 2Sr 2CaCu 2O8+ x,Nature 532 , 343 (2016). [5] M. M. Qazilbash, M. Brehm, B.-G. Chae, P.-C. Ho, G. O. Andreev, B.-J. Kim, S. J. Yun, A. V. Balatsky, M. B. Maple, F. Keilmann, H.-T. Kim, and D. N. Basov, Mott transition in VO 2 revealed by infrared spectroscopy and nano-imaging, Science 318 , 1750 (2007). [6] A. S. McLeod, E. van Heumen, J. G. Ramirez, S. Wang, T. Saerbeck, S. Guenon, M. Goldflam, L. Anderegg, P. Kelly, A. Mueller, M. K. Liu, I. K. Schuller, and D. N. Basov, Nanotextured phase coexistence in the correlated insulator V 2O3, Nature Physics 13 , 80 (2017). [7] Y. Tokura, M. Kawasaki, and N. Nagaosa, Emergent functions of quantum materials, Nature Physics 13 , 1056 (2017). [8] N. Nagaosa and Y. Tokura, Topological properties and dynamics of magnetic skyrmions, Nature Nanotechnol-ogy 8, 899 (2013). [9] T. Kurumaji, T. Nakajima, M. Hirschberger, A. Kikkawa, Y. Yamasaki, H. Sagayama, H. Nakao, Y. Taguchi, T.-h. Arima, and Y. Tokura, Skyrmion lattice with a giant topological hall effect in a frustrated triangular-lattice magnet, Science 365 , 914 (2019). 10 
+
+[10] P. C. Hohenberg and B. I. Halperin, Theory of dynamic critical phenomena, Rev. Mod. Phys. 49 , 435 (1977). [11] A. J. Bray, Theory of phase-ordering kinetics, Advances in Physics 43 , 357 (1994). [12] H. Furukawa, A dynamic scaling assumption for phase separation, Advances in Physics 34 , 703 (1985). [13] J. Behler and M. Parrinello, Generalized neural-network representation of high-dimensional potential-energy sur-faces, Phys. Rev. Lett. 98 , 146401 (2007). [14] A. P. Bart´ ok, M. C. Payne, R. Kondor, and G. Cs´ anyi, Gaussian approximation potentials: The accuracy of quantum mechanics, without the electrons, Phys. Rev. Lett. 104 , 136403 (2010). [15] Z. Li, J. R. Kermode, and A. De Vita, Molecular dy-namics with on-the-fly machine learning of quantum-mechanical forces, Phys. Rev. Lett. 114 , 096405 (2015). [16] J. S. Smith, O. Isayev, and A. E. Roitberg, Ani-1: an extensible neural network potential with dft accuracy at force field computational cost, Chem. Sci. 8, 3192 (2017). [17] S. Chmiela, A. Tkatchenko, H. E. Sauceda, I. Poltavsky, K. T. Sch¨ utt, and K.-R. M¨ uller, Machine learning of ac-curate energy-conserving molecular force fields, Science Advances 3, e1603015 (2017). [18] L. Zhang, J. Han, H. Wang, R. Car, and W. E, Deep potential molecular dynamics: A scalable model with the accuracy of quantum mechanics, Phys. Rev. Lett. 120 ,143001 (2018). [19] V. L. Deringer, M. A. Caro, and G. Csanyi, Machine learning interatomic potentials as emerging tools for ma-terials science, Advanced Materials 31 , 1902765 (2019). [20] F. No´ e, A. Tkatchenko, K.-R. M¨ uller, and C. Clementi, Machine learning for molecular simulation, Annu. Rev. Phys. Chem. 71 , 361 (2020). [21] H. Suwa, J. S. Smith, N. Lubbers, C. D. Batista, G.-W. Chern, and K. Barros, Machine learning for molecular dynamics with strongly correlated electrons, Phys. Rev. B 99 , 161107 (2019). [22] P. Zhang and G.-W. Chern, Arrested phase separation in double-exchange models: Large-scale simulation en-abled by machine learning, Phys. Rev. Lett. 127 , 146401 (2021). [23] S. Zhang, P. Zhang, and G.-W. Chern, Anomalous phase separation in a correlated electron system: Machine-learning enabled large-scale kinetic monte carlo simula-tions, Proceedings of the National Academy of Sciences 
+
+119 , e2119957119 (2022). [24] C. Cheng, S. Zhang, and G.-W. Chern, Machine learn-ing for phase ordering dynamics of charge density waves, Phys. Rev. B 108 , 014301 (2023). [25] S. Ghosh, S. Zhang, C. Cheng, and G.-W. Chern, Kinet-ics of orbital ordering in cooperative jahn-teller models: Machine-learning enabled large-scale simulations, Phys. Rev. Mater. 8, 123602 (2024). [26] X. Cheng, S. Zhang, P. C. H. Nguyen, S. Azarfar, G.-W. Chern, and S. S. Baek, Convolutional neural networks for large-scale dynamical modeling of itinerant magnets, Phys. Rev. Res. 5, 033188 (2023). [27] P. Zhang and G.-W. Chern, Machine learning nonequilib-rium electron forces for spin dynamics of itinerant mag-nets, npj Computational Materials 9, 32 (2023). [28] Y. Fan, S. Zhang, and G.-W. Chern, Coarsening of chi-ral domains in itinerant electron magnets: A machine learning force-field approach, Phys. Rev. B 110 , 245105 (2024). [29] A. Tyberg, Y. Fan, and G.-W. Chern, Machine learning force field model for kinetic monte carlo simulations of itinerant ising magnets, Phys. Rev. B 111 , 235132 (2025). [30] G.-W. Chern, Y. Fan, S. Zhang, and P. Zhang, Machine-learning modeling of magnetization dynamics in itinerant magnets, Journal of Magnetism and Magnetic Materials 
+
+628 , 173679 (2026). [31] J. Behler, Atom-centered symmetry functions for con-structing high-dimensional neural network potentials, The Journal of Chemical Physics 134 , 074106 (2011). [32] A. P. Bart´ ok, R. Kondor, and G. Cs´ anyi, On representing chemical environments, Phys. Rev. B 87 , 184115 (2013). [33] L. M. Ghiringhelli, J. Vybiral, S. V. Levchenko, C. Draxl, and M. Scheffler, Big data of materials science: Criti-cal role of the descriptor, Phys. Rev. Lett. 114 , 105503 (2015). [34] L. Himanen, M. O. J¨ ager, E. V. Morooka, F. Federici Canova, Y. S. Ranawat, D. Z. Gao, P. Rinke, and A. S. Foster, Dscribe: Library of descriptors for machine learn-ing in materials science, Computer Physics Communica-tions 247 , 106949 (2020). [35] H. Huo and M. Rupp, Unified representation of molecules and crystals for machine learning, Machine Learning: Science and Technology 3, 045017 (2022). [36] R. Drautz, Atomic cluster expansion for accurate and transferable interatomic potentials, Phys. Rev. B 99 ,014104 (2019). [37] P. Zhang, S. Zhang, and G.-W. Chern, Descriptors for machine learning model of generalized force field in con-densed matter systems (2022), arXiv:2201.00798 [cond-mat.str-el]. [38] T. S. Cohen and M. Welling, Group equivariant con-volutional networks, in Proceedings of the 33rd Interna-tional Conference on Machine Learning , Proceedings of Machine Learning Research, Vol. 48 (PMLR, 2016) pp. 2990–2999, arXiv:1602.07576 [cs.LG]. [39] T. S. Cohen, M. Geiger, M. Weiler, and M. Welling, A general theory of equivariant cnns on homogeneous spaces, in Advances in Neural Information Processing Systems , Vol. 31 (2018) arXiv:1811.02017 [cs.LG]. [40] N. Thomas, T. Smidt, S. Kearnes, L. Yang, L. Li, K. Kohlhoff, and P. Riley, Tensor field networks: Rotation- and translation-equivariant neural networks for 3d point clouds (2018), arXiv:1802.08219 [cs.LG]. [41] M. Weiler, M. Geiger, M. Welling, W. Boomsma, and T. S. Cohen, 3d steerable cnns: Learning rotationally equivariant features in volumetric data, in Advances in Neural Information Processing Systems , Vol. 31 (Curran Associates, Inc., 2018) arXiv:1807.02547 [cs.LG]. [42] M. Geiger and T. Smidt, e3nn: Euclidean neural net-works, arXiv preprint (2022), arXiv:2207.09453 [cs.LG]. [43] S. Batzner, A. Musaelian, L. Sun, M. Geiger, J. P. Mailoa, M. Kornbluth, N. Molinari, T. E. Smidt, and B. Kozinsky, E(3)-equivariant graph neural networks for data-efficient and accurate interatomic potentials, Nature Communications 13 , 2453 (2022). [44] I. Batatia, D. P. Kov´ acs, G. N. C. Simm, C. Ortner, and G. Cs´ anyi, Mace: Higher order equivariant mes-sage passing neural networks for fast and accurate force fields, in Advances in Neural Information Processing Sys-tems , Vol. 35 (2022) pp. 11423–11436, arXiv:2206.07697 [stat.ML]. [45] A. Musaelian, S. Batzner, A. Johansson, L. Sun, C. J. Owen, M. Kornbluth, and B. Kozinsky, Learning local 11 
+
+equivariant representations for large-scale atomistic dy-namics, Nature Communications 14 , 579 (2023). [46] O. Puny, M. Atzmon, H. Ben-Hamu, I. Misra, A. Grover, E. J. Smith, and Y. Lipman, Frame averaging for in-variant and equivariant network design, in Interna-tional Conference on Learning Representations (2022) arXiv:2110.03336 [cs.LG]. [47] S. Basu, P. Sattigeri, K. Natesan Ramamurthy, V. Chen-thamarakshan, K. R. Varshney, L. R. Varshney, and P. Das, Equi-Tuning: Group equivariant fine-tuning of pretrained models, Proceedings of the AAAI Con-ference on Artificial Intelligence 37 , 6788 (2023), arXiv:2210.06475 [cs.LG]. [48] A. Sannai, M. Kawano, and W. Kumagai, Invariant and equivariant Reynolds networks, Journal of Ma-chine Learning Research 25 , 1 (2024), arXiv:2110.08092 [cs.LG]. [49] S. Dittmer, D. Erzmann, H. Harms, and P. Maass, SELTO: Sample-efficient learned topology optimization (2022), arXiv:2209.05098 [cs.LG]. [50] A. Corbetta, A. Gabbana, V. Gyrya, D. Livescu, J. Prins, and F. Toschi, Toward learning Lattice Boltzmann colli-sion operators, Eur. Phys. J. E 46 , 10 (2023). [51] A. A. Duval, V. Schmidt, A. Hern´ andez-Garc´ ıa, S. Miret, F. D. Malliaros, Y. Bengio, and D. Rolnick, FAENet: Frame averaging equivariant GNN for materials model-ing, in Proceedings of the 40th International Conference on Machine Learning , Proceedings of Machine Learn-ing Research, Vol. 202 (PMLR, 2023) pp. 9013–9033, arXiv:2305.05577 [cs.LG]. [52] W. Kohn, Density functional and density matrix method scaling linearly with the number of atoms, Phys. Rev. Lett. 76 , 3168 (1996). [53] E. Prodan and W. Kohn, Nearsightedness of electronic matter, Proceedings of the National Academy of Sciences 
+
+102 , 11635 (2005). [54] G. Cybenko, Approximation by superpositions of a sig-moidal function, Mathematics of Control, Signals and Systems 2, 303 (1989). [55] K. Hornik, M. Stinchcombe, and H. White, Multilayer feedforward networks are universal approximators, Neu-ral Networks 2, 359 (1989). [56] A. R. Barron, Universal approximation bounds for super-positions of a sigmoidal function, IEEE Transactions on Information Theory 39 , 930 (1993). [57] L. M. Falicov and J. C. Kimball, Simple model for semiconductor-metal transitions: SmB 6 and transition-metal oxides, Phys. Rev. Lett. 22 , 997 (1969). [58] T. Kennedy and E. H. Lieb, An itinerant electron model with crystalline or magnetic long range order, Physica A 
+
+138 , 320 (1986). [59] J. K. Freericks and V. Zlati´ c, Exact dynamical mean-field theory of the Falicov-Kimball model, Rev. Mod. Phys. 
+
+75 , 1333 (2003). [60] J. K. Freericks and R. Lema´ nski, Segregation and charge-density-wave order in the spinless Falicov-Kimball model, Phys. Rev. B 61 , 13438 (2000). [61] J. K. Freericks, E. H. Lieb, and D. Ueltschi, Phase sep-aration due to quantum mechanical correlations, Phys. Rev. Lett. 88 , 106401 (2002). [62] R. Lema´ nski, J. K. Freericks, and G. Banach, Stripe phases in the two-dimensional Falicov-Kimball model, Phys. Rev. Lett. 89 , 196403 (2002). [63] Y. Fan and G.-W. Chern, Graph neural network force fields for adiabatic dynamics of lattice hamiltonians, APL Machine Learning 4, 036107 (2026).

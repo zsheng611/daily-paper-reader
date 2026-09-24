@@ -1,0 +1,1440 @@
+Title: Optimal Bias Potentials via Ergodic Optimal Control and Generator Learning
+
+URL Source: https://arxiv.org/pdf/2609.28010v1
+
+Published Time: Thu, 24 Sep 2026 01:20:41 GMT
+
+Number of Pages: 35
+
+Markdown Content:
+# Optimal Bias Potentials via Ergodic Optimal Control and Generator Learning 
+
+# Lei Guo 1,4 , Carsten Hartmann 2, Thomas Berger 3, and Feliks N¨ uske 4, 5 
+
+> 1
+
+Otto-von-Guericke Universit¨ at, Institute of Mathematics, Magdeburg, Germany 
+
+> 2
+
+Brandenburg University of Technology Cottbus-Senftenberg, Institute of Mathematics, Cottbus, Germany 
+
+> 3
+
+Martin-Luther-Universit¨ at Halle-Wittenberg, Institute of Mathematics, Halle (Saale), Germany 
+
+> 4
+
+Max-Planck-Institute for Dynamics of Complex Technical Systems, Magdeburg, Germany 
+
+> 5
+
+LAAS-CNRS, Universit´ e de Toulouse, France 
+
+# September 24, 2026 
+
+Abstract 
+
+We investigate the computation of optimal bias potentials for accelerating tran-sitions between metastable states and for computation of equilibrium properties in molecular dynamics simulations. We formulate optimal biasing as an ergodic optimal control problem (OCP), which can be recast as a linear eigenvalue problem for the infinitesimal generator of the unbiased dynamics. We demonstrate that data-driven learning methods for the generator enable reliable solution of the OCP, computation of biasing potentials, extraction of equilibrium properties, and acceleration of state transitions. We also explore the relation of the control problem to coarse grained representations and learning of coarse grained dynamics. 
+
+1. Introduction 
+
+Molecular Dynamics (MD) simulations are a powerful computational tool to study the statistical and dynamical properties of systems at the molecular scale [1]. A key limi-tation, however, is that MD is subject to the sampling problem : integration time steps in standard MD implementations are limited to a few femtoseconds, while relevant dy-namical processes typically occur at frequencies of milliseconds or beyond. As a result, vast amounts of simulation data need to be produced to achieve sufficient sampling of a system’s configurational space; for large-scale systems, exhaustive sampling of the configurational space by standard MD simulations is impossible. 1arXiv:2609.28010v1 [physics.comp-ph] 23 Sep 2026 A widely-used approach to circumvent this problem is biased sampling : we model MD simulations as a Langevin process dXt = −∇ V (Xt) d t + p2β−1 dBt, (1) with V : Rd 7 → R the potential energy, β > 0 the inverse temperature, and Bt a
+
+d-dimensional Brownian motion. The invariant distribution of (1) is the Boltzmann distribution with partition function Z:dμ(x) = 1
+
+Z exp( −βV (x)) d x, (2) and we assume the dynamics (1) are ergodic with respect to μ. The sampling problem can then be traced back to trapping of the dynamics in local minima of the potential V
+
+(corresponding to modes of the distribution μ). To overcome trapping, one can apply a bias potential Vbias and modify the dynamics as dXt = − [∇V (Xt) + ∇Vbias (Xt)] d t + p2β−1 dBt. (3) If the bias potential is chosen well, it can facilitate escape from local minima and dras-tically speed up exploration of the configurational space. Highly successful variants of this approach include umbrella sampling [2] (US, pre-defined bias potential), metady-namics [3] (MetaD, bias potential defined on-the-fly), and the adaptive biasing force method [4] (ABF, bias potential defined on-the-fly). Other important techniques for accelerating state space exploration include temperature-based methods such as parallel tempering [5], or techniques based on escape statistics, such as parallel replica [6]. The shape of the biased dynamics (3) suggests to look for an optimal biasing potential according to pre-defined criteria. A natural question would be if there is a bias such that the state space is explored as quickly as possible while perturbing the physical dynamics (1) as little as possible. This leads to a re-formulation of (3) as an optimal control problem , where the bias is interpreted as a control policy that is optimized towards a specified goal. Control-theoretic approaches to biased sampling have been explored in [7] using Markov state models, in [8] using cross-entropy methods, in [9] using small-noise asymptotics, and in [10] using Schr¨ odinger bridges. 
+
+Contributions. Our work follows [7]: we study biased sampling as an ergodic optimal control problem of the form 
+
+J∗(x) = min  
+
+> u
+
+lim sup  
+
+> T→∞
+
+E
+
+ 1
+
+T
+
+Z T
+
+> 0
+
+σℓ (Xs) + β
+
+4 ∥us∥2 ds | X0 = x
+
+
+
+, (4) where x ∈ Rd is a position, σ > 0 is a parameter, and u is a control policy, that is a time-dependent stochastic process taking values in Rd. As the guiding example for this paper, we will choose the running cost ℓ as the indicator function of the complement of a target set A,
+
+ℓ(x) = 1 ¯A(x)2that is, the goal is to drive the dynamics towards the target set A. The infinite time horizon in (9), combined with ergodicity, allows to reduce this problem to a linear eigen-value problem for the infinitesimal generator L of the physical dynamics (1) (see Sec. 2.2), namely the smallest (ground-state) eigenvalue λ > 0 of (σℓ − L )φ = λφ , (5) where the eigenvalue λ = λ(σ) satisfies (cf. [7, Sec. 5.1]) dλ
+
+dσ σ=0 
+
+= lim  
+
+> T→∞
+
+1
+
+T
+
+Z T
+
+> 0
+
+ℓ(xs) d s . (6) Equation (6) allows to recover equilibrium expectations of the cost function ℓ from the eigenvalues λ.The corresponding eigenfunction φ = φ(·; σ) directly leads to the optimal biasing poten-tial Vbias . In this paper, we make the following contributions: 1. We show that the linear eigenvalue problem (5) can be solved efficiently using modern machine learning techniques to approximate the generator L of the phys-ical dynamics, including generator extended dynamic mode decomposition [11] (gEDMD) and neural network approximations. These learning algorithms require equilibrium samples from the Boltzmann distribution for training. 2. As generator learning algorithms do not require time series data, samples from established enhanced sampling algorithms can be used for training, including sim-ulations at higher temperatures or metadynamics simulations. 3. We demonstrate that solutions obtained via generator learning are robust to train-ing data size and parameter variations. We analyze their performance using mul-tiple model problems in low dimension, as well as molecular dynamics simulations of the alanine dipeptide. We show that equilibrium expectations can be recovered robustly by extrapolating (6). Moreover, the resulting bias potentials lead to a drastic reduction of the mean first passage time into the target set A.4. We explain how the resulting method can be understood in the context of coarse-grained (CG) dynamics, namely as applying an optimal forcing in CG space. 
+
+Open Problems. The suggested approach provides a rich data-driven framework based on a rigorous mathematical footing provided by optimal control theory. However, it is not a complete solution to the sampling problem, as training data from the equilibrium distribution are still required. Strategies to obtain these data in an adaptive manner will be explored in future research. 32. Dynamic Optimal Control Problems and the Generator 
+
+2.1. Langevin Dynamics and Control Problems 
+
+We study the Langevin equation (1). Most of the following can be extended to more general reversible processes, but we restrict the presentation to Langevin dynamics for simplicity. We seek a minimally invasive forcing or bias that steers the dynamics towards optimizing a prescribed goal. Concretely, we consider the biased dynamics dXt = [ −∇ V (Xt) + ut] d t + p2β−1 dBt, (7) where ut is a (a priori time-dependent) control input taking values in Rd. We introduce a running cost (or stage cost) 
+
+c : Rd × Rd → R≥0, (x, u) 7 → σℓ (x) + β
+
+4 ∥u∥2, (8) where σ > 0 is a given parameter (that will be varied later on) and ℓ : Rd 7 → R≥0 is a non-negative state cost. The quadratic term penalizes excessive forcing to keep the controlled dynamics as close as possible to the physical equation, σ sets the relative weight of the state cost against this control-effort penalty, while the specific coefficient 
+
+β/ 4 is fixed by the linearization argument given below. The objective then is to minimize the long-time averaged cost subject to the biased dynamics (7): 
+
+J∗(x) = min  
+
+> u
+
+lim sup  
+
+> T→∞
+
+E
+
+ 1
+
+T
+
+Z T
+
+> 0
+
+c(Xs, us) d s | X0 = x
+
+
+
+= min  
+
+> u
+
+J(x, u),
+
+s.t. Xs solution of (7) .
+
+(9) 
+
+Guiding Example. Throughout the text, we consider the problem of forcing the physical dynamics (1) to spend as much time as possible in a fixed subset A ⊂ Rd of its state space. To this end, we choose the cost function 
+
+1 ¯A(x) + β
+
+4 ∥u∥2, (10) where 1A is the indicator function of the set A and ¯A is its complement. The set 
+
+A will typically be a state of physical significance, such as a metastable state of the physical dynamics (1). Figure 1 illustrates the problem on a one-dimensional double-well potential V : under the uncontrolled dynamics the stationary distribution μ(x) ∝ e−βV (x)
+
+places equal mass in both wells; the optimal controller reshapes the potential V to 
+
+Vopt (x), concentrating the invariant measure on A while minimizing the control cost. 
+
+2.2. The Generator and the Optimal Forcing 
+
+The minimization problem (9) is a stochastic optimal control problem (OCP) . A central tool we will need to describe its solution is the Koopman generator L associated to the 41.5 1.0 0.5 0.0 0.5 1.0 1.5       
+
+> x
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+> Energy / density Unbiased system
+> V(x)(x)
+> A
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+> x
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+> Optimally biased system
+> Vopt (x)
+> opt (x)
+> A
+
+Figure 1: Illustration of the ergodic control problem on the one-dimensional double-well potential at inverse temperature β = 1. Left: uncontrolled system with potential V (x) and stationary distribution μ(x) ∝ e−βV (x). The target set A (shaded) is the left well region; under the uncontrolled dynamics, the system spends roughly equal time in both wells. Right: optimally controlled system with reshaped potential Vopt (x) and the corresponding stationary dis-tribution μopt (x) ∝ e−βV opt (x), concentrating the invariant measure on A.dynamics (1). The differential operator L is defined by 
+
+Lϕ = −∇ V · ∇ ϕ + 1
+
+β ∆ϕ, (11) acting on smooth observable functions ϕ : Rd → R. The generator is symmetric with respect to the Boltzmann-weighted inner product 
+
+⟨ϕ, ψ ⟩μ =
+
+Z
+
+> Rd
+
+ϕ(x)ψ(x) d μ(x),
+
+and we have the integration-by-parts formula [12]: 
+
+− ⟨L ϕ, ψ ⟩μ = − ⟨ ϕ, Lψ⟩μ = 1
+
+β
+
+Z
+
+> Rd
+
+∇ϕ(x) · ∇ ψ(x) d μ(x). (12) On a properly chosen domain, the (negative) generator −L is non-negative and self-adjoint. Its spectrum is real-valued, non-negative and discrete [13, 12]. Optimal control theory characterizes the optimal cost-to-go J∗ from (9), as well as the associated optimal forcing u∗ = arg min u J(x, u), via the following result. It follows from the theory of ergodic control of non-degenerate diffusions under a near-monotone running cost, see [14] for a detailed mathematical treatment; cf. [7]. 
+
+Proposition 2.1. The optimal cost-to-go J∗(x) in (9) satisfies the following properties: 
+
+5(i) The cost J∗(x) is independent of x, i.e. J∗(x) = λ ≥ 0 for all x ∈ Rd.(ii ) The optimal control u∗ is a stationary feedback control , expressible as the gradient of a biasing potential Vbias :
+
+u∗ 
+
+> s
+
+= −∇ Vbias (Xs).
+
+(iii ) The optimal cost-to-go λ and the biasing potential Vbias can be computed from the ground state of the following linear eigenvalue equation :
+
+(σℓ − L )φ = λφ (13) 
+
+for the uncontrolled generator L defined in (11) . The smallest eigenvalue λ equals the optimal cost J∗(x) for any x. By the Perron-Frobenius Theorem, the eigen-function φ is strictly positive, and gives rise to the bias potential as 
+
+Vbias (x) = − 2
+
+β log φ(x).
+
+The optimal controlled dynamics is then obtained by choosing 
+
+dX∗ 
+
+> t
+
+=
+
+
+
+−∇ V (X∗ 
+
+> t
+
+) + 2
+
+β
+
+∇φ(X∗ 
+
+> t
+
+)
+
+φ(X∗ 
+
+> t
+
+)
+
+
+
+dt + p2β−1 dBt.
+
+The essential content of Proposition 2.1 is that the optimal forcing is fully characterized by a linear equation involving the physical generator L — an intractable nonlinear control problem is reduced to linear algebra. Intuitively, the ergodic (long-time) limit in (9) requires only a stationary control, and also removes the dependence on the initial condition; deriving (13) then amounts to writing out the Hamilton–Jacobi–Bellman (HJB) equation for (9) and applying a logarithmic transformation that linearizes it. We give a full derivation for the reader’s convenience in Appendix A. Sec. 3 shows how to exploit (13) numerically based only on equilibrium samples of the physical dynamics. 
+
+The prefactor β/ 4. Replacing the specific prefactor β/ 4 in (8) by a general coefficient 
+
+η leads to re-scaling of the generator in (13), which amounts to a re-scaling of time in (1). We stick to the case β 
+
+> 4
+
+for simplicity. 
+
+2.3. Evaluation of Equilibrium Averages 
+
+The solution of the linear eigenvalue problem (13) can subsequently be used to com-pute equilibrium averages of the unbiased dynamics (1). To this end, we highlight the dependence of the eigenvalue λ on the pre-factor σ by writing λ(σ). By a logarithmic transformation (e.g. [7]), the eigenvalue λ(σ) can equivalently be written as 
+
+λ(σ) = − lim sup  
+
+> T→∞
+
+1
+
+T log vσ(x, T ), σ > 0 , (14) 6where vσ denotes the following exponential average: 
+
+vσ(x, T ) = E
+
+
+
+exp 
+
+
+
+−σ
+
+Z T
+
+> 0
+
+ℓ(Xs) d s
+
+
+
+X0 = x
+
+
+
+, (15) and Xs is the solution of the physical Langevin dynamics (1). The map σ → vσ(x, T ), for fixed x and T , is the moment generating function of the random variable 
+
+LT = −
+
+Z T
+
+> 0
+
+ℓ(Xs) d s , 
+
+parametrized by the initial datum x and the terminal time T . Assuming that the moment generating function vσ is finite and strictly positive for all σ close enough to zero, we can expand its logarithm about σ = 0: log vσ(x, T ) = −σE[LT | X0 = x] + σ2
+
+2
+
+
+
+E[L2 
+
+> T
+
+| X0 = x] − (E[LT | X0 = x]) 2
+
+− . . . . 
+
+Taking the limit T → ∞ , it follows that 
+
+λ(σ) = lim sup  
+
+> T→∞
+
+σT E [LT | X0 = x]−lim sup  
+
+> T→∞
+
+σ2
+
+2T
+
+
+
+E[L2 
+
+> T
+
+| X0 = x] − (E[LT | X0 = x]) 2
+
++. . . , 
+
+where all remaining terms are higher order in σ. Then, taking the derivative with respect to σ at σ = 0, and using ergodicity of the Langevin equation (1), we find ddσ λ(σ) σ=0 
+
+= − lim sup  
+
+> T→∞
+
+1
+
+T E [LT | X0 = x]=
+
+Z
+
+> Rd
+
+ℓ(x) d μ(x) = Eμ[ℓ(x)] .
+
+Remark 2.2. In our experiments, we will estimate the equilibrium average Eμ[ℓ(x)] 
+
+by extrapolating ddσ λ(σ) σ=0 from solutions of the eigenvalue problem (13) at different σ
+
+close to zero. Alternatively, one can also run controlled simulations at small σ, use them to evaluate the cost J∗ = λ(σ) defined in (9) , and extrapolate the rate to σ = 0 . However, since φ becomes constant in the limit σ → 0, resulting in vanishing of the control force, there will be a trade-off between the simulation speed-up from using controlled simulations and a low-variance evaluation of the quantity of interest. 
+
+3. Numerical Solution 
+
+We now consider the numerical approximation of the eigenvalue problem (13). The key ingredient is the Rayleigh quotient of the symmetric operator 
+
+A := σℓ − L ,
+
+which is defined for any nonzero trial function ϕ by: 
+
+R[ϕ] := ⟨ϕ, Aϕ⟩μ
+
+⟨ϕ, ϕ ⟩μ
+
+= σ R ℓ ϕ 2 dμ + 1
+
+> β
+
+R ∇ϕ∇ϕ⊤dμ
+
+R ϕ2 dμ . (16) 7The smallest eigenvalue λ in (13) is the minimizer of the Rayleigh quotient, see e.g. [15]: 
+
+λ = min  
+
+> ϕ̸=0
+
+R[ϕ]. (17) This variational formulation provides a common starting point for the discretizations we consider below. 
+
+3.1. Generator Extended Dynamic Mode Decomposition 
+
+Generator extended dynamic mode decomposition ( gEDMD ) [11] provides an empirical data-driven approximation of the Koopman generator based on equilibrium samples. Here we will use gEDMD to compute the principal eigenvalue of A from the weak form of the eigenvalue problem (5): given a set of n basis functions ψi : Rd → R,
+
+ψ(x) = ψ1(x) . . . ψn(x) ∈ Rn,
+
+spanning an n-dimensional approximation subspace, and m samples drawn from the Boltzmann distribution μ,
+
+X = x1 . . . xm
+
+ ∈ Rd×m,
+
+we form the following empirical mass and stiffness matrices of dimension n × n:
+
+Cm 
+
+> 0
+
+= 1
+
+m
+
+> m
+
+X
+
+> k=1
+
+ψ(xk) ⊗ ψ(xk), Cm 
+
+> L
+
+= − 1
+
+βm 
+
+> m
+
+X
+
+> k=1
+
+∇ψ(xk) · ∇ ψ(xk)⊤, (18) where ⊗ denotes the outer product between vectors. Alongside Cm 
+
+> 0
+
+and Cm 
+
+> L
+
+, we form an additional matrix accounting for the zero-order term involving the running cost: 
+
+Cmℓ =
+
+> m
+
+X
+
+> k=1
+
+ℓ(xk)ψ(xk) ⊗ ψ(xk). (19) Finally, we solve the generalized matrix eigenvalue problem (σCmℓ − Cm 
+
+> L
+
+)vm = ˆλmCm 
+
+> 0
+
+vm, (20) and extract its smallest eigenvalue ˆλm, which serves as approximation to the true optimal cost-to-go λ. Assuming that the chosen basis is such that the eigenvector that corre-sponds to the eigenvalue ˆλm is strictly positive, the associated eigenvector vm provides an approximation to the bias potential by 
+
+V m
+
+> bias
+
+(x) = − 2
+
+β log 
+
+" nX
+
+> i=1
+
+vmi ψi(x)
+
+#
+
+.
+
+In the limit of infinite training data ( m → ∞ ), the eigenvalue ˆλm converges to a limiting eigenvalue ˆλ [16]. The associated eigenvector v encodes the minimizer of the Rayleigh quotient (16) restricted to the n-dimensional trial space. By the variational characteri-zation (17), we have 
+
+λ ≤ ˆλ. 
+
+83.2. Neural Cole–Hopf Representation 
+
+Instead of inferring Vbias as a linear combination of fixed basis functions, we also consider a nonlinear parametrization. Furthermore, as the true eigenfunction φ in (13) is positive, we consider a positive parametrization based on a Cole–Hopf transformation, 
+
+φθ(x) := e−Wθ (x), (21) where Wθ : Rd → R is represented by a neural network. For samples x1, . . . , xm drawn from the stationary distribution μ, the network parameters are obtained by minimizing the empirical Rayleigh quotient 
+
+Rm(θ) = 
+
+P 
+
+> k
+
+σℓ (xk)φθ(xk)2 + 1
+
+> β
+
+P 
+
+> k
+
+∥∇ φθ(xk)∥2
+
+P 
+
+> k
+
+φθ(xk)2 . (22) Spatial derivatives ∇φθ and derivatives of the objective with respect to the neural net-work parameters are evaluated using automatic differentiation. The Rayleigh quotient (22) is invariant under multiplication of the eigenfunction by a nonzero constant c, Rm[cφ θ] = Rm[φθ], since both its numerator and denominator scale by c2. Hence, the normalization of the eigenfunction is not determined by Rayleigh-quotient minimization. We remove this redundancy by fixing a reference point x0 and by enforcing Wθ(x0) = 0, and therefore φ(x0) = 1, exactly for every value of θ. This gauge fixes only the arbitrary normalization of the eigenfunction and does not alter the Rayleigh quotient or the associated control force, which depends on spatial derivatives of Wθ.The resulting finite-dimensional optimization problem 
+
+θ∗ ∈ arg min 
+
+> θ
+
+Rm(θ)is solved using the Adam optimizer. Since the optimization problem is non-convex, the calculations are repeated for multiple independent random initializations. The neural and gEDMD approaches target the same variational problem. Their differ-ence is in the trial space: gEDMD uses a fixed linear space with a closed-form gener-alized eigenvalue problem, whereas the neural approach uses a nonlinear, non-convex parametrization with positivity built in. 
+
+3.3. Re-weighting 
+
+Estimating either the gEDMD matrices (18)-(19) or the empirical Rayleigh quotient (22) requires samples from the equilibrium distribution at the target inverse temperature β.For systems with large energetic barriers, direct sampling at the target temperature can be prohibitively expensive. We therefore use importance re-weighting to construct target-temperature averages from samples generated under an alternative equilibrium distribution. For training data sampled from an alternative distribution ν, we denote 9the likelihood ratio (or re-weighting factor) between the Boltzmann distribution μ in (2) and ν by 
+
+w(x) = dμ
+
+dν (x).
+
+Then every sample xk in the gEDMD matrices (18)-(19) or in the empirical Rayleigh quotient (22) is weighted by w(xk). 
+
+3.3.1. Temperature Re-weighting 
+
+We write μβ for the equilibrium distribution (2) associated to the inverse temperature 
+
+β. Let β0 < β denote a reference inverse temperature. Samples generated from μβ0 can be reweighted to the target distribution μβ using the likelihood ratio 
+
+w(x) = exp ( −(β − β0)V (x)) ∝ dμβ
+
+dμβ0
+
+(x). (23) 
+
+3.3.2. Bias-Potential Re-weighting 
+
+For molecular systems, direct temperature re-weighting typically suffers from insur-mountable variance. Most popular enhanced sampling methods lead to a biased dy-namics dXt = −∇ (V (Xt) + Fbias (Xt)) d t + p2β−1 dBt
+
+with stationary density μbias ∝ e−β(V +Fbias ). The corresponding reweighting factor is then 
+
+w(x) = exp  βF bias (x). (24) In metadynamics, the bias potential is the cumulative sum of all deposited Gaussian hill potentials. The re-weighting factors w(xk) can be directly extracted from the simulation data for all samples xk.Averages of observables ϕ with respect to the equilibrium distribution μ can then be recast as the self-normalised importance sampling estimator 
+
+Eμ[ϕ(x)] = E[ϕ(x)w(x)] 
+
+E[w(x)] ≈
+
+P 
+
+> k
+
+ϕ(xk)w(xk)
+
+P 
+
+> k
+
+w(xk) . (25) 
+
+4. Low-dimensional Model Systems 
+
+We begin by evaluating the method on three low-dimensional benchmark potentials of increasing complexity: a one-dimensional double-well, a two-dimensional lemon slice potential, and a two-dimensional three-hole potential. We introduce these systems below. 
+
+4.1. Systems One-dimensional Double-Well. We consider 
+
+V (x) := ( x2 − 1) 2, x ∈ R,
+
+10 with metastable wells located at x = ±1 and a saddle point at x = 0. The target region is A := ( −∞ , −0.5], so the controller is expected to concentrate the invariant measure near the left well. 
+
+Two-dimensional Lemon Slice. We write ( x, y ) ∈ R2 in polar coordinates 
+
+r = px2 + y2, ϕ = arctan 2( y, x ),
+
+and consider 
+
+V (x, y ) := cos( kϕ ) + 1cos(0 .5ϕ) + 10( r − 1) 2 + 1
+
+r , k = 4 .
+
+The potential contains two deep minima near (0 .7, ±0.7) and two shallow minima near (−0.6, ±0.8). The target set is the neighborhood of the upper-left shallow minimum, 
+
+A =
+
+n
+
+(x, y ) ∈ R2 arctan 2( y, x ) − 3π
+
+4 ≤ π
+
+6 , V (x, y ) ≤ 4.5
+
+o
+
+.
+
+Two-dimensional Three-Hole Potential. For the third benchmark we consider 
+
+V (x, y ) = 3 e−x2−(y− 13 )2
+
+− 3e−x2−(y− 53 )2
+
+− 5e−(x−1) 2−y2
+
+− 5e−(x+1) 2−y2
+
++ 0 .2x4 + 0 .2( y − 13 )4, (x, y ) ∈ R2.
+
+This potential contains two deep minima approximately at ( ±1, 0) and a shallow mini-mum approximately at (0 , 1.5). The target set is the upper shallow well 
+
+A = {(x, y ) ∈ R2 y > 1.0, V (x, y ) ≤ − 1.8}.1 0 1
+
+> x
+> 0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6
+
+A  
+
+> (a)
+> 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+
+A  
+
+> (b)
+> 0.0 1.0 2.0 3.1 4.1 5.1 6.1 7.1 8.2 9.2 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+
+A
+
+> (c)
+> -2.8 -1.9 -1.0 -0.1 0.9 1.8 2.7 3.6 4.5 5.4
+
+Figure 2: Three benchmark systems : (a) double-well; (b) lemon slice; (c) three-hole. The shaded area indicates the target set A in each case. 11 4.2. Computational Settings 4.2.1. Data Generation 
+
+We consider inverse temperatures β ∈ [0 .5, 4.0] and running-cost prefactors σ ∈ [0 .0, 2.0]. When training directly at the target temperature, training data are generated by re-jection sampling from the Boltzmann distribution restricted to a finite computational domain. The sampling domains are chosen to contain the metastable wells and the tran-sition regions relevant to the target sets; the specific domain used for the double-well system is [ −2.0, 2.0], for the lemon slice system it is [ −1.5, 1.5] × [−1.5, 1.5] and for the three-hole system it is [ −1.6, 1.6] × [−1.0, 2.0]. For temperature re-weighting, the phys-ical dynamics are instead sampled at a low reference inverse temperature β0 and the resulting data are re-weighted according to (23). 
+
+4.2.2. Basis Sets 
+
+A first choice for the basis set in (20) is as a collection of random Fourier features (RFF) [17]: after sampling n random frequencies ωi ∈ Rd according to a fixed spec-tral distribution ρ on Rd, and additionally drawing n random phase shifts bi ∈ [0 , 2π]uniformly, we form the basis functions as 
+
+ψi(x) = cos 
+
+
+
+ω⊤ 
+
+> i
+
+x + bi
+
+
+
+, i = 1 , . . . , n . (26) In the limit of large n, this approximation converges to a kernel discretization of the operator A, see [18] for details. In particular, if the spectral distribution is normal, the large n limit is a Gaussian kernel discretization. As a deterministic alternative, we use tensor-product cubic B-splines of the form 
+
+ψi1··· id (x) = 
+
+> d
+
+Y
+
+> j=1
+
+B(j) 
+
+> ij
+
+(xj ), n =
+
+> d
+
+Y
+
+> j=1
+
+Nj ,
+
+where B(j) 
+
+> ij
+
+(xj ) are one-dimensional B-splines on intervals [ aj , b j ] along each coordinate direction j = 1 , . . . , d . The compact support of the B-splines yields a locally supported representation and correspondingly sparse matrix structure. As shown in Sec. 4.3, the RFF and B-spline bases give comparable estimates of the eigenvalue λ, whereas the B-spline basis provides a more robust reconstruction of the eigenfunction and the re-sulting bias potential. However, the tensor product construction is only feasible for low-dimensional examples. For the numerical experiments, the RFF basis (26) uses a Gaussian spectral distribution with the number of features and bandwidth summarized in Table 1. The corresponding truncated domain, spline degree, and basis size used for B-spline calculations are listed in Table 2. 
+
+4.2.3. Neural Network Parameters 
+
+For the neural Cole–Hopf (NCH) approximation (Sec. 3.2), Wθ is represented by a single-hidden-layer neural network with hyperbolic-tangent activation functions. The network 12 System n γrff 
+
+Double-well 50 0.3 Lemon slice 100 0.3 Three-hole 100 0.35 Table 1: Parameters used for the random Fourier feature basis. n is the number of random features and γrff is the bandwidth of the Gaussian spectral distribution. System Domain Ω Degree Nj per dimension Total n = Q 
+
+> j
+
+Nj
+
+Double-well [−2, 2] cubic – 30 Lemon slice [−1.5, 1.5] × [−1.5, 1.5] cubic 15 × 15 225 Three-hole [−1.6, 1.6] × [−1.0, 2.0] cubic 10 × 10 100 Table 2: B-spline basis: spline degree, and number of univariate splines per coordinate direction, for each benchmark system. parameters are optimized by minimizing the empirical Rayleigh quotient (22) using Adam [19], with spatial derivatives and parameter gradients evaluated by automatic differentiation using JAX [20]. The training data are generated by rejection sampling from the Boltzmann distribution at the target inverse temperature β. The numerical experiments are repeated for 5 independent network initializations, and the reported NCH results are averaged over these runs. Since the lemon slice and three-hole systems use different network widths and optimization schedules, the corresponding parameters are summarized in Table 3. 
+
+4.2.4. Reference Solution via Finite Elements 
+
+As a reference solution, we additionally solve (13) directly by a finite element (FEM) dis-cretization of its weak form, implemented in FEniCS / Dolfinx [21], with meshes gen-erated by Gmsh [22]. No essential boundary condition is imposed. The weak formulation therefore corresponds to the natural weighted Neumann condition e−βV (x)∇φ(x)·n(x) = 0 on the boundary, equivalently a no-flux condition for the reversible dynamics. The computational domains are chosen sufficiently large that boundary effects are negligible in the region of interest. Mesh-refinement calculations are performed before selecting the production meshes listed in Table 4. 
+
+4.3. Robust Estimation of the Optimal Cost 
+
+We first investigate the robustness of estimating the optimal cost λ by solving the ma-trix eigenvalue problem (20). For each ( β, σ, m ) configuration, we run 20 independent realizations and report the mean and standard deviation of the data-driven estimate, compared to the FEM reference, as shown in Fig. 3. 13 Parameter Lemon slice Three-hole 
+
+β 3.0 2.5
+
+σ 0.7 2.0Training samples m 2 × 10 4 2 × 10 4
+
+Hidden units 128 64 Training epochs 4000 4000 Initial learning rate 2 × 10 −3 2 × 10 −3
+
+Learning-rate decay factor 0.5 0.5Decay epochs 500 , 1000 , 2000 2500 , 3000 Independent seeds 5 5Table 3: Numerical parameters used for the neural Cole–Hopf (NCH) calculations. Training data are generated by rejection sampling from the Boltzmann dis-tribution at the target inverse temperature β. For each system, the network is trained independently from 5 random initializations, and the reported NCH results are averaged over the 5 runs. System Domain Ω Element Mesh Size h
+
+Double-well [−2, 2] P1 (1D, transfinite) 0.005 Lemon slice [−2, 2] × [−2, 2] P1 (2D, unstructured triangular) 0.1Three-hole [−2, 2] × [−1.5, 2.5] P1 (2D, unstructured triangular) 0.1Table 4: FEM reference solver: truncated domain, element type, and production mesh size h for each benchmark system, fixed after the mesh-refinement study of Section 4.2.4. Across all three systems and all β, the estimate stabilizes rapidly with m, with no systematic drift beyond m ≈ 2000 for the double-well, m ≈ 10 4 for the lemon slice, and 
+
+m ≈ 10 5 for the three-hole. For the latter system, only estimates at β = 4 .0 converge slowly, which is the most extreme case. The variance across independent runs, quantified by the error bars, decreases monotonically with m and becomes negligible for m ≥ 10 4.The gEDMD estimates thus closely track the FEM reference over the tested parameter range. As a function of σ, at σ → 0, the operator A approaches −L and the leading eigenfunc-tion approaches a constant, so the optimal cost approaches zero. Increasing σ increases the energetic penalty associated with remaining outside the target and changes the prin-cipal eigen-pair accordingly. Results in Figure 3 are based on an RFF basis. We also repeated the same calculation using the B-spline basis. The results are shown in Fig. 14 in Appendix A and are nearly identical. Thus, the eigenvalue estimates are not strongly dependent on the particular basis used. Beyond providing the optimal cost, the eigenvalue can also be used to recover equilibrium averages. As shown in Sec. 2.3, perturbation of the eigenvalue problem around σ = 0 14 10 3 10 4 10 5 5 × 10 5
+
+> m
+> 0.1 0.2 0.3 0.4
+
+Double-well    
+
+> 10 310 410 55 × 10 5
+> m
+> 0.0 0.2 0.4 0.6
+
+Lemon slice    
+
+> 10 310 410 55 × 10 5
+> m
+> 0.0 0.2 0.4 0.6 0.8
+
+Three-hole             
+
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 0.2 0.4 0.6 0.8
+> 0.0 0.5 1.0 1.5 2.0
+> 0.00 0.25 0.50 0.75 1.00 1.25 1.50
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 0.5 1.0 1.5 2.0
+> = 0.5
+> = 1.0
+> = 1.5
+> = 2.0
+> = 2.5
+> = 3.0
+> = 3.5
+> = 4.0
+
+Figure 3: Eigenvalue reconstruction for the double-well (left), lemon slice (middle), and three-hole (right) systems. Top row: convergence with data size m at fixed σ = 0 .7. Bottom row: dependence on the running cost prefactor σ at fixed m = 2000, 5 × 10 5, and 5 × 10 5 from left to right, respectively. Dashed lines with error bar indicate the RFF-gEDMD estimates (mean ± standard deviation over 20 independent realizations), and solid lines show the FEM reference. Colors indicate the inverse temperature β.yields 
+
+λ(σ)
+
+σ = Eμ[ℓ] + O(σ), σ → 0+.
+
+This provides a second use of the data-driven spectral approximation: once equilibrium training data are available, the eigenvalue problem can be evaluated repeatedly for small positive values of σ without generating additional training data. Fig. 4 confirms that for each of the three model systems, λ(σ)/σ reliably approaches the corresponding indepen-dently evaluated equilibrium average as σ decreases. In these examples, the equilibrium average equals 
+
+Eμ[ℓ] = Eμ[1 ¯A] = 1 − μ(A).
+
+15 10 3 10 2 10 1          
+
+> 0.2 0.3 0.4 0.5 0.6
+> ( )/
+> Double-well
+> 10 310 210 1
+> 0.5 0.6 0.7 0.8 0.9 1.0
+> Lemon slice
+> 10 310 210 1
+> 0.96 0.97 0.98 0.99 1.00
+> Three-hole
+> = 0.5
+> = 1.0
+> = 1.5
+> = 2.0
+> = 2.5
+> = 3.0
+> = 3.5
+> = 4.0
+
+Figure 4: Small-σ convergence of the eigenvalue. The ratio λ(σ)/σ is shown as a function of σ for the double-well (left), lemon slice (middle), and three-hole (right) systems. Dashed curves with markers show the RFF-gEDMD esti-mates (mean ± standard deviation over 20 independent realizations) at fixed 
+
+m = 10 4, 5 × 10 5, and 5 × 10 5 from left to right, respectively. The solid hor-izontal lines denote the corresponding equilibrium averages Eμ[ℓ], evaluated independently from the equilibrium measure. Colors indicate the inverse tem-perature β. For the three-hole system, we extended the sampling domain to Ω = [ −3, 3] 2 to account for the spread of the invariant measure at high tem-perature β = 0 .5, using n = 200 RFFs with γrff = 0 .5. 
+
+4.4. Recovery of the Optimal Bias Potential 
+
+Next, we examine the recovery and spatial structure of the optimal bias potential Vbias 
+
+and the resulting optimal potential Vopt = V + Vbias . This comparison provides a more stringent test, since Vbias = −(2 /β ) log φ depends directly on its spatial structure and is sensitive to small values of the eigenfunction φ.For the double-well system (Fig. 5), the bias preferentially raises the competing right well relative to the target region in the left well. Consequently, Vopt develops a single dominant minimum at the target for all β. For sufficiently large σ, the competing minimum is effectively eliminated. The gEDMD estimates with a B-spline basis (Fig. 5) agree closely with the FEM reference over the full range of parameters shown. The corresponding RFF approximations are shown in Appendix A and are nearly identical. Similarly, the lemon slice system provides a two-dimensional test of the reconstructed optimal landscape. Fig. 6 compares the FEM, RFF, and B-spline estimates of Vopt 
+
+at fixed σ = 0 .7 for β = 1 and β = 3. In both cases, the optimal control reshapes the landscape in favor of the target region in the upper-left part of the domain relative to the competing wells. Both data-driven approximations reproduce this global reorganization and the principal basin structure of the FEM reference. At β = 1, the RFF and B-spline reconstructions are in good qualitative agreement 16 1.5 1.0 0.5 0.0 0.5 1.0 1.5 
+
+> x
+> 0.0 0.5 1.0 1.5 2.0
+
+Vbias       
+
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+> x
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5
+
+Vopt             
+
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+> x
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+> x
+> 01234
+> = 0.5
+> = 1.0
+> = 1.5
+> = 2.0
+> = 2.5
+> = 3.0
+> = 3.5
+> = 4.0
+> V
+> = 0.001
+> = 0.1
+> = 0.3
+> = 0.5
+> = 0.7
+> = 1.0
+> = 1.5
+> = 2.0
+> V
+
+Figure 5: Bias potential Vbias (left column) and optimal potential Vopt (right column) for the double-well system, obtained using B-spline gEDMD with m =10 4 samples. Top row: varying inverse temperature β at fixed σ = 0 .7. Bottom row: varying running-cost prefactor σ at fixed β = 4 .0. Dashed lines with markers show the mean over 20 independent realizations, with shaded bands indicating one standard deviation; solid lines of matching color show the FEM reference. The dashed black curve ( ∗) shows the uncontrolled potential V .with the FEM solution, recovering the locations and relative structure of the principal wells. At β = 3, the target-directed reorganization remains clearly captured by both approximations, but differences in the reconstructed landscape become more visible. In particular, the RFF estimate exhibits stronger small-scale spatial oscillations, whereas the B-spline approximation gives a smoother reconstruction while retaining the dominant basin structure. Thus, although both representations recover the physically relevant reshaping of the landscape, the B-spline basis provides a more regular reconstruction of 17 Vopt in the low-temperature regime. 1 0 1          
+
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+> = 1
+> FEM
+> 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> RFF
+> 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> B-spline
+> 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+> = 3
+> 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 1.2 2.3 3.5 4.7 5.8 7.0 8.2 9.3 10.5
+> 0.0 1.6 3.2 4.9 6.5 8.1 9.7 11.4 13.0 14.6
+
+Figure 6: Optimal potential Vopt for the lemon slice system at fixed σ = 0 .7. Rows correspond to β = 1 (top) and β = 3 (bottom), and columns show the FEM reference, RFF-gEDMD reconstruction, and B-spline-gEDMD reconstruction, respectively. Within each row, all three methods are shown on the same color scale. Both data-driven reconstructions capture the target-favoring reorgani-zation of the optimal landscape observed in the FEM reference. The three-hole system provides a more demanding two-dimensional example because the prescribed target is the shallow upper well, while the uncontrolled landscape contains two competing low-energy wells. Fig. 7 compares the FEM, RFF, and B-spline estimates of Vopt at fixed σ = 2 for β = 1 and β = 2 .5. At β = 1, the optimal control reorganizes the landscape so that the upper target basin is energetically favored relative to the competing lower wells. Both RFF and B-spline reconstructions reproduce this overall structure and the locations of the principal basins observed in the FEM reference. At β = 2 .5, the target-directed modification of the landscape remains visible in both data-driven reconstructions. The principal upper basin and the structure of the compet-ing lower region are retained, although local deviations from the FEM reference become more apparent. The RFF estimate again displays somewhat stronger small-scale varia-18 tions, while the B-spline representation produces a smoother landscape and more clearly preserves the large-scale structure of the FEM solution. Despite these local differences, both basis representations recover the essential effect of the optimal control: a reorga-nization of the physical energy landscape that favors the prescribed target region. 1 0 1          
+
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+> = 1
+> FEM
+> 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> RFF
+> 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> B-spline
+> 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+> = 2.5
+> 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 1.0 2.0 3.1 4.1 5.1 6.1 7.1 8.2 9.2
+> 0.0 1.0 2.0 3.1 4.1 5.1 6.1 7.1 8.2 9.2
+
+Figure 7: Optimal potential Vopt for the three-hole system at fixed σ = 2. Rows correspond to β = 1 (top) and β = 2 .5 (bottom), and columns show the FEM reference, RFF-gEDMD reconstruction, and B-spline-gEDMD reconstruction, respectively. Within each row, all three methods are shown on the same color scale. Both data-driven reconstructions capture the preferential stabilization of the upper target basin observed in the FEM reference. We additionally solve the same variational problem using the neural Cole–Hopf represen-tation introduced in Sec. 3.2. In contrast to the linear basis expansions, the parametriza-tion φθ = e−Wθ enforces positivity of the ground-state approximation by construction. Fig. 8 compares the NCH reconstruction with the FEM reference for the more challeng-ing two-dimensional configurations. For the lemon slice system at β = 3 and σ = 0 .7, the NCH reproduces the large-scale angular structure of optimal landscape and the prefer-ential stabilization of the upper-left target basin. Similarly, for the three-hole system at 
+
+β = 2 .5 and σ = 2, the neural solution recovers the dominant target-directed reshaping 19 of the landscape, with the upper target basin energetically favored relative to the lower region. In both cases, the NCH solutions extrapolate more smoothly to rarely sampled states than the linear basis expansions, but the relative weights of the competing states are not as accurate as for the gEDMD estimates, especially for the lemon slice case. These comparisons highlight an important distinction between estimating the princi-pal eigenvalue and reconstructing the associated eigenfunction. While the eigenvalue is comparatively insensitive to the choice of approximation space, local errors in the eigen-function can be amplified when constructing the bias potential through the logarithmic transformation. 1 0 1      
+
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+> Lemon Slice FEM
+> 101
+> x
+> 2.0
+> 1.5
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> NCH
+> 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> y
+> Three-Hole
+> 101
+> x
+> 1.0
+> 0.5
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 1.8 3.5 5.3 7.1 8.8 10.6 12.4 14.1 15.9
+> 0.0 1.3 2.5 3.8 5.0 6.3 7.6 8.8 10.1 11.3
+
+Figure 8: Optimal potential Vopt from FEM reference (left) and neural Cole– Hopf (NCH) reconstruction (right) . Top row: Lemon Slice system at 
+
+β = 3 and σ = 0 .7. Bottom row: Three-Hole system at β = 2 .5 and σ = 2. The NCH results are averaged over five independent network initializations. The positivity-preserving neural parametrization reproduces the large-scale target-favoring reorganization of the optimal landscape while yielding a smooth reconstruction across the domain. 
+
+4.5. First-Passage-Time Validation 
+
+Upon visual inspection, the learned optimal potentials discussed in the previous section are expected to accelerate transitions into the target set under biased simulations. To quantify this effect, we compare the expected first-passage time (FPT) to the target set A
+
+20 System x0 tmax (β)Double-well 1.0 [15 , 30 , 60 , 90 , 150 , 220] Lemon slice (0 .7, 0.7) [45 , 135 , 435 , 1425 , 4950 , 11400] Three-hole (−1.0, 0.0) [40 , 90 , 240 , 750 , 2200 , 7450] Table 5: Settings for mean first-passage-time calculations. For each system, the max-imum simulation horizon is chosen depending on β based on the MFPT of the physical dynamics. The entries in the third column correspond to 
+
+β = {0.5, 1.0, 1.5, 2.0, 2.5, 3.0}. For all reported simulations, we verified that all trajectories reached the target within the prescribed simulation horizon. under the uncontrolled and controlled dynamics. Starting from a fixed initial condition 
+
+x0 chosen within one of the competing states, we simulate Ntraj = 100 independent trajectories of the biased dynamics (based on the B-spline approximation) using the Euler–Maruyama scheme with time step ∆ t = 10 −3. For a single trajectory Xkt , the first-passage time is defined as 
+
+τ (Xkt ) := inf {t ≥ 0 | Xkt ∈ A},
+
+and the mean first-passage time is estimated as 
+
+\MFPT = 1
+
+Ntraj 
+
+> Ntraj
+
+X
+
+> k=1
+
+τ (Xkt ). (27) For each controlled configuration ( β, σ ), the calculation is repeated for 20 independently reconstructed controllers. We report the mean of the resulting 20 MFPT estimates, with error bars indicating one standard deviation across the reconstructions. For the uncontrolled dynamics, a single ensemble of Ntraj = 100 independent trajectories is used for each β. For the biased simulations, we limited the maximal runtime of each trajectory to a limit tmax , which was chosen depending on β based on the MFPT estimate for the unbiased dynamics. We have verified that all biased simulations reached the target set before time tmax .Figure 9 compares the mean first-passage time to the target set A under the controlled and uncontrolled dynamics. The uncontrolled reference depends on β but not on σ,whereas the controlled MFPT decreases as the state-cost prefactor is increased. For all three benchmark systems, the controlled MFPT quickly decreases compared to the uncontrolled value with increasing σ. The reduction is most pronounced at large β, where transitions under the uncontrolled dynamics become increasingly slow. In the high-β
+
+regime, the uncontrolled MFPT reaches values on the order O(10 2)– O(10 3), whereas the reconstructed controller reduces the transition time by up to three orders of magnitude. These observations confirm quantitatively that the learned optimal biasing potentials can significantly decrease the time it takes to reach the target set, as intended. 21 0.1 0.5 1.0 1.5 2.0              
+
+> 10 0
+> 10 1
+> MFPT
+> Double-well
+> 0.1 0.5 1.0 1.5 2.0
+> 10 0
+> 10 1
+> 10 2
+> 10 3
+> Lemon slice
+> 0.1 0.5 1.0 1.5 2.0
+> 10 1
+> 10 2
+> 10 3
+> Three-hole
+> = 0.5 = 1.0 = 1.5 = 2.0 = 2.5 = 3.0
+
+Figure 9: Mean first-passage time to the target set A for the double-well (left), Lemon-slice (middle), and three-hole (right) systems. Markers show the mean controlled MFPT over 20 independently reconstructed controllers, with er-ror bars denoting one standard deviation across the reconstructions. Each controller-specific MFPT is estimated from Ntraj = 100 trajectories. Solid horizontal lines show the uncontrolled MFPT obtained from 100 independent trajectories, and the corresponding shaded bands indicate the standard error of the mean. Colors denote the inverse temperature β.
+
+4.6. Temperature Re-weighting 
+
+We finally assess whether a single inexpensive simulation at a higher reference tempera-ture can provide accurate eigen-pair estimates at lower target temperatures. To this end, we choose β0 = 0 .1 and generate samples from the physical dynamics at this reference temperature. The samples are then re-weighted according to (23) before assembling the gEDMD matrices. We set ( m, γ rff ) to (5 × 10 3, 0.1) for the double-well system, (10 4, 0.25) for the lemon slice system and (5 × 10 4, 0.3) for the three-hole system. Across all three benchmark systems, the reweighted eigenvalue estimates (dashed lines) closely track the FEM reference (solid lines) over the full range of target inverse temperatures 
+
+β ∈ [0 .5, 4.0], as shown in Fig. 10. To relate this accuracy to the actual sampling effort, we compare the transition time τK(β) of the uncontrolled dynamics at the target inverse temperature with the physical duration Tdata (β0) := m×∆t of the reference-temperature trajectory used to generate the data. The transition times τK(β) are estimated from the Eyring-Kramers law, see [12]. We define the dimensionless ratio Rdata (β) := τK(β) 
+
+> Tdata (β0)
+
+.Thus, Rdata > 1 indicates that the trajectory used for the reweighted estimate is shorter than a single transition time of the uncontrolled dynamics at the target temperature. As shown in the right panel of Fig. 10, Rdata increases rapidly with β. At the largest inverse temperature it exceeds the duration of the reference-temperature trajectory by approximately one to three orders of magnitude, depending on the system. Neverthe-less, the corresponding reweighted eigenvalue estimates remain close to the FEM refer-22 ence. This demonstrates that, for these low-dimensional benchmark systems, tempera-ture reweighting can recover the spectral quantity of interest from reference-temperature data generated over a time interval substantially shorter than the transition timescale of the target dynamics. We emphasize that Rdata is a timescale-based measure of sampling advantage rather than an exact computational speedup. The Eyring–Kramers time characterizes a typical barrier-crossing timescale, whereas statistically converged direct sampling at the target temperature may require multiple transitions. 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0         
+
+> 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7
+> Double-well Lemon slice Three-hole 0.5 1.0 1.5 2.0 2.5 3.0 3.5 4.0
+> 10 1
+> 10 0
+> 10 1
+> 10 2
+> 10 3
+> K( )/ Tdata ( 0)
+> Double-well Lemon slice Three-hole
+
+Figure 10: Temperature re-weighting from a single reference simulation at β0 = 0 .1across the three benchmark systems. Left: eigenvalue λ obtained from reweighted samples using RFF-gEDMD (dashed lines with error bars) com-pared with the FEM reference (solid lines). Right: ratio τK(β) 
+
+> Tdata (β0)
+
+between the Eyring–Kramers transition time at the target inverse temperature and the physical duration of the reference-temperature trajectory. The horizontal line at unity indicates τK(β) = Tdata (β0). 
+
+5. Application to Alanine Dipeptide 
+
+In this section, we apply the proposed framework to a coarse-grained representation of the classical alanine dipeptide benchmark. We consider MD simulations of alanine dipeptide in explicit water, with the force field and simulation parameters described in Ref. [23]. A 500 ns unbiased simulation serves as reference data set. In addition, we also produced a 20 ns long well-tempered metadynamics simulation using the backbone dihedral angles ( ϕ, ψ ) as collective variables. Metadynamics simulations were carried out in Gromacs [24] with the Plumed plug-in [25]. Figure 11 shows the free energy landscape in the dihedral angle space as estimated from both datasets, indicating good agreement. 23 The target set for the bias potential is chosen as the shallow energetic minimum in the right half of the dihedral plane, defined as 
+
+A := { (ϕ, ψ ) | | ϕ − 0.9| < 0.3 }. (28) 2 0 2    
+
+> 3
+> 2
+> 1
+> 0123
+> MD
+> Set A
+> 202
+> 3
+> 2
+> 1
+> 0123
+> Reweighted MetaD
+> Set A
+> 0.0 2.6 5.3 7.9 10.5 13.2 15.8 18.4 21.1 23.7
+
+Figure 11: Free energy of alanine dipeptide estimated from unbiased MD trajectory (left panel) and MetaD re-weighted trajectory (right panel). The target set for the optimal control problem is indicated by the red strip. 
+
+5.1. Bias Potential and Coarse-Grained Generator 
+
+Before presenting numerical results, we explore an interesting connection between the variational approximation (13) and coarse-graining of the original dynamics. Consider a mapping from the Euclidean state space Rd into a lower-dimensional space 
+
+Rq, that is ξ : Rd → Rq and write z = ξ(x). Given the full space dynamics (1) with generator L, one can define a closed Markovian dynamics in Rq by projecting the generator: 
+
+Lξ = PLP , (29) where P is the Mori-Zwanzig projector. The projected generator Lξ gives rise to stochas-tic dynamics on Rq:dZt =
+
+
+
+−a(Zt)∇F (Zt) + 1
+
+β ∇ · a(Zt)
+
+
+
+dt + p2β−1a(Zt)1/2 dBt. (30) 24 Here, F is the free energy in Rq and a is the effective diffusion field. For details on this construction, see Refs. [26, 27, 23]. Also note that the effective dynamics (30) ignores any memory effects due to the coarse-graining. It was shown in [27] that any Galerkin-type approximation to L using a basis set com-posed of functions on z is also a Galerkin approximation to the projected generator Lξ.The significance of this result is the following: if 1. we choose to represent the eigenfunction φ in (13) and hence the optimal bias Vbias 
+
+by functions on z:
+
+φ(x) ≈ φ(ξ(x)) ≈
+
+> n
+
+X
+
+> j=1
+
+vmj ψj (ξ(x)) = 
+
+> n
+
+X
+
+> j=1
+
+vmj ψj (z); 2. the running cost ℓ is also a function of z;then the generalized matrix eigenvalue problem (13) approximates the optimal control problem for the coarse-grained generator: 
+
+Aξφ = ( σℓ − L ξ)φ = λφ. (31) The resulting bias potential Vbias can be used to guide the projected dynamics (30): dZt =
+
+
+
+−a(Zt)( ∇F (Zt) + ∇Vbias (Zt)) + 1
+
+β ∇ · a(Zt)
+
+
+
+dt + p2β−1a(Zt)1/2 dBt. (32) 
+
+5.2. Spectral and Potential Comparison 
+
+With these considerations in mind, we apply the gEDMD approximation to approximate the eigenvalue λ in (31) using a basis set of random features on the ( ϕ, ψ )-dihedral space. We compare the spectral quantities obtained from the equilibrium MD and re-weighted MetaD data. Fig. 12 summarizes this comparison together with the resulting bias and optimal potentials. Panel (a) shows the principal eigenvalue λ as a function of the running cost prefactor σ.The two estimates exhibit consistent dependence on σ over the range considered. Note that, as shown in the inset, the limiting slope of the principal eigenvalue λ(σ) (dashed lines) as σ → 0 approximates the equilibrium probability Eμ[ℓ(x)] = 1 − μ(A). Table 6 reports a quantitative comparison of λ′(0) estimated from the gEDMD eigenvalues using the second-order forward finite-difference 
+
+λ′(0) ≈ 4λ(h) − λ(2 h)2h , h = 10 −3,
+
+compared to a direct estimate obtained either from the unbiased MD data or metady-namics simulations. For σ = 1 .0, panels (b) and (c) show the bias potentials Vbias reconstructed from the MD and MetaD data, respectively. Both estimates are found to be in agreement. The corre-sponding effective controlled potentials Vopt are shown in panels (d) and (e). We can see 25 0 1 2              
+
+> 0.00 0.05 0.10 0.15 0.20
+> ( )
+> (a)
+> MD MetaD
+> 00.05 0.1 0.00 0.02 0.04 0.06 0.08 0.10 ()
+> [ ]
+> 2.5 0.0 2.5
+> 2
+> 02
+> (b) MD
+> 2.5 0.0 2.5
+> 2
+> 02
+> (c) MetaD
+> 2.5 0.0 2.5
+> 2
+> 02
+> (d)
+> 2.5 0.0 2.5
+> 2
+> 02
+> (e)
+> 0.0 5.5 10.9 16.4 21.8 27.3 32.7 38.2 43.6 49.1 0.0 5.7 11.4 17.1 22.9 28.6 34.3 40.0 45.7 51.4
+
+Figure 12: Comparison of the spectral quantities for alanine dipeptide : (a) Eigenvalue λ(σ) from MD and reweighted MetaD data. The inset magnifies the small-σ regime; dashed curves with markers denote the spectral estimates, while solid lines show the linear extrapolation σEμ[ℓ]. (b,c) Bias potentials 
+
+Vbias for σ = 1 .0 obtained from MD and MetaD data, respectively. (d,e) Corresponding optimal potentials Vopt . Within each row, MD and MetaD use the same color scale. that the bias potential significantly lowers the free energy in the right-hand minimum corresponding to the target state relative to the competing minima, to facilitate transi-tions. We next examine whether this agreement also leads to comparable acceleration of the closed-loop dynamics. 
+
+5.3. Closed-Loop Validation 
+
+Closed-loop trajectories are generated using the effective dynamics (32) in the space of collective variables z = ( ϕ, ψ ). As before, we quantify the acceleration in terms of the mean first-passage time (MFPT) to the set A. Starting from the same initial condition, we simulate Ntraj = 100 independent trajectories for each reconstructed controller using a time step ∆ t = 10 −3 ps. The MFPT is computed using the same first-passage criterion as in Sec. 4.5 and shown in Fig. 13. For each value of σ, the reported controlled MFPT is the mean over the independently reconstructed eigen-pairs, with error bars indicating the corresponding standard deviation. The uncontrolled reference is estimated directly from an ensemble of Ntraj = 100 trajectories; the shaded region indicates the standard 26 Dataset Full-data μ(A) Full-data Eμ[ℓ] λ′(0) MD 0.03145 0.96855 0.96856 ± 8.3 × 10 −7
+
+MetaD 0.02393 0.97607 0.97608 ± 4.9 × 10 −7
+
+Table 6: Equilibrium target probabilities and small-σ spectral estimates for alanine dipeptide. The reference target probability μ(A) is computed from the full dataset, with Eμ[ℓ] = 1 − μ(A). The derivative λ′(0) is estimated using the second-order forward finite difference with h = 10 −3 and is reported as the mean ± standard deviation over 20 RFF realizations. error of the estimated uncontrolled MFPT. Note that time is re-scaled and accelerated for the coarse-grained dynamics (30), the corresponding MFPT estimate based on the all-atom simulation data is ≈ 35 ns. We observe that both the MD- and MetaD-trained controllers substantially reduce the MFPT relative to the uncontrolled dynamics. As σ increases, the MFPT decreases systematically, consistent with the increasing strength of the state penalty and the re-sulting control bias. Importantly, the controllers reconstructed from equilibrium MD and reweighted MetaD data exhibit closely consistent first-passage behavior over the full range of σ considered. 
+
+6. Conclusions 
+
+We have studied the calculation of optimal biasing potentials to accelerate metastable transitions and compute equilibrium expectations in molecular dynamics simulations. Starting from an ergodic optimal control problem, we have exploited that the OCP can be reformulated as a linear eigenvalue problem for the generator of the physical dynamics. We have formulated data-driven learning methods to solve this eigenvalue problem, and to determine equilibrium expectations by extrapolating the slope of these eigenvalues at 
+
+σ = 0. We have studied in detail the robustness and accuracy of these learning methods using both model problems and MD simulations of the alanine dipeptide. Finally, we have also analyzed the relation of the ergodic OCP to coarse-grained dynamics and generator approximation on reaction coordinates. As already noted in the introduction, future work will focus on lifting the need for equilibrium samples, on extending the scope of the method to larger systems, and on applying the method in an adaptive sampling context. 
+
+Declarations 
+
+The authors have no conflicts of interest to disclose. 
+
+Data Availability Data and codes to reproduce the results presented in this study are available from the public repository hosted on Zenodo at 10.5281/zenodo.22070320 .27 0.00 0.25 0.50 0.75 1.00 1.25 1.50 1.75 2.00 
+
+> 10 0
+> 10 1
+> MFPT [ps]
+> Uncontrolled MD-trained controller MetaD-trained controller
+
+Figure 13: Mean first-passage time (MFPT) for alanine dipeptide under con-trollers reconstructed from equilibrium MD data (circles) and reweighted MetaD data (stars), as a function of the running-cost prefactor σ. Controlled MFPTs are computed from Ntraj = 100 trajectories for each reconstructed eigen-pair; markers show the mean over 20 independently reconstructed eigen-pairs and error bars denote one standard deviation across reconstructions. The horizontal line shows the uncontrolled MFPT estimated from Ntraj = 100 trajectories, and the shaded band denotes the standard error of this mean. The logarithmic vertical scale highlights the systematic reduction in transi-tion time with increasing σ.28 Use of Artificial Intelligence During the preparation of this work, Claude Sonnet 4.6 and ChatGPT Sol 5.6 were used as writing aids, primarily for language refinement, as well as for code polishing and debugging. All mathematical derivations, numerical results, and scientific conclusions are those of the authors. The authors independently verified all AI-assisted code and reviewed all AI-assisted content, and remain fully re-sponsible for the content of the manuscript. 
+
+Funding and Acknowledgemts L.G. is funded by Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) - 314838170, GRK 2297 MathCoRe. T.B. ac-knowledges funding by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) – Project-ID 544702565. The work C.H. has been partially funded by the German Federal Government, the Federal Ministry of Research, Technology and Space, and the State of Brandenburg within the framework of the joint project EIZ: Energy Innovation Center (project numbers 85056897 and 03SF0693A) with funds from the Structural Development Act (Strukturst¨ arkungsgesetz) for coal-mining regions. 
+
+References 
+
+[1] Daan Frenkel and Berend Smit. Understanding molecular simulation: from algo-rithms to applications . ELSEVIER ACADEMIC PRESS, S.l., third edition edition, 2023. [2] Glenn M Torrie and John P Valleau. Nonphysical sampling distributions in Monte Carlo free-energy estimation: Umbrella sampling. Journal of computational physics ,23(2):187–199, 1977. [3] Alessandro Laio and Michele Parrinello. Escaping free-energy minima. Proceedings of the National Academy of Sciences , 99(20):12562–12566, October 2002. [4] Eric Darve and Andrew Pohorille. Calculating free energies using average force. 
+
+The Journal of Chemical Physics , 115(20):9169–9183, November 2001. [5] Robert H. Swendsen and Jian-Sheng Wang. Replica Monte Carlo Simulation of Spin-Glasses. Physical Review Letters , 57(21):2607–2609, November 1986. [6] Arthur F. Voter. Parallel replica method for dynamics of infrequent events. Physical Review B , 57(22):R13985–R13988, June 1998. [7] Christof Sch¨ utte, Stefanie Winkelmann, and Carsten Hartmann. Optimal control of molecular dynamics using Markov state models. Mathematical Programming ,134(1):259–282, August 2012. [8] Carsten Hartmann and Christof Sch¨ utte. Efficient rare event simulation by optimal nonequilibrium forcing. Journal of Statistical Mechanics: Theory and Experiment ,2012(11):P11004, November 2012. 29 [9] Eric Vanden-Eijnden and Jonathan Weare. Rare Event Simulation of Small Noise Diffusions. Communications on Pure and Applied Mathematics , 65(12):1770–1803, December 2012. [10] Lars Holdijk, Yuanqi Du, Ferry Hooft, Priyank Jaini, Berend Ensing, and Max Welling. Stochastic Optimal Control for Collective Variable Free Sampling of Molec-ular Transition Paths. In Advances in Neural Information Processing Systems 36 ,pages 79540–79556, New Orleans, Louisiana, USA, 2023. Neural Information Pro-cessing Systems Foundation, Inc. (NeurIPS). [11] Stefan Klus, Feliks N¨ uske, Sebastian Peitz, Jan Hendrik Niemann, Cecilia Clementi, and Christof Sch¨ utte. Data-driven approximation of the Koopman generator: Model reduction, system identification, and control. Physica D: Nonlinear Phenomena ,406, 2020. [12] Tony Leli` evre and Gabriel Stoltz. Partial differential equations and stochastic meth-ods in moleculardynamics. Acta Numerica , 25:681–880, May 2016. [13] Dominique Bakry, Ivan Gentil, and Michel Ledoux. Analysis and Geometry of Markov Diffusion Operators , volume 348 of Grundlehren der mathematischen Wis-senschaften . Springer International Publishing, Cham, 2014. [14] Ari Arapostathis, Vivek S Borkar, and Mrinal K Ghosh. Ergodic control of diffusion processes . Number 143. Cambridge University Press, 2012. [15] Gerald Teschl. Mathematical Methods in Quantum Mechanics , volume 157 of Grad-uate Studies in Mathematics . American Mathematical Society, Providence, Rhode Island, November 2014. [16] Feliks N¨ uske, Sebastian Peitz, Friedrich Philipp, Manuel Schaller, and Karl Worth-mann. Finite-Data Error Bounds for Koopman-Based Prediction and Control. Jour-nal of Nonlinear Science , 33(1), 2023. [17] A. Rahimi and B. Recht. Random features for large-scale kernel machines. Advances in Neural Information Processing Systems , 20, 2007. [18] Feliks N¨ uske and Stefan Klus. Efficient approximation of molecular kinetics using random Fourier features. The Journal of Chemical Physics , 159(7):074105, August 2023. [19] Diederik P. Kingma and Jimmy Ba. Adam: A Method for Stochastic Optimization, 2014. [20] James Bradbury, Roy Frostig, Peter Hawkins, Matthew James Johnson, Yash Katariya, Chris Leary, Dougal Maclaurin, George Necula, Adam Paszke, and Jake VanderPlas. JAX: composable transformations of Python+NumPy programs, 2018. 30 [21] Igor A. Baratta, Joseph P. Dean, Jørgen S. Dokken, Michal Habera, Jack S. Hale, Chris N. Richardson, Marie E. Rognes, Matthew W. Scroggs, Nathan Sime, and Garth N. Wells. DOLFINx: The next generation FEniCS problem solving environ-ment, December 2023. [22] Christophe Geuzaine and Jean-Fran¸ cois Remacle. Gmsh: A 3-D finite element mesh generator with built-in pre- and post-processing facilities. International Journal for Numerical Methods in Engineering , 79(11):1309–1331, September 2009. [23] Vahid Nateghi and Feliks N¨ uske. Kinetically Consistent Coarse Graining Using Kernel-Based Extended Dynamic Mode Decomposition. Journal of Chemical The-ory and Computation , 21(15):7236–7248, August 2025. [24] Mark James Abraham, Teemu Murtola, Roland Schulz, Szil´ ard P´ all, Jeremy C. Smith, Berk Hess, and Erik Lindahl. GROMACS: High performance molecular simulations through multi-level parallelism from laptops to supercomputers. Soft-wareX , 1-2:19–25, September 2015. [25] The PLUMED consortium. Promoting transparency and reproducibility in en-hanced molecular simulations. Nature Methods , 16(8):670–673, August 2019. [26] Fr´ ed´ eric Legoll and Tony Leli` evre. Effective dynamics using conditional expecta-tions. Nonlinearity , 23(9):2131–2163, September 2010. [27] Wei Zhang, Carsten Hartmann, and Christof Sch¨ utte. Effective dynamics along given reaction coordinates, and reaction rate theory. Faraday Discussions , 195:365– 394, 2016. 
+
+A. Additional Validation Results 
+
+In this section we show additional validation results for the low-dimensional model sys-tems. Figure 14 shows the cost-to-go λ as a function of data size m and prefactor σ if a B-spline basis is used. Figure 15 shows the reconstruction of the optimal bias potential for the double-well example and the RFF basis. 
+
+B. Proof of Proposition 2.1 
+
+We show the steps to derive the eigenvalue equation (13) and the statements of Propo-sition 2.1. 
+
+Proof of Proposition 2.1. We proceed in five steps. 
+
+Step 1 (Existence of the ergodic HJB pair). We assume that the running cost 
+
+c(x, u) := σℓ (x) + β 
+
+> 4
+
+|u|2 and the potential V are such that the ergodic Hamilton-Jacobi-Bellman equation can be solved (see [14, Thm. 3.6.6] for conditions): there exists W ∈
+
+31 10 3 10 4 10 5 5 × 10 5
+
+> m
+> 0.1 0.2 0.3 0.4
+
+Double-well    
+
+> 10 310 410 55 × 10 5
+> m
+> 0.0 0.2 0.4 0.6
+
+Lemon slice    
+
+> 10 310 410 55 × 10 5
+> m
+> 0.0 0.2 0.4 0.6 0.8
+
+Three-hole             
+
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 0.2 0.4 0.6 0.8
+> 0.0 0.5 1.0 1.5 2.0
+> 0.00 0.25 0.50 0.75 1.00 1.25 1.50
+> 0.0 0.5 1.0 1.5 2.0
+> 0.0 0.5 1.0 1.5 2.0
+> = 0.5
+> = 1.0
+> = 1.5
+> = 2.0
+> = 2.5
+> = 3.0
+> = 3.5
+> = 4.0
+
+Figure 14: As Fig. 3, using a B-spline basis in place of RFF. Left (Double-well): n = 30 and bottom panel fixes m = 10 4. Middle (Lemon slice): n = 15 × 15 and bottom panel fixes m = 5 × 10 5. Right (Three-hole): n = 10 × 10 and bottom panel fixes m = 5 × 10 5.
+
+C2(Rd) and a constant λ ∈ R, together satisfying W (0) = 0, inf W > −∞ , and 
+
+λ ≤ λ∗, (33) such that the ergodic HJB equation for (9) holds true: min 
+
+u∈Rk
+
+h
+
+LW (x) + u · ∇ W (x) + σℓ (x) + β
+
+4 ∥u∥2i
+
+= λ ∀ x ∈ Rd. (34) 
+
+Step 2 (Pointwise minimization). For fixed p ∈ Rk, completing the square gives 
+
+u · p + β
+
+4 ∥u∥2 = β
+
+4 u + 2
+
+β p 2
+
+− 1
+
+β ∥p∥2 ≥ − 1
+
+β ∥p∥2,
+
+with equality iff u = − 2
+
+β p. Setting p = ∇W (x) in (34), 32 1.5 1.0 0.5 0.0 0.5 1.0 1.5 
+
+x
+
+> 0.0 0.5 1.0 1.5 2.0 2.5
+
+Vbias       
+
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+
+x
+
+> 0.0 0.5 1.0 1.5 2.0 2.5 3.0 3.5
+
+Vopt       
+
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+
+x      
+
+> 01234
+> 1.5 1.0 0.5 0.0 0.5 1.0 1.5
+
+x
+
+> 012345
+> = 0.5
+> = 1.0
+> = 1.5
+> = 2.0
+> = 2.5
+> = 3.0
+> = 3.5
+> = 4.0
+> V
+> = 0.001
+> = 0.1
+> = 0.3
+> = 0.5
+> = 0.7
+> = 1.0
+> = 1.5
+> = 2.0
+> V
+
+Figure 15: As Fig. 5 using RFF basis at m = 10 4 and γrff = 0 .3. 
+
+u∗(x) = − 2
+
+β ∇W (x), (35) and (34) reduces to the semi-linear equation 
+
+LW (x) − 1
+
+β ∥∇ W (x)∥2 + σℓ (x) = λ ∀ x ∈ Rd. (36) Defining Vbias := 2
+
+β W turns (35) into u∗(x) = −∇ Vbias (x), which is claim (ii). 
+
+Step 3 (Logarithmic transform). Set φ := e−W > 0, so W = − log φ and Vbias =
+
+− 2
+
+β log φ. Then 
+
+∇W = − ∇φφ , ∆W = − ∆φφ + ∥∇ φ∥2
+
+φ2 ,
+
+33 so, using L = −∇ V · ∇ + β−1∆, 
+
+LW = ∇V · ∇ φφ − 1
+
+β
+
+∆φφ + 1
+
+β
+
+∥∇ φ∥2
+
+φ2 , 1
+
+β ∥∇ W ∥2 = 1
+
+β
+
+∥∇ φ∥2
+
+φ2 .
+
+The quadratic terms cancel exactly in LW − 1 
+
+> β
+
+∥∇ W ∥2, leaving 
+
+LW − 1
+
+β ∥∇ W ∥2 = ∇V · ∇ φφ − 1
+
+β
+
+∆φφ = − 1
+
+φ Lφ. 
+
+Substituting into (36) and multiplying by φ,(σℓ − L )φ = λ φ, (37) which is exactly (13): no rescaling of L is needed, because the control-cost coefficient 
+
+β/ 4 in (8) was chosen precisely to make this cancellation exact. 
+
+Remark B.1 (Why β/ 4, precisely) . For a general coefficient η in place of β/ 4 in (8) ,the minimizer becomes u∗ = − 12η ∇W and the semilinear HJB equation reads LW − 
+
+> 14η
+
+∥∇ W ∥2 + σℓ = λ. The same substitution φ = e−W then leaves 
+
+LW − 14η ∥∇ W ∥2 = − Lφφ +
+
+ 1
+
+β − 14η
+
+ ∥∇ φ∥2
+
+φ2 ,
+
+so the nonlinear term cancels, linearizing the equation into (13) , if and only if η = β/ 4.Equivalently: allowing a tuned substitution W := −c1 ·log φ with c1 = 4 η/β linearizes the semilinear HJB equation for any η > 0, but leaves the rescaled equation  σℓ − c1Lφ =
+
+λφ ; only η = β/ 4 makes c1 = 1 and removes the rescaling factor 4η/β from in front of 
+
+L, giving (13) exactly, against the bare generator L.
+
+Step 4 (Ground state and principal eigenvalue). The uncontrolled Langevin dynamics are reversible with respect to d μ(x) ∝ e−βV (x) dx, and L is essentially self-adjoint on L2(μ). Moreover, for sufficiently regular f ,
+
+⟨f, −L f ⟩μ = 1
+
+β
+
+Z
+
+> Rd
+
+∥∇ f ∥2 dμ. 
+
+Consequently, the operator σℓ − L is essentially self-adjoint and nonnegative, with quadratic form 
+
+⟨f, (σℓ − L )f ⟩μ = 1
+
+β
+
+Z
+
+∥∇ f ∥2 dμ + σ
+
+Z
+
+ℓf 2 dμ. 
+
+Its lowest eigenvalue is characterized by the Rayleigh–Ritz formula 
+
+λ0 = inf  
+
+> f̸=0
+
+β−1 R ∥∇ f ∥2 dμ + σ R ℓf 2 dμ
+
+R f 2 dμ .
+
+Since the eigenfunction φ = e−W constructed in Step 3 is strictly positive, the principal-eigenvalue characterization identifies λ = λ0.34 Step 5 (Verification and optimality). Steps 1-4 constructed a pair ( W, λ ) solving the ergodic HJB (34), with minimizing control u∗(x) = − 2 
+
+> β
+
+∇W (x) and λ the smallest eigenvalue of σℓ − L on L2(μ). By the standard verification theorem for ergodic control ([14, Thm. 3.5.6/3.5.8 ]), any such solution pair automatically satisfies λ = λu∗ = λ∗ ≥ 0for every x – proving claim (i) – with the associated feedback control u∗ being stable, proving claim (ii). 35

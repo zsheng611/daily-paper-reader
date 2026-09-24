@@ -1,0 +1,637 @@
+Title: WhatWorkedBench: Benchmarking Experimental Understanding in AI Agents
+
+URL Source: https://arxiv.org/pdf/2609.27490v1
+
+Published Time: Thu, 24 Sep 2026 00:42:58 GMT
+
+Number of Pages: 30
+
+Markdown Content:
+Preprint 
+
+# WHAT WORKED BENCH : B ENCHMARKING 
+
+# EXPERIMENTAL UNDERSTANDING IN AI A GENTS 
+
+Jingjie Ning 1∗ Xueqi Li 1 Yibo Kong 1 Dongting Li 2
+
+> 1
+
+Carnegie Mellon University 2Tsinghua University {jening, xueqil, yibok}@cs.cmu.edu ldt25@mails.tsinghua.edu.cn Homepage GitHub 
+
+# ABSTRACT 
+
+AI research agents need reliable knowledge of how their experiments change out-comes. We introduce WhatWorkedBench to measure experimental understanding ,the accuracy of predictions about component changes after budgeted experimen-tation. Agents inspect code, select measurements, and submit a response surface ,a table predicting scores for every configuration of component settings. Exhaus-tive CPU execution supplies reference effects for changing each component while holding the others fixed. These effects capture combinations of changes across 36 tasks from 30 data sources and 8 workflow types, with 1248 configuration records. Core evaluation combines 4,206 numerical-control records across all eight fami-lies and 108 agent episodes across the original six. At eight new measurements, pair-effect ridge selects an optimum on 15 of 22 sources and limits every effect error to 10% of score range on three. Fitting a Gaussian process (GP) to the same agent observations raises effect recovery, accuracy relative to true effect magni-tude, from 0.632 to 0.698 in the original Flash cohort and from 0.621 to 0.720 in an additional cohort. On six completed beat-detection and graph submissions, the same-observation GP raises family-macro recovery from 0.303 to 0.455. On six workflows with six binary options at 20 new measurements, encoding code equiv-alences, configurations with identical behavior, raises GP recovery from 0.248 to 0.462. WhatWorkedBench supports research on experimental agents, adaptive experimental design, numerical inference, and use of program structure. BUDGETED EXPERIMENTS → QUANTITATIVE UNDERSTANDING                
+
+> 1234
+> </>
+> Library operations
+> 4 or 6 binary options
+> ABCDEF
+> 2 free + B new
+> Choose masks Measure scores Read scores Update evidence
+> Repeat within the measurement budget
+> scores
+> Preserve measured scores. Infer the remaining scores. Submit one prediction table
+> Component effects 32 / 192
+> Pair interactions 6 / 15
+> Best configuration regret
+> Final table validity
+> Compare with the complete reference
+> All legal configurations executed
+> 1,248 outcomes · 36 tasks · 30 sources · 8 workflow types
+> Measured feedback Full reference
+> Hold observations fixed Pair ridge Gaussian process
+> Compare what different estimators recover
+
+Figure 1: WhatWorkedBench connects budgeted experiments to quantitative understanding. Agents inspect a workflow, query selected configurations, and submit a complete prediction table. The eval-uator uses exhaustive CPU outcomes to score conditional effects, mean pair interactions (departures from additive effects), configuration choice, and artifact delivery. Shared inference compares esti-mators on the same observations. 
+
+> ∗
+
+Corresponding author 
+
+1arXiv:2609.27490v1 [cs.AI] 23 Sep 2026 Preprint 
+
+# 1 INTRODUCTION 
+
+AI agents increasingly plan, execute, and interpret computational experiments (Huang et al., 2024; Chan et al., 2025; Kon et al., 2026). Research agents use trial histories to revise training recipes and carry lessons from cheap experiments to costly configurations (Ning et al., 2026a; Guo et al., 2026). Reliable experimentation requires predicting how component changes behave in new settings and combine with other changes. Measuring this acquired knowledge is central to evaluating systems that learn through experimentation. We study experimental understanding as the accuracy of quantitative predictions about computa-tional interventions available at the end of an experimental episode. The evaluated system combines an agent’s measurement policy, numerical tools, and submitted prediction artifact. A native outcome 
+
+is the score of a code-option intervention with source data, implementation, and evaluation cohort fixed. An agent inspects workflow code and component definitions, chooses experiments under a measurement budget, and submits a complete predicted response surface (Figure 1). A background 
+
+fixes the settings of every other component. The reference evaluates each component’s effect in every background. These conditional effects describe arbitrary combinations of the documented interventions. They connect the experiments an agent chooses to the predictive knowledge that its final artifact contains. One switch, opposite effects SCIFACT / NDCG@10    
+
+> Measured retrieval quality Effect of binary counts
+> RAW COUNTS BINARY COUNTS
+> TF off
+
+0.384 0.544  
+
+> TF on
+
+0.629 0.544  
+
+> TF off TF on
+> +0.160 −0.084
+> Binary counts give identical rankings in both contexts Interaction −0.245
+
+Figure 2: A retrieval switch reverses its effect across two workflow backgrounds. The left panel reports SciFact normalized discounted cumulative gain at rank 10 (NDCG@10) for raw and binary term counts with sublinear term frequency (TF) off or on. The right panel shows that binary counts raise NDCG@10 by 0.160 with TF off and lower it by 0.084 with TF on, yielding a −0.245 interac-tion. Binary counts make the sublinear transform inactive, so both right-column cells have identical rankings and score 0.544. Other settings use unigrams, English stopword removal, disabled inverse document frequency, and unnormalized vectors. Figure 2 illustrates why the full intervention context matters. The same retrieval option improves one configuration and degrades another. This dependence of one change on another is an interaction .Across the catalog, 35 of 36 task conditions contain such sign reversals; 24 retain a reversal when both directions must exceed 5% of the response range. A single preferred configuration or an average component effect leaves these conditional behaviors unresolved. WhatWorkedBench makes them explicit quantitative prediction targets. The benchmark connects three algorithmic decisions. Measurement selection determines which evi-dence is acquired. Numerical inference turns that evidence into predictions about unmeasured inter-ventions. Program structure supplies relations among configurations, such as parameters becoming inactive when an operation is disabled. Shared-estimator comparisons hold acquired observations fixed while changing the inference method. Code-equivalence controls translate visible program rules into measurement and prediction constraints. This organization supports controlled compari-son of all three decisions within the same experimental task. Our contributions are threefold. 2Preprint • We define an executable evaluation of experimental understanding through complete con-ditional component effects. The reference covers arbitrary combinations of each task’s documented changes, alongside configuration choice and final artifact delivery. • We provide 36 task conditions on 30 sources across 8 computational workflow families. Exhaustive native execution yields 1248 configuration records, 3,392 conditional effects, and 342 mean pair interactions, with standalone execution and grading. • We establish comparisons of experimental design, numerical reconstruction, and use of program structure through 4,206 numerical-control records, 108 core agent episodes, eight structure-diagnostic episodes, and six completed submissions from added workflow fami-lies. The results separate optimization success from intervention knowledge and show how inference and executable equivalences improve reconstruction. 
+
+# 2 RELATED WORK 
+
+Experimental investigation. ScienceWorld and DiscoveryWorld evaluate scientific reasoning through interaction (Wang et al., 2022; Jansen et al., 2024). Gravity-Bench, Science-Gym, Box-ingGym, and SciGym evaluate experiment selection, prediction, or model discovery (Koblischke et al., 2025; Cerrato et al., 2026; Gandhi et al., 2025; Duan et al., 2025). CausalGame tests exper-imental design and causal explanations under selection bias and hidden confounding (Chen et al., 2026). Science sandboxes document gaps between optimization and scientific understanding (Rao et al., 2026). WhatWorkedBench measures complete conditional-effect predictions against exhaus-tive computational outcomes. 
+
+Research workflows. AbGen, AblationBench, and SCOPE assess experiment plans (Zhao et al., 2025; Abramovich and Chechik, 2025; Liu et al., 2026). MLAgentBench, MLE-bench, BLADE, ScienceAgentBench, EXP-Bench, and ResearchGym assess execution and research out-comes (Huang et al., 2024; Chan et al., 2025; Gu et al., 2024; Chen et al., 2025; Kon et al., 2026; Garikaparthi et al., 2026). FIRE-Bench scores rediscovered findings, while AgentActionBench scores reproduction traces (Wang et al., 2026; Hong et al., 2026). Our delivered knowledge arti-fact is a complete numerical response surface. 
+
+Attribution and experimental design. CAFE evaluates factorial component attribution (Lukassen et al., 2026); petri-bench tests controlled identification and interaction signs (petri-labs, n.d.). Conditional parameter spaces with inactive options are established in hyperparameter optimiza-tion (Bergstra et al., 2011; Lindauer et al., 2022). Our native-verified equivalences support error measurement for every conditional effect and comparisons of acquisition and inference using the same observations. This connects agent evaluation with Bayesian experimental design (Rainforth et al., 2024) and hyperparameter importance (Hutter et al., 2014). Appendix A compares the evalu-ated objects in detail. 
+
+# 3 TASK AND EVALUATION PROTOCOL 
+
+For task t, native execution defines a deterministic utility ut(z) ∈ [0 , 1] on configurations z ∈{0, 1}dt , with dt ∈ { 4, 6}. Each bit is a binary option, called a factor ; the full vector is a mask .All masks are legal. The agent receives two free anchor measurements, ut(0 dt ) and ut(1 dt ), and may purchase at most B additional distinct measurements. It can query adaptively or in batches. Repeated measurements are free and over-budget batches are rejected atomically. Each utility ta-ble is defined by the case’s frozen algorithm implementation, random seed, and evaluation cohort. Four- and six-factor designs permit exhaustive, independently replayed references while varying how much of the response surface a budget reveals. The final artifact is a prediction ˆut(z) for every legal mask, with finite values in [0 , 1] . Grading inserts authoritative observations at measured cells. Submission closes the episode and establishes the delivered artifact used for the final score. The protocol records intermediate calculations as part of the experimental trajectory. Measured endpoint pairs give exact effects; the remaining contrasts require predictions at one or both endpoints. Appendix F.6 reports coverage and prediction error. 3Preprint 
+
+Primary numerical target. For component i and background z with zi = 0 , define 
+
+∆i(z) = ut(z + ei) − ut(z), Et = 1
+
+dt2dt−1
+
+X
+
+> i
+
+X
+
+> z∈{ 0,1}dt
+> zi=0
+
+| b∆i(z) − ∆i(z)|. (1) These effects describe every joint intervention. For configurations x, y , a path that switches their differing bits gives 
+
+ut(y) − ut(x) = X
+
+> e∈path( x,y )
+
+se∆e, se ∈ {− 1, 1}. (2) Thus complete conditional effects and one anchor determine the whole response surface. Deriv-ing all predicted effects from a single submitted table preserves this path consistency. If every conditional-effect error is at most ϵ, the error of any k-component intervention is at most kϵ . Ap-pendix F gives the derivation and a configuration-choice counterexample that clarifies the need for an effect-based evaluation target. There are 32 conditional effects at four factors and 192 at six. Let At be the mean absolute true conditional effect. We report raw effect MAE Et and relative recovery Rt = max(0 , 1 − Et/A t) for 
+
+At > 10 −12 . For a numerically flat table, recovery is one only when Et ≤ 10 −12 . A zero recovery score corresponds to error at least as large as the mean true-effect magnitude. Reporting Et, At, and the utility range preserves the numerical scale of each reconstruction problem. 
+
+Additional numerical outputs. For every pair of components, we additionally compare the mean second difference u(z + ei + ej ) − u(z + ei) − u(z + ej ) + u(z), averaging over the remaining backgrounds. These averages summarize pair interactions; the complete conditional effects retain their dependence on other components. We report MAE over the six or 15 pair contrasts, together with grid MAE and selection regret max z ut(z) − ut(arg max z ˆut(z)) . Prediction ties prefer fewer enabled options and then the lexically smaller mask. Exact optimality allows regret up to 10 −12 .The strict reconstruction score requires every conditional-effect error to be at most 
+
+max[10 −12 , τ (max ut − min ut)] . We set the development tolerance to τ = 0 .1 and evaluate a five-tolerance profile alongside continuous recovery. Missing delivery receives zero recovery and a strict score of zero. Raw errors include valid artifacts with explicit sample counts. 
+
+# 4 NATIVE CATALOG AND REFERENCE VALIDATION 
+
+A source is a dataset or record; a task condition pairs a source with a set of workflow options. A 
+
+family groups tasks by computation and metric. Table 1 summarizes the catalog. The four-factor track contains 22 instances. A paired track adds two options on one source per family, producing six six-factor variants. The six-factor track additionally includes four beat-detection records and four graph instances. Thus there are 36 task conditions on 30 sources, comprising 352 four-factor and 896 six-factor configuration records. Of these, 96 reproduce original subcube outcomes. Table 1: Task conditions and source inventory. Paired variants share their original sources. Source metadata retain dataset and library relationships, including the classifier reused for link prediction.                                           
+
+> Workflow d= 4 d= 6 Sources Native operation and metric
+> Classification 414Logistic regression; balanced accuracy Regression 414Ridge regression; transformed MAE Clustering 414k-means; normalized mutual information Forecasting 414One-step ridge forecasts; transformed MAE Restoration 414Native image filters; transformed pixel RMSE Retrieval 212TF–IDF retrieval; NDCG@10 Beat detection 044SciPy signal processing; event F1 Link prediction 044NetworkX features and logistic regression; ROC AUC Total 22 14 30 36 conditions across eight families
+
+The catalog combines predictive learning, partition discovery, temporal prediction, signal and im-age processing, and ranked retrieval. Its options change representations, estimators, preprocessing, 4Preprint 0% 25% 50% 75% 100% Components with sign reversals Classification Regression Clustering Forecasting Restoration Retrieval Beat detection Link prediction 4 factors 6 factors 
+
+> CONDITIONS WITH A SIGN REVERSAL
+
+35/36 
+
+> Numerical
+
+33/36 
+
+> 1% of range
+
+24/36 
+
+> 5% of range
+
+16/36 
+
+> 10% of range
+
+Figure 3: Conditional sign reversals across eight workflow families. Each point is one task con-dition, positioned by the fraction of its components with both positive and negative effects across backgrounds at a 10 −12 numerical floor. Color and shape distinguish four- and six-factor conditions. The upper strip counts conditions with at least one reversal under increasingly strict effect floors. Its numerical entry uses 10 −12 , while percentage floors scale with each condition’s score range. Six six-factor conditions share sources with four-factor counterparts. or computational operators. Every outcome is produced by the documented native-library work-flow on source data. The source inventory, preparation, and all 48 workflow options appear in Ap-pendices B–D. Each task records its source, implementation, random seed, and evaluation cohort. Construction plans specify the additional sources and configurations before their execution. 
+
+Conditional structure across the catalog. Figure 3 shows the fraction of options whose effects change sign within each task condition. At a numerical floor of 10 −12 , 35 of 36 conditions contain a sign reversal. Requiring both the positive and negative effects to exceed 1%, 5%, or 10% of the task response range gives 33, 24, and 16 conditions, respectively. These descriptive counts characterize conditional structure across the frozen catalog. Flat exports provide all 3,392 conditional effects and 342 mean pair interactions for direct reuse. 
+
+Data access and native evaluation. Training partitions fit supervised transforms and models, while feature-identical rows remain grouped across splits. Clustering labels enter the external met-ric. Forecasts use preceding observations with parameters fitted on the training prefix. Restora-tion retains clean references at the evaluator, and retrieval uses original relevance annotations with query-copy exclusion for ArguAna. Beat detection uses archived MIT-BIH waveforms and event annotations (Moody and Mark, 2001; Pollard et al., 2026). Link prediction computes features on an observed graph, fits calibration labels, and evaluates disjoint test pairs. Appendix C specifies access rules and scoring cohorts. 
+
+Complete references and reproducible episodes. Cold execution checks all configuration predic-tions against their recorded hashes. Separately implemented native metrics and target-perturbation checks verify the scoring and evaluation boundaries. The prepared-input pack replays all 1248 records outside the project in 127.87 seconds with one computation thread. The standalone episode engine agrees with 4206 stored numerical-control records. These checks establish a common refer-ence for repeated evaluation. Measurement credits define an information budget . A trusted host returns cached outcomes from na-tive execution, giving identical feedback whenever a policy queries the same configuration. Agents 5Preprint interact with public task descriptions and purchased observations; exhaustive outcomes remain with the evaluator. This separation supports inexpensive repeated comparisons of experimental policies against a complete numerical target. 
+
+# 5 EXPERIMENTAL SETUP 
+
+Numerical reference methods. Main-effect ridge (D1) models additive component contributions; pair-effect ridge (D2) additionally models pairwise interactions. Sequential ridge designs spread measurements over these component features. Random design uses 20 seeds with the pair estimator. A Gaussian-process baseline estimates a constant mean and models similarity through the number of differing options (Rasmussen and Williams, 2006). Regularization and kernel parameters minimize leave-one-out prediction error on observed values. Grid GP and Effect GP select measurements to reduce uncertainty in scores and conditional effects, respectively (Cohn et al., 1996). All predictors retain measured values. Appendix G gives the feature maps, covariance, and acquisition criteria. We additionally evaluate public-code equivalences for the original six-factor variants. For example, a filter-width option is inactive when its filter is off. An equivalence class contains configurations with identical native behavior. The control measures one representative per class and assigns its pre-diction to every class member. The trajectory records purchased measurements and inferred aliases separately. Every equivalence is checked against native prediction hashes and scores. Ridge con-trols, GP controls, and code-equivalence controls follow recorded development stages. The protocol history and exact method grids appear in Appendix J. 
+
+Agents and budgets. Numerical controls cover all eight workflow families. The 108-episode core agent study uses the first source in each of the original six families, with matched controls on those same sources. Four-factor evaluation uses the API identifiers deepseek-v4-flash and 
+
+deepseek-v4-pro at B = 4 , 8 for 72 episodes across the original and additional cohorts. We abbreviate these identifiers as Flash and Pro. 1 Both receive workflow code and input summaries, reasoning enabled at high effort, a 32,768-token output cap, and a disclosed 1,800-second session deadline. The four tools expose current evidence, purchase masks, execute numerical Python, and submit a prediction table. A maximum of 20 calculation calls applies, with 30 CPU seconds and 45 wall seconds per call. NumPy, SciPy, scikit-learn, and public main-effect and pair-effect ridge helpers are available. Submission accepts a complete agent table or a named public helper. The information study contains 36 Flash episodes comparing full workflow information with an 
+
+opaque view , containing masks and utilities without workflow details, on all six paired six-factor variants at B = 20 . The full condition provides code, factor semantics, source information, and input summaries; both views share the same tools, helpers, and utility-only receipts. The original information cohort contains one pair per source; the additional cohort contains two. Four-factor evaluation contains three executions per source, model identifier, and budget across the dated co-horts. Every execution is retained. Exact prompts, helper settings, and cohort chronology appear in Appendices H–J. Six complete Flash submissions on added beat-detection and graph tasks at 
+
+B = 32 support a separate completed-artifact analysis under the same six-factor interface. 
+
+Aggregation and delivery. We average repetitions within source, sources within family, and then weight families equally. We call this family-macro averaging . Masks and random seeds remain repeated observations within a source. Four-factor evaluation delivers 63 of 72 artifacts. The origi-nal cohort records 75 HTTP 429 responses; the additional cohort records five Pro deadline failures without HTTP 429. Execution accounting also identifies delayed HTTP 200 streams with no parsed model response in the additional information study. Valid delivery is recorded independently of HTTP status. These records expose the agent’s measurement choices, estimator selection, and fi-nal delivery under the specified interface. Missing delivery remains in the denominator with zero recovery. Appendix K reports every attempted episode. 
+
+> 1Original calls were made on September 7, 2026, and additional calls on September 14–15. The provider documents that the legacy Flash alias serves V4.1 Flash, while Pro remains available ( https://api-docs. deepseek.com/ ). We report the dated cohorts separately.
+
+6Preprint 
+
+# 6 RESULTS 
+
+6.1 OPTIMIZATION SUCCESS AND INTERVENTION KNOWLEDGE ARE DISTINCT TARGETS 
+
+Exact configuration choice can coexist with arbitrarily small effect recovery, even when both free anchors match. Appendix F gives a compact construction. Native measurements show how the two targets separate in practice. Figure 4 compares recovery across budgets. On the 22 four-factor sources, pair-effect design/ridge at B = 8 achieves 0.612 family-macro recovery, 15 exact configuration choices, and three strict reconstructions. Thirteen instances combine exact choice with an effect error above the strict toler-ance. The effect-variance GP reaches 0.701 recovery, 16 exact choices, and one strict reconstruction. Thus the GP ranks higher on mean recovery and configuration choice, while pair ridge ranks higher on the maximum-error criterion. These differences establish complementary evaluation targets for systems that select configurations and explain component effects. 0 4 8 14 0.0 0.2 0.4 0.6 0.8 1.0 Effect recovery        
+
+> full grid
+> B = 8
+> 4 factors | 22 sources
+> 0820 32 62
+> full grid
+> B = 20
+> 6 factors | 6 paired sources
+> New measurements B (+2 free anchors)
+> BOTH PANELS 6 FACTORS ONLY
+> Pair ridge Grid GP Effect GP Code + ridge Code + GP
+
+Figure 4: Family-macro conditional-effect recovery across measurement budgets. The left panel contains 22 four-factor sources; the right panel contains six paired six-factor sources. Vertical guides mark the B = 8 and B = 20 comparison budgets. Pale final segments end at complete configuration enumeration, with B = 14 and B = 62 . Code-equivalence methods appear only on the six-factor track and encode visible inactive-parameter rules. The tolerance profile resolves reconstruction quality at several error levels. With maximum-edge tolerances of 2.5%, 5%, 10%, 20%, and 40% of response range, pair ridge passes on 1, 1, 3, 8, and 20 of 22 instances. Among its 15 exact-choice cases, mean continuous recovery is 0.634, with minimum 0.361. The combined profile describes both the typical accuracy of estimated effects and the largest remaining errors. Native-unit evaluation provides a second view of the same predictions. For the MAE and RMSE tasks, we invert the utility transform and compute errors in the original units. At four factors and 
+
+B = 8 , native-scale recovery is 0.633 for pair ridge and 0.712 for effect-variance GP. Per-source native errors, utility ranges, and continuous recovery accompany the tolerance profile. 6.2 SHARED INFERENCE EXTRACTS ADDITIONAL VALUE FROM ACQUIRED EVIDENCE 
+
+Table 2 reports the four-factor agent studies by cohort. Original Flash recovery rises from 0.178 at B = 4 to 0.632 at B = 8 ; the additional cohort rises from 0.375 to 0.621. Pro recovery rises from 0.043 to 0.366 in the original cohort and from 0.308 to 0.503 in the additional cohort. The table retains delivery outcomes and reports variation across repeated executions. Across all 18 Flash 
+
+B = 8 episodes, seven select an exact optimum and one passes strict reconstruction. Pair-effect design/ridge scores 0.627 on these same six sources. Appendix K.2 compares individual sources. 7Preprint Table 2: Four-factor agent evaluation on six matched sources per row. Recovery averages all at-tempted episodes, assigning zero to missing delivery. Mean SD averages the sample standard devi-ation across repetitions within each source; a dash denotes a single execution per source. Exact and strict count episodes. Original and additional cohorts retain their separate execution periods.                                                                         
+
+> Model Cohort BRuns Valid Recovery Mean SD Exact Strict
+> Flash Original 4660.178 —20Flash Original 812 12 0.632 0.073 51Pro Original 4640.043 —20Pro Original 8640.366 —30Flash Additional 412 12 0.375 0.105 50Flash Additional 8660.621 —20Pro Additional 412 10 0.308 0.130 20Pro Additional 812 90.503 0.080 61
+
+Table 3: Acquisition and reconstruction at B = 8 on six matched four-factor sources. Shared columns fit each estimator to the row’s observed sets. Random designs average 20 seeds within source. Delivered recovery assigns zero to missing artifacts; shared fits use all acquired evidence.                                                    
+
+> Acquisition Records Delivered RShared D1 Shared D2 Shared GP
+> Flash, original 12 0.632 0.604 0.550 0.698 Pro, original 60.366 0.628 0.567 0.692 Flash, additional 60.621 0.598 0.537 0.720 Pro, additional 12 0.503 0.564 0.670 0.667 D1 60.546 0.546 0.592 0.592 D2 60.627 0.571 0.627 0.669 Random D2 120 0.523 0.542 0.523 0.619 GP-G 60.666 0.564 0.633 0.666 GP-E 60.640 0.553 0.568 0.640
+
+Across the original Flash B = 8 trials, 67.4% of conditional effects involve an unmeasured config-uration. Filling unmeasured utilities with the mean of the same observations gives recovery 0.287, compared with the delivered 0.632. The mean effect error on those remaining contrasts, normal-ized by At, is 1.054 for mean completion and 0.542 for the agent artifacts (Appendix F.6). This calibration measures reconstruction beyond the exact effects available from measured pairs. The shared-estimator protocol holds acquired observations fixed while changing the inference cal-culation. Applying the GP to the original Flash B = 8 trials raises mean recovery from 0.632 to 0.698. In the additional Flash cohort, it raises recovery from 0.621 to 0.720. Table 3 shows the acquisition-by-estimator comparison for both cohorts. Across a row, the measurements stay fixed; down a shared-reconstruction column, the estimator stays fixed. This permits direct study of which evidence is acquired and how effectively that evidence is used. Shared GP recovery is 0.698 and 0.720 on the two Flash cohorts, compared with 0.669 on D2-design observations and 0.640 with GP’s own effect-variance acquisition. These comparisons show how acquired evidence supports a common reconstruction method. Shared GP fitting is retrospective for the original cohort and specified before the additional runs; agents have the two ridge helpers during execution. The original-cohort GP gain stays positive after omitting each source in turn, ranging from 0.021 to 0.096. The additional cohort supplies a separate replication (Appendix L.1). 6.3 PROGRAM STRUCTURE INCREASES THE VALUE OF MEASUREMENTS 
+
+Code-derived constraints. Workflow code exposes exact equivalences when an operation makes a parameter inactive. Across six paired workflows at B = 20 , using these classes raises pair-ridge recovery from 0.157 to 0.389 and effect-GP recovery from 0.248 to 0.462. At B = 32 , the 8Preprint corresponding gains are 0.445 to 0.650 and 0.537 to 0.697. All four sources with nontrivial classes improve; the two identity controls retain their predictions. Every source-omission mean GP gain remains positive (Appendix L.1). 
+
+Workflow information. Full-code and opaque agent views yield recovery 0.268 and 0.257 in the original cohort, then 0.185 and 0.234 in the additional cohort. Shared GP favors opaque observations in both cohorts, with full-minus- opaque differences of −0.024 and −0.064 . Among eight additional pairs with two valid artifacts, the source-macro delivered difference is −0.120 . These contrasts identify effective use of visible program rules as the next algorithmic target (Appendix K.1). 
+
+Recognition and application. Eight B = 20 episodes pair full code with code plus verified rules on four sources. The four code-only agents report all six registered rules before measurement; the four rules-supplied agents also report them. All eight final tables use public ridge helpers and violate the equivalences. Supplied rules change mean recovery from 0.247 to 0.429. Our offline, post-hoc projection of those tables holds observations fixed, raises recovery from 0.338 to 0.507, and lowers raw effect error in all eight runs (Appendix K.3). 6.4 SHARED INFERENCE ON ADDED WORKFLOW FAMILIES 
+
+Six complete B = 32 Flash submissions cover beat detection and graph link prediction, three sources per family. Fitting shared GP to the same acquired observations raises family-macro ef-fect recovery from 0.303 to 0.455, with positive gains on all six sources. Same-source numerical controls reach 0.230 for D2, 0.414 for grid GP, and 0.404 for effect GP. This extends agent analysis to all eight workflow families (Appendix L.6). 
+
+# 7 A PLATFORM FOR RESEARCH ON EXPERIMENTAL UNDERSTANDING 
+
+WhatWorkedBench supports experimental agents, adaptive design, response-surface inference, and program-based inference in one executable setting. Public tasks, native references, observation traces, and exact effect tables support matched comparisons of measurement policies, estimators, and code-based constraints through the companion data guide. 
+
+# 8 CONCLUSION 
+
+WhatWorkedBench measures how accurately AI agents learn the effects of computational interven-tions through budgeted experimentation. Agents inspect workflow code, choose measurements, and submit a complete predicted response surface. Exhaustive CPU execution supplies the reference for every conditional component effect, covering joint changes and interactions of every order. The catalog contains 36 task conditions on 30 sources across 8 workflow families, with 1248 configura-tion records. Its common protocol evaluates effect reconstruction, configuration choice, and artifact delivery. Shared-estimator comparisons separate measurement selection from numerical inference. Across 4,206 numerical controls and 108 core agent episodes, optimal configuration choices coexist with substantial conditional-effect error. Shared GP improves recovery on the same Flash observa-tions in both dated API cohorts and on all six completed added-family submissions. The latter rise from 0.303 to 0.455 under a shared estimator with fixed observations. At B = 20 , code equiva-lences raise six-factor GP recovery from 0.248 to 0.462. In eight diagnostic episodes, agents report program rules yet deliver tables that violate them; post-hoc class projection raises recovery from 0.338 to 0.507. Reusable tasks, references, and episode tools make experimental understanding a reproducible target for experimental AI. 
+
+# REPRODUCIBILITY STATEMENT 
+
+The accompanying artifacts include public tasks, evaluator-only references, versioned episode se-mantics, exact native operations, prepared inputs, numerical controls, and machine-readable audits. The task pack’s standard-library engine reproduces 4206 stored score records in a standalone pro-cess. The prepared-input pack reproduces all 1248 native records outside the repository. Source acquisition and preparation retain separate manifests and code identities. 9Preprint 
+
+# AI USE STATEMENT 
+
+An AI coding assistant contributed to topic and literature exploration, workflow-option design, ex-periment protocols, data preparation, implementation, numerical analysis, figures, and drafting. DeepSeek models were additionally used as evaluated experimental agents. Verification used cold native replay, separately implemented numerical metrics, and recorded source and code identities. The study preserves the generated implementations, analysis scripts, experiment plans, and numeri-cal audit results. 
+
+# ETHICS STATEMENT 
+
+This work uses publicly available research archives with their accompanying source terms and ci-tations. The ECG tasks evaluate computational event detection on archived waveforms. Prepared inputs contain the signal data and reference events used for scoring. Evaluation references are held by the trusted host, and agents receive task descriptions and budgeted aggregate observations. 
+
+# REFERENCES 
+
+Yilun Zhao et al. AbGen: Evaluating Large Language Models in Ablation Study Design and Evalu-ation for Scientific Research. ACL, 2025. ACL Anthology. Talor Abramovich and Gal Chechik. AblationBench: Evaluating Automated Planning of Ablations in Empirical AI Research. AI4Science Workshop, ICML, 2026. First preprint 2025. arXiv 2507.08038v3. Zejun Liu et al. Can LLM design high-quality experiments? A Comprehensive and Systematic Benchmark on Autonomous Experimental Design. 2026. arXiv 2608.03501. Fabian Lukassen, Christoph Weisser, Thomas Kneib, and Alexander Silbersdorff. CAFE: A Compound-AI Factorial Evaluation Framework. 2026. arXiv 2607.10380. Kanishk Gandhi et al. BoxingGym: Benchmarking Progress in Automated Experimental Design and Model Discovery. 2025. arXiv 2501.01540. Haonan Duan et al. Measuring Scientific Capabilities of Language Models with a Systems Biology Dry Lab. 2025. arXiv 2507.02083. Ken Gu et al. BLADE: Benchmarking Language Model Agents for Data-Driven Science. Findings of EMNLP, 2024. ACL Anthology. Patrick Tser Jern Kon et al. EXP-Bench: Can AI Conduct AI Research Experiments? ICLR, 2026. Conference proceedings. Katharina Eggensperger et al. HPOBench: A Collection of Reproducible Multi-Fidelity Benchmark Problems for HPO. NeurIPS Datasets and Benchmarks, 2021. arXiv 2109.06716. Tennison Liu, Nicolás Astorga, Nabeel Seedat, and Mihaela van der Schaar. Large Language Models to Enhance Bayesian Optimization. ICLR, 2024. arXiv 2402.03921. Carl Edward Rasmussen and Christopher K. I. Williams. Gaussian Processes for Machine Learning. MIT Press, 2006. Online text. George B. Moody and Roger G. Mark. The impact of the MIT-BIH Arrhythmia Database. IEEE Engineering in Medicine and Biology, 20(3):45–50, 2001. Dataset version 1.0.0. Dataset record. Tom Pollard et al. PhysioNet as a global platform for biomedical research. Nature Health, 1:792– 795, 2026. Publisher page. Shanshan Zhong, Yi Lu, Jingjie Ning, Yibing Wan, Lihan Feng, Yuyi Ao, Leonardo F. R. Ribeiro, Markus Dreyer, Sean Ammirati, and Chenyan Xiong. SkillLearnBench: Benchmark-ing Continual Learning Methods for Agent Skill Generation on Real-World Tasks. COLM, 2026. arXiv 2604.20087. 10 Preprint Jingjie Ning, Xiaochuan Li, Ji Zeng, Hao Kang, and Chenyan Xiong. Auto Research with Specialist Agents Develops Effective and Non-Trivial Training Recipes. 2026. arXiv 2605.05724. Jingjie Ning, Xiaochuan Li, Shanshan Zhong, Ji Zeng, and Guolin Ke. Auto Research for Materials: Auditable AI-Scientist Workflows with Held-Out Transfer. 2026. arXiv 2607.17100. Jingjie Ning, Shanshan Zhong, Xiaochuan Li, Ji Zeng, and Chenyan Xiong. One Run Is Not an Idea: The Implementation Lottery in Automated Research. 2026. arXiv 2607.26587. Arya S. Rao et al. Science sandboxes measure the scientific capability of AI agents. 2026. arXiv 2608.30165. Matt L. Wiemann, Lindsay M. Smith, Peter Melchior, Siddharth Mishra-Sharma, Andrew Gordon Wilson, Pavel Izmailov, and Carolina Cuesta-Lázaro. DiscoverPhysics: Benchmarking LLMs for Out-of-the-Box Scientific Thinking. 2026. arXiv 2605.26087. Abhranil Chandra, Sankaran Vaidyanathan, Utsav Dhanuka, Varun Gandhi, and Scott Niekum. Hi-erarchical Experimentalist Agents. 2026. arXiv 2606.29315. Jingjie Ning, Xiaochuan Li, Ji Zeng, Chenyan Xiong, and Guolin Ke. Closed-loop Auto Research for Molecular Property Prediction: Discovering and Certifying Generalizable Improvements. 2026. arXiv 2606.22731. Jingjie Ning, Shanshan Zhong, Xiaochuan Li, and Ji Zeng. Scores Alone Do Not Prove Discovery: The Discovery Certification Protocol for Auditing AI Research Agents. 2026. arXiv 2609.09219. Peter Jansen, Marc-Alexandre Côté, Tushar Khot, Erin Bransom, Bhavana Dalvi Mishra, Bod-hisattwa Prasad Majumder, Oyvind Tafjord, and Peter Clark. DiscoveryWorld: A Virtual Environ-ment for Developing and Evaluating Automated Scientific Discovery Agents. NeurIPS Datasets and Benchmarks, 2024. arXiv 2406.06769. Nolan Koblischke, Hyunseok Jang, Kristen Menou, and Mohamad Ali-Dib. Gravity-Bench-v1: A Benchmark on Gravitational Physics Discovery for Agents. ICML, 2025. Conference proceedings. Mattia Cerrato et al. Science-Gym: a simple testbed for AI-driven scientific discovery. Machine Learning, 115, article 16, 2026. Publisher page. Bodhisattwa Prasad Majumder et al. DiscoveryBench: Towards Data-Driven Discovery with Large Language Models. ICLR, 2025. arXiv 2407.01725. Ziru Chen et al. ScienceAgentBench: Toward Rigorous Assessment of Language Agents for Data-Driven Scientific Discovery. ICLR, 2025. arXiv 2410.05080. Aniketh Garikaparthi, Manasi Patwardhan, and Arman Cohan. ResearchGym: Evaluating Language Model Agents on Real-World AI Research. 2026. arXiv 2602.15112. Yunze Wu et al. InnovatorBench: Evaluating Agents’ Ability to Conduct Innovative LLM Research. 2025. arXiv 2510.27598. Nicholas Edwards, Yukyung Lee, Yujun Audrey Mao, Yulu Qin, Sebastian Schuster, and Najoung Kim. RExBench: Can coding agents autonomously implement AI research extensions? ACL, 2026. ACL Anthology. Yujiong Shen et al. SciAgentGym: Benchmarking Multi-Step Scientific Tool-use in LLM Agents. 2026. arXiv 2602.12984. Tianyu Liu et al. Benchmarking AI Agents for Addressing Scientific Challenges Across Scales. 2026. arXiv 2606.12736. petri-labs. petri-bench: Scoring the Scientific Method of LLM Agents on Procedurally Gener-ated Causal-Discovery Tasks. Technical report, working draft v0.5. Accessed September 15, 2026. Technical report. 11 Preprint Frank Hutter, Holger Hoos, and Kevin Leyton-Brown. An Efficient Approach for Assessing Hyper-parameter Importance. ICML, pp. 754–762, 2014. Conference proceedings. Tom Rainforth, Adam Foster, Desi R. Ivanova, and Freddie Bickford Smith. Modern Bayesian Ex-perimental Design. Statistical Science, 39(1):100–114, 2024. Publisher page. Adam Foster, Desi R. Ivanova, Ilyas Malik, and Tom Rainforth. Deep Adaptive De-sign: Amortizing Sequential Bayesian Experimental Design. ICML, pp. 3384–3395, 2021. Conference proceedings. David A. Cohn, Zoubin Ghahramani, and Michael I. Jordan. Active Learning with Statistical Mod-els. Journal of Artificial Intelligence Research, 4:129–145, 1996. arXiv cs/9603104. Ryan O’Donnell. Analysis of Boolean Functions. Cambridge University Press, 2014. Publisher page. João Coelho, Jingjie Ning, Jingyuan He, Kangrui Mao, Abhijay Paladugu, Pranav Setlur, Ji-ahe Jin, Jamie Callan, João Magalhães, Bruno Martins, and Chenyan Xiong. DeepResearch-Gym: A Free, Transparent, and Reproducible Sandbox for Deep Research. ICTIR, pp. 34–43, 2026. Publisher page. Qian Huang, Jian Vora, Percy Liang, and Jure Leskovec. MLAgentBench: Evaluat-ing Language Agents on Machine Learning Experimentation. ICML, pp. 20271–20309, 2024. Conference proceedings. Jun Shern Chan et al. MLE-bench: Evaluating Machine Learning Agents on Machine Learning Engineering. ICLR, 2025. Conference paper. Ruoyao Wang, Peter Jansen, Marc-Alexandre Côté, and Prithviraj Ammanabrolu. ScienceWorld: Is your Agent Smarter than a 5th Grader? EMNLP, pp. 11279–11298, 2022. ACL Anthology. Zhenhao Chen, Yongqiang Chen, Chenxi Liu, Junchi Yu, Xiangchen Song, Zijian Li, Jialin Li, Philip Torr, Bo Han, and Kun Zhang. CausalGame: Benchmarking Causal Thinking of LLM Agents in Games. ICML, 2026. arXiv 2607.04293. James S. Bergstra, Rémi Bardenet, Yoshua Bengio, and Balázs Kégl. Algorithms for Hyper-Parameter Optimization. NeurIPS, 2011. Conference proceedings. Marius Lindauer et al. SMAC3: A Versatile Bayesian Optimization Package for Hyperparameter Optimization. Journal of Machine Learning Research, 23(54):1–9, 2022. Journal paper. Taicheng Guo, Nitesh V. Chawla, Olaf Wiest, and Xiangliang Zhang. AutoLLMResearch: Train-ing Research Agents for Automating LLM Experiment Configuration – Learning from Cheap, Optimizing Expensive. 2026. arXiv 2605.11518. Zhen Wang et al. FIRE-Bench: Evaluating AI Agents on the Rediscovery of Scientific Insights. ICML, 2026. arXiv 2602.02905v2. Hanhua Hong, Yizhi Li, Luu Gia Huy, Jian Yang, Ming Zhou, and Chenghua Lin. Overview of the NLPCC 2026 Shared Task 11: Agent-Based Experiment Reproduction from Scientific Papers. 2026. arXiv 2609.11117. Qiushi Sun et al. ScienceBoard: Evaluating Multimodal Autonomous Agents in Realistic Scientific Workflows. ICLR, 2026. Conference paper. Nandan Thakur, Nils Reimers, Andreas Rücklé, Abhishek Srivastava, and Iryna Gurevych. BEIR: A Heterogeneous Benchmark for Zero-shot Evaluation of Information Retrieval Models. NeurIPS Datasets and Benchmarks, 2021. Conference proceedings. 
+
+# A BENCHMARK DESIGN AND RELATED EVALUATIONS 
+
+This appendix retains source and option definitions, metric properties, numerical methods, agent prompts, and comparisons needed to interpret the results. Complete configuration, prediction, and trajectory records remain in the repository. Displayed statistics are rounded after computation. 12 Preprint 
+
+Interactive experimental discovery. ScienceWorld tests grounded scientific reasoning in an inter-active text environment (Wang et al., 2022). BoxingGym directly evaluates experimental design and acquired predictive knowledge through expected information gain, prediction errors, and the predic-tions enabled by an agent’s explanation (Gandhi et al., 2025). DiscoveryWorld evaluates complete scientific investigations in virtual worlds, including hypothesis formation, experiments, and conclu-sions (Jansen et al., 2024). Gravity-Bench budgets observations of gravitational systems and grades numerical answers about concealed physics (Koblischke et al., 2025). Science-Gym couples data collection with equation discovery across physical and epidemiological simulations (Cerrato et al., 2026). SciGym evaluates reconstruction of biological systems (Duan et al., 2025), while Discover-Physics scores executable inferred laws and explanations in noncanonical physical worlds (Wiemann et al., 2026). CausalGame evaluates active experimental design and causal explanation in games with selection bias, measurement error, and hidden confounding (Chen et al., 2026). These works establish interactive discovery and prediction as existing benchmark targets. WhatWorkedBench’s reference consists of exhaustive native outcomes for documented component interventions, support-ing error measurement on every conditional component effect and reuse of identical observations across reconstruction methods.                 
+
+> Evaluation Experimental object Reference and scored target
+> BoxingGym Generative scientific envi-ronments Information gain, predictive error, and explanation-enabled predictions Gravity-Bench Gravitational simulations Numerical discovery answers under an observation budget Science-Gym Physics and epidemiology simulations Discovered equations and their predictive behavior SciGym Biological dynamical sys-tems Network, reaction, and simulation reconstruction Science sandboxes Biological experimental loops Task performance and scientific understanding CAFE Configurable compound-AI pipelines Factor effects and interactions from rated outputs petri-bench Procedurally perturbed simulations Changed factors, direction, interaction sign, and controlled evidence WhatWorkedBench Native component inter-ventions Complete conditional-effect predictions, choice, delivery, and shared reconstruction
+
+Understanding and attribution. Science sandboxes explicitly distinguish successful optimiza-tion from learning system rules, using regulatory-genomics and protein-fitness settings (Rao et al., 2026). CAFE registers pipeline components as factors, executes factorial designs, and uses mixed-effects models to attribute rated answer quality to components and interactions (Lukassen et al., 2026). The petri-bench technical report evaluates identification of hidden parameter changes and, at its interaction tier, the sign of a controlled two-factor contrast; scoring also checks the supporting experimental procedure (petri-labs, n.d.). WhatWorkedBench grades the entire conditional-effect field implied by a submitted response surface against native metric outcomes. Its decomposition compares measurement policies under shared estimators and estimators on the same acquired set. Factorial attribution and the distinction between performance and understanding supply foundations for this particular measurement design. 
+
+Research workflows and scientific tools. DeepResearchGym provides a reproducible search en-vironment and evaluates research reports for information-need alignment, retrieval faithfulness, and quality (Coelho et al., 2026); our fixed experimental environment evaluates quantitative predic-tions of component interventions. MLAgentBench and MLE-bench evaluate executable machine-learning solutions and model performance (Huang et al., 2024; Chan et al., 2025). BLADE scores analysis decisions against expert analyses (Gu et al., 2024); DiscoveryBench evaluates hypotheses about relationships in supplied datasets through structured facets (Majumder et al., 2025). Sci-enceAgentBench evaluates executable programs for scientific tasks drawn from publications (Chen et al., 2025). EXP-Bench covers design, implementation, execution, and conclusions for paper-derived experiments (Kon et al., 2026). ResearchGym preserves datasets, evaluators, and baselines while withholding proposed methods (Garikaparthi et al., 2026); InnovatorBench evaluates runnable contributions to LLM research (Wu et al., 2025). RExBench tests expert-specified extensions to ex-13 Preprint isting research code (Edwards et al., 2026). FIRE-Bench evaluates the rediscovery of established findings (Wang et al., 2026). AgentActionBench evaluates reproduction traces using paper-specific rubrics (Hong et al., 2026), and ScienceBoard evaluates scientific workflows using professional soft-ware (Sun et al., 2026). SciAgentGym evaluates scientific tool orchestration, and SciAgentArena provides interactive research tasks with stepwise verification (Shen et al., 2026; Liu et al., 2026). These targets concern successful research actions and outputs. The finite workflow intervention ref-erence here permits exhaustive assessment of what an agent can predict after purchasing only part of the available evidence. 
+
+Planning and learned artifacts. AbGen, AblationBench, and SCOPE evaluate proposed abla-tions or experiment plans using paper-derived references and expert or model judgments (Zhao et al., 2025; Abramovich and Chechik, 2025; Liu et al., 2026). WhatWorkedBench adds execution-backed measurements and quantitative predictions to the evaluated episode. HExA learns composable skills through active experimentation in Interphyre (Chandra et al., 2026); SkillLearnBench evaluates pro-cedural skills at the levels of skill quality, execution trajectory, and task outcome (Zhong et al., 2026). Here the delivered knowledge artifact is a complete numerical response surface. 
+
+Design and response-surface foundations. Bayesian experimental design chooses observations to inform a declared target (Rainforth et al., 2024). Deep Adaptive Design learns policies for se-quential information acquisition (Foster et al., 2021). Predictive-variance active learning supplies the basis for our grid and linear contrast acquisition criteria (Cohn et al., 1996); the Gaussian-process reference uses standard conditioning and covariance calculations (Rasmussen and Williams, 2006). Functional ANOVA estimates hyperparameter importance and interaction contributions from surrogate models (Hutter et al., 2014). HPOBench provides reproducible optimization objectives, while LLAMBO uses language models for initialization, surrogate modeling, and candidate selec-tion (Eggensperger et al., 2021; Liu et al., 2024). Our exhaustive tables provide observed references for conditional-effect error, allowing different acquisition and inference methods to share one eval-uation object. The complete binary-cube representation follows standard Fourier analysis on the Boolean cube (O’Donnell, 2014). 
+
+Evidence from automated research. Specialist-agent Auto Research uses measured trial histo-ries to revise executable training recipes (Ning et al., 2026a). Molecular Auto Research isolates feature, model, and external-data interventions before held-out evaluation (Ning et al., 2026e). Mate-rials Auto Research evaluates held-out intervention ordering and compatibility of frozen code (Ning et al., 2026b). The Implementation Lottery measures variation across implementations of the same research idea (Ning et al., 2026d). These studies motivate explicit intervention units and preserved experimental records. WhatWorkedBench fixes native workflow implementations and evaluates pre-dictions of their component interventions. DCP audits useful outcomes through matched recovery attempts and a calibrated truthful-versus-neutral feedback comparison (Ning et al., 2026f). Its recov-ery event is attaining a target result without the target history. Our effect-recovery score quantifies the accuracy of conditional-effect predictions. 
+
+# B SOURCE INVENTORY 
+
+The catalog contains 30 distinct sources and 36 task conditions. The table links every source identi-fier to its recorded source location and reports the prepared input and evaluation size. The six entries marked d = 4 /6 have paired dimensional variants. Their E=F=0 subcubes reproduce the original four-factor outcomes, accounting for 96 repeated configuration records across the two tracks. 14 Preprint                                                                                                                                       
+
+> Family Source ID Prepared input Evaluation d
+> Classification banknote 943 rows ×4405 rows 4breast_diagnostic 398 rows ×30 171 rows 4ionosphere 245 rows ×34 105 rows 4spambase 2,947 rows ×57 1,263 rows 4/6 Regression airfoil 1,052 rows ×5451 rows 4concrete 702 rows ×8303 rows 4/6 energy_efficiency 537 rows ×8231 rows 4yacht 215 rows ×693 rows 4Clustering dry_bean 13,543 rows ×16 7 reference classes 4glass 213 rows ×96 reference classes 4seeds 210 rows ×73 reference classes 4wine 178 rows ×13 3 reference classes 4/6 Forecasting co2 1,713 training points 571 next points 4/6 elnino 549 training points 183 next points 4nile 75 training points 25 next points 4sunspots 231 training points 78 next points 4Image restoration astronaut 256 ×256 pixels Clean reference 4/6 coffee 171 ×256 pixels Clean reference 4hubble_deep_field 223 ×256 pixels Clean reference 4rocket 171 ×256 pixels Clean reference 4Retrieval arguana 8,567 documents 64 queries 4scifact 5,183 documents 64 queries 4/6 Beat detection mitdb_100 108,000 at 360 Hz 369 interior events 6mitdb_101 108,000 at 360 Hz 340 interior events 6mitdb_102 108,000 at 360 Hz 364 interior events 6mitdb_103 108,000 at 360 Hz 352 interior events 6Link prediction graph_adjnoun 112 nodes, 255 edges 170 cal., 170 test 6graph_dolphins 62 nodes, 95 edges 64 cal., 64 test 6graph_football 115 nodes, 367 edges 246 cal., 246 test 6graph_lesmis 77 nodes, 152 edges 102 cal., 102 test 6
+
+Source terms and attribution. The UCI tabular sources retain CC-BY-4.0 attribution in their manifests. The statsmodels 0.14.6 time-series metadata identify their data as public domain. The scikit-image collection retains source-specific attribution for the NASA Astronaut image, Rachel Michetti’s CC0 Coffee image, Hubble Deep Field, and the SpaceX Rocket image. SciFact claims and annotations use CC-BY-4.0, with corpus terms recorded as ODC-By-1.0. ArguAna preserves the original authors’ CC-BY-4.0 deposit. MIT-BIH uses Open Data Commons Attribution v1.0 (Moody and Mark, 2001; Pollard et al., 2026). The graph archive attributes Les Miserables coappearance to D. E. Knuth, The Stanford GraphBase 
+
+(1993); David Copperfield word adjacency to M. E. J. Newman, Physical Review E 74, 036104 (2006); college football to M. Girvan and M. E. J. Newman, PNAS 99, 7821–7826 (2002); and dol-phin associations to D. Lusseau et al., Behavioral Ecology and Sociobiology 54, 396–405 (2003). Its source page permits scientific use. Complete source terms, original row counts, duplicate removals, and acquisition metadata remain with each source manifest. Photographs share the scikit-image collection, time series share the statsmodels distribution, ECG records share MIT-BIH, and graph instances share an archive. Source-level reporting retains these relationships and merges paired variants when counting distinct sources. 
+
+# C DATA PREPARATION AND EVALUATION BOUNDARIES 
+
+C.1 TABULAR CLASSIFICATION , REGRESSION , AND CLUSTERING 
+
+The UCI metadata define feature roles, index columns, and target columns. Acquisition checks the dataset identifier and feature count against these metadata. Regression uses the designated numerical target. Energy Efficiency uses heating load Y1, with the secondary target excluded from the features. 15 Preprint Classification and clustering map sorted original class labels to integer identifiers. All retained feature and target values are finite. Preparation removes exact duplicate feature–label rows while preserving the order of first occurrence. Supervised datasets then group rows by identical feature vectors. A single 
+
+GroupShuffleSplit with evaluation fraction 0.3 and seed 20260907 assigns complete groups to training or evaluation. Both parts of every classification split contain the same class set. The split is fixed across masks. Feature transforms, feature selection, PCA, and predictive models fit on training data and transform the evaluation features afterward. Clustering operates on all deduplicated feature rows. The known number of classes fixes k. K-means fits the feature representation for each mask, and the original class labels enter the external NMI calculation. The evaluation therefore measures agreement between the resulting partition and the archived class partition on the fixed data. C.2 CHRONOLOGICAL FORECASTING 
+
+The time-series files come from statsmodels version 0.14.6. El Niño year rows are expanded in calendar-month order. Other series preserve their source time order. A missing value receives the latest preceding finite value. CO2 has 59 such replacements, and the other three series have zero. The training cut is ⌊0.75 N ⌋, and the suffix supplies the evaluation points. All configurations start their training examples at index 12 so the one-lag and 12-lag designs use the same fitting times. The predictor fits once on the training prefix. Evaluation at time t uses the realized observations preceding t, giving a sequence of one-step predictions with fixed fitted parameters. The six-factor first-difference option applies after the optional logarithm and restores each prediction using the preceding realized level. This contract defines the temporal information available to every mask. C.3 IMAGE PREPARATION AND RESTORATION 
+
+Image bytes are checked against the scikit-image 0.26.0 registry. Pillow converts the source to grayscale, uses a Lanczos thumbnail with maximum width and height 256, and scales intensities by 255. The resulting array supplies the clean reference. A NumPy generator with seed 20260907 adds independent Gaussian noise with standard deviation 0.1, followed by clipping to [0 , 1] . Each source uses the same prepared noisy array across all masks. Native filters operate on that array, and the clean array enters only the external pixel-RMSE calculation. C.4 RETRIEVAL CORPORA AND QUERY COHORTS 
+
+The retrieval sources use BEIR corpus exports (Thakur et al., 2021). SciFact uses 5,183 corpus documents and the hash-first 64 original training queries. ArguAna uses 8,567 corpus documents and the first 64 prepared G queries from its original training partition. Original relevance anno-tations supply the target. Corpus documents are sorted by document identifier before vectorizer fitting. Query vectors use the corpus-fitted vocabulary and weighting. Stable descending score order determines the top ten documents. ArguAna removes every document whose normalized text matches the query text, under every mask. The recorded split audit checks query text, counter-text, reversed pairs, and debate-group relation-ships. The prepared query cohorts and the source terms are preserved in the source manifests. Retrieval utility averages the same 64 query-level NDCG values for every configuration. C.5 ARCHIVED SIGNAL RECORDS 
+
+MIT-BIH records 100, 101, 102, and 103 contribute samples [0 , 108000) from chan-nel zero at 360 Hz. The first channel’s physical units are millivolts. WFDB reads the waveform and original event annotations. The QRS label-code set is 
+
+{1, 2, 3, 4, 5, 6, 7, 8, 9, 10 , 11 , 12 , 13 , 25 , 30 , 31 , 34 , 35 , 38 , 41 }, following the source labels. Native prediction receives the waveform and sample rate. Scoring restricts predicted and reference events to the interior [1 , 299) -second interval. The source inventory reports the interior event counts 16 Preprint used for scoring. The filters use offline forward–backward filtering. Consequently, this task eval-uates event localization within a fixed archived segment. Event matching uses a 100-ms tolerance, with 50-ms and 150-ms checks retained for sensitivity. C.6 GRAPH CONSTRUCTION AND PAIR PARTITIONS 
+
+The source graphs are converted to simple, undirected, unweighted graphs. Self-loops are removed and node identifiers are mapped to consecutive integers. A source-specific fixed seed shuffles the original edges. Calibration and test each receive round(0 .2|E|) positive edges. The remaining edges form the observed graph, giving approximately 60/20/20 proportions. The shuffled sequence assigns observed edges first, then calibration positives, then test positives. Partition sizes and source-specific seeds accompany the prepared arrays. Calibration and test negatives are disjoint balanced samples from the original graph’s nonedges. Ev-ery feature for both sets is computed on the shared observed graph. Calibration labels fit logistic re-gression. Test labels supply the external ROC AUC. This creates a reproducible finite link-prediction problem with separate observed, calibration-positive, and test-positive edges. 
+
+# D WORKFLOW OPTIONS AND FIXED NUMERICAL SETTINGS 
+
+Mask bits run left to right as A, B, C, D, E, F. The four-factor track uses A–D. The paired track adds E and F with the original options and order preserved. Every binary mask is legal. The tables specify both settings for each option, followed by operation order and numerical details. The public task files contain the corresponding executable operation definitions. D.1 CLASSIFICATION                    
+
+> Bit Setting 0 Setting 1
+> AOriginal features sign( x) log(1 + |x|)
+> BOriginal feature scale Training-fitted standard scaling CUniform class weights Balanced class weights DLogistic regression C= 1 Logistic regression C= 0 .05
+> EAll input features Training-fitted ANOVA selection at the 50th percentile FInput representation PCA retaining 95% variance after optional selection
+
+Logistic regression uses the LBFGS solver, 3,000 maximum iterations, and random state 17. Stan-dard scaling precedes selection and PCA. PCA uses the full SVD. Class balancing follows the train-ing class frequencies. D.2 REGRESSION                       
+
+> Bit Setting 0 Setting 1
+> AOriginal target Training-target log1p with expm1 inverse BOriginal feature scale Training-fitted feature scaling COriginal features Degree-two polynomial features without a bias column DRidge α= 1 Ridge α= 10
+> EFull degree-two polynomial terms Interaction-only polynomial terms when C is enabled FStandard scaling when B is enabled Robust scaling when B is enabled
+
+Scaling precedes polynomial construction. Ridge uses the SVD solver. The target transform wraps the complete regressor. E is inactive at C=0, and F is inactive at B=0. 17 Preprint D.3 CLUSTERING 
+
+Bit Setting 0 Setting 1 
+
+A Original features Signed logarithmic feature transform B Original feature scale Feature-only standard scaling C All input features PCA retaining 95% variance D One k-means initialization Ten k-means initializations E Unwhitened PCA coordinates Whitened coordinates when C is enabled F K-means++ initialization Random initialization 
+
+K-means uses Lloyd’s algorithm, a maximum of 300 iterations, and random state 17. The known class count determines k. PCA uses the full SVD. E is inactive at C=0. D.4 FORECASTING 
+
+Bit Setting 0 Setting 1 
+
+A Lag features Lag features and a linear time trend t/ cut 
+
+B Lag 1 Lags 1 through 12 C Original series levels log1p levels with expm1 inverse D Ridge α = 1 Ridge α = 10 
+
+E Training-fitted standard scaling Training-fitted robust scaling F Model series levels Model first differences and restore the previous level 
+
+Ridge uses the SVD solver. Optional differencing follows the series transform. The first difference at index zero is set to zero, and fitting starts at index 12 for every mask. Forecast inversion restores differenced levels before the optional exponential inverse. D.5 IMAGE RESTORATION 
+
+Bit Setting 0 Setting 1 
+
+A Pass the image onward Median filter with a 3 × 3 window B Pass the image onward Gaussian filter with σ = 0 .8
+
+C Pass the image onward Wiener filter with a 5 × 5 neighborhood D Pass the image onward Unsharp mask with Gaussian σ = 1 , amount 0.5 E Gaussian σ = 0 .8 when B is enabled Gaussian σ = 1 .6 when B is enabled F Median window 3×3 when A is enabled Median window 5 × 5 when A is enabled 
+
+Filters execute in A, B, C, D order and the final image is clipped to [0 , 1] . Median and Gaussian filters use reflected boundaries. Wiener noise power is estimated by the library from the current image. E is inactive at B=0 and F is inactive at A=0. D.6 RETRIEVAL 
+
+Bit Setting 0 Setting 1 
+
+A Unigrams Unigrams and bigrams B Retain stopwords Remove the scikit-learn English stopword set C Raw term frequency Sublinear term frequency D Unit term weights Inverse-document-frequency weighting E Frequency counts Binary term counts F L2 vector normalization Unnormalized document and query vectors 
+
+TF–IDF vectors use float64. The vectorizer fits on corpus text and transforms queries. Dot products supply ranking scores. Binary counts make the sublinear transform inactive. Document sorting and stable ranking fix score ties. 18 Preprint D.7 BEAT DETECTION 
+
+Bit Setting 0 Setting 1 
+
+A Median-centered waveform Additional second-order 0.5-Hz high-pass filter B Current waveform Additional second-order 35-Hz low-pass filter C Absolute-amplitude envelope Squared first-difference envelope D Current envelope 120-ms moving integration E Mean plus one standard deviation Median plus three scaled MAD units F 200-ms minimum peak distance 300-ms minimum peak distance 
+
+The MAD scale factor is 1.4826. Butterworth filters use second-order sections and forward– backward filtering. Integration uses nearest-edge extension. Each candidate aligns to the largest absolute filtered amplitude within 75 ms. Duplicate samples merge before scoring. D.8 LINK PREDICTION 
+
+Bit Setting 0 Setting 1 
+
+A Feature absent Common-neighbor count B Feature absent Jaccard coefficient C Feature absent Adamic–Adar index D Feature absent Resource-allocation index E Feature absent Preferential-attachment score F Original feature scales Calibration-fitted standard scaling 
+
+A mask with all five feature bits zero supplies a zero feature column and fits an intercept-only model. Logistic regression uses C = 1 , LBFGS, 2,000 maximum iterations, and random state 20260907. The positive-class probability supplies the ranking score for ROC AUC. 
+
+# E RESPONSE SCALES AND CONDITIONAL STRUCTURE 
+
+The table summarizes score ranges and effect magnitudes by workflow family. Each interval spans task conditions within that family. At is the mean absolute conditional effect used to normalize recovery. Full per-condition anchors, extrema, effect magnitudes, and reversal counts are retained in 
+
+reports/phase4/repository_tables/catalog.tex ; the source inventory links each condition to its dataset or record. 
+
+Workflow Conditions Score range Mean effect At
+
+Regression 5 0.0402–0.3847 0.0096–0.1018 Retrieval 3 0.3094–0.6394 0.0755–0.0992 Image restoration 5 0.1928–0.3306 0.0401–0.0678 Classification 5 0.0364–0.2799 0.0081–0.0391 Forecasting 5 0.0109–0.1594 0.0026–0.0384 Clustering 5 0.1733–0.8203 0.0433–0.1362 Beat detection 4 0.4464–0.6268 0.0538–0.1299 Link prediction 4 0.2470–0.4035 0.0199–0.0366 
+
+# F METRIC DEFINITIONS AND ARTIFACT GRADING 
+
+F.1 COVERAGE OF JOINT INTERVENTIONS 
+
+Let x = z0, z 1, . . . , z k = y be a path that switches each differing bit once. Then 
+
+> k
+
+X
+
+> j=1
+
+[u(zj ) − u(zj−1)] = u(y) − u(x). (3) Each summand is a signed conditional component effect. Exact effects therefore determine every joint intervention and, with one anchor, every utility value. Predicted effects derived from a complete 19 Preprint table satisfy the same identity. If every edge error is bounded by ϵ, the triangle inequality bounds the 
+
+k-switch intervention error by kϵ . This statement applies to maximum edge error; mean edge MAE describes average reconstruction quality. Higher-order interactions remain represented through the background dependence of conditional effects. Mean pair interactions provide a readable summary of that structure and may average effects with different signs. F.2 CONFIGURATION CHOICE AND EFFECT RECOVERY 
+
+Both two-bit tables below preserve the free anchors and select 10 as their unique optimum for 0 <δ < 1.              
+
+> Configuration 00 10 01 11
+> True utility 0100Predicted utility 011−δ0
+
+The mean absolute true edge effect is A = 1 /2 and edge MAE is E = (1 − δ)/2, giving R = δ.Thus exact choice can coexist with arbitrarily weak effect recovery. Additional inactive bits embed the same construction in four- and six-factor spaces. This example explains the distinct evaluation targets; the main results measure their relationship on native workflows. F.3 NATIVE METRICS AND UTILITY TRANSFORMATIONS 
+
+Balanced accuracy is the arithmetic mean of class recalls. NMI uses 2 MI( Y, C )/[H(Y ) + H(C)] ,with contingency counts defining the entropies and mutual information. Regression and forecasting use the arithmetic mean absolute residual. Image restoration uses the square root of mean squared pixel residual. Retrieval uses 
+
+NDCG@10( q) = 
+
+P10  
+
+> k=1
+
+rq (πk)/ log 2(k + 1) 
+
+P10  
+
+> k=1
+
+rq, (k)/ log 2(k + 1) , (4) where rq is the original binary relevance and rq, (k) is its sorted ideal gain. Utility averages this quantity over the fixed query cohort. Event F1 is 2M/ (P +T ), where P and T are the numbers of interior predicted and reference events, and M is the maximum number of one-to-one pairs within the matching tolerance. The sorted native matcher is checked by a separately implemented maximum bipartite matcher. ROC AUC averages pairwise ranking credit over positive and negative examples, awarding one for a higher positive score and one-half for a tie. Balanced accuracy, NMI, NDCG, event F1, and ROC AUC directly supply utility. For native cost c
+
+in regression, forecasting, or restoration, 
+
+u = 11 + c/s , c = s
+
+ 1
+
+u − 1
+
+
+
+. (5) Regression uses the interquartile range of training targets for s. Forecasting uses the interquartile range of the training series. Restoration uses s = 0 .1. The fixed training statistics define the scale for every mask. F.4 EFFECT , INTERACTION , AND GRID ERRORS 
+
+The main text defines conditional-effect MAE Et and recovery Rt. Pair interaction Jij averages the second difference over all 2d−2 backgrounds, and pair MAE is 
+
+It =
+
+d
+
+2
+
+−1 X
+
+> i<j
+
+| bJij − Jij |. (6) Grid MAE is Gt = 2 −d P 
+
+> z
+
+|ˆu(z) − u(z)|. The saved outputs additionally record grid error on unobserved cells. The raw error columns in this appendix use Et, It, and Gt. The paper consistently uses the explicitly named MAE fields in the recorded outputs. 20 Preprint Selection chooses the largest predicted utility, then fewer enabled bits, then the lexically smaller mask. Regret compares that mask’s true utility with the exhaustive optimum. Exact choice allows regret at most 10 −12 . A supplemental near-optimal flag uses regret at most 0.02 utility, accompanied by an indicator for tasks whose entire response range is below 0.02. F.5 ARTIFACT VALIDATION AND THE STRICT DIAGNOSTIC 
+
+A complete artifact contains exactly one finite numerical utility in [0 , 1] for each legal mask. Dupli-cate JSON keys, Boolean values in numerical cells, nonfinite values, missing cells, and extra masks fail validation. The grader replaces measured cells with their authoritative observed values before computing effects and selection. Submission closes the episode. Strict reconstruction is 
+
+St(τ ) = 1
+
+
+
+max  
+
+> i,z :zi=0
+
+| b∆i(z) − ∆i(z)| ≤ max {10 −12 , τ (max ut − min ut)}
+
+
+
+. (7) The development endpoint uses τ = 0 .1. Missing delivery receives Rt = 0 , St = 0 , and zero exact-choice credit. Its raw numerical errors remain undefined. Shared estimators can still use the observations acquired before that failure. F.6 MEASURED EFFECTS AND REMAINING RECONSTRUCTION 
+
+The complete-effect score includes knowledge supplied by direct measurement and by predictions at unmeasured configurations. Let K contain edges whose endpoints are both observed, let U contain the remaining edges, and let c = |K|/(|K| + |U |). Restoring authoritative observations makes the error on K zero. Hence 
+
+Et = (1 − c)EU,t , EU,t = 1
+
+|U |
+
+X
+
+> e∈U
+
+| b∆e − ∆e|, QU,t = EU,t /A t. (8) Lower QU indicates smaller error on effects involving unmeasured endpoints. The task-wide At
+
+fixes its scale across observation policies. Each policy determines the remaining edge set. A simple calibration completes every unmeasured utility with the mean of that episode’s observed utilities. This baseline and the agent artifact receive exactly the same observations and observed-cell restoration. The retrospective analysis covers all 94 valid core artifacts; the table presents Flash results separately for the original (O) and additional (A) cohorts. Repeated executions are averaged within source and cohort. N counts represented sources. Columns labelled mean use the completion baseline; agent columns use delivered tables.                                                                        
+
+> Setting BValid NKnown edges
+> Rmean Ragent QU, mean QU, agent
+> O, 4 factors 46610.4% 0.056 0.178 1.093 0.921 O, 4 factors 812 632.6% 0.287 0.632 1.054 0.542 O, 6 factors, full 20 666.8% 0.012 0.268 1.156 0.824 O, 6 factors, opaque 20 6614.9% 0.011 0.257 1.183 0.899 A, 4 factors 412 69.9% 0.084 0.375 1.075 0.710 A, 4 factors 86632.3% 0.213 0.621 1.156 0.567 A, 6 factors, full 20 10 68.6% 0.014 0.211 1.200 0.882 A, 6 factors, opaque 20 968.8% 0.028 0.283 1.172 0.790
+
+For the original Flash cohort at B = 8 , 32.6% of effects have two measured endpoints, leaving 67.4% dependent on reconstruction. Mean completion gives recovery 0.287 and QU = 1 .054 , while the delivered tables give 0.632 and 0.542. Shared GP gives recovery 0.698 and QU = 0 .444 on the same observations. The original six-factor views also improve over mean completion, with 85.1%– 93.2% of effects involving an unmeasured endpoint. Per-episode coverage and errors remain in the repository. This analysis adds a calibration view of the saved artifacts and preserves the original 4,206 numerical-control records and primary scoring definition. 21 Preprint 
+
+# G NUMERICAL ESTIMATORS AND MEASUREMENT POLICIES 
+
+G.1 MAIN -EFFECT AND PAIR -EFFECT RIDGE 
+
+For mask z, the feature vector contains an intercept and products of centered bits xi = 2 zi − 1.Degree one includes xi; degree two adds xixj for all i < j . For measured set O, ridge solves 
+
+min 
+
+> β0,β
+
+X
+
+> z∈O
+
+[u(z) − β0 − ϕ(z)⊤β]2 + α∥β∥22. (9) The intercept is unpenalized. Each candidate α in {10 −5, 10 −3, 0.1, 1, 10 } is evaluated by leaving out one measured observation at a time. Mean squared error selects the regularizer. Loss ties at 14 decimal places prefer larger α. The final table is clipped to [0 , 1] and measured cells are restored. The sequential design policy uses the same factorial feature vector, including the intercept, and selects the remaining mask with maximum 
+
+ϕall (z)⊤  X⊤ 
+
+> O
+
+XO + diag(10 −8, 0.01 , . . . , 0.01) −1 ϕall (z). (10) Each chosen row enters the design matrix before the next selection. Utility values enter ridge fitting; the design depends on feature geometry and the already selected masks. Acquisition ties at ten decimal places prefer lexical mask order. D1 denotes degree-one design and fitting, and D2 denotes degree-two design and fitting. Rand2 samples a uniformly shuffled legal-mask sequence without replacement and fits degree-two ridge. Each random setting has 20 recorded seed indices, numbered 0 through 19, added to seed base 20260907. G.2 GAUSSIAN -PROCESS CONTROLS 
+
+The all-order kernel is k(z, z ′) = exp[ −h(z, z ′)/ℓ ], where h is Hamming distance. Ordinary kriging estimates a constant mean from measured values (Rasmussen and Williams, 2006). For C = KO +
+
+ηI , let 
+
+q = C−11, c = 1⊤q, P = C−1 − qq ⊤/c. (11) The leave-one-out residual vector has entries (P y )i/P ii . Its mean square selects ℓ ∈{0.25 , 0.5, 1, 2, 4, 8} and η ∈ { 10 −6, 10 −3, 0.03 , 0.3}. Loss ties at 14 decimal places prefer larger length scale, then larger nugget. The nugget regularizes the fit to deterministic utilities. Predictive means are clipped and observations restored. Let Σ be the ordinary-kriging covariance on the full grid and D the matrix taking all conditional component differences. The two acquisition objectives for candidate j apply predictive-variance reduction (Cohn et al., 1996) to the grid and its linear contrasts, respectively, giving 
+
+aG(j) = ∥Σ:,j ∥22
+
+max(Σ jj + η, 10 −12 ) , aE (j) = ∥DΣ:,j ∥22
+
+max(Σ jj + η, 10 −12 ) . (12) GP-G maximizes aG and GP-E maximizes aE . Parameters are refitted after each new observation. Acquisition ties at 12 decimal places prefer lexical mask order. The grid and effect objectives share the same estimator. G.3 PROGRAM -EQUIVALENCE CONTROLS 
+
+The six-factor control maps masks to representatives using the visible guards in Section D. In re-gression, E resets to zero when C is zero, and F resets to zero when B is zero. In clustering, E resets to zero when C is zero. In restoration, E resets to zero when B is zero, and F resets to zero when A is zero. In retrieval, C resets to zero when E is one. Classification and forecasting retain all masks as separate representatives. These rules yield 64, 36, 48, 64, 36, and 48 classes in classification, regression, clustering, forecast-ing, restoration, and retrieval, respectively. Every asserted alias matches the native prediction hash and utility of its representative. CD1 and CD2 apply the corresponding ridge design and fit to repre-sentatives. CGP-E computes its kernel on representative masks and uses effect-variance acquisition. Purchased observations and inferred aliases are recorded separately. Once every class is measured, the policy stops purchasing and maps measured values to the complete grid. Thus actual credits b
+
+can be below the allowed budget B.22 Preprint G.4 SHARED ESTIMATORS AND AGGREGATION 
+
+Shared fitting passes the exact observed set from an episode to D1, D2, or the GP. It then evaluates the resulting complete table against the same reference. The GP uses the fitting rule above with the observed set fixed. Its own acquisition policy remains inactive during a shared fit. Episodes with missing delivery retain their acquired observations for this analysis. For random designs, metrics average over seeds within a source. Repeat studies average trials within a source. Family-macro scores then average sources within each family and weight the participating families equally. Four-factor controls use all 22 source instances, the paired six-factor controls use the six paired sources, and the added track uses four sources within each of its two families. Agent– control comparisons select the same six source instances. Reported counts retain their episode or source denominator explicitly. 
+
+# H AGENT INTERFACE AND EXECUTION ENVIRONMENT 
+
+Both model studies expose four tools. current_evidence() returns the public task, observations, remaining credits, calculation allowance, elapsed time, remaining time, and episode status. observe_many(masks) purchases a batch of legal configurations. 
+
+calculate_python(code) runs numerical Python with the current public task and observa-tions. submit_diagnosis(predictions_json, estimator) accepts exactly one of a complete JSON prediction table or a public estimator name. The four-factor observation tool accepts 1–14 masks per call, and the paired six-factor tool accepts 1–62. Repeated masks consume zero additional credits. A batch is checked in full before charging or inserting observations. A valid batch charges one credit per distinct newly measured mask. At 
+
+B purchased measurements, the total observed set has at most B + 2 cells. Native configuration outcomes are cached from the reference construction. Four-factor receipts include utility, native metric name, and native metric value. Both views of the six-factor information study use utility-only receipts. The full view contains workflow code, factor semantics, source information, and input summaries. The opaque view contains a generic workflow identifier, dimensions, factor order, legal masks, and the scalar utility contract. The opaque view’s identifiers and receipts preserve that information condition. Every numerical call starts a fresh Python process with the current observations and task. NumPy, SciPy, scikit-learn, and wwb_helpers are available. The process receives a 30-second CPU ceil-ing, 45-second wall ceiling, 2-billion-byte address-space ceiling, and 2-million-byte file-size ceiling. CPU affinity uses at most two available cores. The surrounding namespace mounts public task data, helpers, and numerical dependencies. Network access and bundled scikit-learn dataset labels are blocked. Printed outputs return to the agent for subsequent reasoning. A maximum of 20 calcula-tion calls applies to each episode. The evaluated models are the recorded identifiers deepseek-v4-flash and 
+
+deepseek-v4-pro . Runs enable reasoning, request high effort, and set an output-token cap of 32,768 with a 1,800-second outer session deadline. The broker checks time before further investigation calls and accepts a final submission while the outer session remains active. Tool receipts expose the remaining investigation time. The prompt advises submission with 120 seconds remaining. The public helper names are ridge_main and ridge_pair , both recorded explicitly in submission metadata. 
+
+# I RECORDED PROMPTS AND TASK PAYLOADS 
+
+The source bundle includes the complete frozen strings in prompts/four_system. txt , prompts/four_prompt.txt , prompts/six_system.txt , and prompts/six_ prompt.txt . The companion repository preserves the same files in reports/phase4/ repository_tables/ . Episode construction substitutes the measurement budget, two anchor observations, and public task into the templates. 23 Preprint The instructions prioritize conditional-effect accuracy and require predictions for all 16 or 64 con-figurations. They state the session and calculation limits, describe the numerical helpers, and permit either a complete prediction table or explicit helper selection. Submission is recommended with 120 seconds remaining. Four-factor repetitions share the original prompt strings. Both six-factor information views share the templates; their public task payloads specify the information condition. The structure diagnostic adds a first-call request for a JSON list of inactive-option rules. Both arms receive this request; one additionally receives verified rules in its task payload (Appendix K.3). Its exact instruction and supplied payloads are included with the diagnostic records. The task pack contains full workflow code and each agent’s received payload. 
+
+# J STUDY DESIGN AND EXECUTION ACCOUNTING 
+
+Construction and analysis order. The 22-source four-factor inventory is specified before exe-cution of its added configurations. Paired construction selects the first source in each family, adds E and F, and requires agreement with all original subcubes. The signal and graph extension lists eight sources and fixes its numerical methods and budgets before native outcomes. Every listed source appears in the final catalog. Acceptance uses native validity, cold replay, independent metric agreement, and evaluation-boundary checks. Initial ridge/design results precede the GP and code-equivalence analyses. The original agent cohort records its prompt, tools, deadlines, and models before execution. The six-factor information study follows inspection of the four-factor agent and six-factor numerical results and specifies shared GP analysis before its runs. Shared GP evaluation of the original cohort is retrospective. The additional Flash trial follows inspection of trial zero and retains every source outcome. A subsequent 66-episode plan adds 42 four-factor executions and 24 six-factor information executions using the same prompts, helpers, measurement budgets, and deadlines. It is specified after inspection of the historical results. API identifiers and execution dates identify each cohort; the main text reports the provider’s Flash routing update. Tolerance, native-unit, and sign analyses summarize the saved references and predictions. 
+
+Budgets and records. Four-factor controls use B ∈ { 0, 4, 8, 14 }; paired six-factor controls use 
+
+B ∈ { 0, 4, 8, 14 , 20 , 32 , 62 }; the eight added sources use B ∈ { 0, 8, 20 , 32 , 62 }. The 4,206 records comprise 1,936 four-factor ridge/design runs, 924 paired ridge/design runs, 84 code-equivalence ridge runs, 302 GP runs, and 960 added-source runs. Random designs use 20 seed indices. Full-observation endpoints purchase every remaining mask or program-equivalence class.                                    
+
+> Agent study dBEpisodes Valid HTTP 429
+> Flash and Pro original cohort 44, 8 24 20 75 Flash full/opaque information 620 12 12 0Flash additional trial 48660Additional Flash and Pro 44, 8 42 37 0Additional Flash information 620 24 19 0Structure diagnostic 620 880
+
+The four missing artifacts are Pro episodes that reach their session deadlines after rate-limit re-sponses. A scheduling amendment runs previously unstarted Pro jobs sequentially. Logical ac-counting includes every episode that attempted a provider request and excludes five zero-request administrative records. The original, information, and repeat studies record 748, 304, and 155 ter-minal requests, respectively. Requested and returned model identities agree in the provider audit where a model identifier is returned. These identifiers record API aliases. The additional four-factor cohort records five Pro deadline failures. Later information episodes encounter HTTP 200 streams that provide no parsed model identifier, output, or usage before disconnection. Unstarted episodes are paused, and the final two resume after a successful short response check. Every actual attempt remains in the results. Per-request outcomes, reported usage fields, timing, and observation events remain in the accompanying execution summaries. 24 Preprint 
+
+# K EPISODE RESULTS AND PAIRED COMPARISONS 
+
+The following table compares original and additional four-factor cohorts. Recovery includes zero for missing delivery. The companion repository retains all 108 core episode records, complete predic-tions, measurement batches, helper choices, and execution metadata through reports/phase4/ repository_tables/agent_index.json . Its episode identifiers link each result to the source condition and original execution record. 
+
+Model B Original episodes Additional episodes 
+
+Valid / runs R Valid / runs R
+
+Flash 4 6/6 0.178 12/12 0.375 Flash 8 12/12 0.632 6/6 0.621 Pro 4 4/6 0.043 10/12 0.308 Pro 8 4/6 0.366 9/12 0.503 
+
+K.1 INFORMATION SUPPLIED TO THE AGENT 
+
+Full and opaque conditions share sources, reference tables, budgets, tools, helpers, utility-only re-ceipts, and deadlines. Full information adds code, option semantics, source information, and input summaries jointly. Each source has one attempted pair in the original cohort and two in the addi-tional cohort. The table reports delivered and shared-GP recovery; ∆ is full minus opaque.                                                                                                            
+
+> Cohort Source Valid pairs Delivered RShared GP R
+> Full Opaque ∆Full Opaque ∆
+> Oastronaut 1/1 0.294 0.255 +0.039 0.379 0.137 +0.242 Oco2 1/1 0.244 0.049 +0.196 0.263 0.131 +0.133 Oconcrete 1/1 0.298 0.642 -0.343 0.796 0.847 -0.051 Oscifact 1/1 0.522 0.407 +0.115 0.598 0.468 +0.130 Ospambase 1/1 0.000 0.000 +0.000 0.000 0.389 -0.389 Owine 1/1 0.247 0.191 +0.056 0.205 0.414 -0.209 Aastronaut 1/2 0.275 0.000 +0.275 0.217 0.112 +0.105 Aco2 1/2 0.129 0.102 +0.027 0.262 0.161 +0.101 Aconcrete 2/2 0.505 0.754 -0.249 0.771 0.843 -0.072 Ascifact 1/2 0.153 0.357 -0.204 0.300 0.496 -0.195 Aspambase 2/2 0.042 0.000 +0.042 0.039 0.203 -0.164 Awine 1/2 0.006 0.193 -0.187 0.002 0.160 -0.158
+
+Cohorts O and A denote original and additional executions. Valid pairs count pairs with two deliv-ered artifacts over all attempted pairs. Means retain all attempts, including zero delivered recovery after a missing submission. The original mean delivered difference is 0.0103 and its shared-GP dif-ference is −0.0242 . Additional-cohort differences are −0.0491 for delivered recovery and −0.0638 
+
+for shared GP. The eight additional pairs with two delivered artifacts cover all six sources; their source-macro differences are −0.1198 and −0.0914 , respectively. These conditional summaries describe the paired deliveries, while the main comparison retains every attempted pair. K.2 REPEATED HIGH -BUDGET AGENT RUNS 
+
+Both original Flash B = 8 trials and the additional execution are retained for each source. The table keeps their cohorts separate. Parentheses give the sample standard deviation where repetitions are available; a dash denotes a single execution. The final column reports matched D2 recovery. 25 Preprint                                          
+
+> Source Flash, original Flash, additional Designed D2
+> Delivered R(SD) Shared GP Delivered R(SD) Shared GP R
+> astronaut 0.356 (0.144) 0.645 0.270 (—) 0.523 0.634 co2 0.365 (0.026) 0.505 0.569 (—) 0.667 0.400 concrete 0.853 (0.011) 0.877 0.842 (—) 0.913 0.888 scifact 0.803 (0.096) 0.799 0.762 (—) 0.761 0.799 spambase 0.637 (0.066) 0.667 0.684 (—) 0.683 0.508 wine 0.778 (0.095) 0.691 0.599 (—) 0.775 0.533
+
+Across the 12 original episodes, five select an exact optimum and one passes strict reconstruction. Original mean recovery is 0.6321 and shared GP recovery is 0.6976. The six additional episodes have mean recovery 0.6211 and shared GP recovery 0.7205, with two exact choices and zero strict reconstructions. The repository index links to every measurement batch and prediction. K.3 STRUCTURE RECOGNITION AND APPLICATION 
+
+An additional diagnostic uses all four six-factor workflows with nontrivial code equivalences. Each source receives one full-code and one code-plus-rules Flash episode at B = 20 , with arm order alternated across sources. Both arms use the full task and the same first-call instruction to report inactive-option rules before buying measurements. The report counts toward the 20 calculation calls and receives no correctness feedback. The rules arm additionally receives six registered guard re-lations across the four sources. Independent checks confirm identical native predictions for all 96 registered equivalent endpoint pairs. Models, tools, anchors, and session limits match the informa-tion study. These eight episodes were run on September 22, 2026 (UTC), as a separate cohort with an elicited reporting task. The table separates observable rule reporting, acquisition, and prediction. Rules counts correctly reported registered relations. Redundant counts purchases within an equivalence class already rep-resented by an anchor or paid measurement. Equiv. error is the mean absolute predicted-utility dif-ference across the registered equivalent pairs, divided by the source’s utility range. Recovery retains all attempted episodes. The final column projects each submitted table onto code-derived equiv-alence classes after the run. A class containing a measured mask receives that observation; other classes receive the mean of their submitted predictions. The projection preserves every acquired observation and uses no new measurements. All eight episodes deliver valid artifacts.                                                       
+
+> Source Information Rules Redundant Equiv. error Recovery Post-hoc R
+> concrete Code 2/2 0/20 4.88% 0.680 0.823 concrete Code + rules 2/2 0/20 10.21% 0.646 0.748 wine Code 1/1 0/20 16.97% 0.000 0.000 wine Code + rules 1/1 0/20 15.54% 0.213 0.290 astronaut Code 2/2 2/20 16.77% 0.000 0.415 astronaut Code + rules 2/2 0/20 12.14% 0.334 0.745 scifact Code 1/1 0/20 8.89% 0.308 0.485 scifact Code + rules 1/1 0/20 1.39% 0.524 0.549
+
+Both arms correctly report all six registered rules. Supplied rules improve recovery on three sources and reduce it on concrete; arm means are 0.247 and 0.429. Shared GP reaches 0.382 and 0.471. The code arm spends 2/80 credits on equivalent repeats and the rules arm spends none. All eight submissions select public ridge helpers and violate equivalences, with mean equivalence errors of 11.88% and 9.82% of source utility range. Calculation logs record 16 failures in 69 code calls and four in 41 calls with supplied rules. The post-hoc class projection raises mean recovery from 0.338 to 0.507 with fixed observations, lowers raw effect error in all eight runs, improves recovery in seven, and leaves the strict score at zero. These four source pairs expose a repairable final-prediction error after correct rule reporting under the elicited diagnostic. Full records and independent regrading are in reports/phase4/structure_probe_20260921/ .26 Preprint 
+
+# L SENSITIVITY AND ADDITIONAL -WORKFLOW RESULTS 
+
+L.1 SENSITIVITY TO INDIVIDUAL SOURCES 
+
+Each comparison is paired by source. The original Flash comparison first averages its two trials within each source; the additional comparison uses its separate execution on each source. We report the mean and median recovery change, counts of positive, tied, and negative sources, and the range of paired means after omitting each of the six sources in turn. These ranges describe the composition of the evaluated catalog. 
+
+Comparison B Mean ∆R Median +/ = /− Source omission range 
+
+Shared GP, Flash original 8 +0.066 +0.028 4 / 0 / 2 +0.021 +0.096 Shared GP, Flash additional 8 +0.099 +0.085 4 / 0 / 2 +0.069 +0.120 Code GP over GP 20 +0.214 +0.166 4 / 2 / 0 +0.121 +0.257 Code D2 over D2 20 +0.233 +0.231 4 / 2 / 0 +0.167 +0.279 Code GP over GP 32 +0.159 +0.131 4 / 2 / 0 +0.096 +0.191 Code D2 over D2 32 +0.205 +0.136 4 / 2 / 0 +0.113 +0.246 
+
+The original shared-GP mean advantage ranges from 0.021 to 0.096 under source omission. The additional Flash cohort has a mean gain of 0.099, with a source-omission range of 0.069 to 0.120. Four sources improve and two decline in each cohort. Program-equivalence controls improve on all four sources with nontrivial classes. Classification and forecasting retain identity maps and yield the same predictions as their corresponding controls. At both reported budgets, every source-omission mean remains positive. The repository includes all per-source contrasts and source-omission means. L.2 STRICT -ERROR TOLERANCES 
+
+Each row summarizes five tolerances on the same saved predictions. Track four uses all 22 four-factor sources; track six uses the six paired sources. Strict counts use maximum conditional-effect error relative to the response range. Exact is the number of optimal configuration choices, and the final column averages recovery among those exact-choice cases.                                                                                                                                                                                                 
+
+> Track Method BNStrict count at tolerance τExact R|
+> Exact
+> .025 .05 .10 .20 .40 4 factors D1 822 011513 15 0.618 4 factors D2 822 113820 15 0.634 4 factors GP-G 822 11210 19 15 0.669 4 factors GP-E 822 11112 19 16 0.717 6 factors D1 860000120.405 6 factors D2 86000000—6 factors GP-G 86000110—6 factors GP-E 86000020—6 factors Code D1 860001120.063 6 factors Code D2 860000010.000 6 factors Code GP-E 860001120.544 6 factors D1 32 60001220.431 6 factors D2 32 60011220.598 6 factors GP-G 32 60011420.682 6 factors GP-E 32 60011420.704 6 factors Code D1 32 60223330.786 6 factors Code D2 32 61133320.987 6 factors Code GP-E 32 61223430.925
+
+This profile connects the continuous metric to several maximum-error criteria. For example, D2 at 
+
+B = 8 passes on 3/22 sources at the 10% tolerance and 8/22 at 20%, while its 15 exact choices remain the same. Native-case response scales appear in Appendix E. 27 Preprint L.3 NATIVE -UNIT SENSITIVITY 
+
+The analysis applies the inverse utility map to saved predictions and computes effects in native units. Fitted models and observed sets remain fixed. All 3,246 analysed original control records have finite inverses. Raw native errors are reported by source in the repository, preserving each source’s units. The table compares family-macro recovery at the main four-factor budget and both reported paired budgets. N counts sources. Native strict counts successful records across all seeds, with 20 seeds for each random design. 
+
+Track Method B N Utility R Native R Native strict 
+
+4 factors D1 8 22 0.571 0.562 1/22 4 factors D2 8 22 0.612 0.633 3/22 4 factors Random D2 8 22 0.503 0.505 14/440 4 factors GP-G 8 22 0.661 0.669 2/22 4 factors GP-E 8 22 0.701 0.712 2/22 6 factors D1 20 6 0.192 0.197 0/6 6 factors D2 20 6 0.157 0.171 0/6 6 factors Random D2 20 6 0.214 0.216 0/120 6 factors GP-G 20 6 0.330 0.334 0/6 6 factors GP-E 20 6 0.248 0.252 0/6 6 factors Code D1 20 6 0.303 0.296 1/6 6 factors Code D2 20 6 0.389 0.384 1/6 6 factors Code GP-E 20 6 0.462 0.468 1/6 6 factors D1 32 6 0.298 0.301 0/6 6 factors D2 32 6 0.445 0.451 1/6 6 factors Random D2 32 6 0.465 0.466 17/120 6 factors GP-G 32 6 0.548 0.547 1/6 6 factors GP-E 32 6 0.537 0.538 1/6 6 factors Code D1 32 6 0.545 0.545 2/6 6 factors Code D2 32 6 0.650 0.650 3/6 6 factors Code GP-E 32 6 0.697 0.697 2/6 
+
+At four factors and B = 8 , D2 recovery is 0.612 in utility units and 0.633 in native units; GP-E gives 0.701 and 0.712. The paired code-equivalence gains also persist under this transformation. These comparisons describe the effect of utility normalization on the reported reconstructions. L.4 MAGNITUDE OF CONDITIONAL REVERSALS 
+
+A reversal requires at least one positive and one negative background effect whose magnitudes both exceed the indicated floor. Source counts merge paired dimensional variants. The two largest floors identify substantial conditional changes within the fixed response range. 
+
+Effect floor Components / 172 Conditions / 36 Sources / 30 
+
+10 −12 utility 121 35 29 1% of response range 98 33 28 5% of response range 59 24 20 10% of response range 31 16 14 
+
+L.5 SIGNAL AND GRAPH WORKFLOWS 
+
+Figure 5 and the source profiles describe all eight added six-factor cases. Order ≥ 3 variance is the share of uniform-cube factorial variance carried by interactions of order three and above in the Boolean-cube Fourier expansion (O’Donnell, 2014). Curves average random seeds within source, then the four sources within each family. 28 Preprint 0 8 20 32 62 New measurements (+2 anchors) 0.0 0.2 0.4 0.6 0.8 1.0 Effect recovery     
+
+> Beat event detection
+> 0820 32 62 New measurements (+2 anchors)
+> Graph link prediction
+> Main ridge Pair ridge Random + pair ridge Effect GP
+
+Figure 5: Recovery across measurement budgets for beat detection and link prediction. Each family contains four source instances, with complete native references and the same experimental-design and reconstruction interfaces. 
+
+Source Min Max Sign reversals Order ≥ 3
+
+variance 
+
+mitdb_100 0.502 1.000 4 0.162 mitdb_101 0.369 0.996 6 0.140 mitdb_102 0.554 1.000 5 0.386 mitdb_103 0.506 1.000 5 0.153 graph_lesmis 0.500 0.903 6 0.419 graph_adjnoun 0.500 0.747 5 0.084 graph_football 0.500 0.892 5 0.265 graph_dolphins 0.500 0.764 6 0.432 
+
+At B = 20 , two-family recovery is 0.0439 for pair ridge and 0.0435 for GP-E. Their larger-budget trajectories and exhaustive endpoints expose the remaining reconstruction problem under sparse measurements. The complete control records include all methods, budgets, and random seeds. L.6 COMPLETED AGENT PREDICTIONS ON THE ADDED FAMILIES 
+
+Six Flash episodes at B = 32 deliver complete tables on three beat-detection and three graph-link prediction sources. Their tools, two free anchors, and session limits match the six-factor agent interface. The table compares each delivered score with a GP fit to its identical purchased observa-tions and with three numerical controls on the same source at B = 32 . Family rows average three submitted sources each. 29 Preprint 
+
+Family Source Agent R Shared GP D2 GP-G GP-E 
+
+Beat detection mitdb_100 0.480 0.624 0.279 0.356 0.533 Beat detection mitdb_101 0.515 0.642 0.336 0.509 0.536 Beat detection mitdb_102 0.242 0.452 0.178 0.213 0.383 
+
+Beat detection mean 0.412 0.573 0.264 0.359 0.484 Link prediction graph_lesmis 0.000 0.185 0.000 0.467 0.000 Link prediction graph_adjnoun 0.528 0.596 0.425 0.591 0.565 Link prediction graph_football 0.053 0.234 0.163 0.348 0.406 
+
+Link prediction mean 0.194 0.338 0.196 0.469 0.324 
+
+Six-source macro 0.303 0.455 0.230 0.414 0.404 
+
+Shared GP improves every submitted table. Family-macro recovery rises from 0.303 to 0.455; the corresponding beat and graph gains are 0.160 and 0.145. These scores condition on complete final artifacts. The companion repository retains the frozen plan and all attempt records. 30

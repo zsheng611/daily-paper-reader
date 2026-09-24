@@ -1,0 +1,383 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-24T18:38:31.471409+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 2,
+    "deep_cap": 7,
+    "deep_selected": 2,
+    "quick_candidates": 7,
+    "quick_skim_target": 12,
+    "quick_selected": 7
+  },
+  "deep_dive": [
+    {
+      "id": "2609.27132v1",
+      "source": "arxiv",
+      "title": "Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics",
+      "abstract": "Large-scale simulations of correlated electron systems require repeated evaluations of the electronic forces and transition energies driving collective dynamics. Machine-learning surrogates alleviate this bottleneck, but incorporating symmetry often involves carefully designed descriptors or specialized network architectures. We show that ordinary multilayer perceptrons equipped with finite-group averaging provide exactly equivariant surrogates directly from microscopic configurations. The construction separates symmetry enforcement from the internal network architecture and applies to both discrete and continuous lattice degrees of freedom. In the Falicov--Kimball model, it predicts directional hopping free-energy differences; in the Holstein model, its invariant limit generates conservative lattice forces. Benchmarks against exact diagonalization establish microscopic accuracy and agreement of dynamical correlations, while large-scale simulations recover multiscale charge ordering and charge-density-wave coarsening. These results demonstrate an accessible, reusable route to symmetry-preserving many-body dynamics for systems with finite lattice point groups.",
+      "authors": [
+        "Ho Jang",
+        "Sankha Subhra Bakshi",
+        "Gia-Wei Chern"
+      ],
+      "primary_category": "cond-mat.str-el",
+      "categories": [
+        "cond-mat.str-el",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-22T22:47:55+00:00",
+      "link": "https://arxiv.org/pdf/2609.27132v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "exactly equivariant ML surrogates for lattice many-body dynamics and force prediction",
+      "llm_evidence_cn": "面向晶格多体动力学的精确等变机器学习代理与力预测",
+      "llm_evidence": "面向晶格多体动力学的精确等变机器学习代理与力预测",
+      "canonical_evidence": "面向晶格多体动力学的精确等变机器学习代理与力预测",
+      "llm_tldr_en": "Ordinary MLPs with finite-group averaging yield exactly equivariant surrogates for lattice many-body dynamics, predicting hopping free-energy differences in Falicov-Kimball and Holstein models without specialized descriptors.",
+      "llm_tldr_cn": "相关电子系统的大规模模拟需要反复计算电子力与跃迁能量，机器学习代理虽能缓解瓶颈，却往往依赖精心设计的描述符或专用网络结构。该工作证明普通多层感知机结合有限群平均即可直接从微观构型给出精确等变代理，把对称性约束与网络内部结构解耦，并可同时处理离散与连续晶格自由度。在Falicov-Kimball与Holstein模型中，它成功预测方向性跳跃自由能差。该构造为晶格多体动力学提供了通用易实现的等变机器学习方案。",
+      "llm_tldr": "相关电子系统的大规模模拟需要反复计算电子力与跃迁能量，机器学习代理虽能缓解瓶颈，却往往依赖精心设计的描述符或专用网络结构。该工作证明普通多层感知机结合有限群平均即可直接从微观构型给出精确等变代理，把对称性约束与网络内部结构解耦，并可同时处理离散与连续晶格自由度。在Falicov-Kimball与Holstein模型中，它成功预测方向性跳跃自由能差。该构造为晶格多体动力学提供了通用易实现的等变机器学习方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "equivariant graph neural networks for materials modeling, energy prediction, and force prediction",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.28013v1",
+      "source": "arxiv",
+      "title": "SoLiD26: A First Principles Solid-Liquid Interface Dataset for Machine-learned Interatomic Potentials",
+      "abstract": "Machine-learned interatomic potentials (MLIPs) for solid-liquid interfaces in advanced materials applications, e.g., electrochemistry, catalysis and corrosion, require training data that samples both liquid environments, the solid and the interface itself. We present SoLiD26, a curated solid-liquid interface dataset, containing 15.4 million first-principles atomic structures with up to 576 atoms and 15 chemical elements for training and evaluating MLIPs. The structures were compiled from density functional theory (DFT) calculations performed in studies of solid-liquid interfaces, with most configurations originating from ab initio molecular dynamics (AIMD) simulations. Each record contains atomic species, positions, simulation cell, periodic boundary conditions, potential energy and atomic forces. SoLiD26 includes aqueous coinage metal interfaces, electrode-electrolyte systems, and selected bulk reference structures, calculated with VASP using the PBE functional and D3 dispersion corrections. We describe the data ingestion and preparation pipeline used to construct the dataset. The application of SoLiD26 for training and evaluating MLIPs is demonstrated with a suite of MACE models on a simple training, validation and test split. The dataset enables development and benchmarking of MLIPs for structurally and chemically heterogeneous solid-liquid interfaces.",
+      "authors": [
+        "Jonas Busk",
+        "Emil J. P. Frost",
+        "Yogeshwaran Krishnan",
+        "Henrik H. Kristoffersen",
+        "August E. G. Mikkelsen",
+        "Xueping Qin",
+        "Xin Yang",
+        "Heine A. Hansen",
+        "Arghya Bhowmik",
+        "Tejs Vegge"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.LG",
+        "physics.chem-ph",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-23T12:36:34+00:00",
+      "link": "https://arxiv.org/pdf/2609.28013v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "first-principles dataset from DFT and AIMD for training machine-learned interatomic potentials at solid-liquid interfaces",
+      "llm_evidence_cn": "基于DFT与AIMD的固液界面第一性原理数据集，用于训练机器学习原子间势",
+      "llm_evidence": "基于DFT与AIMD的固液界面第一性原理数据集，用于训练机器学习原子间势",
+      "canonical_evidence": "基于DFT与AIMD的固液界面第一性原理数据集，用于训练机器学习原子间势",
+      "llm_tldr_en": "SoLiD26 is a curated 15.4-million-structure first-principles dataset of solid-liquid interfaces from DFT and AIMD, designed for training and evaluating machine-learned interatomic potentials.",
+      "llm_tldr_cn": "针对固液界面机器学习原子间势缺乏能同时采样液体、固体与界面构型训练数据的问题，本文汇编来自密度泛函理论计算与从头算分子动力学的结构，构建了SoLiD26数据集。该数据集包含1540万个第一性原理原子结构，最多576个原子、覆盖15种化学元素，并记录原子种类、位置与模拟信息。它为电化学、催化与腐蚀等应用中固液界面机器学习势的训练与评估提供了大规模基准数据。",
+      "llm_tldr": "针对固液界面机器学习原子间势缺乏能同时采样液体、固体与界面构型训练数据的问题，本文汇编来自密度泛函理论计算与从头算分子动力学的结构，构建了SoLiD26数据集。该数据集包含1540万个第一性原理原子结构，最多576个原子、覆盖15种化学元素，并记录原子种类、位置与模拟信息。它为电化学、催化与腐蚀等应用中固液界面机器学习势的训练与评估提供了大规模基准数据。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.25421v1",
+      "source": "arxiv",
+      "title": "Beyond Natural Language: An Agent-Native Language for Autonomous Science",
+      "abstract": "As autonomous AI agents take on every stage of scientific inquiry, research output is expanding far beyond human review capacity. Yet scientific communication still relies on natural-language prose: an informal medium prone to ambiguity, hidden assumptions, and untracked limitations that machines cannot reliably audit. We introduce Lara, a machine-checkable language and protocol for checking and revising support for research claims. By turning research arguments into executable artifacts, Lara provides an epistemic kernel for autonomous science: it enables automated validation pipelines for research agents, lets declared bridges connect arguments across papers into an auditable network, and allows both humans and machines to recheck the standing of an encoded claim in milliseconds. In a Lara program, authors explicitly declare their claims, supporting evidence and assumptions, and known objections or limitations. A lightweight, deterministic checker adjudicates these interactions, assigning each claim a reproducible status: \"justified\", \"defeated\", \"contested\", or \"gap\", which marks a claim whose support is incomplete and locates the unanswered question. Case studies cover empirical review, a philosophical debate without measurements, and the loss of support when an assumed axiom is withdrawn. We establish the metatheory of claim checking and cross-context argument transport, and mechanize the semantic guarantees in Lean 4 (roughly 117,000 lines), leaving three arguments on paper. The audited public metatheory is \"sorry\"-free and uses only Lean's three standard axioms; some executable examples additionally trust native evaluation.",
+      "authors": [
+        "Yifeng He",
+        "Jiachen Liu"
+      ],
+      "primary_category": "cs.PL",
+      "categories": [
+        "cs.PL",
+        "cs.AI"
+      ],
+      "published": "2026-09-21T21:19:46+00:00",
+      "link": "https://arxiv.org/pdf/2609.25421v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "machine-checkable language and protocol for autonomous science claims",
+      "llm_evidence_cn": "面向自主科学的可机器校验语言与协议",
+      "llm_evidence": "面向自主科学的可机器校验语言与协议",
+      "canonical_evidence": "面向自主科学的可机器校验语言与协议",
+      "llm_tldr_en": "Autonomous science agents produce more claims than humans can audit, yet prose remains the medium. Lara is a machine-checkable language turning arguments into executable, auditable artifacts for research agents.",
+      "llm_tldr_cn": "随着自主AI智能体承担科学探究各阶段，研究产出已远超人工评审能力，但科学交流仍依赖易产生歧义的自然语言。本文提出Lara，一种可机器校验的语言与协议，将研究论证转化为可执行制品，从而支持研究智能体的自动化验证流程。该协议允许通过声明的桥接把不同论文的论证连接成可审计网络，使人与机器都能复核研究主张的成立状态。这为自主科学提供了可审计的认识论内核，有助于提升科研结论的可验证性与可靠性。",
+      "llm_tldr": "随着自主AI智能体承担科学探究各阶段，研究产出已远超人工评审能力，但科学交流仍依赖易产生歧义的自然语言。本文提出Lara，一种可机器校验的语言与协议，将研究论证转化为可执行制品，从而支持研究智能体的自动化验证流程。该协议允许通过声明的桥接把不同论文的论证连接成可审计网络，使人与机器都能复核研究主张的成立状态。这为自主科学提供了可审计的认识论内核，有助于提升科研结论的可验证性与可靠性。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery",
+      "matched_requirement_id": "req-15",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.23611v1",
+      "source": "arxiv",
+      "title": "Uni-Macro-FRPN: Full-Resolution and Cross-Scale Learning for Polymers",
+      "abstract": "Polymer properties emerge from interactions across scales, yet existing polymer models typically preserve either detailed monomer chemistry without an explicit polymer graph or polymer connectivity with simplified monomer representations, due to computational constraints, as polymers typically contain tens of thousands of atoms. We present Uni-Macro-FRPN (FRPN), a Full-Resolution Polymer Network that retains both detailed atom-level and monomer-level features and explicit polymer structure information within a unified framework. Two Transformers jointly learn atom-informed monomer semantics, sequence order, and chain topology from BigSMILES-derived representations. On the Block Copolymer Database (BCDB) lamellar-versus-non-lamellar classification task, FRPN achieves 86.4% accuracy and 90.6% ROC-AUC, establishing state-of-the-art performance. Ablation results indicate that the gain is not explained solely by increased parameter count. On a linear homopolymer benchmark, monomer-centric learning remains competitive, highlighting a boundary case where polymer-scale organization is simple. To test generalization beyond linear polymers, we further construct an all-atom molecular-dynamics benchmark of 1640 datapoints spanning diverse monomer chemistries, sequence orderings, chain topologies, and physical properties. FRPN achieves the strongest overall performance on this topology-rich benchmark, with diagnostics supporting the benefit of jointly modeling monomer chemistry and polymer structure. Taken together, FRPN provides a practical route for moving polymer representation learning beyond monomer-centric representations. The leading performance of FRPN also suggests a promising direction for polymer informatics: future polymer prediction models should treat polymers not only as collections of monomer descriptors, but as complete multiscale chemical and topological objects.",
+      "authors": [
+        "Jintao Wu",
+        "Yiran Shan",
+        "Rui Zhang"
+      ],
+      "primary_category": "cond-mat.soft",
+      "categories": [
+        "cond-mat.soft",
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-20T12:54:40+00:00",
+      "link": "https://arxiv.org/pdf/2609.23611v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Cross-scale machine learning model for polymer property prediction",
+      "llm_evidence_cn": "面向聚合物性质预测的跨尺度机器学习模型",
+      "llm_evidence": "面向聚合物性质预测的跨尺度机器学习模型",
+      "canonical_evidence": "面向聚合物性质预测的跨尺度机器学习模型",
+      "llm_tldr_en": "Proposes a full-resolution polymer network combining atom-level and monomer-level features via two Transformers to jointly learn chemistry, sequence order and chain topology for polymer property prediction.",
+      "llm_tldr_cn": "聚合物性质源于跨尺度相互作用，但现有模型受计算限制，往往只能保留单体化学细节或聚合物连接结构之一。本文提出全分辨率聚合物网络Uni-Macro-FRPN，用两个Transformer从BigSMILES表示中联合学习原子级单体语义、序列顺序与链拓扑。在嵌段共聚物数据库的层状与非层状分类任务上验证了模型有效性。该框架为大规模聚合物体系的跨尺度统一建模提供了新思路。",
+      "llm_tldr": "聚合物性质源于跨尺度相互作用，但现有模型受计算限制，往往只能保留单体化学细节或聚合物连接结构之一。本文提出全分辨率聚合物网络Uni-Macro-FRPN，用两个Transformer从BigSMILES表示中联合学习原子级单体语义、序列顺序与链拓扑。在嵌段共聚物数据库的层状与非层状分类任务上验证了模型有效性。该框架为大规模聚合物体系的跨尺度统一建模提供了新思路。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.27036v1",
+      "source": "arxiv",
+      "title": "An open benchmark for machine learning-based polymer property prediction",
+      "abstract": "Polymer property prediction lacks open, standardized benchmarks that enable rigorous comparison of machine-learning methods, with existing resources covering only a narrow fraction of polymer architectures, such as homopolymers. We introduce Polymer Benchmark 2026 (PolyBench26), an open dataset comprising nearly 250,000 polymer-property datapoints across eight physical properties, including data from experimental measurements, density functional theory, and molecular dynamics. The benchmark supports four evaluation tasks across homopolymers and alternating, random, and block copolymers: in-distribution property prediction, dataset-size scaling, repeat-unit complexity, and transfer to held-out polymer architectures. We compare language model, graph-based, and descriptor-based approaches and find graph-based models provide the lowest errors in property prediction, retain their advantage across the evaluated training-set sizes, and remain robust to increasing repeat-unit complexity. PolyBench26 provides a reproducible foundation for developing models for the increasingly complex polymer design space. The PolyBench26 benchmark is available open-source at https://github.com/rlearsch/PolymerBenchmark2026.",
+      "authors": [
+        "Robert W. Learsch",
+        "Nicholas Liesen",
+        "Daniel S. Levine",
+        "Anna M. Hiszpanski",
+        "Evan R. Antoniuk"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cond-mat.mtrl-sci",
+        "cs.AI"
+      ],
+      "published": "2026-09-22T20:32:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.27036v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "open benchmark for ML polymer property prediction using DFT and MD data",
+      "llm_evidence_cn": "面向聚合物性质预测的机器学习开放基准，含 DFT 与 MD 数据",
+      "llm_evidence": "面向聚合物性质预测的机器学习开放基准，含 DFT 与 MD 数据",
+      "canonical_evidence": "面向聚合物性质预测的机器学习开放基准，含 DFT 与 MD 数据",
+      "llm_tldr_en": "Polymer property prediction lacks open standardized benchmarks covering diverse architectures. PolyBench26 offers about 250k datapoints across eight properties from experiment, DFT, and MD, enabling four evaluation tasks over homo- and copolymers to rigorously compare ML methods.",
+      "llm_tldr_cn": "聚合物性质预测长期缺少开放、标准化的基准，现有资源仅覆盖均聚物等狭窄结构范围。本文提出 PolyBench26，整合约25万条、八种物性的数据，来源涵盖实验测量、密度泛函理论与分子动力学。基准支持四类任务，横跨均聚物与交替、无规、嵌段共聚物，并对比语言模型与图模型等方法。该工作为聚合物机器学习提供可复现的标准化评测平台，有助于推动材料性质预测方法的严格比较。",
+      "llm_tldr": "聚合物性质预测长期缺少开放、标准化的基准，现有资源仅覆盖均聚物等狭窄结构范围。本文提出 PolyBench26，整合约25万条、八种物性的数据，来源涵盖实验测量、密度泛函理论与分子动力学。基准支持四类任务，横跨均聚物与交替、无规、嵌段共聚物，并对比语言模型与图模型等方法。该工作为聚合物机器学习提供可复现的标准化评测平台，有助于推动材料性质预测方法的严格比较。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.27490v1",
+      "source": "arxiv",
+      "title": "WhatWorkedBench: Benchmarking Experimental Understanding in AI Agents",
+      "abstract": "AI research agents need reliable knowledge of how their experiments change outcomes. We introduce WhatWorkedBench to measure experimental understanding, the accuracy of predictions about component changes after budgeted experimentation. Agents inspect code, select measurements, and submit a response surface, a table predicting scores for every configuration of component settings. Exhaustive CPU execution supplies reference effects for changing each component while holding the others fixed. These effects capture combinations of changes across 36 tasks from 30 data sources and 8 workflow types, with 1248 configuration records. Core evaluation combines 4,206 numerical-control records across all eight families and 108 agent episodes across the original six. At eight new measurements, pair-effect ridge selects an optimum on 15 of 22 sources and limits every effect error to 10% of score range on three. Fitting a Gaussian process (GP) to the same agent observations raises effect recovery, accuracy relative to true effect magnitude, from 0.632 to 0.698 in the original Flash cohort and from 0.621 to 0.720 in an additional cohort. On six completed beat-detection and graph submissions, the same-observation GP raises family-macro recovery from 0.303 to 0.455. On six workflows with six binary options at 20 new measurements, encoding code equivalences, configurations with identical behavior, raises GP recovery from 0.248 to 0.462. WhatWorkedBench supports research on experimental agents, adaptive experimental design, numerical inference, and use of program structure.",
+      "authors": [
+        "Jingjie Ning",
+        "Xueqi Li",
+        "Yibo Kong",
+        "Dongting Li"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.LG"
+      ],
+      "published": "2026-09-23T07:49:24+00:00",
+      "link": "https://arxiv.org/pdf/2609.27490v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "benchmark for AI agents understanding how experiments change outcomes",
+      "llm_evidence_cn": "评测AI智能体理解实验变化影响的基准",
+      "llm_evidence": "评测AI智能体理解实验变化影响的基准",
+      "canonical_evidence": "评测AI智能体理解实验变化影响的基准",
+      "llm_tldr_en": "WhatWorkedBench measures experimental understanding: agents inspect code, choose measurements and submit a response surface predicting scores for every configuration, with reference effects from exhaustive CPU execution.",
+      "llm_tldr_cn": "AI研究智能体需要可靠地知道实验改动如何影响结果，但缺乏相应评测。本文提出WhatWorkedBench，通过预算化实验衡量智能体的实验理解能力：智能体检查代码、选择测量并提交预测所有组件配置得分的响应面。参考效应由穷举CPU执行提供，覆盖36个任务、8类工作流与108个智能体回合。该基准为自主实验智能体的因果理解与迭代决策提供了量化标准。",
+      "llm_tldr": "AI研究智能体需要可靠地知道实验改动如何影响结果，但缺乏相应评测。本文提出WhatWorkedBench，通过预算化实验衡量智能体的实验理解能力：智能体检查代码、选择测量并提交预测所有组件配置得分的响应面。参考效应由穷举CPU执行提供，覆盖36个任务、8类工作流与108个智能体回合。该基准为自主实验智能体的因果理解与迭代决策提供了量化标准。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist systems that autonomously design, execute, evaluate, and iteratively improve scientific experiments",
+      "matched_requirement_id": "req-18",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.27108v1",
+      "source": "arxiv",
+      "title": "Towards Extended Active Learning for Modelling Ferroelectric Switching: the Need for 'Gold Standards'",
+      "abstract": "For the purpose of modelling ferroelectric switching in wurtzite-structured materials, four cost-effective density-functional theory (DFT) methods (PBE, PBEsol, r2SCAN, and r2SCAN-rVV10) are considered and compared to various ab initio approaches based on the random-phase approximation (RPA), including RPA with singles corrections (RPAR+S), as well as second-order Møller-Plesset perturbation theory (MP2). The purpose is to determine whether an ab initio approach could act as a 'gold standard' for estimating the reliability of DFT, thus determining an optimal DFT method for use in exhaustive tasks such as the training of machine-learning interatomic potentials (MLIP) for large-scale simulations of materials of arbitrary composition and structure such as Al1-xScxN and Zn1-xMgxO, using AlN, Al0.5Sc0.5N, ZnO, and Zn0.5Mg0.5O as model materials. Applications of active learning (AL) are now common, in which results from MLIP simulations are used to enhance the DFT training data set, but future extended active learning (EAL) methods will also need to systematically assess the DFT methodology against a gold standard. Herein, the variability of the ab initio results is found to exceed that required for a robust gold standard, but the DFT and ab initio approaches appear to converge on RPAR+S and r2SCAN-rVV10 as optimal method choices to initiate EAL. The electron correlation energy is found to be dominated by covalent binding effects associated with the high-electron-density anions involved, but the van der Waals dispersion force is seen to be too significant to ignore in ferroelectric modelling.",
+      "authors": [
+        "Jeffrey R. Reimers",
+        "Wenbin Zhang",
+        "Zhe Su",
+        "Musen Li",
+        "Carla Verdi",
+        "Tim Gould",
+        "Wei Ren"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-22T22:04:38+00:00",
+      "link": "https://arxiv.org/pdf/2609.27108v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "Compares DFT methods to pick optimal functional for training machine-learning interatomic potentials",
+      "llm_evidence_cn": "比较DFT方法以筛选训练机器学习原子间势的最优泛函",
+      "llm_evidence": "比较DFT方法以筛选训练机器学习原子间势的最优泛函",
+      "canonical_evidence": "比较DFT方法以筛选训练机器学习原子间势的最优泛函",
+      "llm_tldr_en": "Compares four low-cost DFT methods against RPA and MP2 ab initio approaches to identify a gold standard for validating DFT, guiding functional choice for training machine-learning interatomic potentials.",
+      "llm_tldr_cn": "该工作针对铁电翻转建模中DFT方法可靠性缺乏基准的问题，系统比较了PBE、PBEsol、r2SCAN与r2SCAN-rVV10四种低成本密度泛函方法，并与RPA、RPAR+S和MP2等从头算方法对照。结果显示，从头算方法可作为评估DFT可靠性的金标准，从而为训练机器学习原子间势等大规模模拟任务筛选最优DFT方法。该研究为MLIP训练数据的泛函选择提供了依据。",
+      "llm_tldr": "该工作针对铁电翻转建模中DFT方法可靠性缺乏基准的问题，系统比较了PBE、PBEsol、r2SCAN与r2SCAN-rVV10四种低成本密度泛函方法，并与RPA、RPAR+S和MP2等从头算方法对照。结果显示，从头算方法可作为评估DFT可靠性的金标准，从而为训练机器学习原子间势等大规模模拟任务筛选最优DFT方法。该研究为MLIP训练数据的泛函选择提供了依据。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.28010v1",
+      "source": "arxiv",
+      "title": "Optimal Bias Potentials via Ergodic Optimal Control and Generator Learning",
+      "abstract": "We investigate the computation of optimal bias potentials for accelerating transitions between metastable states and for computation of equilibrium properties in molecular dynamics simulations. We formulate optimal biasing as an ergodic optimal control problem (OCP), which can be recast as a linear eigenvalue problem for the infinitesimal generator of the unbiased dynamics. We demonstrate that data-driven learning methods for the generator enable reliable solution of the OCP, computation of biasing potentials, extraction of equilibrium properties, and acceleration of state transitions. We also explore the relation of the control problem to coarse grained representations and learning of coarse grained dynamics.",
+      "authors": [
+        "Lei Guo",
+        "Carsten Hartmann",
+        "Thomas Berger",
+        "Feliks Nüske"
+      ],
+      "primary_category": "physics.comp-ph",
+      "categories": [
+        "physics.comp-ph",
+        "math.DS",
+        "math.OC"
+      ],
+      "published": "2026-09-23T12:34:51+00:00",
+      "link": "https://arxiv.org/pdf/2609.28010v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "data-driven generator learning to compute optimal bias potentials and accelerate molecular dynamics",
+      "llm_evidence_cn": "用数据驱动生成元学习计算最优偏置势，加速分子动力学跃迁",
+      "llm_evidence": "用数据驱动生成元学习计算最优偏置势，加速分子动力学跃迁",
+      "canonical_evidence": "用数据驱动生成元学习计算最优偏置势，加速分子动力学跃迁",
+      "llm_tldr_en": "Optimal biasing for molecular dynamics is formulated as an ergodic optimal control problem recast as a linear eigenvalue problem, solved via data-driven generator learning to compute bias potentials and accelerate transitions.",
+      "llm_tldr_cn": "在分子动力学中加速亚稳态之间的跃迁并计算平衡性质，长期依赖难以求解的最优偏置势。本文将最优偏置建模为遍历最优控制问题，并证明其可重写为无偏动力学无穷小生成元的线性特征值问题。作者利用数据驱动的生成元学习方法可靠求解该控制问题，从而计算偏置势、提取平衡性质并加速状态跃迁，并进一步探讨其与粗粒化表示及粗粒化动力学学习的关系。",
+      "llm_tldr": "在分子动力学中加速亚稳态之间的跃迁并计算平衡性质，长期依赖难以求解的最优偏置势。本文将最优偏置建模为遍历最优控制问题，并证明其可重写为无偏动力学无穷小生成元的线性特征值问题。作者利用数据驱动的生成元学习方法可靠求解该控制问题，从而计算偏置势、提取平衡性质并加速状态跃迁，并进一步探讨其与粗粒化表示及粗粒化动力学学习的关系。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning accelerated molecular dynamics simulations",
+      "matched_requirement_id": "req-6",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.27302v1",
+      "source": "arxiv",
+      "title": "Unmodeled states and uncertain action outcomes in agentic scanning tunneling microscopy",
+      "abstract": "In physical experiments, interventions can alter hidden experimental states in ways that cannot be predicted in advance. Autonomous scientific agents must therefore interpret the consequences of their interventions while operating with incomplete knowledge of the experimental state. Here we investigate this problem using scanning tunneling microscopy (STM) tip conditioning, traditionally a human-expert-intensive task governed by inaccessible tip apex conditions and uncertain action outcomes. We introduce quailbot, an agent harness that places the LLM inside the instrument feedback loop by linking physical interventions with experimental readbacks. After a brief apprenticeship with a human expert, frontier LLM agents autonomously completed end-to-end tip conditioning on an STM and passed an independent verification. The contingencies that arose during the experiments further exposed the limits of LLM agentic autonomy when relevant experimental states or dynamics were hidden or unmodeled. Our results show that future autonomous physical experimentation requires agents to infer hidden and unmodeled experimental states, track the outcomes of their actions, and operate within the observability and action limits of real instruments.",
+      "authors": [
+        "Siyu Cheng",
+        "Muxian Xu",
+        "Christopher Candelora",
+        "Ilija Zeljkovic"
+      ],
+      "primary_category": "cond-mat.mes-hall",
+      "categories": [
+        "cond-mat.mes-hall",
+        "cond-mat.str-el"
+      ],
+      "published": "2026-09-23T03:36:33+00:00",
+      "link": "https://arxiv.org/pdf/2609.27302v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "LLM agent harness placing the model in the instrument feedback loop for autonomous STM experiments",
+      "llm_evidence_cn": "将LLM置于仪器反馈回路以实现自主STM实验的智能体框架",
+      "llm_evidence": "将LLM置于仪器反馈回路以实现自主STM实验的智能体框架",
+      "canonical_evidence": "将LLM置于仪器反馈回路以实现自主STM实验的智能体框架",
+      "llm_tldr_en": "Introduces quailbot, an LLM agent harness placing the model inside the instrument feedback loop linking interventions with readbacks, enabling frontier LLM agents to autonomously perform STM tip conditioning despite unmodeled states.",
+      "llm_tldr_cn": "物理实验中干预会不可预测地改变隐藏实验状态，自主科学智能体须在不完整状态知识下解释干预后果。该工作提出quailbot智能体框架，将LLM置于仪器反馈回路中，把物理干预与实验读数关联。经人类专家短期示范后，前沿LLM智能体可自主完成STM针尖调理任务，表明LLM智能体可在不确定实验状态下自主操作精密仪器并推进自主科学发现。",
+      "llm_tldr": "物理实验中干预会不可预测地改变隐藏实验状态，自主科学智能体须在不完整状态知识下解释干预后果。该工作提出quailbot智能体框架，将LLM置于仪器反馈回路中，把物理干预与实验读数关联。经人类专家短期示范后，前沿LLM智能体可自主完成STM针尖调理任务，表明LLM智能体可在不确定实验状态下自主操作精密仪器并推进自主科学发现。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery",
+      "matched_requirement_id": "req-15",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

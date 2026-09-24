@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-23</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-24</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 10 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 9 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>3</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>2</dd></div>
     <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>7</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-23 18:19:06 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-24 18:39:44 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日日报成功收录10篇，精读3篇、速读7篇，重点聚焦AI Agent自主科研与材料发现。</p>
-<p>最值得看的是两篇9.0分精读：Agent-E2MD实现原子间势方程到LAMMPS合法pair style的自主翻译验证，另一篇用AI Agent自主完成二维半导体量子输运测量。</p>
-<p>普通读者可先读这两篇精读，再扫速读中的agent-native language及OMatG-flash、拓扑分层材料生成模型，把握自主科学与生成式材料发现趋势。</p>
+<p>2026-09-24日报筛出9篇，精读2篇、速读7篇，主线集中在机器学习势、材料数据与自主科学工具。</p>
+<p>最值得看的是两篇8.0精读：晶格多体动力学的精确等变性，以及面向机器学习原子间势的固-液界面第一性原理数据集。</p>
+<p>普通读者可先扫这两篇摘要，若关心材料、聚合物或铁电建模，再从7.0速读里挑基准、主动学习或Agent语言相关一篇跟进。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -80,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">3 篇</strong>
+    <strong class="dpr-home-dashboard-count">2 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Agent-E2MD: Autonomous Translation of Interatomic Potential Equations into Physically Validated Pair Styles for Molecular Dynamics in LAMMPS">Agent-E2MD: Autonomous Translation of Interatomic Potential Equations into Physically Validated Pair Styles for Molecular Dynamics in LAMMPS</span></li><li><span class="dpr-home-dashboard-paper-title" title="Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent">Autonomous Quantum Transport Measurements of 2D Semiconductors by an AI Agent</span></li><li><span class="dpr-home-dashboard-paper-title" title="Recursive self-improvement of AI research agents">Recursive self-improvement of AI research agents</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics">Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics</span></li><li><span class="dpr-home-dashboard-paper-title" title="SoLiD26: A First Principles Solid-Liquid Interface Dataset for Machine-learned Interatomic Potentials">SoLiD26: A First Principles Solid-Liquid Interface Dataset for Machine-learned Interatomic Potentials</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span><span class="dpr-home-dashboard-tag">ai-materials <strong>1</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>2</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -96,7 +96,7 @@
     <strong class="dpr-home-dashboard-count">7 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Beyond Natural Language: An Agent-Native Language for Autonomous Science">Beyond Natural Language: An Agent-Native Language for Autonomous Science</span></li><li><span class="dpr-home-dashboard-paper-title" title="OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery">OMatG-flash: An All-Atom Flow Map with Reinforce Adjoint Matching for Scalable Materials Discovery</span></li><li><span class="dpr-home-dashboard-paper-title" title="Topology-Stratified Materials Discovery with A Flow-Based Generative Model">Topology-Stratified Materials Discovery with A Flow-Based Generative Model</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Beyond Natural Language: An Agent-Native Language for Autonomous Science">Beyond Natural Language: An Agent-Native Language for Autonomous Science</span></li><li><span class="dpr-home-dashboard-paper-title" title="An open benchmark for machine learning-based polymer property prediction">An open benchmark for machine learning-based polymer property prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="Towards Extended Active Learning for Modelling Ferroelectric Switching: the Need for &#x27;Gold Standards&#x27;">Towards Extended Active Learning for Modelling Ferroelectric Switching: the Need for &#x27;Gold Standards&#x27;</span></li></ul>
   </div>
   <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>4</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
 </section>
