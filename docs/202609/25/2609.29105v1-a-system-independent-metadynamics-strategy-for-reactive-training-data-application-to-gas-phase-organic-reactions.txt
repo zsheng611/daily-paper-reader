@@ -1,0 +1,2920 @@
+A System-Independent Metadynamics Strategy
+for Reactive Training Data: Application to
+Gas-Phase Organic Reactions
+Wanrun Jiang,† Jinzhe Zeng,‡,¶,§ Manyi Yang,∗,∥,⊥Tong Zhu,∗,#,†,@ and Han
+Wang∗,△,∇
+†AI for Science Institute, Beijing 100080, P. R. China
+‡School of Artificial Intelligence and Data Science, State Key Laboratory of Precision and
+Intelligent Chemistry, University of Science and Technology of China, Hefei 230026, P. R.
+China
+¶Suzhou Institute for Advanced Research, University of Science and Technology of China,
+Suzhou 215123, P. R. China
+§Suzhou Big Data & AI Research and Engineering Center, Suzhou 215123, P. R. China
+∥State Key Laboratory of Coordination Chemistry, Key Laboratory of Mesoscopic Chemistry
+of Ministry of Education, Nanjing University, Nanjing 210093, P. R. China
+⊥The Institute of Green Chemistry and Engineering, Nanjing University, Suzhou 215163, P.
+R. China
+#Shanghai Engineering Research Center of Molecular Therapeutics and New Drug
+Development, School of Chemistry and Molecular Engineering, East China Normal
+University, Shanghai 200062, P. R. China
+@Shanghai Innovation Institute, Shanghai 200003, P. R. China
+△National Key Laboratory of Computational Physics, Institute of Applied Physics and
+Computational Mathematics, Fenghao East Road 2, Beijing 100094, P. R. China
+∇HEDPS, CAPT, College of Engineering, Peking University, Beijing 100871, P. R. China
+E-mail: manyi.yang@nju.edu.cn; tzhu@lps.ecnu.edu.cn; wang han@iapcm.ac.cn
+1
+arXiv:2609.29105v1  [physics.chem-ph]  24 Sep 2026
+
+
+Abstract
+General-purpose machine-learning interatomic potentials (MLIPs) for organic reac-
+tions need to be accurate on both the minimum energy path (MEP) for static evaluation
+of basic properties and the broader configurational space for simulating reaction dy-
+namics. Existing general datasets for gas-phase organic reactions rely on quasi-static
+relaxation that confines configurations to the MEP vicinity, so models trained on
+them could fail on direct molecular-dynamics trajectories; the gap is methodological,
+not a question of dataset size. We introduce a spatiotemporally resolved, system-
+independent collective variable (CV): Cartesian RMSD within randomly partitioned
+local domains against an expanding list of time-averaged reference geometries. The
+CV drives metadynamics as the main exploration engine, supplemented by structural
+relaxation towards transition state (TS) to augment the coverage around TS. Within a
+concurrent-learning workflow, this produces OpenRxn26, a dataset of 1.8 M DFT-labeled
+configurations covering neutral singlet unimolecular reactions in the H/C/N/O chemical
+space (Nheavy ≤30), containing reactive atomic environments underrepresented in
+community datasets. Trained on OpenRxn26, a DPA3 model (denoted DPA3 rxn)
+achieves transferable accuracy on barrier heights and reaction energies. On off-MEP
+reactive trajectories, DPA3 rxn is the only model in the benchmark suite to reach 1.0
+kcal/mol energy accuracy compared with the labeling method, where the domain MLIP
+leading on static benchmarks degrades several-fold (e.g. MACE OMol25), showing the
+insufficiency of quasi-static sampling and MEP-anchored benchmarks for guaranteeing
+dynamics reliability of MLIPs. OpenRxn26 thus provides MD-ready reactive train-
+ing data for gas-phase neutral singlet organic reactions, verifying the generality and
+efficiency of the sampling strategy.
+1
+Introduction
+Organic chemical reactions mediate structural and energy transformations across the vast
+space of organic molecules,1 underlying biochemical processes, materials synthesis, and energy
+2
+
+
+conversion. Accurate and efficient prediction of elementary-step reaction behaviors underpins
+mechanism discovery under operative conditions, rational design of synthetic routes, and
+high-throughput in silico screening.
+Reliable prediction of reaction behavior requires both static analysis of the potential energy
+surface (PES) and direct simulation of reaction dynamics on it. The PES picture was first
+introduced by Marcelin to rationalize the Arrhenius equation within a statistical-mechanical
+framework.2 Transition state theory (TST)3 sharpened this picture by relating the rate,
+under the statistical quasi-equilibrium assumption, to the free-energy barrier between the
+reactant minimum and the transition state (TS) saddle point. The minimum energy path
+(MEP)4 that connects reactant, TS and product on the PES then anchors static analysis of the
+reaction’s basic properties. These include rate constants (from the barrier height), equilibrium
+constants (from the reaction free energy), reaction mechanisms (from geometry evolution on
+MEP), and selectivities (from barriers of competing MEPs). Refinements built on the same
+statistical foundation, such as variational transition state theory (VTST)5–7 and RRKM
+theory,8–10 inherit the MEP-anchored analysis. However, real reactions do not always satisfy
+this statistical quasi-equilibrium assumption. Capturing transient non-equilibrated kinetics
+and trajectories that stray from the MEP is then critical and requires direct simulation
+of the dynamic process. Since the 1990s, non-statistical effects have been systematically
+documented in organic chemistry,11,12 including dynamic matching,13,14 post-transition-state
+bifurcations,15 roaming,16 and recrossing.17 These effects have reshaped the understanding
+of reaction mechanisms, selectivities, and timescales in both fundamental and industrial
+contexts.
+For instance, formal [1,3]-sigmatropic rearrangements can proceed through a biradical
+intermediate whose lifetime is shorter than the intramolecular vibrational energy redistribution
+(IVR) timescale.18 Trajectories therefore retain momentum from the entry channel, biasing
+products toward configurations with inverted migrating carbon. The resulting dynamic-
+matching stereoselectivity overturns the classical concerted picture governed by Woodward-
+3
+
+
+Hoffmann rules.19,20 In atmospheric formaldehyde dissociation, H-atom roaming locks energy
+and angular momentum into long-range orbiting modes, preventing statistical randomization.
+The resulting modulation of the radical-vs-molecular branching ratio and the vibrational
+activation of products lies beyond statistical rate theories.21,22 Diels-Alder cycloaddition,
+prototypical in pharmaceutical synthesis, can exhibit post-TS bifurcations in which a single
+TS connects to multiple products, invalidating static barrier comparisons for predicting
+branching.23,24 C60-modified variants of Diels-Alder cycloaddition make the static-dynamic
+gap even wider: although the MEP profile is similar and the barrier is 7.8 kcal/mol lower
+than the unmodified reaction, the trajectory traverses the TS region 50% more slowly because
+long-range C60 interactions induce complex motions that hinder reactant alignment.25
+Addressing these challenges requires PES descriptions that are accurate and efficient,
+covering not only the MEP but also the configurational space sampled by reaction dynamics.
+High-level first-principles calculations26 reach chemical accuracy (≤1 kcal/mol) that guaran-
+tees room-temperature rates within a 5-fold margin of experiment values,27 but their cost
+rules out the long-time or large-scale molecular dynamics needed to capture reactive processes.
+Empirical reactive force fields such as AIREBO28 and ReaxFF29 trade accuracy for efficiency,
+becoming unsuitable for static PES analysis and unreliable under mild conditions, where
+small energy errors are amplified by the exponential temperature dependence of Eyring rates.
+Machine-learning interatomic potentials (MLIPs) aim to overcome this trade-off: trained on
+first-principles data, they promise near-DFT accuracy at force-field-like cost.30,31 However,
+MLIP applicability is bounded by training-data coverage, which for organic reactions must
+span both the MEP skeleton across the chemical space and the configurational space sampled
+by reaction dynamics. Existing general datasets focus on the former, leaving the dynamic
+regime systematically under-covered and reactive trajectories beyond the reach of current
+MLIPs.
+This gap is methodological, not a question of dataset size. Current general data-sampling
+strategies for gas-phase reactions share a common engine, quasi-static structural relaxation,
+4
+
+
+which by design converges to the MEP vicinities and cannot reach dynamic configurations.
+One family relaxes the global path along enumerated driving coordinates32 or between
+enumerated reactant-product pairs,33 via nudged elastic band (NEB),34 growing string method
+(GSM),35 and intrinsic reaction coordinate (IRC)36 refinement, underpinning datasets such
+as Transition1x,32,37 RGD1,38 AIMNet2-rxn,39 and RXN-xTB-AL.40 A second family relaxes
+individual structures under constraints of external force or fixed distance to trace low-energy
+paths approximating MEPs, as in ANI-1xBB41 (13.1 million bond-stretching configurations)
+and the OMol2542 subset that applies artificial force induced reaction (AFIR)43 on established
+mechanism databases. This dependence on relaxation cannot be patched at the architectural
+level. Auxiliary equilibrium sampling on relaxed configurations, such as normal mode sampling
+(NMS) in AIMNet2-rxn or fixed-bond molecular dynamics in AIMNet2-rxn and ANI-1xBB,
+only performs local vibrational expansion and cannot reach trajectories that stray from MEPs.
+Bias-driven relaxation such as stochastic surface walking (SSW)44 maps reaction-network
+skeletons along low-energy paths rather than dynamic trajectories. Hybrid workflows such as
+MDCD45,46 combine molecular dynamics over non-reactive conformers with coordinate-driven
+relaxed scans for bond rearrangement, but each resulting pathway remains confined to MEP
+vicinity. The clearest evidence is hydrogen combustion:47 a system small enough (six atoms
+per channel) that all 19 reaction channels have been enumerated and each MEP sampled
+by IRC with NMS augmentation. Even so, the trained MLIP fails on direct MD below
+500 K, because trajectories released from the transition states diverge from the MEPs and fall
+outside the training configurational space. Only after switching to metadynamics sampling
+could a dynamics-working MLIP be obtained.
+Among enhanced-sampling MD techniques that simultaneously explore chemical and
+conformational spaces of reactions,48 metadynamics49,50 fits training-data generation well: by
+repelling the system from already-visited regions, it naturally produces the broad coverage
+of diverse atomic environments that training sets benefit from, which is mechanistically
+implemented through depositing history-dependent bias potentials along selected collective
+5
+
+
+variables (CVs).51 Metadynamics has been validated for training-set generation in specific
+gas-phase or solution reactions,47,52,53 but its broader application as a general sampling engine
+remains constrained by the difficulty of designing transferable CVs. Traditional CVs are
+system-dependent: they capture the reaction coordinates of particular channels and require
+prior knowledge of targeted mechanisms or outcomes, whether crafted manually or extracted
+by data-driven approaches.54–56 General sampling, by contrast, is open-ended exploration
+towards unknown reactions,57 where such prior knowledge is unavailable. Attempts to harvest
+partial knowledge such as reactant-product pairs by graphical enumeration face combinatorial
+explosion with molecular size, with no kinetic basis for down-sampling. The bottleneck is
+therefore a general, system-independent CV that drives diverse reactions from arbitrary
+molecules, operates under mild conditions with kinetic relevance to practice, and is scalable
+to large systems. Grimme’s 2019 scheme is the first system-independent attempt on organic
+reactions, using Cartesian RMSD against a dynamically accumulating reference library.58 In
+gas-phase scenarios, however, it targets rapid product screening, not the sampling of dynamic
+configurations. The CV functions under extreme conditions (e.g., 13 eV biases per deposition
+on benzene, average temperature about 1700 K), driving high-energy fragmentation and
+recombination that fall outside the kinetically relevant elementary-step regime. To date, no
+general organic-reaction dataset mainly built by a metadynamics-based strategy has been
+reported.
+This paper presents a sampling methodology that produces reactive training data with
+sufficient off-MEP coverage to make general MLIPs MD-ready for gas-phase organic reactions.
+The core is a spatiotemporally resolved, system-independent CV: Cartesian RMSD within
+randomly partitioned local domains (spatial resolution) against an expanding list of time-
+averaged reference geometries (temporal noise filtering).
+Scanning the partition radius
+captures reaction freedoms over a range of spatial scales, from local bond-changing to
+diffuse-motion-gated events. The design supports general, efficient metadynamics sampling
+under mild conditions and scales to large molecules.
+The sampling strategy combines
+6
+
+
+metadynamics as the main exploration engine with TS-targeted structural relaxations that
+augment the coverage around TS. The strategy is integrated into the DPGEN259,60 concurrent-
+learning workflow, leveraging Druglike202561 as non-reactive pretraining data. The outcome
+is OpenRxn26, a dataset of 1.8 M DFT-labeled configurations covering reactions from
+neutral singlet unimolecular reactants in the H/C/N/O chemical space with Nheavy ≤30,
+containing reactive atomic environments underrepresented in community datasets. Trained
+on OpenRxn26, a DPA3 model (denoted DPA3 rxn) serves to evaluate the data-model
+pipeline and achieves transferable accuracy on static evaluation of reaction properties across
+representative test reactions. Crucially, on reactive trajectories away from MEPs, it reaches
+1.0 kcal/mol overall energy accuracy with respect to the labeling method of training data,
+outperforming other tested models. OpenRxn26 thus provides MD-ready reactive training
+data, establishing the metadynamics-based sampling strategy as an efficient data solution for
+building general-purpose MLIPs on gas-phase organic reactions.
+The remainder of the paper is organized as follows. Section 2 describes the methodology,
+including the sampling strategy, concurrent-learning workflow, CV formulation, and training
+protocol of DPA3 models. Section 3 presents results benchmarking the atomic-environment
+coverage of OpenRxn26, the transferable accuracy of DPA3 rxn on basic reaction properties,
+and DPA3 rxn’s reliability on reactive dynamics trajectories. Section 4 concludes the work.
+2
+Methods
+General and efficient sampling of the chemical and conformational spaces of gas-phase
+organic reactions exceeds the capability of traditional structure-relaxation based schemes. In
+particular, these schemes cannot effectively cover the configurations visited by the dynamic
+reactive processes away from MEPs. In this work, we develop a general sampling strategy
+that uses metadynamics as the sampling engine, supplemented by downstream structural
+relaxations to augment sampling around TSs (Fig. 1a). The strategy is then integrated into
+7
+
+
+the concurrent learning platform DPGEN2, which uses disagreement among an ensemble of
+trained models to automatically identify under-sampled configurations and select them for first-
+principles labeling (Fig. 1c). Because of the local nature of atomic environments and bonding
+changes in organic reactions, samples from small molecules carry useful representativeness for
+local motifs in larger molecules and their reactive events. We therefore start the exploration
+from the reaction space of small reactants in Transition1x (number of heavy atoms Nheavy ≤7)
+and gradually extend it to larger systems drawn from PubChem with a broader chemical
+variety, up to Nheavy ≤30 and elements H/C/N/O. To address the combinatorial explosion
+of species at larger sizes, a chemically intuitive down-sampling scheme is applied, reducing
+the number of starting reactants by orders of magnitude while preserving the topological
+diversity (Fig. 1b).
+8
+
+
+Figure 1: Overview of the OpenRxn26 data-generation workflow. a, Sampling strategy. Meta-
+dynamics drives reactive exploration using a spatiotemporally resolved, system-independent
+CV: Cartesian RMSD computed within randomly partitioned local domains against an
+expanding list of time-averaged reference geometries. Scanning the partition radius captures
+reactions over a range of spatial scales, from local bond-changing to diffuse-motion-gated
+events. Selected snapshots from reactive windows seed TS optimizations (dimer method);
+metadynamics seeds and sparse configurations along TS-relaxation trajectories are passed to
+the uncertainty evaluation in exploration step of DPGEN2. b, Staged reactant selection. Five
+stages cover progressively larger Nheavy ranges (Stage 1: Transition1x reactants; Stages 2–5:
+PubChem unimolecular SMILES). For Stages 4–5, a topology-motif-driven down-sampling
+retains reactants that introduce motifs absent from earlier-stage pools, reducing millions
+of SMILES to tens of thousands while preserving motif coverage. c, DPGEN2 concurrent
+learning. Each iteration cycles through training (an ensemble of MLIPs is fine-tuned on
+the current dataset), exploration (sampling strategy in a, runs on PES of one MLIP in the
+ensemble; sampled candidates are classified by ensemble deviation ϵ into accurate / candidate
+/ failed), and labeling (selected candidates labeled by DFT and added to the training set).
+The cycle converges on each stage in order, yielding OpenRxn26.
+9
+
+
+2.1
+Sampling strategy
+In metadynamics,50,51 MD trajectories propagate on a PES augmented by an accumulating
+sum of Gaussian bias kernels (hills); each hill is centered at a collective variable (CV)
+value visited earlier in the trajectory, so the bias progressively raises the currently occupied
+free-energy basin until the system escapes over a barrier in CV space. This mechanism
+not only accelerates rare reactive events but also samples chemical and conformational
+spaces simultaneously, making metadynamics well-suited as the engine of a general-purpose
+reactive-data curation workflow.
+The bias potential is constructed as a sum of Gaussian hills,
+Vbias(⃗s, t) =
+X
+tj<t
+G(⃗s; tj) ,
+(1)
+where the CV⃗s =⃗s(X) = (s1(X), . . . , sdcv(X)) is a dcv-dimensional function of the atomic
+configuration X chosen to capture the slow modes of interest, t is the current simulation time,
+and {tj} are the discrete times at which hills are deposited. Each hill takes the Gaussian
+form
+G(⃗s; tj) = W(tj) exp
+
+−
+dcv
+X
+i=1
+
+si(X) −s(0)
+i (tj)
+2
+2σ2
+i
+
+,
+(2)
+where X ≡X(t) is the current configuration, s(0)
+i (tj) is the i-th CV component of the hill
+center deposited at time tj, W(tj) is the hill height, and σi is the width along the i-th CV
+component.
+A general-purpose metadynamics engine for arbitrary molecules should be (i) system-
+independent, so the CV transfers without molecule-specific tuning, and (ii) spatially tunable,
+so it can resolve reactive motions ranging from local bonding change to collective deformation.
+For efficient sampling, it should additionally be (iii) noise-suppressed, so the deposited bias
+acts on slow reactive modes rather than on high-frequency vibrations. In this work, we
+adopt a CV that achieves all three characteristics. Conceptually, it consists of a Cartesian
+10
+
+
+RMSD metric (system-independent), locally partitioned molecular domains at a controllable
+spatial scale (spatially tunable), and time-averaged bias references (noise-suppressed); the full
+definition is given in Sec. 2.4. This design further supports efficient sampling under moderate
+hill heights and temperatures, and parameters transferable to larger molecules with little
+adjustment that is well-suited for high-throughput exploration (Fig. 1a).
+The transition state is a first-order saddle point on the PES, traversed rapidly by reactive
+trajectories and narrow in the directions orthogonal to the reaction coordinate. Consequently,
+even enhanced-sampling dynamics rarely resolves it with precision. To concentrate sampling
+on configurations near the TS, we incorporate a geometry-refinement step. Valuable near-
+reactive configurations are identified from the metadynamics trajectory by two criteria applied
+jointly: (i) its bias or potential energy is within a steepest-descent window (reactive window),
+and (ii) bonding atom pairs differ from the initial reactant by pair changes not observed
+in preceding reactive windows. A dimer-method62 saddle-point optimization is launched
+from each identified configuration, with the initial dimer image generated by Gaussian
+perturbations of the detected bond-changing atoms. Finally, sparsified samples are obtained
+by equal arc-length intervals along the projected arc of each optimization trajectory onto the
+space spanned by bond-changing distances, containing both the first-frame metadynamics
+seed and the last-frame. These samples are passed to the concurrent-learning platform for
+further evaluation.
+2.2
+Concurrent learning
+Concurrent learning is an iterative scheme that adaptively constructs training data for MLIPs
+by focusing first-principles labeling on configurations where the current model has high
+uncertainty. This avoids spending expensive labels on configurations the model already
+handles and progressively expands the model’s coverage of the target PES. We use the
+DPGEN2 implementation59,60 of this scheme, in which each iteration cycles through three
+steps (model training, exploration, and first-principles labeling) described in turn below
+11
+
+
+(Fig. 1c).
+Training. In each iteration, an ensemble of MLIPs is trained on the same data with the
+same hyperparameters but different random seeds. In this work, the ensemble consists of
+four models; they are first pretrained on non-reactive data and then fine-tuned in subsequent
+iterations on a mixture of pretrain and newly collected reactive data, using DPA’s fine-tuning
+scheme.63
+The model ensemble uses the DPA-364 architecture with 6 layers, whose vertex, edge,
+and angle feature dimensions are set to 128, 64, and 32, respectively. The vertex-edge and
+edge-angle graph cutoffs are 6 and 4 ˚A, respectively, with the smaller edge-angle cutoff
+chosen for efficiency. Smooth switching of graph cutoffs are applied over 5–6 ˚A and 3.5–4 ˚A,
+respectively. The fitting network has three layers with 240 neurons each. The model ensemble
+is pretrained on the combination of two datasets: (1) the non-reactive druglike conformation
+dataset proposed by Yang et al.,61 denoted as Druglike2025, containing 1.4 M conformations
+of 0.1 M neutral closed-shell molecules, and labeled at a DFT level consistent with this work;
+(2) ∼1.2 K reactants from Transition1x,32,37 relabeled at the same DFT level as item (1).
+Before concurrent learning starts, the model ensemble is pretrained for 1 M steps, with the
+number of configurations per batch chosen so that the total atom count is ∼1024. The learning
+rate decays exponentially from 1 × 10−3 to 1 × 10−5, and the energy and force loss prefactors
+change linearly with the learning rate from 0.2 and 100 to 20 and 20, respectively. At each
+concurrent learning iteration, each ensemble member is fine-tuned from its corresponding
+model in the previous iteration (or from the pretrained model at iteration 1) for 400 K steps,
+with the number of configurations per batch chosen so that the total atom count is ∼256. The
+learning rate decays exponentially from 5 × 10−4 to 1 × 10−5, and the energy and force loss
+prefactors change linearly with the learning rate from 2 and 200 to 20 and 20, respectively.
+Exploration. In each iteration, the metadynamics-dimer sampling scheme of Sec. 2.1 is run
+on the PES of one trained model from the previous step, generating sampled configurations.
+The ensemble’s disagreement on each sample is quantified by the model deviation ϵ, defined
+12
+
+
+as the maximum, over all atoms, of the standard deviation of the predicted force across the
+ensemble. Since ensemble members agree on well-covered configurations and disagree on novel
+ones, ϵ is used as the metric to select candidates for first-principles labeling. Configurations
+are classified by two trust levels σlo and σhi: those with ϵ < σlo are skipped as already
+well covered, those with ϵ > σhi are discarded as failed (likely unphysical), and those with
+σlo ≤ϵ ≤σhi are retained as candidates for labeling. For data efficiency, the retained
+candidates are further down-sampled before labeling: each candidate is kept with probability
+inversely proportional to its bin population in the model-deviation histogram, biasing selection
+toward the high-uncertainty tail. The self-adaptive σlo scheme of DPGEN2 is adopted: in each
+iteration, σlo is set to the lower bound of the top P% of model deviations among non-failed
+samples. The exploration continues until σlo saturates, defined as the change in σlo between
+2 neighbor iterations remaining below threshold H for N consecutive iterations. In this work,
+P = 10, N = 3, and H = 0.01 eV/˚A. σhi is set to 0.5 eV/˚A in early iterations and gradually
+increased to 2.0 eV/˚A in later iterations.
+Metadynamics simulations are conducted in the NVT ensemble at 300 K with a 1 fs
+time step, using a Nos´e–Hoover thermostat with a 100 fs damping time. A static spherical
+nanoreactor confines the system to prevent dissociated fragments from escaping and to raise
+their collision probability, with the cavity centered at the reactant’s geometric center and
+radius equal to the distance from that center to its outermost atom. Confinement is imposed
+by an outer harmonic wall that is zero at the cavity boundary and grows outward, with wall
+coefficient 10 eV/˚A2 and thickness 6 ˚A. For each molecule, multiple metadynamics runs are
+conducted simultaneously across a matrix of sampling parameters to diversify the explored
+reaction pathways. All combinations (one value per parameter dimension) are evaluated
+for Stages 1–3 exploration stages on gradually enlarged reactant pools, defined in Sec. 2.3;
+for Stages 4–5, the number of combinations is equal to the number of rcut candidates (the
+local-domain partition radius, defined in Sec. 2.4): each rcut value is used once, and the
+other parameter dimensions are sampled randomly. Hill height W ∈{1, 2, 3, 4} eV for Stages
+13
+
+
+1–4 and {2, 4, 6} eV for Stage 5. Hill width σ ∈{0.2, 0.3, 0.35, 0.5} ˚A, with a 500 fs deposit
+interval. Metadynamics-run length is self adaptive between 3.0 and 11.5 ps, with longer
+runs for smaller W. Each run is preceded by a 0.5 ps unbiased MD relaxation under the
+same thermostat and confinement. The hydrogen mass is set to 8.0 u for numerical stability
+during long metadynamics runs, without altering the configurational Boltzmann distribution.
+Simulations are performed with custom-modified LAMMPS65 and PLUMED66 workflows.
+Labeling. Selected candidates are labeled by first-principles calculations and added to
+the training set for the next iteration. Energies and forces are labeled by density functional
+theory (DFT) using the range-separated hybrid generalized-gradient functional ωB97X-D67
+and the 6-31G(d,p) basis set in Gaussian 16 Revision C.01.68 Self-consistent field (SCF)
+convergence requires the root-mean-squared (RMS) change in the density matrix to be below
+1 × 10−8 and the maximum change to be below 1 × 10−6. Numerical integration uses a (99,
+590) grid: 99 radial shells per atom with 590 angular points each.
+Each calculation is first performed as a closed-shell singlet, followed by stability anal-
+ysis69,70 of the restricted Kohn-Sham wavefunction. If an external instability towards a
+broken-symmetry (BS) wavefunction is detected, an unrestricted Kohn-Sham optimization is
+performed to produce the lower-energy BS singlet state with spin-polarized diradical character.
+The BS state is essential for properly describing bond cleavage and formation in organic
+reactions.71–74
+2.3
+Staged reactant selection
+The concurrent-learning iterations are organized into five stages, each sampling reactions
+from molecules within a specific Nheavy range (Fig. 1b). Stage 1 uses 90% of the Transition1x
+reactants, about 1 K H/C/N/O molecules with Nheavy ≤7. The remaining 10% are held
+out as the OOD SMILES split of the Transition1x 1900 test set (Sec. 3.2). Stage 2 takes
+unimolecular SMILES from the PubChem database restricted to H/C/N/O Nheavy ≤7, and
+neutral singlet state. After de-duplication, 3D-geometry generation, and rough optimization
+14
+
+
+with RDKit, about 27 K reactants are obtained. Stage 3 takes PubChem SMILES under
+the same conditions as Stage 2 but with 8 ≤Nheavy ≤10, yielding about 366 K reactants
+after the same treatment. Stages 4 and 5 take PubChem SMILES with 11 ≤Nheavy ≤15
+and 16 ≤Nheavy ≤30, comprising 4.4 M and 28.4 M SMILES records, respectively.
+For Stages 1–3, the reactants are used directly as configuration pools, where starting points
+of exploration are randomly selected at each iteration. For Stages 4 and 5 (Nheavy > 10),
+however, direct exploration over all reactants is no longer efficient. As molecules grow
+larger, the density of novel local atomic environments decreases sharply, because most larger
+molecules can be viewed as assemblies of structural motifs already explored in smaller systems.
+The novelty of the explored reactive trajectories is similarly diluted, given the local nature of
+bonding changes in organic reactions.
+We therefore develop a chemically intuitive down-sampling strategy that maintains a
+reference library of motifs from earlier stages. For each SMILES in the new stage’s pool,
+motifs are extracted from both the original SMILES and the SMILES of inferred products
+obtained by matching 26 typical SMARTS reaction templates (manually-collected in this
+work, see Table S1). Each motif absent from the reference library defines a new-motif group
+consisting of the SMILES whose original or inferred-product motifs contain it. An equal
+quota of SMILES is sampled from each group, and their union forms the final down-sampled
+pool, maximizing the coverage of new motifs. For Stage 4, the reference library is built from
+the Stage 2 and Stage 3 pools, and the filter retains fewer than 20 K SMILES, reduced to
+about 13 K after holding out the OOD SMILES test split (Sec. 3.2). For Stage 5, motifs from
+the Stage 4 pool are added to the reference, and the filter retains about 180 K SMILES. The
+retention ratio is below 1% in both stages.
+The motifs themselves are extracted through a four-step pipeline. SMILES are first
+decomposed using the BRICS75 and RECAP76 retrosynthetic methods, which break molecules
+into chemically meaningful fragments. Each fragment is then reduced to its Murcko scaffold,77
+retaining ring systems and the linkers between them. Each scaffold is converted to a pure
+15
+
+
+topological motif by replacing all heavy atoms with carbon and setting all bond orders to
+single. Finally, the canonical SMILES of each topological motif is stored for comparison. This
+pipeline emphasizes cyclic topology, which captures the novel features that emerge at larger
+sizes; acyclic chains, by contrast, are typically trivial extensions of smaller-scale prototypes.
+2.4
+Collective variable formulation
+In its global form, the CV is a one-dimensional (dcv = 1 in Eq. (2)), system-independent
+RMSD metric in Cartesian coordinates, computed against a dynamically expanding library
+of reference structures collected from the trajectory:⃗
+s = sglobal(X, t) =
+
+
+Nref(t)
+X
+k=1
+d
+ X, Xref
+k
+2
+
+
+1/2
+,
+(3)
+where {Xref
+k }Nref(t)
+k=1
+is the reference library, Nref(t) is its current size, and d(X, Xref) is the
+pairwise distance between two structures, defined as
+d(X, Xref) =
+ 
+1
+N
+N
+X
+i=1
+˜ri −rref
+i
+2
+!1/2
+.
+(4)
+Here X = {ri}N
+i=1 is the current structure, Xref = {rref
+i }N
+i=1 is a reference structure (with
+consistent atom ordering), and ˜ri denotes the coordinate of atom i after optimal rigid-body
+alignment of X onto Xref.
+To make the CV adaptable to both localized and collective reactive events, we partition
+the structure into M(rcut) domains controlled by a cutoff radius rcut:
+X 7→{XDm}M(rcut)
+m=1
+,
+XDm = {ri}i∈Dm,
+M(rcut)
+[
+m=1
+Dm(rcut) = {1, . . . , N},
+(5)
+where each domain Dm is constructed iteratively: (i) the first seed is drawn at random
+from the unassigned atoms, and subsequent seeds are chosen as the atom farthest from
+16
+
+
+the geometric center of the unassigned set; (ii) Dm comprises the seed together with all
+unassigned atoms within rcut of it; (iii) the procedure repeats until every atom is assigned;
+(iv) any single-atom domain is merged into its nearest neighbor Dm. The domain-aggregated
+distance to a reference Xref
+k
+is then defined as
+˜s
+ X, Xref
+k ; rcut
+
+=
+
+
+M(rcut)
+X
+m=1
+d
+ XDm, Xref
+k,Dm
+2
+
+
+1/2
+.
+(6)
+Since reactive progress is usually slow compared to trivial thermal vibrations, each reference
+is constructed as a time-averaged structure over a window of nw MD frames, suppressing
+high-frequency vibrational noise in the bias centers:
+¯r(k)
+i
+= 1
+nw
+nw
+X
+n=1
+r(k,n)
+i
+,
+¯Xref
+k
+= {¯r(k)
+i }N
+i=1,
+(7)
+where r(k,n)
+i
+is the coordinate of atom i in the n-th frame contributing to reference k, and nw
+is the averaging window length.
+Combining Eqs. (5) and (7), the final CV is
+s(X, t) =
+
+
+Nref(t)
+X
+k=1
+˜s
+ X, ¯Xref
+k ; rcut
+2
+
+
+1/2
+=
+
+
+Nref(t)
+X
+k=1
+M(rcut)
+X
+m=1
+d
+ XDm, ¯Xref
+k,Dm
+2
+
+
+1/2
+.
+(8)
+Since the reference list grows during the simulation, s(X, t) depends explicitly on t through
+Nref(t). With dcv = 1 and time-averaged references ¯Xref
+j
+as hill centers, the metadynamics
+bias of Eqs. (1)–(2) becomes
+Vbias(X, t) =
+X
+tj<t
+W(tj) exp
+"
+−
+ s(X, t) −s( ¯Xref
+j , t)
+2
+2σ2
+#
+.
+(9)
+In this work, rcut candidates are {1.2, 1.5, 2.0, 2.4, 3.0, 4.0, 10.0} ˚A for Stage 1, {1.2, 2.0,
+3.0, 10.0} ˚A for Stages 2–3, and {2.1, 4.5, 10.0} ˚A for Stages 4–5. The time-averaging window
+17
+
+
+is 500 fs for Stages 1–3, and is drawn from {500, 300, 100} fs (50%/25%/25% probability) for
+Stages 4–5. Hydrogen atoms are excluded from the CV metric for domains with rcut > 2.0 ˚A
+in Stage 3, and for all domains in Stages 4–5.
+Taken together, the CV allows the bias energy to be relaxed across local domains (through
+the aggregated formalism), to be responsive to local modes within each domain (through
+the per-domain RMSD), and to couple selectively to slow modes (through the time-averaged
+reference). Ablation experiments on spatial and temporal resolution of the CV are shown in
+Sec. S1.1, Fig. S1 and Fig. S2. Compared with the bare CV that ablates both resolutions,
+adding spatial resolution remarkably improves the sampling efficiency and the abundance in
+spatial extent of sampled reactions, achieving performance robust to increasing the molecule
+size. The temporal resolution also brings slightly positive effect over the bare. The combined
+spatiotemporally resolved CV is more than twice the efficiency of the bare on exploring
+random reactants from 5 molecular-size stages in Sec. 2.3, and ∼10-fold the efficiency of the
+bare on large-size reactants from stage 5. Besides, Table S2 shows averaged temperatures
+below 400 K in metadynamics simulations under a 300 K NVT ensemble, conforming that
+all CV formalisms maintain relatively mild sampling conditions. In practice, random local-
+domain partitioning at multiple rcut scales, explored in parallel, enables high-throughput
+sampling of reactions across diverse mechanisms and spatial scales. Our design differs from
+Grimme’s earlier CV58 in three respects: it adopts an aggregated metric rather than separate
+RMSD for each reference, uses time-averaged rather than snapshot references, and randomized
+local-domain partitioning rather than whole-molecule or manually-assigned-subset RMSD.
+2.5
+Training the production model
+To assess whether OpenRxn26 enables reliable reactive MLIPs, we train a production-grade
+model (denoted DPA3 rxn) on the DPA-364 architecture; the resulting model provides the
+headline benchmarks of Sec. 3. The architecture uses 24 layers, whose vertex, edge, and angle
+feature dimensions are set to 128, 64, and 32, respectively. The vertex-edge and edge-angle
+18
+
+
+graph cutoffs are 6 and 4 ˚A, respectively, with smooth switching applied over 5–6 ˚A and
+3.5–4 ˚A. The fitting network has three layers with 240 neurons each.
+The production model is trained in two stages of 1.5 M steps each, with the number of
+configurations per batch chosen so that the total atom count is ∼1024 (distributed across
+4 GPU cards). Druglike2025 and the curated reactive dataset produced by the concurrent
+learning workflow of Sec. 2.2 are mixed with sampling probabilities 1:3. In the first stage, the
+learning rate decays exponentially from 1 × 10−3 to 1 × 10−5 under a mean-squared-error loss,
+and the energy and force loss prefactors change linearly with the learning rate from 0.2 and
+100 to 20 and 20, respectively. In the second stage, the learning rate decays exponentially
+from 5 × 10−4 to 1 × 10−5 under a Huber loss (δ = 0.01), and the energy and force loss
+prefactors are held constant at 30 and 1, respectively.
+For benchmarks in Sec. 3, we additionally train a reference model, DPA3 druglike, using
+the same architecture and training protocol as the production model but only on Druglike2025.
+3
+Results
+The concurrent learning workflow (Sec. 2.2) yields OpenRxn26, a dataset of 1.8 M configura-
+tions with DFT labels accumulated across its iterations. It covers gas-phase unimolecular
+reactions of ∼0.6 M organic reactants drawn from two sources: ∼1K from Transition1x, and
+the rest down-sampled from ∼30 M PubChem records. All reactants are neutral singlet
+organic molecules in the H/C/N/O chemical space with Nheavy ≤30. OpenRxn26 excludes
+configurations with any absolute force component exceeding 15 eV/˚A. We train a production
+model, DPA3 rxn, on OpenRxn26 combined with the non-reactive druglike dataset of Yang et
+al.61 (Druglike2025); training details are described in Sec. 2.5. We characterize the novelty and
+coverage of OpenRxn26’s atomic environments, assess the transferable accuracy of DPA3 rxn
+on reaction properties, and examine its reliability in navigating reactive dynamics trajectories.
+19
+
+
+3.1
+New atomic environments
+In an MLIP, energy is decomposed into per-atom contributions, each determined by the
+local atomic environment (the geometry of neighboring atoms within a cutoff radius). The
+diversity of atomic environments in a training set therefore determines the range of configu-
+rations a model can reliably predict. We find that OpenRxn26 contains atomic environments
+underrepresented in OMol25,42 currently the most comprehensive general-purpose molecule
+dataset. OMol25 spans the chemical and conformational space currently accessible through
+domain training sets, aggregating ANI-2x,78 SPICE2,79,80 GEOM,81 OrbNet Denali,82 Tran-
+sition1x,32,37 RGD1,38 ANI-1xBB,41 and MechDB curations,83,84 with additional coverage of
+biomolecules, electrolytes, and metal complexes. Its conformations include both non-reactive
+and reactive structures, making it a stringent reference for novelty. We first qualitatively
+illustrate the novelty by comparing distributions of atomic-environment features through
+t-distributed stochastic neighbor embeddings (t-SNE) between samples from OpenRxn26
+and an OMol25 subset. We then quantify the extrapolation gap on the t-SNE-identified
+out-of-distribution (OOD) samples using a model trained on the full OMol25 set, finding
+prediction errors more than an order of magnitude larger than in-distribution (ID) baselines.
+Fig. 2a and b plot the t-SNE of atomic environment representations from DPA3 rxn
+for heavy atoms sampled from OpenRxn26 and OMol25. In these two panels, the overlay
+order of data points from the two sets is swapped to highlight the relative coverage and
+dominance of each set, and the brightness of the points encodes the force magnitude on the
+target atom (the atom whose environment representation gives the data point). Example
+molecular structures carrying representative carbon atoms are connected to their t-SNE points
+by dashed lines. Fig. 2c plots the atomic force-magnitude distributions of sampled heavy
+atoms from OpenRxn26 and OMol25. To plot the figure, an OMol25 subset is constructed by
+matching the conditions of OpenRxn26 (neutral singlet molecules in the H/C/N/O chemical
+space, excluding aqueous systems with ≥3 water molecules). It comprises 34 M frames from
+100 M total. Recently, OMol25 is updated with extra 40 M frames beyond the scope of
+20
+
+
+gas-phase neutral-singlet unimolecular organic reactions (denoted by version OMol-1, while
+the original 100 M by version OMol-0): systems with charged or higher spin states, element
+substitutions beyond H/C/N/O, as well as clusters from condensed-phase molecular crystals
+and MD boxes. These samples would not align with the OpenRxn26 condition, and are not
+considered below. Then 300 K heavy-atom representations are randomly down-sampled from
+each set, after excluding those with force magnitudes ≥15 eV/˚A.
+In Fig. 2a, blue OMol25 points are overlaid on top of orange OpenRxn26 points. Regions
+where orange remains exposed reveal new atomic environments unique to OpenRxn26. These
+regions diffuse among the shattered OMol25 islands to form continuous continents in the
+t-SNE projection, especially for carbon atoms. The distribution morphology supports the
+interpretation that the new environments are reactive and dynamic, blending features from
+distinct stable environments to fill the interior gaps left by OMol25.
+For qualitatively perceiving the environment characteristics and locating representative
+samples for further quantitative test, we focus on the core regions of new C-atom environments,
+defined as smoothed t-SNE bins where the OpenRxn26 density is at least 20× the OMol25
+density. To ensure representativeness, bins where either the OpenRxn26 density or the
+total density falls below its 10th percentile are excluded. These regions host approximately
+22% of OpenRxn26 carbon atoms in the t-SNE plot. Force magnitudes on these C atoms
+have mean/std of 1.63/1.56 eV/˚A, consistent with the full-sample OpenRxn26 distribution
+(1.48/1.57 eV/˚A, Fig. 2c) and lower than the OMol25 distribution (1.91/2.27 eV/˚A). This
+suggests that the new environments arise from reasonable but unseen molecular configurations,
+not from unphysical high-force outliers.
+Geometric analysis of parent molecules shows that about 25% of these C atoms lie in
+fragments cleaved from the heavy-atom scaffold of unimolecular reactants, with an average
+of 2.65 bonding neighbors (lower than the 3.10 of other C atoms in the same fragments),
+suggesting that the target atoms are likely the unsaturated bond-cleavage sites. The parent
+molecules contain an average of 2.10 heavy-atom fragments. An example molecule carrying a
+21
+
+
+t-SNE 1
+t-SNE 2
+a
+OpenRxn26
+OMol25
+t-SNE 1
+t-SNE 2
+b
+OpenRxn26
+OMol25
+10
+4
+10
+3
+10
+2
+10
+1
+100
+Density
+OpenRxn26
+MEAN: 1.48
+STD: 1.57
+c
+0
+5
+10
+15
+Force Magnitude (eV/Å)
+10
+4
+10
+3
+10
+2
+10
+1
+100
+Density
+OMol25
+MEAN: 1.91
+STD: 2.27
+|F| = 4.74 eV/Å
+|F| = 0.71 eV/Å
+|F| = 2.35 eV/Å
+|F| = 0.04 eV/Å
+|F| = 0.02 eV/Å
+|F| = 0.75 eV/Å
+|F| = 0.70 eV/Å
+|F| = 1.32 eV/Å
+|F| = 10.77 eV/Å
+|F| = 6.88 eV/Å
+|F| = 7.60 eV/Å
+|F| = 14.75 eV/Å
+Figure 2: Atomic-environment coverage of OpenRxn26 compared with OMol25, visualized
+by t-SNE of DPA3 rxn representations on heavy atoms (300,000 sampled from each set,
+≥15 eV/˚A forces excluded; 600,000 atoms total). Orange points denote OpenRxn26 atomic
+environments and blue points OMol25; data-point brightness encodes the force magnitude on
+the target atom (mapping shown in c). a, t-SNE projection with OMol25 (blue) points overlaid
+on OpenRxn26 (orange) points, exposing OpenRxn26-dominated regions. Representative
+molecular structures carrying carbon atoms from these regions are shown next to the t-SNE;
+the target atom in each structure is marked by a halo matching the color and brightness of
+its scatter point, with the force magnitude labeled beneath. Fragments that do not contain
+the target atom are rendered transparently. Main elements of t-SNE clusters are labeled. b,
+As in a, but with OpenRxn26 points overlaid on OMol25 points, showing structures from
+OMol25-dominated regions. c, Density distributions of force magnitudes on the analyzed
+heavy atoms.
+22
+
+
+cleavage-site carbon is shown at the upper right of Fig. 2a. In addition, about 74% of these
+C atoms are in ring structures, with each ring-membered target atom participating in 1.40
+rings on average. About half of the rings are 3- to 4-membered, the other half mainly 5- to
+6-membered, and the largest reaches 20 members. Cage-like and polycyclic motifs strained
+by small rings, reactive toward strain relief, are exemplified by the upper-left molecule.
+Medium-sized rings with target atoms near cleavage sites are shown by the upper-middle
+and lower-right molecules. Stable environments with novel surroundings are also present,
+exemplified by the large cage-like molecule at the lower left; density profiles of the 20×
+OpenRxn26 regions in t-SNE are shown in Fig. S3.
+In Fig. 2b, the overlay is reversed: orange OpenRxn26 points are on top of blue OMol25
+points, and OpenRxn26 nonetheless covers most of OMol25’s distribution areas. Within
+OpenRxn26’s Nheavy ≤30 size range, the coverage is even more complete (Fig. S4). This may
+seem counterintuitive given that OMol25 includes many non-reactive environments in addition
+to reactive ones. However, it becomes reasonable from the local nature of bond-breaking
+and bond-forming events in organic reactions: atoms far from the reaction center contribute
+near-equilibrium local environments similar to those in non-reactive molecules. Such atoms
+appear as the darker, lower-force points in Fig. 2b.
+In Fig. 2b, several blue OMol25 clusters remain exposed at the exteriors of the continents.
+An analogous analysis of the OMol25 20× regions (OMol25 having ≥20-fold the point density
+of OpenRxn26) shows that these atoms tend toward less reactive, high-force environments with
+less diversity. These regions host about 38% of OMol25’s carbon atoms in the t-SNE plot, with
+83% of them from Nheavy > 30 systems (distribution profiles in Fig. S5). Force magnitudes
+show a pronounced Nheavy-dependent split: atoms from Nheavy ≤30 (within OpenRxn26’s
+size range) systems have mean/std of 4.13/4.01 eV/˚A, while those from Nheavy > 30 systems
+are 1.79/1.81 eV/˚A, suggesting distinct atomic environments across the two size regimes.
+Geometric analysis shows around 85% of these C atoms lie in multi-fragment systems, in
+nearly saturated states with an average of 3.75 bonded neighbors (close to the sp3 maximum
+23
+
+
+of 4.00). Other C atoms in the same fragment (3.76 neighbors) and the fragment average
+(3.73) are nearly equivalent, suggesting that the majority of target atoms are at random
+sites within intermolecular clusters of stable molecules, which are marginally relevant to
+elementary-step unimolecular reactions. Such stable sites dominate the Nheavy > 30 regime,
+accounting for 95% of its atoms, consistent with its low forces noted above. These clusters
+are large, giving condensed-phase-like environments with an average of 7.96 non-hydrogen
+fragments; three examples (upper left, upper middle, and upper right of Fig. 2b) show the
+terminal carbon, middle carbon, and amide carbonyl carbon in stable monomers.
+Focusing on the Nheavy ≤30 regime, ring structures are common in more regular scaffolds,
+hosting about 46% of the C atoms, with each ring-membered target atom participating
+in only 1.02 rings on average and over 90% of the rings being 6-membered. These in-ring
+atoms exert high force magnitudes (mean/std 5.59/4.24 eV/˚A), accounting for the distinctive
+forces of this regime. Among the top 50% highest-force environments, more than half come
+from C-H bond stretching at target atoms (lower-left two molecules of Fig. 2b), or ring
+distortions (lower-right two molecules of Fig. 2b) including angle deviations and heavy-atom
+bond contractions.
+Besides the qualitative distribution analysis, Table 1 quantifies the extrapolation gap from
+OMol25 to the t-SNE-identified OOD samples (OpenRxn26 20×) by the prediction errors of
+MACE OMol25,85 a MACE model trained on the full OMol25 set in OMol-0 version. For
+comparison, DPA3 rxn is evaluated on the inverse OOD samples (OMol25 20×, split by frame
+origin into Nheavy ≤30 and Nheavy > 30 regimes), and in contrast generalizes well to them.
+The OOD test samples 300 carbon atoms from the t-SNE- and Nheavy-identified regions, with
+DFT labels recomputed for each tested model using its training-data DFT method. The
+ID baseline samples 100K random carbon atoms from each model’s training distribution.
+Samples with any absolute force component in the parent frame exceeding 15 eV/˚A are
+filtered out. The OOD test further excludes compressed condensed-phase-like clusters from
+OMol25, which contain over-coordinated heavy atoms (C, N, O with more than 4, 4, and 2
+24
+
+
+Table 1: Atomic-environment coverage gap between OpenRxn26 and OMol25, quantified by
+prediction MAEs on each set’s ID samples and on cross-set t-SNE OOD samples (target-atom
+force; parent-frame force and energy).
+model
+evaluated atomic environments§
+target atom
+parent frame
+ID/OOD
+data source
+#samples
+force
+force
+energy
+name
+Nheavy (avg.)
+(kcal/mol/˚A) (kcal/mol/˚A) (kcal/mol/atom)
+MACE OMol25† ID
+OMol25
+2–224 (37.9)
+100,000
+0.2
+0.1
+0.020
+t-SNE OOD OpenRxn26 20x∥
+4– 30
+(8.2)
+300
+6.0
+3.2
+0.281
+DPA3 rxn
+ID
+OpenRxn26
+2– 30 (10.1)
+100,000
+2.0
+1.3
+0.040
+t-SNE OOD OMol25 20x¶
+2– 30 (20.5)
+300
+0.6
+0.4
+0.019
+t-SNE OOD OMol25 20x¶
+31–152 (65.3)
+300
+0.7
+0.5
+0.030
+§ Carbon atoms sampled from the t-SNE in Fig. 2, with all force components in the parent frame ≤15 eV/˚A
+(∼346 kcal/mol/˚A). OOD samples exclude compressed condensed-phase clusters from OMol25 with
+over-coordinated heavy atoms (C, N, O with more than 4, 4, and 2 covalent neighbors, respectively).
+† A MACE model trained on the full set of OMol25 (version OMol-0).85
+∥t-SNE clusters where OpenRxn26 point density is ≥20× that of OMol25; sampled atoms are relabeled with
+the OMol25 DFT method. See Fig. S3 for the highlighted carbon regions.
+¶ t-SNE clusters where OMol25 point density is ≥20× that of OpenRxn26; sampled atoms are relabeled with
+the OpenRxn26 DFT method. See Fig. S5 for the highlighted carbon regions.
+covalent neighbors, respectively) and fall outside the scope of this work’s gas-phase systems.
+For each target atom, we examine force-component errors, together with force-component
+errors on all H, C, N, and O atoms in the parent frame, as well as the per-atom energy of
+that frame.
+Remarkably, MACE OMol25’s force MAE on target carbon atoms inflates from an ID
+baseline of 0.2 kcal/mol/˚A to 6.0 kcal/mol/˚A on OpenRxn26 20× OOD samples, a 30-fold
+gap. The gap persists at the parent-frame level: force MAE rises from 0.1 to 3.2 kcal/mol/˚A,
+and per-atom energy MAE from 0.020 to 0.281 kcal/mol. These results imply that an OMol25-
+trained model suffers severe accuracy degradation on systems containing OpenRxn26’s new
+environments, supporting their distinguishability from OMol25’s environments. DPA3 rxn’s
+MAEs on OMol25 20× OOD samples match or undercut the ID baselines (0.4–0.7 kcal/mol/˚A
+for forces, 0.019–0.030 kcal/mol for per-atom energy). DPA3 rxn’s ability to handle OMol25’s
+OOD environments suggests that OpenRxn26 covers a broader, more challenging atomic-
+environment space than OMol25 under the same condition.
+25
+
+
+Furthermore, OpenRxn26 20× samples have milder force magnitudes than the Nheavy ≤30
+OMol25 20× samples in their DFT labels (Table S3). Despite the milder forces, they are
+more challenging to predict: DPA3 rxn shows larger MAEs on them than on full-OpenRxn26
+samples (Table S4), even though they are within its training distribution. This is consistent
+with the highly reactive and diverse nature of these environments established above.
+3.2
+Transferable accuracy in reaction properties
+The basic utility of a reactive MLIP is benchmarked by its accuracy and transferability in
+predicting barrier heights and reaction energies. We perform a two-phase examination of
+DPA3 rxn. Phase 1 is a data ablation testing the sampling strategy: we compare DPA3 rxn
+against the baseline DPA3 druglike, a DPA3 model trained only on Druglike2025, on broad
+reaction collections (Transition1x and RGD1), isolating the effect of adding OpenRxn26.
+Phase 2 benchmarks DPA3 rxn against other reactive MLIPs on mechanism-classified reaction
+benchmarks (BH9, Textbook181, cyclo[3+2]). Throughout, barrier heights and reaction
+energies are reported as potential-energy differences.
+In Phase 1, test sets are constructed from two reaction databases: Transition1x32,37 (∼10K
+reactions) and RGD138 (∼177K reactions). Respectively, around 1900 and 1800 reactions are
+sampled and their reactant, TS, and product geometries are relabeled at OpenRxn26’s DFT
+level (also used for Druglike2025), forming Transition1x 1900 and RGD1 1800. Each test set
+is partitioned into ID, OOD SMILES, and OOD composition subsets according to whether
+the reactant’s SMILES is in OpenRxn26’s reactant pool (ID), only its elemental composition
+matches (OOD SMILES), or neither (OOD composition).
+RGD1 1800 is further partitioned by molecule size into Nheavy 3–7 and Nheavy 8–10 groups.
+The 3–7 group, in the same size range as Transition1x 1900, tests sensitivity to chemical
+diversity at fixed system size: RGD1’s reactants are derived from PubChem with tailoring
+allowing multi-molecules while Transition1x’s reactants are unimolecules from GDB-7.1
+The 8–10 group, compared with the 3–7 group, tests scaling with system size.
+Subset
+26
+
+
+barrier height reaction energy
+barrier height reaction energy
+barrier height reaction energy
+0
+5
+10
+15
+20
+25
+MAE v.s. DFT (kcal/mol)
+19.2
+20.6
+1.1
+1.4
+8.5
+9.1
+0.4
+0.4
+18.1
+16.2
+17.0
+2.0
+1.8
+2.4
+1.4
+3.0
+0.7
+0.2
+0.3
+0.0
+20.3
+18.4
+25.4
+2.1
+2.6
+2.1
+0.8
+1.7
+0.6
+0.3
+0.4
+0.3
+Transition1x_1900
+Nheavy 3~7
+RGD1_1800
+Nheavy 3~7
+RGD1_1800
+Nheavy 8~10
+a
+b
+c
+barrier height
+reaction energy
+barrier height
+reaction energy
+barrier height
+reaction energy
+0
+3
+6
+9
+12
+15
+MAE v.s. DFT (kcal/mol)
+2.2
+3.4
+0.9
+2.9
+3.4
+6.7
+8.9
+0.5
+0.6
+0.2
+0.4
+1.2
+7.5
+4.0
+1.4
+1.7
+0.7
+1.9
+2.6
+7.8
+5.8
+0.5
+0.6
+0.2
+0.4
+0.9
+5.1
+4.0
+2.9
+1.5
+2.3
+4.0
+5.2
+8.0
+10.3
+1.1
+1.4
+0.9
+1.7
+2.6
+13.5
+18.1
+BH9_42
+Nheavy 6~21
+Textbook181_100
+Nheavy 6~29
+cyclo[3+2]_350
+Nheavy 6~39
+d
+e
+f
+DPA3_druglike
+ID
+OOD_SMILES
+OOD_composition
+DPA3_rxn
+ID
+OOD_SMILES
+OOD_composition
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MACE_OMol25-4M
+AIMNet2-rxn
+PaiNN_transition1x
+ANI-1xBB
+Figure 3: Benchmarks of model accuracy and generalization on barrier heights and reaction
+energies (reported as potential-energy differences). a–c, Effect of adding OpenRxn26 to DPA3
+training: DPA3 rxn (trained on Druglike2025 + OpenRxn26) vs the baseline DPA3 druglike
+(trained on Druglike2025 only), tested on subsets of Transition1x and RGD1. a, Transi-
+tion1x 1900 (∼1900 reactions sampled from Transition1x). b, c, RGD1 1800 partitioned by
+Nheavy 3–7 (b) and 8–10 (c), ∼900 reactions each. Reactions are categorized by whether the
+reactant’s SMILES is in OpenRxn26’s reactant pool (ID), only its elemental composition
+matches (OOD SMILES), or neither (OOD composition). d–f, Comparison of reactive MLIPs
+on three domain-specific reaction collections, filtered to H/C/N/O neutral-singlet reactions.
+d, BH9 42 (42 reactions from BH9). e, Textbook181 100 (100 reactions from Textbook181).
+f, cyclo[3+2] 350 (∼350 reactions sampled from cyclo[3+2]). DFT references are recalculated
+using each tested MLIP’s training-data DFT method.
+27
+
+
+sizes are: Transition1x 1900 ID/OOD SMILES (∼1000/900, Fig. 3a); RGD1 1800 Nheavy
+3–7 ID/OOD SMILES/OOD composition (∼400/400/80, Fig. 3b); RGD1 1800 Nheavy 8–10
+ID/OOD SMILES/OOD composition (∼300 in each, Fig. 3c).
+All Transition1x compositions are covered in OpenRxn26, so Transition1x 1900 has no
+OOD composition subset. RGD1’s reactants undergo tailoring and re-saturation around
+reaction centers, which can produce small systems without carbon atoms; these inorganic
+systems are excluded from RGD1 1800.
+As shown in Fig. 3a–c, training on OpenRxn26 substantially improves DPA3’s accuracy
+on reaction properties: across all subsets, barrier-height MAEs drop from ∼20 kcal/mol
+to ≤2.6 kcal/mol, and reaction-energy MAEs from up to 9.1 kcal/mol to ≤0.4 kcal/mol
+(within chemical accuracy with respect to the DFT reference). More importantly, DPA3 rxn
+shows a small ID/OOD generalization gap: the largest is ∼0.5 kcal/mol in barrier height
+(ID →OOD SMILES for RGD1 1800 Nheavy 8–10), and the reaction-energy gap is hardly
+observable (∼0.1 kcal/mol). Performance is also stable across both axes of variation: across
+chemical diversity, barrier-height MAE rises from 1.1–1.4 kcal/mol on Transition1x 1900 to
+1.8–2.4 kcal/mol on the more diverse RGD1 1800 (Fig. 3a vs. b, a fluctuation of ∼1 kcal/mol);
+across system size, MAE is 1.8–2.4 kcal/mol for Nheavy 3–7 and 2.1–2.6 kcal/mol for 8–10
+(Fig. 3b vs. c). Reaction-energy accuracy is stable across both axes.
+In Phase 2, we benchmark DPA3 rxn against several representative reactive MLIPs
+specialized for gas-phase organic reactions. MDCD-NN46 is a sister DPA3 model trained on
+the MDCD20 reactive dataset (1.08 M structures of H/C/N/O molecules with Nheavy ≤20).
+MACE OMol2585 and MACE OMol25-4M86 are MACE models trained on the full 100 M-
+frame OMol25 set (version OMol-0) and on a uniformly sampled 4 M subset,42 respectively.
+AIMNet2-rxn39 is an AIMNet2-family model specialized for organic reactions, trained on
+4.7 M H/C/N/O geometries around MEPs of RGD138 records and ∼400 K extra reactions
+via graph enumeration, as well as non-reactive conformations from AIMNet287 training sets.
+ANI-1xBB41 is an ANI-family model specialized for elementary-step organic reactions, trained
+28
+
+
+on 13.1 M bond-breaking structures from PubChem (Nheavy ≤7) plus 5.5 M non-reactive
+ANI-1x configurations. PaiNN transition1x88 is a PaiNN model trained on 9.6 M Transition1x
+configurations.
+Test sets are selected from three domain-specific reaction collections, BH9,89,90 Text-
+book181,46 and cyclo[3+2],91 filtered to H/C/N/O neutral-singlet reactions. BH9 42 contains
+42 reactions with Nheavy 6–21: 40 unimolecular pericyclic reactions and 2 proton-transfer
+reactions. Unimolecular pericyclic reactions demand concerted bonding of multiple sites and,
+in flexible molecules, large-amplitude motions to bring distant sites together, which makes
+training-set construction challenging. Textbook181 100 contains the singlet subset of 100
+classical organic-chemistry textbook reactions (collected by Li and co-workers46) with Nheavy
+6–29, spanning a broad range of mechanisms (cycloaddition, electrocyclization, sigmatropic
+rearrangement, aldol reaction, Baeyer–Villiger oxidation, Cope elimination, Eschweiler–Clarke,
+Kiliani–Fischer synthesis, Huang–Minlon modified Wolff–Kishner reduction, Michael addition,
+Prilezhaev epoxidation, Arndt–Eistert homologation, Alder–ene reaction, Hantzsch reaction,
+Hofmann elimination, and Leuckart–Wallach reaction). For cyclo[3+2], we randomly sample
+∼350 reactions to form cyclo[3+2] 350 (Nheavy 6–39); these are 3+2 cycloadditions, which
+require concerted bonding of two reactants and therefore lie outside OpenRxn26’s unimolecu-
+lar sampling scope, providing a strict generalization test. For a fair comparison, single-point
+energies on these geometries are relabeled at each benchmarked model’s training DFT level.
+Importantly, all reactions in the three test sets are OOD to DPA3 rxn. OpenRxn26 was
+constructed to exclude any configuration whose reactant, TS, or product SMILES appears
+in these test sets, making all of them at least OOD SMILES; reactions with Nheavy >
+30 in cyclo[3+2] 350 further fall outside OpenRxn26’s scope and are OOD composition.
+For MDCD-NN, Textbook181 100 and cyclo[3+2] 350 are partially ID, since about half of
+Textbook181 100’s reactants and ∼1/10 of cyclo[3+2]’s are used to initialize the MDCD20
+training set.46 MACE OMol25 is expected to deliver state-of-the-art performance given the
+scale of its training set, while MACE OMol25-4M serves as a matched-scale reference (4 M
+29
+
+
+frames, comparable to OpenRxn26 + Druglike2025 at ∼1.8 M + ∼1.4 M).
+On BH9 42 (Fig. 3d) and Textbook181 100 (Fig. 3e), DPA3 rxn ranks second in barrier-
+height accuracy, below MACE OMol25 but ahead of MACE OMol25-4M (the matched-data-
+scale reference), reflecting the data efficiency of the sampling strategy. On BH9 42, DPA3 rxn’s
+barrier MAE is 2.2 kcal/mol (1.3 above the best, 0.7 below the third-best MACE OMol25-
+4M); reaction-energy MAE remains low at 0.5 kcal/mol. On Textbook181 100, DPA3 rxn’s
+barrier MAE is 1.4 kcal/mol (0.7 above the best, 0.3 below the third-best MDCD-NN);
+reaction-energy MAE is 0.5 kcal/mol. The transferable accuracy and the representativeness
+of these OOD test sets (especially Textbook181 100) support DPA3 rxn’s applicability across
+diverse gas-phase organic reactions, verifying the effectiveness of the data-generation scheme.
+On cyclo[3+2] 350 (Fig. 3f), prediction becomes more challenging for most models. For
+barrier heights, the partially-ID MDCD-NN achieves the smallest MAE of 1.5 kcal/mol, while
+MAEs of other models generally increase relative to BH9 42 and Textbook181 100. DPA3 rxn
+ranks third with an MAE of 2.9 kcal/mol, behind MDCD-NN by 1.4 and MACE OMol25 by 0.6,
+but still outperforming MACE OMol25-4M by 1.1 kcal/mol. Reaction-energy MAEs increase
+by about 1 kcal/mol for the top four models. The general degradation on cyclo[3+2] 350
+(except for the partially-ID MDCD-NN) suggests the broader coverage by training data is
+needed; for OpenRxn26 this is expected, since its sampling targeted unimolecular reactants
+rather than the bimolecular cycloadditions tested here.
+PaiNN transition1x and ANI-1xBB struggle on all three test sets, while AIMNet2-rxn ranks
+outside the top-3. Despite their larger training sets (9.6 M frames for PaiNN transition1x,
+13.1 M for ANI-1xBB, 4.7 M for AIMNet2-rxn), they appear under-sampled in the regions
+tested, supporting the data efficiency of OpenRxn26’s (1.8 M frames) sampling strategy.
+3.3
+Reliability in reactive dynamic trajectories
+Finally, we probe whether reactive training datasets support reliable MLIP predictions on the
+dynamic process of reactions, which is the foundation for harnessing MLIPs towards in-situ
+30
+
+
+energy
+force
+0
+3
+6
+9
+12
+15
+18
+MAE v.s. DFT
+(kcal/mol or kcal/mol·Å)
+1.0
+1.4
+2.9
+6.3
+6.6
+10.8
+1.0
+1.1
+0.9
+1.4
+7.5
+5.1
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MACE_OMol25
+MACE_OMol25
+MACE_OMol25-4M
+ANI-1xBB
+PaiNN_transition1x
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+3
+6
+9
+12
+15
+18
+energy (kcal/mol)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+3
+6
+9
+12
+15
+18
+force (kcal/mol·Å)
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+0
+15
+30
+45
+60
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MAE
+0.8
+1.3
+5.3
+MAE
+1.0
+2.5
+21.6
+MAE
+0.6
+1.5
+15.8
+-12
+-6
+0
+6
+12
+MAE
+1.3
+2.0
+4.0
+MAE
+0.5
+1.2
+0.7
+MAE
+1.5
+1.8
+1.9
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj1
+-12
+-6
+0
+6
+12
+MAE
+1.5
+2.0
+1.5
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj2
+MAE
+1.3
+2.1
+1.1
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj3
+MAE
+1.2
+1.8
+1.2
+MAE
+std
+RXNPath_39
+Error statistics along pathways
+a
+b
+energy error
+(kcal/mol)
+c
+roaming-like (most difficult for models other than DPA3_rxn)
+epoxidation (largest DFT variance)
+dissociative Claisen (most difficult for DPA3_rxn)
+Figure 4: Benchmark of model accuracy on RXNPath 39 dynamic reactive configurations.
+a, Overall energy and force MAEs. b, Per-progress energy and force error statistics for the
+top-three models in a. Trajectories are projected onto the reaction space defined by distances
+of bond-changing atom pairs; pathway progress is the normalized cumulative arc length on
+this projection, and selected snapshots are rounded to nearest 0.1 intervals. c, Per-trajectory
+errors for the top-three models on three reactions, a N2 extrusion reaction with spurious
+roaming-like H atom (Case 1; largest error among non-DPA3 rxn models); an epoxidation
+reaction with loose conformations transferring an oxygen atom (Case 2; largest DFT-energy
+variance spread across its 3 trajectories, intrinsically difficult); a Claisen rearrangement (Case
+3; largest error for DPA3 rxn). Structures at progresses 0.0, 0.4/0.6, and 1.0 are shown
+with reaction-center, bond breaking (red)/forming (green) highlighted (details in Fig. S7–S9).
+DFT references are recalculated using each model’s training-data DFT method.
+31
+
+
+mechanism mining, rate and selectivity prediction, and process optimization. To support
+reliable MD propagation, the training data must cover broader off-MEP configurations
+encountered in diverse trajectories, including spurious high-energy pathways.47 This goes
+beyond the static accuracy tested in Sec. 3.2 (barrier heights and reaction energies on
+MEP-anchored geometries). Gaps in this coverage manifest as model errors that bias the
+relative population of reaction channels or, more severely, pull the trajectory into unphysical
+regions with cascading bond breaking and simulation collapse.47 Accurate prediction on
+dynamics-derived reactive configurations is therefore the necessary condition we use below to
+assess each reactive dataset’s MD-readiness, measured via the MLIP trained on it.
+Test conformations are sampled from a spatially continuous trajectory connecting reactant
+and product, constructed by a relay of biased shooting MD segments driven by DPA3 rxn
+and labeled at the DFT reference level. A reference path is defined by interpolated images
+along the documented reactant-TS-product triad. Each MD segment then starts from the
+farthest-progressed snapshot of the preceding segment, with initial velocities of reaction-center
+atoms modulated along the bond-changing direction. The bond-changing direction points
+toward the pair distances in the nearest next reference image if the current distance is
+within the interpolation range, or toward those in the final product otherwise. Consequently,
+trajectories between reactant and product do not necessarily traverse the documented TS,
+can vary substantially from one another, and may include spurious pathways with high-energy
+configurations. Finally, the trajectory is projected onto a low-dimensional reaction space
+defined by the distances of bond-changing atom pairs, and sparse configurations are selected as
+snapshots nearest to equal arc-length intervals along the projected arc; each selected snapshot
+retains its full atomic geometry. This sampling method is distinct from the metadynamics
+used to curate OpenRxn26, providing a complementary viewpoint on dataset coverage and
+an OOD-style test for DPA3 rxn.
+Specifically, we construct the RXNPath 39 test set from 39 dynamic reactive trajectories,
+sampled on 13 reactions randomly selected from Textbook181 100. For each reactant-product
+32
+
+
+pair, 3 trajectories are sampled, each contributing 11 sparse configurations at evenly spaced
+pathway progresses (from 0.0 to 1.0 with an interval of 0.1 after normalization), giving
+429 data points in total. Configurations from high-energy spurious pathways including
+roaming-like ones (see below) are collected as expected, providing all MLIPs strict tests for
+reliabilities on broad off-MEP configurational space. DFT labels of configurations are further
+recalculated for each model using its training-data DFT method to provide a fair test. We
+use Textbook181 100 as the reference to (1) leverage its broad coverage of organic reaction
+mechanisms and (2) enable direct comparison with Sec. 3.2 in assessing performance beyond
+MEPs.
+As shown in Fig. 4a, DPA3 rxn achieves the lowest energy MAE (1.0 kcal/mol), followed
+by MDCD-NN at 1.4 kcal/mol (0.4 kcal/mol higher), MACE OMol25 at 2.9 kcal/mol, and
+the remaining models at 6.3–10.8 kcal/mol. This ranking notably differs from the static-
+property test of Sec. 3.2, where MACE OMol25 was the top performer on barrier heights:
+MEP-anchored accuracy does not naturally imply accuracy on dynamically sampled off-
+MEP configurations. DPA3 rxn’s energy errors on RXNPath 39 are also comparable to its
+Textbook181 100 errors in Sec. 3.2, indicating uniform accuracy across the conformational
+space sampled by OpenRxn26; in contrast, MACE OMol25 degrades from Textbook181 100
+to RXNPath 39, indicating that OMol25’s coverage thins on off-MEP configurations. Recall
+that Textbook181 100 (and hence RXNPath 39) is OOD to DPA3 rxn; the best performance
+of DPA3 rxn restates the data efficiency of OpenRxn26’s sampling strategy. On forces, the
+top-three models are close (0.9–1.1 kcal/mol/˚A), with DPA3 rxn ranked second.
+Fig. 4b tracks the error distribution of all 39 trajectories with respect to normalized
+pathway progress, resolving the per-model performance along reaction propagation for the
+top-three models in Fig. 4a. Energy MAE of DPA3 rxn rises from 0.6–0.9 kcal/mol at the ends
+of the error curve to a maximum of 1.3 kcal/mol at progress 0.7 (std ∼1.7 kcal/mol), and its
+force MAE rises from 0.5–0.7 kcal/mol/˚A at the ends to 1.2 kcal/mol/˚A at the same progress
+(std ∼0.7 kcal/mol/˚A). MDCD-NN tracks DPA3 rxn closely overall, with slightly larger errors
+33
+
+
+at mid-progress: in the 0.4–0.6 interval, its energy MAE is 0.5–0.8 kcal/mol higher and its
+std is 0.2–0.8 kcal/mol higher; force errors are nearly indistinguishable (∼0.1 kcal/mol/˚A
+higher MAE at mid-phase). MACE OMol25 degrades severely at mid-progress: its energy
+MAE exceeds 5 kcal/mol at progress 0.4 with std over 10 kcal/mol, strongly suggesting that
+some tested pathways fall outside its training distribution. Its force errors are also worst
+among the top three, with MAE ∼1.5 kcal/mol/˚A and std ∼1.3 kcal/mol/˚A at progress 0.4.
+Plots for the remaining (lower-ranked) models are shown in Fig. S6.
+Fig. 4c illustrates the performance differences among the top-three models by typical
+reactions and specific pathways. Three reactions are selected to expose trajectories that are
+(1) hardest for all benchmarked models except DPA3 rxn, (2) most divergent in DFT energies
+across their three test trajectories (intrinsically difficult), and (3) hardest for DPA3 rxn.
+Case (1) is identified by the largest averaged prediction RMSE of snapshot energies across
+models excluding DPA3 rxn: a N2 extrusion reaction proceeding through high-energy spurious
+roaming-like pathways (top row), in which the H atom first dissociates from a N–H bond,
+drifts around, and recombines (detailed geometry evolution in Fig. S7). Case (2) is identified
+by the largest standard deviation of DFT energies across the three test trajectories at each
+progress: an epoxidation reaction with intermolecular oxygen atom transfer, where the loose
+transfer processes vary markedly among trajectories (Fig. S8). Case (3) is identified by the
+largest prediction RMSE of DPA3 rxn: a Claisen rearrangement in dissociative pathways
+(Fig. S9).
+Case (1) shows that roaming-like conformations from spurious pathways are difficult for
+MACE OMol25, with energy MAE on these trajectories ranging 5–22 kcal/mol and peaks up
+to ∼50 kcal/mol. Even more dangerously, some non-top-three models artificially lower the
+energy by 30 kcal/mol at the roaming stages (Fig. S10, S11), the failure mode that draws
+trajectories into unphysical regions. In contrast, DPA3 rxn handles these configurations
+best with MAEs of 0.6–1.0 kcal/mol and no observable fluctuation during roaming, while
+MDCD-NN falls in between (MAE 1.3–2.5 kcal/mol). DPA3 rxn’s superiority is notable
+34
+
+
+given that Textbook181 100 is partially ID for MDCD-NN and MDCD20 explicitly samples
+dynamic conformations via MD.
+Case (2) shows substantial trajectory-to-trajectory variation in MACE OMol25’s reliability
+on the epoxidation reaction. On trajectory 1, MACE OMol25 has the largest MAE among
+top-three models (4.0 kcal/mol, with a peak up to ∼12 kcal/mol), yet on trajectory 2, its
+MAEs drop below 1 kcal/mol. This is attributed to the delayed and straying transfer of the
+detached O atom in trajectory 1, occurring in the loose intermolecular process. In contrast,
+DPA3 rxn maintains the smallest MAEs of 0.5–1.5 kcal/mol across all three trajectories,
+being the best among top-3 models.
+Case (3) points to where OpenRxn26’s atomic-environment coverage could be further
+enriched: near-contact fragments with multiple reactive sites aligned, like in dissociative
+Claisen rearrangement. DPA3 rxn’s accuracy decreases when both rearranging bonds are
+outside the bonding range, as shown by mid-phase geometries in trajectory 2 and 3, but
+recovers as long as one site becomes bonded. Nevertheless, DPA3 rxn’s MAEs across the three
+Case (3) trajectories are 1.2–1.5 kcal/mol, on par with the first-rank MACE OMol25 (1.1–1.5),
+and close to the full-data MAE of 1.0 kcal/mol. DPA3 rxn is the most consistent across the
+nine trajectories of Fig. 4c: its per-trajectory MAE varies by 1.0 kcal/mol, compared with
+1.3 kcal/mol for MDCD-NN and 20.9 kcal/mol for MACE OMol25.
+Taken together, the RXNPath 39 benchmark shows that DPA3 rxn is the only model in this
+benchmark suite combining 1.0 kcal/mol overall accuracy on dynamics-derived configurations
+with consistency across diverse reactions. OpenRxn26 is thereby established as MD-ready
+reactive training data. Case 3 (dissociative Claisen rearrangement), the least-satisfactory
+scenario selected by Fig. 4c for DPA3 rxn, together with cyclo[3+2] by Fig. 3f, points to
+fragment pairs aligned by multiple reactive sites, like in dissociative rearrangements and
+intermolecular concerted-bonding reactions as frontiers for coverage extension.
+The superior reliability of DPA3 rxn above is robust to models sampling the test-set
+geometries. Verifying benchmarks on trajectories respectively sampled by MDCD-NN and
+35
+
+
+MACE OMol25 are shown in Fig. S12 and Fig. S13. They preserve the same accuracy
+ranking as that in Fig. 4, where the overall MAEs in energy and force for DPA3 rxn are
+still 1.0 kcal/mol and 1.0 kcal/mol/˚A. Energy MAEs of MDCD-NN are 1.5 kcal/mol in
+both verifying benchmarks, while those of MACE OMol25 are respectively 3.2 (MDCD-NN
+geometries) and 1.8 (MACE OMol25 geometries) kcal/mol. Benchmarks for AIMNet2-rxn
+are shown in Fig. S11, whose overall relative-energy (with respect to the first frame for each
+trajectory) MAE on RXNPath 39 is 5.4 kcal/mol and the force MAE is 3.9 kcal/mol/˚A.
+AIMNet2-rxn outputs energy shifts relative to the composition sum of unreported per-element
+references, thus can’t be directly compared with the total energies in Fig. 4.
+4
+Conclusion
+We developed a metadynamics-driven sampling methodology that produces reactive training
+data with sufficient off-MEP coverage to make general MLIPs MD-ready for gas-phase
+organic reactions. The core methodological contribution is a system-independent collective
+variable built from Cartesian RMSD against a dynamically expanding library of time-averaged
+references, with local-domain partitioning for tunable spatial resolution. Applied within
+a DPGEN2 concurrent-learning workflow, this produces OpenRxn26, a dataset of 1.8 M
+DFT-labeled configurations covering reactions from ∼0.6 M unimolecular reactant molecules
+in the H/C/N/O chemical space (Nheavy ≤30). A DPA3 model trained on OpenRxn26
+(denoted DPA3 rxn) serves as the production-grade demonstration to evaluate the data-model
+pipeline.
+Benchmark results establish three points. First, OpenRxn26 covers atomic environments
+that general-purpose datasets such as OMol25 do not, with a model trained on OMol25 showing
+more than an order of magnitude force-MAE inflation on the OpenRxn26-distinguished regions.
+Second, OpenRxn26-trained DPA3 (DPA3 rxn) delivers transferable accuracy on barrier
+heights and reaction energies. Third, DPA3 rxn is the only model in the benchmark suite
+36
+
+
+to deliver 1.0 kcal/mol overall MAE on dynamics-derived configurations and the smallest
+trajectory-to-trajectory variation across diverse reactions, with respect to labeling methods
+of training data; OpenRxn26 thereby constitutes MD-ready training data for dynamics
+simulation on gas-phase neutral singlet unimolecular organic reactions.
+High accuracy on static properties along MEP does not naturally imply reliability on
+off-MEP configurations from dynamics trajectories, as exemplified by MACE OMol25 ranking
+first on barrier heights but third on reactive MD snapshots. Evaluating reactive MLIPs at the
+trajectory level is therefore necessary to assess their readiness for direct or enhanced-sampling
+MD. The current OpenRxn26 sampling targets unimolecular gas-phase reactants in the
+H/C/N/O chemical space with Nheavy ≤30; natural extensions include broader chemical space
+(additional elements, larger molecules, transition-metal catalysis), intermolecular reactions
+(e.g., bimolecular cycloadditions), charged and higher-spin species, and condensed-phase
+environments.
+Supporting Information
+Supporting Information is available online and includes details of ablation experiments on
+spatiotemporal resolution of CV for sampling performance; SMARTS templates for down-
+sampling reactants; t-SNE analysis for OpenRxn26 and OMol25; label statistics and test on
+t-SNE ID/OOD samples; benchmarks on RXNPath 39 for lower-ranked models; verifying
+RXNPath 39 benchmarks on trajectories sampled by MDCD-NN and MACE OMol25; reac-
+tion center evolutions in exemplified trajectories of RXNPath 39; Tables S1–S4 and Figures
+S1–S13.
+Data Availability
+The training dataset OpenRxn26, the production model DPA3 rxn and corresponding training
+scripts are available online from AIS Square repository at https://www.aissquare.com/
+37
+
+
+datasets/detail?pageType=datasets&name=OpenRxn26&id=425 and https://www.aissquare.
+com/models/detail?pageType=models&name=DPA3_rxn&id=441. The benchmark reference
+data and scripts of the sampling strategy are available from https://github.com/Vibsteamer/
+OpenRxn26_benchmark-ref_sampling-script.
+Acknowledgements
+The authors thank Mr. Duo Zhang for support with DPA3 model. The authors thank
+Mr. Bowen Li for discussions on model training. The authors thank Mr. Zhaojia Dong for
+discussions on domain test set. The authors thank Mr. Guoao Li for discussions on domain
+test set. The authors thank Dr. Xinzijian Liu for support with DPGEN2. Computational
+resources are supported by the Bohrium Platform of DP Technology. The work of Han Wang is
+supported by the National Key R&D Program of China (Grant No. 2022YFA1004300), and the
+National Natural Science Foundation of China (Grants No. 12525113 and No. 12561160120).
+The work of Tong Zhu is supported by the National Natural Science Foundation of China
+(Grant Nos. 92570205, 92461313, and 22361132538), and the AI for Science Program of the
+Shanghai Municipal Commission of Economy and Informatization (Grant No. 2025-GZL-
+RGZN-BTBX-01004). Tong Zhu also acknowledges the support from the Open Research
+Fund of Suzhou Laboratory (No. SZLAB-1508-2024-TS017).
+Declarations
+The authors declare no conflict of interest.
+References
+(1) Ruddigkeit, L.; van Deursen, R.; Blum, L. C.; Reymond, J.-L. Enumeration of 166
+Billion Organic Small Molecules in the Chemical Universe Database GDB-17. Journal
+38
+
+
+of Chemical Information and Modeling 2012, 52, 2864–2875.
+(2) Marcelin, R. Contribution `a l’´etude de la cin´etique physico-chimique. Annales de Physique
+1915, 9, 120–231.
+(3) Eyring, H. The Activated Complex in Chemical Reactions. The Journal of Chemical
+Physics 1935, 3, 107–115.
+(4) Fukui, K. Formulation of the reaction coordinate. The Journal of Physical Chemistry
+1970, 74, 4161–4163.
+(5) Wigner, E. The Transition State Method. Transactions of the Faraday Society 1938,
+34, 29–41.
+(6) Keck, J. C. Variational Theory of Reaction Rates. In Advances in Chemical Physics;
+John Wiley & Sons, Ltd, 1967; pp 85–121.
+(7) Truhlar, D. G.; Garrett, B. C. Variational Transition-State Theory. Accounts of Chemical
+Research 1980, 13, 440–448.
+(8) Rice, O. K.; Ramsperger, H. C. Theories of Unimolecular Gas Reactions at Low Pressures.
+Journal of the American Chemical Society 1927, 49, 1617–1629.
+(9) Kassel, L. S. Studies in Homogeneous Gas Reactions. I. The Journal of Physical Chem-
+istry 1928, 32, 225–242.
+(10) Marcus, R. A. Unimolecular Dissociations and Free Radical Recombination Reactions.
+The Journal of Chemical Physics 1952, 20, 359–364.
+(11) Tantillo, D. J. Chapter One - Beyond transition state theory—Non-statistical dynamic
+effects for organic reactions. In Advances in Physical Organic Chemistry; Williams, I. H.,
+Williams, N. H., Eds.; Academic Press, 2021; Vol. 55; pp 1–16.
+39
+
+
+(12) Perrin, C. L.; Agranat, I.; Bagno, A.; Braslavsky, S. E.; Fernandes, P. A.; Gal, J.-F.;
+Lloyd-Jones, G. C.; Mayr, H.; Murdoch, J. R.; Nudelman, N. S.; Radom, L.; Rap-
+poport, Z.; Ruasse, M.-F.; Siehl, H.-U.; Takeuchi, Y.; Tidwell, T. T.; Uggerud, E.;
+Williams, I. H. Glossary of terms used in physical organic chemistry (IUPAC Recom-
+mendations 2021). Pure and Applied Chemistry 2022, 94, 353–534.
+(13) Carpenter, B. K. Intramolecular Dynamics for the Organic Chemist. Accounts of
+Chemical Research 1992, 25, 520–528.
+(14) Carpenter, B. K. Nonstatistical Dynamics in Thermal Reactions of Polyatomic Molecules.
+Annual Review of Physical Chemistry 2005, 56, 57–89.
+(15) Ess, D. H.; Wheeler, S. E.; Iafe, R. G.; Xu, L.; C¸elebi-¨Ol¸c¨um, N.; Houk, K. N. Bifurcations
+on Potential Energy Surfaces of Organic Reactions. Angewandte Chemie International
+Edition 2008, 47, 7592–7601.
+(16) Suits, A. G. Roaming Reactions and Dynamics in the van der Waals Region. Annual
+Review of Physical Chemistry 2020, 71, 77–100.
+(17) Gonzalez-James, O. M.; Kwan, E. E.; Singleton, D. A. Entropic Intermediates and Hidden
+Rate-Limiting Steps in Seemingly Concerted Cycloadditions. Observation, Prediction,
+and Origin of an Isotope Effect on Recrossing. Journal of the American Chemical Society
+2012, 134, 1914–1917.
+(18) Carpenter, B. K. Dynamic Matching: The Cause of Inversion of Configuration in the
+[1,3] Sigmatropic Migration? Journal of the American Chemical Society 1995, 117,
+6336–6344.
+(19) Berson, J. A. The Stereochemistry of Sigmatropic Rearrangements. Tests of the Pre-
+dictive Power of Orbital Symmetry Rules. Accounts of Chemical Research 1968, 1,
+152–160.
+40
+
+
+(20) Baldwin, J. E.; Leber, P. A. Molecular Rearrangements through Thermal [1,3] Carbon
+Shifts. Organic & Biomolecular Chemistry 2008, 6, 36–47.
+(21) Townsend, D.; Lahankar, S. A.; Lee, S. K.; Chambreau, S. D.; Suits, A. G.; Zhang, X.;
+Rheinecker, J.; Harding, L. B.; Bowman, J. M. The Roaming Atom: Straying from the
+Reaction Path in Formaldehyde Decomposition. Science 2004, 306, 1158–1161.
+(22) Lahankar, S.; Goncharov, V.; Suits, F.; Farnum, J.; Bowman, J.; Suits, A. G. Further
+aspects of the roaming mechanism in formaldehyde dissociation. Chemical Physics 2008,
+347, 288–299, Ultrafast Photoinduced Processes in Polyatomic Molecules.
+(23) Caramella, P.; Quadrelli, P.; Toma, L. An Unexpected Bispericyclic Transition Structure
+Leading to 4+2 and 2+4 Cycloadducts in the Endo Dimerization of Cyclopentadiene.
+Journal of the American Chemical Society 2002, 124, 1130–1131.
+(24) Wang, Z.; Hirschi, J. S.; Singleton, D. A. Recrossing and Dynamic Matching Effects on
+Selectivity in a Diels-Alder Reaction. Angewandte Chemie International Edition 2009,
+48, 9156–9159.
+(25) Hou, Y.-F.; Zhang, Q.; Dral, P. O. Surprising Dynamics Phenomena in the Diels-Alder
+Reaction of C60 Uncovered with AI. The Journal of Organic Chemistry 2024, 89,
+15041–15047.
+(26) Mardirossian, N.; Head-Gordon, M. Thirty years of density functional theory in compu-
+tational chemistry: an overview and extensive assessment of 200 density functionals.
+Molecular Physics 2017, 115, 2315–2372.
+(27) Truhlar, D. G.; Garrett, B. C.; Klippenstein, S. J. Current Status of Transition-State
+Theory. The Journal of Physical Chemistry 1996, 100, 12771–12800.
+(28) Stuart, S. J.; Tutein, A. B.; Harrison, J. A. A reactive potential for hydrocarbons with
+intermolecular interactions. The Journal of Chemical Physics 2000, 112, 6472–6486.
+41
+
+
+(29) van Duin, A. C. T.; Dasgupta, S.; Lorant, F.; Goddard, W. A. ReaxFF: A Reactive Force
+Field for Hydrocarbons. The Journal of Physical Chemistry A 2001, 105, 9396–9409.
+(30) Behler, J.;
+Parrinello, M. Generalized Neural-Network Representation of High-
+Dimensional Potential-Energy Surfaces. Physical Review Letters 2007, 98, 146401.
+(31) Xia, J.; Zhang, Y.; Jiang, B. The Evolution of Machine Learning Potentials for Molecules,
+Reactions and Materials. Chemical Society Reviews 2025, 54, 4790–4821.
+(32) Grambow, C. A.; Pattanaik, L.; Green, W. H. Reactants, products, and transition states
+of elementary chemical reactions based on quantum chemistry. Scientific Data 2020, 7,
+137.
+(33) Zhao, Q.; Savoie, B. M. Simultaneously improving reaction coverage and computational
+cost in automated reaction prediction tasks. Nature Computational Science 2021, 1,
+479–490.
+(34) J´onsson, H.; Mills, G.; Jacobsen, K. W. Nudged Elastic Band Method for Finding Mini-
+mum Energy Paths of Transitions. In Classical and Quantum Dynamics in Condensed
+Phase Simulations; Berne, B. J., Ciccotti, G., Coker, D. F., Eds.; World Scientific:
+Singapore, 1998; pp 385–404.
+(35) Zimmerman, P. M. Reliable transition state searches integrated with the growing string
+method. Journal of Chemical Theory and Computation 2013, 9, 3043–3050.
+(36) Gonzalez, C.; Schlegel, H. B. An improved algorithm for reaction path following. The
+Journal of Chemical Physics 1989, 90, 2154–2161.
+(37) Schreiner, M.; Bhowmik, A.; Vegge, T.; Busk, J.; Winther, O. Transition1x - a Dataset
+for Building Generalizable Reactive Machine Learning Potentials. Scientific Data 2022,
+9, 779.
+42
+
+
+(38) Zhao, Q.; Vaddadi, S. M.; Woulfe, M.; Ogunfowora, L. A.; Garimella, S. S.; Isayev, O.;
+Savoie, B. M. Comprehensive Exploration of Graphically Defined Reaction Spaces.
+Scientific Data 2023, 10, 145.
+(39) Anstine, D. M.; Zhao, Q.; Zubatiuk, R.; Zhang, S.; Singla, V.; Nikitin, F.; Savoie, B. M.;
+Isayev, O. AIMNet2-rxn: A Machine Learned Potential for Generalized Reaction
+Modeling on a Millions-of-Pathways Scale. ChemRxiv, 2025; DOI: 10.26434/chemrxiv-
+2025-hpdmg.
+(40) Li, B.; Mi, S.; Xiao, J.; Zhang, D.; Zhang, S.; Zhang, J.; Wang, H.; Zhu, T. Gen-
+eral reactive machine learning potentials for CHON elements. ChemRxiv, 2025; DOI:
+10.26434/chemrxiv-2025-1d293-v2.
+(41) Zhang, S.; Zubatyuk, R. I.; Yang, Y.; Roitberg, A.; Isayev, O. ANI-1xBB: An ANI-
+Based Reactive Potential for Small Organic Molecules. Journal of Chemical Theory and
+Computation 2025, 21, 4365–4374.
+(42) Levine, D. S.; Shuaibi, M.; Spotte-Smith, E. W. C.; Taylor, M. G.; Hasyim, M. R.;
+Michel, K.; Batatia, I.; Cs´anyi, G.; Dzamba, M.; Eastman, P.; Frey, N. C.; Fu, X.;
+Gharakhanyan, V.; Krishnapriyan, A. S.; Rackers, J. A.; Raja, S.; Rizvi, A.;
+Rosen, A. S.; Ulissi, Z.; Vargas, S.; Zitnick, C. L.; Blau, S. M.; Wood, B. M. The
+Open Molecules 2025 (OMol25) Dataset, Evaluations, and Models. arXiv, 2025; DOI:
+10.48550/arXiv.2505.08762.
+(43) Sameera, W. M. C.; Kumar Sharma, A.; Maeda, S.; Morokuma, K. Artificial Force In-
+duced Reaction Method for Systematic Determination of Complex Reaction Mechanisms.
+The Chemical Record 2016, 16, 2349–2363.
+(44) Shang, C.; Liu, Z.-P. Stochastic Surface Walking Method for Structure Prediction and
+Pathway Searching. Journal of Chemical Theory and Computation 2013, 9, 1838–1845.
+43
+
+
+(45) Yang, M.; Yang, L.; Wang, G.; Zhou, Y.; Xie, D.; Li, S. Combined Molecular Dynamics
+and Coordinate Driving Method for Automatic Reaction Pathway Search of Reactions
+in Solution. Journal of Chemical Theory and Computation 2018, 14, 5787–5796, PMID:
+30351922.
+(46) Li, G.; Ling, H.; Su, C.; Liu, Z.; Wang, G.; Yang, M.; Li, S. A Data-Efficient Reactive
+Machine Learning Potential to Accelerate Automated Exploration of Complex Reaction
+Networks. CCS Chemistry 2026, https://doi.org/10.31635/ccschem.026.202607339.
+(47) Guan, X.; Heindel, J. P.; Ko, T.; Yang, C.; Head-Gordon, T. Using Machine Learning
+to Go Beyond Potential Energy Surface Benchmarking for Chemical Reactivity. Nature
+Computational Science 2023, 3, 965–974.
+(48) Yang, Y. I.; Shao, Q.; Zhang, J.; Yang, L.; Gao, Y. Q. Enhanced sampling in molecular
+dynamics. The Journal of Chemical Physics 2019, 151, 070902.
+(49) Huber, T.; Torda, A. E.; van Gunsteren, W. F. Local elevation: a method for improving
+the searching properties of molecular dynamics simulation. Journal of Computer-Aided
+Molecular Design 1994, 8, 695–708.
+(50) Laio, A.; Parrinello, M. Escaping Free-Energy Minima. Proceedings of the National
+Academy of Sciences of the United States of America 2002, 99, 12562–12566.
+(51) Bussi, G.; Laio, A. Using metadynamics to explore complex free-energy landscapes.
+Nature Reviews Physics 2020, 2, 200–212.
+(52) Yang, M.; Bonati, L.; Polino, D.; Parrinello, M. Using Metadynamics to Build Neural
+Network Potentials for Reactive Events: The Case of Urea Decomposition in Water.
+Catalysis Today 2022, 387, 143–149.
+(53) Vitartas, V.; Zhang, H.; Juraskova, V.; Johnston-Wood, T.; Duarte, F. Active learning
+44
+
+
+meets metadynamics: automated workflow for reactive machine learning interatomic
+potentials. Digital Discovery 2026, 5, 108–122.
+(54) Piccini, G.; Mendels, D.; Parrinello, M. Metadynamics with Discriminants: A Tool for
+Understanding Chemistry. Journal of Chemical Theory and Computation 2018, 14,
+5040–5044.
+(55) Rizzi, V.; Mendels, D.; Sicilia, E.; Parrinello, M. Blind Search for Complex Chemical
+Pathways Using Harmonic Linear Discriminant Analysis. Journal of Chemical Theory
+and Computation 2019, 15, 4507–4515.
+(56) Zhang, J.; Bonati, L.; Trizio, E.; Zhang, O.; Kang, Y.; Hou, T.; Parrinello, M. Descriptor-
+Free Collective Variables from Geometric Graph Neural Networks. Journal of Chemical
+Theory and Computation 2024, 20, 10787–10797.
+(57) Unsleber, J. P.; Reiher, M. The Exploration of Chemical Reaction Networks. Annual
+Review of Physical Chemistry 2020, 71, 121–142.
+(58) Grimme, S. Exploration of Chemical Compound, Conformer, and Reaction Space with
+Meta-Dynamics Simulations Based on Tight-Binding Quantum Chemical Calculations.
+Journal of Chemical Theory and Computation 2019, 15, 2847–2862.
+(59) Zhang, Y.; Wang, H.; Chen, W.; Zeng, J.; Zhang, L.; Wang, H.; E, W. DP-GEN: A
+concurrent learning platform for the generation of reliable deep learning based potential
+energy models. Computer Physics Communications 2020, 253, 107206.
+(60) deepmodeling DPGEN2: 2nd generation of the Deep Potential GENerator. GitHub
+repository, 2024; https://github.com/deepmodeling/dpgen2.
+(61) Yang, M.; Zhang, D.; Wang, X.; Li, B.; Zhang, L.; E, W.; Zhu, T.; Wang, H. Ab Initio
+Accuracy Neural Network Potential for Drug-Like Molecules. Research 2025, 8, 0837.
+45
+
+
+(62) Henkelman, G.; J´onsson, H. A dimer method for finding saddle points on high dimensional
+potential surfaces using only first derivatives. The Journal of Chemical Physics 1999,
+111, 7010–7022.
+(63) Zhang, D.; Liu, X.; Zhang, X.; Zhang, C.; Cai, C.; Bi, H.; Du, Y.; Qin, X.; Peng, A.;
+Huang, J.; Li, B.; Shan, Y.; Zeng, J.; Zhang, Y.; Liu, S.; Li, Y.; Chang, J.; Wang, X.;
+Zhou, S.; Liu, J.; Luo, X.; Wang, Z.; Jiang, W.; Wu, J.; Yang, Y.; Yang, J.; Yang, M.;
+Gong, F.-Q.; Zhang, L.; Shi, M.; Dai, F.-Z.; York, D. M.; Liu, S.; Zhu, T.; Zhong, Z.;
+Lv, J.; Cheng, J.; Jia, W.; Chen, M.; Ke, G.; E, W.; Zhang, L.; Wang, H. DPA-2: a
+large atomic model as a multi-task learner. npj Computational Materials 2024, 10, 293.
+(64) Zhang, D.; Peng, A.; Cai, C.; Li, W.; Zhou, Y.; Zeng, J.; Guo, M.; Zhang, C.; Li, B.;
+Jiang, H.; Zhu, T.; Jia, W.; Zhang, L.; Wang, H. A graph neural network for the era of
+large atomistic models. npj Computational Materials 2026, 12, 276.
+(65) Thompson, A. P.; Aktulga, H. M.; Berger, R.; Bolintineanu, D. S.; Brown, W. M.;
+Crozier, P. S.; in ’t Veld, P. J.; Kohlmeyer, A.; Moore, S. G.; Nguyen, T. D.; Shan, R.;
+Stevens, M. J.; Tranchida, J.; Trott, C.; Plimpton, S. J. LAMMPS – a flexible simulation
+tool for particle-based materials modeling at the atomic, meso, and continuum scales.
+Computer Physics Communications 2022, 271, 108171.
+(66) Tribello, G. A.; Bonomi, M.; Branduardi, D.; Camilloni, C.; Bussi, G. PLUMED 2: New
+feathers for an old bird. Computer Physics Communications 2014, 185, 604–613.
+(67) Chai, J.-D.; Head-Gordon, M. Long-range corrected hybrid density functionals with
+damped atom-atom dispersion corrections. Physical Chemistry Chemical Physics 2008,
+10, 6615–6620.
+(68) Frisch, M. J.; Trucks, G. W.; Schlegel, H. B.; Scuseria, G. E.; Robb, M. A.; Cheese-
+man, J. R.; Scalmani, G.; Barone, V.; Petersson, G. A.; Nakatsuji, H.; Li, X.; Cari-
+cato, M.; Marenich, A. V.; Bloino, J.; Janesko, B. G.; Gomperts, R.; Mennucci, B.;
+46
+
+
+Hratchian, H. P.; Ortiz, J. V.; Izmaylov, A. F.; Sonnenberg, J. L.; Williams-Young, D.;
+Ding, F.; Lipparini, F.; Egidi, F.; Goings, J.; Peng, B.; Petrone, A.; Henderson, T.;
+Ranasinghe, D.; Zakrzewski, V. G.; Gao, J.; Rega, N.; Zheng, G.; Liang, W.; Hada, M.;
+Ehara, M.; Toyota, K.; Fukuda, R.; Hasegawa, J.; Ishida, M.; Nakajima, T.; Honda, Y.;
+Kitao, O.; Nakai, H.; Vreven, T.; Throssell, K.; Montgomery, J. A., Jr.; Peralta, J. E.;
+Ogliaro, F.; Bearpark, M. J.; Heyd, J. J.; Brothers, E. N.; Kudin, K. N.; Staroverov, V. N.;
+Keith, T. A.; Kobayashi, R.; Normand, J.; Raghavachari, K.; Rendell, A. P.; Burant, J. C.;
+Iyengar, S. S.; Tomasi, J.; Cossi, M.; Millam, J. M.; Klene, M.; Adamo, C.; Cammi, R.;
+Ochterski, J. W.; Martin, R. L.; Morokuma, K.; Farkas, O.; Foresman, J. B.; Fox, D. J.
+Gaussian 16 Revision C.01. 2016; Gaussian Inc. Wallingford CT.
+(69) Seeger, R.; Pople, J. A. Self-consistent molecular orbital methods. XVIII. Constraints and
+stability in Hartree–Fock theory. The Journal of Chemical Physics 1977, 66, 3045–3050.
+(70) Bauernschmitt, R.; Ahlrichs, R. Stability analysis for solutions of the closed shell
+Kohn–Sham equation. The Journal of Chemical Physics 1996, 104, 9047–9052.
+(71) Isobe, H.; Takano, Y.; Kitagawa, Y.; Kawakami, T.; Yamanaka, S.; Yamaguchi, K.;
+Houk, K. N. Systematic Comparisons between Broken Symmetry and Symmetry-Adapted
+Approaches to Transition States by Chemical Indices: A Case Study of the Diels–Alder
+Reactions. The Journal of Physical Chemistry A 2003, 107, 682–694.
+(72) Kedziora, G. S.; Barr, S. A.; Berry, R.; Moller, J. C.; Breitzman, T. D. Bond break-
+ing in stretched molecules: multi-reference methods versus density functional theory.
+Theoretical Chemistry Accounts 2016, 135, 79.
+(73) Skraba-Joiner, S. L.; Johnson, R. P.; Agarwal, J. Dehydropericyclic Reactions:
+Symmetry-Controlled Routes to Strained Reactive Intermediates. The Journal of Organic
+Chemistry 2015, 80, 11779–11787.
+(74) Hamaguchi, M.; Nakaishi, M.; Nagai, T.; Nakamura, T.; Abe, M. Notable Effect of an
+47
+
+
+Electron-Withdrawing Group at C3 on the Selective Formation of Alkylidenecyclobutanes
+in the Thermal Denitrogenation of 4-Spirocyclopropane-1-pyrazolines. Nonstatistical
+Dynamics Effects in the Denitrogenation Reactions. Journal of the American Chemical
+Society 2007, 129, 12981–12988.
+(75) Degen, J.; Wegscheid-Gerlach, C.; Zaliani, A.; Rarey, M. On the Art of Compiling and
+Using ’Drug-Like’ Chemical Fragment Spaces. ChemMedChem 2008, 3, 1503–1507.
+(76) Lewell, X. Q.; Judd, D. B.; Watson, S. P.; Hann, M. M. RECAP—Retrosynthetic
+Combinatorial Analysis Procedure: A Powerful New Technique for Identifying Privileged
+Molecular Fragments with Useful Applications in Combinatorial Chemistry. Journal of
+Chemical Information and Computer Sciences 1998, 38, 511–522.
+(77) Bemis, G. W.; Murcko, M. A. The Properties of Known Drugs. 1. Molecular Frameworks.
+Journal of Medicinal Chemistry 1996, 39, 2887–2893.
+(78) Devereux, C.; Smith, J. S.; Huddleston, K. K.; Barros, K.; Zubatyuk, R.; Isayev, O.;
+Roitberg, A. E. Extending the Applicability of the ANI Deep Learning Molecular
+Potential to Sulfur and Halogens. Journal of Chemical Theory and Computation 2020,
+16, 4192–4202.
+(79) Eastman, P.; Behara, P. K.; Dotson, D. L.; Galvelis, R.; Herr, J. E.; Horton, J. T.;
+Mao, Y.; Chodera, J. D.; Pritchard, B. P.; Wang, Y.; De Fabritiis, G.; Markland, T. E.
+SPICE, A Dataset of Drug-like Molecules and Peptides for Training Machine Learning
+Potentials. Scientific Data 2023, 10, 11.
+(80) Eastman, P.; Pritchard, B. P.; Chodera, J. D.; Markland, T. E. Nutmeg and SPICE:
+Models and Data for Biomolecular Machine Learning. Journal of Chemical Theory and
+Computation 2024, 20, 8583–8593.
+(81) Axelrod, S.; G´omez-Bombarelli, R. GEOM, energy-annotated molecular conformations
+for property prediction and molecular generation. Scientific Data 2022, 9, 185.
+48
+
+
+(82) Christensen, A. S.; Sirumalla, S. K.; Qiao, Z.; O’Connor, M. B.; Smith, D. G. A.;
+Ding, F.; Bygrave, P. J.; Anandkumar, A.; Welborn, M.; Manby, F. R.; Miller, T. F., III
+OrbNet Denali: A machine learning potential for biological and organic chemistry with
+semi-empirical cost and DFT accuracy. The Journal of Chemical Physics 2021, 155,
+204103.
+(83) Tavakoli, M.; Chiu, Y. T. T.; Baldi, P.; Carlton, A. M.; Van Vranken, D. RMechDB: A
+Public Database of Elementary Radical Reaction Steps. Journal of Chemical Information
+and Modeling 2023, 63, 1114–1123.
+(84) Tavakoli, M.; Miller, R. J.; Angel, M. C.; Pfeiffer, M. A.; Gutman, E. S.; Mood, A. D.;
+Van Vranken, D.; Baldi, P. PMechDB: A Public Database of Elementary Polar Reaction
+Steps. Journal of Chemical Information and Modeling 2024, 64, 1975–1983.
+(85) Batatia, I.; Lin, C.; Hart, J.; Kasoar, E.; Elena, A. M.; Norwood, S. W.; Wolf, T.;
+Cs´anyi, G. Cross Learning between Electronic Structure Theories for Unifying
+Molecular, Surface, and Inorganic Crystal Foundation Force Fields. arXiv 2025,
+10.48550/arXiv.2510.25380.
+(86) ACEsuit A MACE model trained on the 4M training split of OMol25. GitHub
+release asset,
+ACEsuit/mace-foundations,
+2025;
+https://github.com/ACEsuit/
+mace-foundations/releases/tag/mace_omol_0.
+(87) Anstine, D. M.; Zubatyuk, R.; Isayev, O. AIMNet2: a neural network potential to meet
+your neutral, charged, organic, and elemental-organic needs. Chemical Science 2025,
+16, 10228–10244.
+(88) Schreiner, M.; Bhowmik, A.; Vegge, T.; Jørgensen, P. B.; Winther, O. NeuralNEB—
+neural networks can find reaction paths fast. Machine Learning: Science and Technology
+2022, 3, 045022.
+49
+
+
+(89) Prasad, V. K.; Pei, Z.; Edelmann, S.; Otero-de-la Roza, A.; DiLabio, G. A. BH9, a New
+Comprehensive Benchmark Data Set for Barrier Heights and Reaction Energies: Assess-
+ment of Density Functional Approximations and Basis Set Incompleteness Potentials.
+Journal of Chemical Theory and Computation 2022, 18, 151–166.
+(90) Prasad, V. K.; Pei, Z.; Edelmann, S.; Otero-de-la Roza, A.; DiLabio, G. A. Correction to
+“BH9, a New Comprehensive Benchmark Data Set for Barrier Heights and Reaction En-
+ergies: Assessment of Density Functional Approximations and Basis Set Incompleteness
+Potentials”. Journal of Chemical Theory and Computation 2022, 18, 4041–4044.
+(91) Stuyver, T.; Jorner, K.; Coley, C. W. Reaction profiles for quantum chemistry-computed
+[3 + 2] cycloaddition reactions. Scientific Data 2023, 10, 66.
+50
+
+
+Supporting Information
+S1
+Supporting Contexts
+S1.1
+Ablation experiment on spatiotemporal resolution of CV
+We evaluated the performance in sampling reactive pathways of four CV formalisms. With
+respect to the full (spatial+temporal) CV, ablated formalisms respectively retain the spatial,
+temporal, or neither (bare) resolution. The compared performance aspects include efficiency,
+the abundance of spatial scales of sampled pathways, especially focusing on the scale-up ability
+towards large molecules. The averaged temperature in metadynamics is further checked for
+guaranteeing a relatively mild condition.
+A fixed set of 20 preselected reactant molecules were prepared, with four molecules
+randomly taken from each of 5 molecular-size stages from Sec. 2.3 to exhibit the variance of the
+sampling performance with respect to the increase of molecular size. 6 individual experiment
+batches are conducted to evaluate the averaged result, with the velocity initialization seeds
+being different among batches. In each of the 6 batches, each of the 4 CV formalisms conducts
+6 metadynamics runs for each of the 20 molecules, giving 2880 metadynamics runs in total.
+For 1) spatiotemporally resolved formalism (spatial+temporal), a simulation scheme close
+to the OpenRxn26 production scheme is adopted: rcut candidates are {1.2, 2.1, 3.0, 4.0, 4.5,
+10.0} ˚A and each candidate value is used once to give 6 sampling runs; the time-averaging
+window for hill-center reference is 500 fs; the height candidates for bias hill are {1, 2, 4} eV
+and hill width candidates are {0.20, 0.35} ˚A, with each rcut-specific run randomly adopting
+one height-width combination from the candidates; hydrogen atoms are excluded from the
+CV metric if rcut ≥2.0 ˚A (1/6 runs adopting rcut = 1.2 ˚A consider H in metrics).
+For 2) spatial formalism, no time-averaging of the reference is conducted, with the other
+settings the same as in 1).
+For 3) temporal formalism, no local-partition of the molecule in CV metric is conducted
+51
+
+
+(still 6 runs per molecule adopting random height-width combinations for bias hill), and only
+the random 1/6 of runs consider hydrogen in the CV metric to match the sampling condition
+of 1); other settings are the same as in 1).
+For 4) the bare formalism, neither the time-averaging nor the local partition is conducted
+(still 6 runs per molecule adopting random height-width combinations for bias hill), and only
+the random 1/6 of runs include hydrogen in the CV metric to match the sampling condition
+of 1); other settings are the same as in 1).
+For all runs, one bias hill is deposited every 500 fs and MD time step is 1 fs, using the
+300 K NVT ensemble with a Nos´e–Hoover thermostat adopting a 100 fs damping time. The
+simulation length of each run is self-adaptive from 3.5 ps to 9.5 ps according to the hill
+height (the lower the hill the longer the simulation), and in total giving 17.75 ns for 2880
+runs. The simulation adopts the DPA3 model used in the DPGEN2 workflow for generating
+OpenRxn26.
+For analysis of sampling efficiency and spatial extent of sampled events, distinct reactive
+pathways within each experiment batch for each CV are recognized. On each trajectory,
+bond-change events in one trajectory linking distinct stable molecules and separated by less
+than 100 fs are merged into one committed pathway. Each committed pathway was assigned
+a unique identifier, consisting of the connectivity of the pre- and post- stable states of the
+pathway, and the ordered sequence of committed bond-change pairs (atom pairs with altered
+connectivity between pre- and post- stable states). Among runs within the same batch for
+each CV, de-duplication is conducted according to the identifier, and the batch-level distinct
+pathways are used for evaluating the final batch-averaged results.
+Results are shown in Fig. S1–Fig. S2 and Table S2.
+52
+
+
+S2
+Supporting Figures
+Stage 1 (Nheavy ≤ 7)
+Stage 2 (Nheavy ≤ 7)
+Stage 3 (Nheavy 8–10)
+Stage 4 (Nheavy 11–15)
+Stage 5 (Nheavy 16–30)
+0
+0.1
+0.2
+0.3
+0.4
+distinct pathways ps−1
+a
+μ=0.081
+bare
+μ=0.095
+temporal
+μ=0.181
+spatial
+μ=0.185
+spatial +
+temporal
+0
+20
+40
+60
+distinct pathway count
+b
+Σ=59.8
+bare
+Σ=71.0
+temporal
+Σ=134.5
+spatial
+Σ=136.7
+spatial +
+temporal
+Figure S1: Ablation on spatiotemporal resolution of CVs for sampling efficiency. Experimental
+settings and the de-duplication of reactive pathways are described in Sec. S1.1. a, averaged
+sampling efficiency of distinct reactive pathways using 4 CV formalisms, respectively retaining
+the spatial, temporal, or neither (bare) resolution of the full (spatial+temporal) CV. µ
+values denote the all-stage averaged efficiencies, and standard deviations of each stage
+across experiment batches are depicted. The averaged efficiencies on stage 5 molecules are
+particularly labeled. b, averaged number of sampled distinct reactive pathways, with the
+standard deviations of each stage across experiment batches also depicted. Σ values denote
+the all-stage sum of distinct reactive pathways. The averaged sum on stage 5 molecules are
+particularly labeled. The averaged simulation time of each batch for each CV on 20 molecules
+from 5 stages is around 0.7 ns. The spatial+temporal CV has the highest sampling efficiency,
+with relative advantages being mainly attributed to the spatial resolution that gives similarly
+good efficiency. Temporal resolution also shows positive improvement to the bare. Both
+spatial+temporal and spatial CVs show relatively stable efficiency facing larger molecules
+thus are capable to scale up to large systems.
+53
+
+
+0
+10
+20
+0
+20
+40
+0
+10
+20
+0
+20
+40
+0
+10
+20
+0
+20
+40
+0
+10
+20
+0
+20
+40
+0
+3
+6
+9
+12
+15
+18
+0
+10
+20
+0
+3
+6
+9
+12
+15
+18
+0
+20
+40
+bare
+temporal
+spatial
+spatial + temporal
+largest reactant diameter in each stage
+distinct pathway density (Å−1)
+cumulative distinct pathway count
+a
+b
+spatial extent of reaction-involved atoms traced back to the initial reactant (Å)
+Stage 1
+Stage 1
+Stage 2
+Stage 2
+Stage 3
+Stage 3
+Stage 4
+Stage 4
+Stage 5
+Stage 5
+Figure S2: Ablation on the spatiotemporal resolution of CV for spatial extent of sampled
+reactive process. Experimental settings are described in Sec. S1.1. For each pathway, the
+pairwise distances between all reaction-involved atoms in the initial reactant are examined,
+and the maximum of these distances defines the spatial extent a reactive process can reach
+on the initial reactant, i.e., the initial separation between the two most distant atoms that
+participate in the reaction. The distances are taken as time-averaged values over the unbiased
+MD segment that initializes each exploration run. a, the averaged distribution density of
+distinct pathways with respect to its spatial extent on initial reactant. b, the averaged
+cumulative distinct pathways with respect to its spatial extent on initial reactant. The curve
+stops after the reactive event with the largest spatial extent is accumulated, and the endpoint
+marks the largest explored extent. Dashed lines indicate the maximum extent allowed by
+each stage (maximum atomic pair-distance of selected reactants). The CVs with spatial
+resolution obtain remarkably more abundant pathways on the full spatial extents accessible
+by 4 CVs, particularly for the larger molecules. Spatial resolution is the principal contributor
+to the increased abundance in spatial extent.
+54
+
+
+t-SNE 1
+t-SNE 2
+(OpenRxn26) / (OMol25) 
+ 20
+OpenRxn26 representative structures
+data points from Nheavy
+30 systems
+data points from OMol25 Nheavy > 30 systems
+Figure S3: Highlighted t-SNE regions where OpenRxn26 covers atomic environments beyond
+OMol25, on the same projection as Fig. 2. Red contour lines enclose regions with OpenRxn26-
+to-OMol25 point-density ratios of ≥20; the 20× regions provide the cross-set OOD samples
+used in Table 1. Regions where either the OpenRxn26 density or the total density is below
+its 10th percentile are excluded. Yellow stars mark positions of OpenRxn26 representative
+structures shown in Fig. 2a. Data points from OpenRxn26 and OMol25 Nheavy ≤30 systems
+are in light gray, while those from OMol25 Nheavy > 30 systems are in dark gray. Element-
+dominant continents are labeled (C, N, O).
+55
+
+
+t-SNE 1
+t-SNE 2
+OpenRxn26
+OMol25 Nheavy
+30
+OMol25 Nheavy > 30
+Figure S4: OpenRxn26 well covers the t-SNE distribution of heavy atoms from OMol25
+Nheavy ≤30 systems. t-SNE projection is the same as Fig. 2b, with data points from OMol25
+Nheavy > 30 being plotted in gray.
+56
+
+
+t-SNE 1
+t-SNE 2
+(OMol25) / (OpenRxn26) 
+ 20
+OMol25 representative structures
+data points from Nheavy
+30 systems
+data points from OMol25 Nheavy > 30 systems
+Figure S5: Highlighted t-SNE regions where OMol25 point density exceeds OpenRxn26, on
+the same projection as Fig. 2. Blue contour lines enclose regions with OMol25-to-OpenRxn26
+point-density ratios of ≥20; the 20× regions provide the cross-set OOD samples used in
+Table 1. Regions where either the OMol25 density or the total density is below its 10th
+percentile are excluded. Yellow stars mark positions of OMol25 representative structures
+shown in Fig. 2b. Data points from OpenRxn26 and OMol25 Nheavy ≤30 systems are in
+light gray, while those from OMol25 Nheavy > 30 systems are in dark gray. Element-dominant
+continents are labeled (C, N, O).
+57
+
+
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+10
+20
+30
+40
+energy (kcal/mol)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+10
+20
+30
+40
+force (kcal/mol·Å)
+std
+MAE
+MACE_OMol25-4M
+ANI-1xBB
+PaiNN_transition1x
+MACE_OMol25-4M
+ANI-1xBB
+PaiNN_transition1x
+Error statistics along pathways
+Figure S6: Per-progress energy and force error statistics on RXNPath 39 for the lower-ranked
+models (MACE OMol25-4M, PaiNN transition1x, ANI-1xBB), complementing Fig. 4b. Solid
+lines show MAE; shaded bands show one standard deviation. Trajectory projection and
+pathway-progress definition follow Fig. 4. DFT references are recalculated using each model’s
+training-data DFT method.
+58
+
+
+N2 extrusion
+roaming-like H atom
+reactant
+N
+N
+reactant
+product
+traj 1
+traj 2
+traj 3
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+Figure S7: N2 extrusion reaction (Case 1 in Fig. 4c). Top row: Highlights of the reaction
+center in reactant and product. Rows 2–4: reaction-center evolution along the 3 trajectories
+with roaming-like H atoms from RXNPath 39 (labeled traj 1, 2, 3), sampled at evenly spaced
+pathway progresses 0.0–1.0. Red and green lines mark breaking and forming bonds; solid
+lines are within bonding distance (1.3× sum of covalent radii), dashed lines beyond.
+59
+
+
+epoxidation
+reactant
+O
+O
+reactant
+product
+traj 1
+traj 2
+traj 3
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+Figure S8: Epoxidation reaction with intermolecular oxygen atom transfer (Case 2 in Fig. 4c).
+Top row: Highlights of the reaction center in reactant and product. Rows 2–4: reaction-center
+evolution along the 3 trajectories from RXNPath 39 (labeled traj 1, 2, 3), sampled at evenly
+spaced pathway progresses 0.0–1.0. Red and green lines mark breaking and forming bonds;
+solid lines are within bonding distance (1.3× sum of covalent radii), dashed lines beyond.
+60
+
+
+Claisen
+dissociative
+reactant
+O
+reactant
+product
+traj 1
+traj 2
+traj 3
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+Figure S9: Claisen rearrangement in dissociative pathways (Case 3 in Fig. 4c). Top row:
+Highlights of the reaction center in reactant and product. Rows 2–4: reaction-center evolution
+along the 3 trajectories from RXNPath 39 (labeled traj 1, 2, 3), sampled at evenly spaced
+pathway progresses 0.0–1.0. Red and green lines mark breaking and forming bonds; solid
+lines are within bonding distance (1.3× sum of covalent radii), dashed lines beyond.
+61
+
+
+-60
+-30
+0
+30
+60
+MAE 21.1 4.5 12.7
+MAE 41.4 5.0 15.0
+MAE 33.0 4.2 17.2
+-60
+-30
+0
+30
+60
+MAE 8.1 14.3 10.5
+MAE 3.9 8.0 3.2
+MAE 6.0 7.5 5.7
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj1
+-60
+-30
+0
+30
+60
+MAE 2.2 5.0 7.4
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj2
+MAE 1.8 5.4 6.7
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj3
+MAE 2.1 3.8 10.4
+roaming-like (most difficult for models other than DPA3_rxn)
+epoxidation (largest DFT variance)
+dissociative Claisen (most difficult for DPA3_rxn)
+energy error
+(kcal/mol)
+MACE_OMol25-4M
+ANI-1xBB
+PaiNN_transition1x
+Figure S10: Per-trajectory energy errors for the lower-ranked models (MACE OMol25-4M,
+PaiNN transition1x, ANI-1xBB) on the three reactions in Fig. 4c. Rows correspond to the
+three cases: roaming-like N2 extrusion (Case 1, Fig. S7), epoxidation (Case 2, Fig. S8),
+dissociative Claisen rearrangement (Case 3, Fig. S9); columns show the 3 trajectories per
+reaction (traj 1–3). Each subplot annotates the per-model MAE (kcal/mol). DFT references
+are recalculated using each model’s training-data DFT method.
+62
+
+
+energy
+force
+0
+3
+6
+9
+12
+15
+18
+MAE v.s. DFT
+(kcal/mol or kcal/mol·Å)
+5.4
+5.7
+5.0
+3.9
+4.1
+4.1
+AIMNet2-rxn on DPA3_rxn trajs
+AIMNet2-rxn on MDCD-NN trajs
+AIMNet2-rxn on MACE_OMol25 trajs
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+10
+20
+30
+40
+energy (kcal/mol)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+10
+20
+30
+40
+force (kcal/mol·Å)
+AIMNet2-rxn on DPA3_rxn trajs
+AIMNet2-rxn on MDCD-NN trajs
+AIMNet2-rxn on MACE_OMol25 trajs
+AIMNet2-rxn on DPA3_rxn trajs
+AIMNet2-rxn on MDCD-NN trajs
+AIMNet2-rxn on MACE_OMol25 trajs
+-60
+-30
+0
+30
+60
+AIMNet2-rxn on DPA3_rxn trajs
+MAE
+6.6
+MAE
+6.0
+MAE
+10.8
+-60
+-30
+0
+30
+60
+MAE
+8.0
+MAE
+3.2
+MAE
+3.8
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj1
+-60
+-30
+0
+30
+60
+MAE
+4.6
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj2
+MAE
+5.5
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+traj3
+MAE
+5.3
+MAE
+std
+RXNPath_39 by 3 samplers
+Error statistics along pathways
+a
+b
+energy error
+(kcal/mol)
+c
+roaming-like (most difficult for models other than DPA3_rxn)
+epoxidation (largest DFT variance)
+dissociative Claisen (most difficult for DPA3_rxn)
+Figure S11: Benchmark of AIMNet2-rxn accuracy on RXNPath 39 dynamic reactive con-
+figurations (sampled by DPA3 rxn), as well as on configurations sampled by MDCD-NN
+and MACE OMol25. For each trajectory, the relative energies with respect to the first
+frame are compared. AIMNet2-rxn outputs energy shifts relative to the composition sum of
+unreported per-element references, that cannot be directly compared to total energies (also
+not to the formal formation energies). Forces are not shifted. a, Overall energy and force
+MAEs. b, Per-progress energy and force error statistics. The normalized pathway progress is
+the same as that described in Fig. 4b. The range of y axis is aligned with that in Fig. S6.
+c, Per-trajectory errors on three representative reactions from RXNPath 39 (sampled by
+DPA3 rxn). Three reactions are the same as those in Fig. 4c. The y-axis ranges are aligned
+with those in Fig. S10. DFT references are recalculated using AIMNet2-rxn’s training-data
+DFT method.
+63
+
+
+energy
+force
+0
+3
+6
+9
+12
+15
+18
+MAE v.s. DFT
+(kcal/mol or kcal/mol·Å)
+1.0
+1.5
+3.2
+6.8
+7.1
+11.5
+1.0
+1.1
+1.0
+1.5
+7.7
+5.3
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MACE_OMol25
+MACE_OMol25
+MACE_OMol25-4M
+ANI-1xBB
+PaiNN_transition1x
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+3
+6
+9
+12
+15
+18
+energy (kcal/mol)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+3
+6
+9
+12
+15
+18
+force (kcal/mol·Å)
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MAE
+std
+RXNPath_39_MDCD-NN
+Error statistics along pathways
+a
+b
+Figure S12: Verifying benchmark of model accuracy on dynamic reactive configurations
+sampled by MDCD-NN. The same sampling strategy for RXNPath 39 in Fig. 4 is used, and
+the test set is denoted as RXNPath 39 MDCD-NN. a, Overall energy and force MAEs. b,
+Per-progress energy and force error statistics for the top-three models in a. Trajectories are
+projected onto the reaction space defined by distances of bond-changing atom pairs; pathway
+progress is the normalized cumulative arc length on this projection, and selected snapshots
+are rounded to nearest 0.1 intervals.
+energy
+force
+0
+3
+6
+9
+12
+15
+18
+MAE v.s. DFT
+(kcal/mol or kcal/mol·Å)
+1.0
+1.5
+1.8
+5.9
+6.5
+11.0
+1.0
+1.1
+0.9
+1.4
+7.6
+5.3
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MACE_OMol25
+MACE_OMol25
+MACE_OMol25-4M
+ANI-1xBB
+PaiNN_transition1x
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+3
+6
+9
+12
+15
+18
+energy (kcal/mol)
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+normalized pathway progress
+0
+3
+6
+9
+12
+15
+18
+force (kcal/mol·Å)
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+DPA3_rxn
+MDCD-NN
+MACE_OMol25
+MAE
+std
+RXNPath_39_MACE_OMol25
+Error statistics along pathways
+a
+b
+Figure S13: Verifying benchmark of model accuracy on dynamic reactive configurations
+sampled by MACE OMol25. The same sampling strategy for RXNPath 39 in Fig. 4 is
+used, and the test set is denoted as RXNPath 39 MACE OMol25. a, Overall energy and
+force MAEs. b, Per-progress energy and force error statistics for the top-three models in
+a. Trajectories are projected onto the reaction space defined by distances of bond-changing
+atom pairs; pathway progress is the normalized cumulative arc length on this projection, and
+selected snapshots are rounded to nearest 0.1 intervals.
+64
+
+
+S3
+Supporting Tables
+Table S1: The 26 SMARTS reaction templates used in the staged reactant-selection strategy
+(Sec. 2.3) to infer possible product SMILES from each candidate reactant.
+# Rule name
+Description
+Reaction SMARTS
+Sigmatropic H-shifts
+1 Allylic H shift
+H transfers across
+C–C=C–C; the C=C
+shifts one position
+[C:1]-[C:2]=[C:3]-[CH:4] >>
+[CH:1]=[C:2]-[C:3]-[C:4]
+2 1,5-hydrogen shift
+Allylic methine H
+relocates across a
+1,3-diene
+[C:1]=[C:2]-[C:3]=[C:4]-[CH:5] >>
+[CH:1]=[C:2]-[C:3]=[C:4]=[C:5]
+Sigmatropic C–C shifts
+3 Allylic ester [3, 3] shift [3, 3]-shift of an allylic
+ester motif (including
+Carroll rearrangement)
+[C:1]=[C:2][C:3][O:4][C:5](=[O:6])[C:7] >>
+[C:1][C:2]=[C:3][C:7]([OH:4])[C:5]=[O:6]
+4 Carbonyl→dienol
+shift
+Breaks Cα–Cβ, bonds
+the carbonyl C to the
+alkene terminus →
+dienol
+[O:1]=[C:2]-[C:3]-[C:4]-[C:5]=[C:6] >>
+[C:4]-[C:5]=[C:6]-[C:2]([O:1])=[C:3]
+Electrocyclizations
+5 4π electrocyclization
+Diene closes to a
+cyclobutene
+[C:1]=[C:2]-[C:3]=[C:4] >>
+[C:1]1-[C:2]=[C:3]-[C:4]-1
+6 6π electrocyclization
+Triene closes to a
+1,3-cyclohexadiene
+[C:1]=[C:2]-[C:3]=[C:4]-[C:5]=[C:6] >>
+[C:1]1=[C:2]-[C:3]=[C:4]-[C:5]-[C:6]-1
+7 8π electrocyclization
+Tetraene closes to a
+cyclooctatriene
+[C:1]=[C:2]-[C:3]=[C:4]-[C:5]=[C:6]-[C:7]=[C:8] >>
+[C:1]1=[C:2]-[C:3]=[C:4]-[C:5]=[C:6]-[C:7]-[C:8]-1
+Ring transformations
+8 Ring expansion
+4-membered ring →
+5-membered ring
+[C:1]1-[C:2]-[C:3]-[C:4]-1 >>
+[C:1]1-[C:2]-[C:3]-[C:4]-[C:5]-1
+9 Ring contraction
+5-membered ring →
+4-membered ring
+[C:1]1-[C:2]-[C:3]-[C:4]-[C:5]-1 >>
+[C:1]1-[C:2]-[C:3]-[C:4]-1
+10 Fused bicyclization
+Chain closes to a
+3-membered ring fused
+to a 5-membered ring
+[C:1]([C:5])([C:6])-[C:2]=[C:3]-[C:4] >>
+[C:1]12-[C:5]-[C:6]-1-[C:2]-[C:3]-[C:4]-2
+11 Aziridine ring closure
+C–N–C closes to a
+three-membered
+aziridine ring
+[C:1][N:2][C:3] >>
+[C:1]1-[N:2]-[C:3]-1
+continued on next page
+65
+
+
+Table S1 (continued)
+# Rule name
+Description
+Reaction SMARTS
+12 Hydroxycyclopentene
+motif fragmentation
+Hydroxycyclopentene
+motif cleaves; groups on
+C6 could fragment
+together
+[C:1]1-[C:2]=[C:3]-[C:4]([OH:5])-[C:6]-1 >>
+[C:1]=[C:2]-[C:3]=[C:4]=[O:5].[C:6]
+13 Meinwald
+rearrangement
+Epoxide rearranges to a
+carbonyl
+[C:1]1-[O:2]-[C:3]-1 >>
+[C:1](=[O:2])-[C:3]
+14 Epoxide to
+cyclopropanol
+Epoxide O leaves the
+ring; adjacent C closes a
+cyclopropanol
+[C:1]1-[O:2]-[C:3]([C:4])-1 >>
+[C:1]1-[C:3]([O:2])-[C:4]-1
+Heteroatom migrations
+15 Nitrogen walk
+N moves to the far end
+of an allyl unit
+[N:1]-[C:2]=[C:3]-[C:4] >>
+[C:2]=[C:3]-[C:4]-[N:1]
+16 Oxygen walk
+O moves to the far end
+of an allyl unit
+[O:1]-[C:2]=[C:3]-[C:4] >>
+[C:2]=[C:3]-[C:4]-[O:1]
+Tautomerizations & π-bond isomerizations
+17 Diene isomerization
+C=C migrates to give a
+conjugated 1,3-diene
+[C:1]=[C:2]-[C:3]-[C:4]=[C:5]-[C:6] >>
+[C:1]-[C:2]=[C:3]-[C:4]=[C:5]-[C:6]
+18 Imine–enamine
+tautom.
+Imine →conjugated
+dienamine (aza-diene)
+[N:1]=[C:2]-[C:3]-[C:4]=[C:5]-[C:6] >>
+[N:1]-[C:2]=[C:3]-[C:4]=[C:5]-[C:6]
+19 Oxime–nitroso
+tautom.
+Oxime (C=N–OH) →
+C–nitroso (C–N=O)
+[C:1]=[N:2][OH:3] >>
+[C:1][N:2]=[O:3]
+20 Dienone→phenol
+aromatization
+Cyclohexa-2,5-dienone
+aromatizes to phenol
+[C:1]1=[C:2][C:3](=[O:4])[C:5]=[C:6][C:7]-1 >>
+[c:1]1[c:2][c:3]([OH:4])[c:5][c:6][c:7]1
+21 Keto-enol
+tautomerism
+C=O ⇌C=C–OH
+[C:1]-[C:2]=[O:3] >>
+[C:1]=[C:2]-[OH:3]
+Acyl / nitrogen rearrangements
+22 Benzilic acid
+rearrangement
+1,2-diaryl diketone →
+α-hydroxy acid (aryl
+migration)
+[c:1][C:2](=[O:3])[C:4](=[O:5])[c:6] >>
+[c:1][C:2]([OH:3])([c:6])[C:4](=[O:5])[OH]
+23 Wolff rearrangement
+α-diazoketone →ketene
+(−N2)
+[C:1](=[O:2])[C:3]=[N+:4]=[N-:5] >>
+[C:1]=[C:3]=[O:2]
+24 Curtius
+rearrangement
+Acyl azide →isocyanate
+(−N2)
+[C:1](=[O:2])[N:3]=[N+:4]=[N-:5] >>
+[N:3]=[C:1]=[O:2]
+25 Lossen rearrangement
+Hydroxamic acid →
+isocyanate
+[C:1](=[O:2])[N:3][OH:4] >>
+[N:3]=[C:1]=[O:2]
+26 Schmidt
+rearrangement
+Ketone →amide via
+formal N insertion
+[C:1](=[O:2])[C:3]([C:4])([C:5]) >>
+[C:3]([C:4])([C:5])[N:6][C:1](=[O:2])
+66
+
+
+Table S2: Averaged temperature (K) of metadynamics simulations in the ablation experiment
+using 4 formalisms of the CV. With respect to the full (spatial+temporal) CV, ablated
+formalisms respectively retain the spatial, temporal, or neither (bare) resolution.
+CV
+Stage 1
+Stage 2
+Stage 3
+Stage 4
+Stage 5
+All stages
+bare
+379.7 ± 51.0
+375.2 ± 44.1
+387.8 ± 55.4
+359.8 ± 33.7
+344.8 ± 24.9
+369.5 ± 45.9
+temporal
+386.4 ± 49.3
+381.8 ± 43.4
+383.3 ± 51.0
+348.4 ± 26.1
+327.9 ± 17.9
+365.5 ± 46.2
+spatial
+385.1 ± 53.1
+383.6 ± 53.5
+377.4 ± 56.4
+349.3 ± 30.0
+333.7 ± 25.4
+365.9 ± 50.1
+spatial + temporal
+386.6 ± 44.5
+389.2 ± 49.6
+376.4 ± 47.4
+338.8 ± 24.8
+331.2 ± 19.5
+364.4 ± 46.2
+The simulation is conducted under the 300 K NVT ensemble using a Nos´e–Hoover thermostat adopting a
+100 fs damping time. The unbiased MD segments initializing metadynamics runs are excluded in statistics.
+Table S3: DFT force-magnitude statistics on target C atoms. OpenRxn26 20× samples carry
+lower force magnitudes than OMol25 20× Nheavy ≤30 samples, despite both from cross-set
+t-SNE OOD regions.
+label method
+selected atomic environments
+|F| label mean/std
+data source
+#samples (kcal/mol/˚A)
+(eV/˚A)
+name
+Nheavy (avg.)
+OMol25
+OMol25
+2–224 (37.9)
+100,000
+33.9 / 35.4
+1.47 / 1.54
+OpenRxn26 20x
+4– 30 ( 8.2)
+300
+39.1 / 31.3
+1.69 / 1.36
+OMol25 20x
+2– 30 (20.5)
+300
+51.1 / 64.3
+2.21 / 2.79
+OMol25 20x
+31–152 (65.3)
+300
+35.3 / 24.7
+1.53 / 1.07
+OpenRxn26
+OpenRxn26
+2– 30 (10.1)
+100,000
+34.2 / 37.2
+1.48 / 1.61
+OpenRxn26 20x
+4– 30 ( 8.2)
+300
+38.3 / 31.9
+1.66 / 1.38
+OMol25 20x
+2– 30 (20.5)
+300
+53.5 / 68.6
+2.32 / 2.98
+OMol25 20x
+31–152 (65.3)
+300
+37.3 / 26.0
+1.62 / 1.13
+Samples are the same as in Table 1. For cross-set comparison, the OpenRxn26 20× and OMol25 20×
+samples each have two sets of DFT reference labels, computed using the OMol25 and OpenRxn26 label
+methods, respectively.
+Table S4: MAEs on cross-set 20× t-SNE regions as ID samples (MACE OMol25 on two sets
+from OMol25 20×; DPA3 rxn on samples from OpenRxn26 20×). Compared with the ID
+baselines in Table 1, OpenRxn26 20× regions are harder than typical OpenRxn26 ID samples
+for DPA3 rxn, while OMol25 20× regions belonging to the same Nheavy ≤30 regime are not
+for MACE OMol25.
+model
+evaluated atomic environments
+target atom
+parent frame
+ID/OOD
+data source
+#samples
+force
+force
+energy
+name
+Nheavy (avg.)
+(kcal/mol/˚A) (kcal/mol/˚A) (kcal/mol/atom)
+MACE OMol25 ID
+OMol25 20x
+2– 30 (20.5)
+300
+0.1
+0.1
+0.015
+ID
+OMol25 20x
+31–152 (65.3)
+300
+0.1
+0.1
+0.024
+DPA3 rxn
+ID
+OpenRxn26 20x
+4– 30 ( 8.2)
+300
+2.6
+1.5
+0.044
+67

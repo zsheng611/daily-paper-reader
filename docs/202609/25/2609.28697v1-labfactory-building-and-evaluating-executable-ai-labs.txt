@@ -1,0 +1,355 @@
+Title: LabFactory: Building and Evaluating Executable AI Labs
+
+URL Source: https://arxiv.org/pdf/2609.28697v1
+
+Published Time: Fri, 25 Sep 2026 00:10:57 GMT
+
+Number of Pages: 20
+
+Markdown Content:
+# LAB FACTORY :Building and Evaluating Executable AI Labs 
+
+Jinge Wu, Hongjian Zhou, Mingde Zeng, Jiayuan Zhu, Junde Wu, Jiazhen Pan, Lei Clifton, Andrew Liu, David A. Clifton University of Oxford University College London Technical University of Munich Oxford-Suzhou Centre for Advanced Research, China 
+
+jinge.wu@outlook.com 
+
+## Abstract 
+
+Scientific tasks specify a desired capability, but realizing it often requires building a computational system tailored to the task—acquiring data, designing represen-tations, training models, implementing tools, and deciding how they are used at inference. We present L AB FACTORY , a framework in which an AI builder turns a scientific brief into an executable AI lab: a task-specific solver that integrates models, knowledge resources, tools, and a controller behind a fixed interface. The builder develops and packages the lab in a metered workspace; a separate host then executes the delivered artifact on held-out inputs, with reference labels kept outside the solver’s input interface, and scores its outputs under the task’s protocol. This makes the delivered system, rather than the builder’s account of its progress, the object of evaluation. We document 28 selected constructions across seven scientific task categories—from molecular and genomic prediction to physiological signals, clinical decision support, and biomedical text—whose delivered labs exceeded their configured reference values on all 33 subtests under host-side execution. Ten contain predictive models fitted during construction; the others assemble retrieval systems, executable analysis environments, and tool-driven workflows around a fixed platform LLM. Together they show that an AI agent can carry a scientific brief all the way to a working lab that can still be invoked, inspected, and checked after construction ends. Code is available at https://github.com/JINGEWU/LabFactory. 
+
+## 1 Introduction 
+
+Consider a request to identify functional polyadenylation signals from DNA sequence windows. The requested output is a binary label, but producing it requires a sequence representation, a predictive procedure, and an implementation that can process new inputs. A clinical calculation poses a different construction problem: formulas and unit handling must be implemented exactly, while the parameters they need must be extracted from free-text patient notes. In both settings the scientific brief is only the starting point; the system that turns it into a working computation still has to be built. Agents that develop models, execute analyses, and run experiments are increasingly studied in machine-learning engineering and scientific workflows [Huang et al., 2024, Chen et al., 2025c, Yamada et al., 2025]. We focus on what such activity leaves behind: can an agent assemble the resources and procedures a scientific task requires into a system that remains invocable after construction ends? This shifts attention from individual development actions, or a single answer, to the capabilities retained in the delivered artifact. 
+
+> Preprint. arXiv:2609.28697v1 [cs.LG] 23 Sep 2026
+
+We call that artifact an AI lab : the task-specific collection of models, knowledge resources, executable tools, and control procedures, delivered as a solver behind a defined interface. LAB FACTORY 
+
+separates the builder from the lab it constructs (Figure 1). The builder acquires resources, develops components, and revises its design in a metered workspace. The delivery contract fixes how the lab is invoked but leaves its representations, model families, and inference policy to construction, so different tasks produce different kinds of labs under the same interface. Evaluation is operational: a separate host invokes the delivered lab on held-out inputs and scores its outputs under the task protocol, tying each reported result to an executable system rather than to the builder’s own assessment of its progress. With claude-opus-5 as the builder, we report 28 constructions whose delivered labs cleared their configured references under host-side execution, compare nine of them with the raw platform LLM, and trace the polyadenylation build end to end, from motif-relative alignment and CNN training to an uncertainty-gated inference policy (§5). Our contributions are: 1. A construction and delivery protocol. A task-conditioned runtime that records actions, resource use, and terminal status, and a common entry-script contract for independent evaluation (§3). 2. An account of constructed AI labs. A component-level description of delivered solvers, three recurring controller patterns, and construction records for eleven labs (§3.3, §5, Appendix B). 3. Execution-grounded case records. Host-side results for all 33 subtests with reference provenance, matched raw-LLM comparisons, and per-episode construction traces and resource records (§4, Appendix C). 
+
+## 2 Related Work 
+
+Machine-learning engineering agents. MLAgentBench [Huang et al., 2024] and MLE-bench [Chan et al., 2024] evaluate agents that prepare data, run experiments, and train models on ML tasks; MLE-STAR [Nam et al., 2025] refines model components through web search and ablation-guided edits. These works establish executable experimentation as an evaluation unit, typ-ically producing a model or a submission file. In L AB FACTORY the product is a solver that may combine trained models with knowledge resources, tools, and control logic, and that the host executes through a fixed interface. 
+
+Agents for scientific workflows. ScienceAgentBench [Chen et al., 2025c] evaluates self-contained Python programs for scientific tasks, and AI Scientist-v2 [Yamada et al., 2025] automates hypothesis generation, experimentation, and manuscript writing. The object here is an intermediate scientific instrument: a solver that remains invocable on new task inputs after construction has ended. 
+
+AI-generated agents. The Darwin Gödel Machine [Zhang et al., 2026b] modifies agent code and evaluates the resulting variants empirically. L AB FACTORY likewise makes an executable system the product of agent activity, but for a specified scientific task and with an explicit boundary between the builder and the solver it delivers. 
+
+## 3 Method 
+
+3.1 Task-conditioned construction 
+
+Let a task be a tuple (d, X , Y, R, m ), where d is a scientific brief, X and Y specify input and output formats, R defines the available resources and delivery contract, and m is the evaluation metric. Given d and R, a builder works in a workspace and delivers an artifact D (§3.2). The interface specifies what must be delivered without prescribing a single internal architecture. The builder may deliver a trained predictor, a retrieval index, an analytical program, or a combination of these, which matters when moving between tasks whose central operation is prediction, retrieval, or computation. The framework provides the working and evaluation environments; representation, model family, tool design, and inference policy are chosen during construction. 2Figure 1: The L AB FACTORY framework. Construction produces a solver composed of models, knowledge, tools, and a controller. The runtime records actions and resource consumption; inde-pendent evaluation runs the delivered artifact. “Hidden reference” denotes the host-side reference. Illustrated modalities indicate possible task interfaces, not the reported result set. 
+
+3.2 The construction lifecycle 
+
+An episode begins when the builder receives the task brief and a workspace. A typical run inspects the brief and environment, acquires public data and software, develops models or tools, validates them on its own development splits, packages the solver, and submits it. These stages are common rather than mandatory: after a failed local test the builder can return to an earlier design decision. Tool responses—a training loss, an exception, a self-check result—inform the next construction action. They are development feedback, separate from the independent evaluation that grades the delivered artifact. An episode ends in one of two ways: the builder submits an artifact, or, if it stops or times out with a staged artifact but no explicit submission, an operator closes the episode. This operator closure is recorded as a distinct terminal path, and the staged artifact then proceeds to independent evaluation (§3.5). 
+
+3.3 The solver as a composite artifact 
+
+We describe an artifact as 
+
+D = ( P, W, K, U, π ), by = fD (X; F ), (1) where X is a batch of task inputs, by the corresponding predictions, P is input processing, W denotes model parameters, K comprises knowledge and retrieval resources, U is the executable tool interface, and π controls how these components are invoked and combined. F denotes access, where used, to a platform LLM served through host endpoints. This is a descriptive decomposition rather than a requirement that every solver contain every component. The decomposition separates capabilities that are often conflated in a single agent prompt: P translates task inputs into stable representations, W can supply a numerical prediction, K supplies structured domain information, and U exposes operations the controller can execute. The builder does not fine-tune the platform LLM during construction: it trains domain models and writes the code through which the LLM is invoked, and the deliverable contains no newly trained LLM weights. The controller π is the most task-dependent component, and three recurring controller patterns organize the reported cases (Appendix B). A fixed-procedure controller combines a predictor with a prescribed policy for language-model support: bounded score adjustment for protein interaction, evidence-based score fusion for regulatory variants, CNN-led scoring with supplementary LLM consultation for methylation, and arbitration within an uncertainty band in the worked example (§5). An LLM-driven loop has the model write and run code or queries against constructed tools, as in 3the executable-environment cases. A retrieval-and-rank controller has the model choose among candidates a constructed index returns, as in the concept-linking and literature cases. All three share one delivery contract. An artifact is packaged with an entry script and the code, weights, and resources needed for its configured inference path. The entry script accepts a batch of cases and produces an identifier-indexed prediction file, so the host can invoke solvers with different internals through the same contract while retaining task-specific output types such as probabilities, concept identifiers, SQL queries, and textual answers. 
+
+3.4 Construction runtime and records 
+
+The builder works in a build VM with network access to public datasets, software, and model weights, and organizes its own development data and local tests. The runtime admits an action only when the episode is open, the request is well formed, and the applicable resource ledger allows it; compute jobs reserve budget and settle against measured use, and model calls pass through host-mediated endpoints. The ledgers make consumption observable without imposing a single fixed budget across tasks. Each run leaves three records. Harness logs retain turns, tool calls, and token counts; result metadata retain actions, attempts, resource use, and the terminal path (submission or operator closure); the workspace and deliverable preserve the code, weights, and resources of the artifact. Together they trace a reported metric back to a specific construction episode and keep the delivered artifact separate from the builder’s narrative of its own progress. 
+
+3.5 Independent evaluation 
+
+The host executes the delivered solver on evaluation inputs {xi}ni=1 , obtains outputs {ˆyi}ni=1 , and computes the configured metric m({ˆyi}, {yi}) from host-side references, recording execution status, coverage, and applicable output checks. Evaluation thus ties one executable artifact to one measured outcome, distinct from the builder’s development measurements. Detailed accounting and grading conventions are given in Appendix A. 
+
+Data-access boundary. The host retains evaluation references outside the solver input interface and records metrics from artifact execution. During construction, control actions pass through host-mediated endpoints, a separate execution surface runs commands and retrieves public packages, data, and weights, and structured observations screen out hidden reference fields. At evaluation, case identifiers are reminted and input fields permuted, so a solver cannot rely on persistent identifiers or field positions; these transformations change presentation, not scientific content. Builders may acquire public resources during construction; the interface boundary does not establish disjointness between those resources and evaluation samples. 
+
+3.6 Task metrics and acceptance criteria 
+
+A task may contain several subtests. For subtest j, let vj denote its higher-is-better primary value and 
+
+bj its configured reference bar. The acceptance rule is 
+
+clear( D) = 
+
+> J
+
+^
+
+> j=1
+
+(vj > b j ), j∗ = arg min  
+
+> j
+
+(vj − bj ). (2) The binding subtest j∗ provides a compact task-level row; the raw margin vj −bj is the primary-metric difference, not a reward difference. All subtests must clear their bars for a case to count as clearing. For the two MAE tasks t the native error is mapped to a higher-is-better skill value 
+
+st = clip [0 ,1] 
+
+
+
+1 − MAE t
+
+ct
+
+
+
+(3) before comparison with the bar, where ct is the error of always predicting the mean (Appendix A); ct
+
+is a normalizing constant, distinct from the reference bar in Table 2; we label those rows and give their native errors alongside the results. The platform also computes a bar-anchored episode reward for its own bookkeeping; this report uses primary values and reference bars only. Judge-graded and rubric-jury scores are separate metric types (Appendix A) and are not averaged with classification accuracy; group summaries aggregate only counts and resource use. 4Coverage and degenerate outputs. The verifier requires coverage of at least half of the current identifiers and at least min(2 , n ) distinct top-1 outputs. Failure zeros the affected subtest; it need not zero every other subtest. Additional metric-specific rules can constrain outputs, including positive-rate guards. These checks make incomplete or constant predictions visible, but are neither semantic-validity certificates nor proofs of data disjointness. 
+
+## 4 Results 
+
+4.1 Evaluation setup Task collection. Each construction task is assembled around a published method or benchmark. For each task we obtain the dataset and hold out a test split on the host. Each task has a configured reference value used for case selection. Table 2 records the available source attribution, any rescaling or recomputation, and the provenance status of each value. Before construction, we checked that each task executes correctly in its evaluation environment. The builder then constructs an executable solver from the given task specification within the designated resource environment (§3.4); the held-out split is used only for independent evaluation (§3.5). 
+
+Reported cases. A case is reported when its delivered solver cleared the reference bar on every subtest under host-side execution (Eq. (2)). This rule yields 28 cases in seven categories: molecules and proteins (2), genomics and omics (4), imaging (1), physiological signals (3), knowledge and reasoning (8), clinical decision support (2), and clinical and biomedical text (8) (Table 1). The 28 cases contain 33 subtests with classification, regression, ranking, retrieval, generation, program-synthesis, and judge-scored outputs; held-out sets range from 100 to 40,157 cases per subtest (Table 2). 
+
+Builder configuration. Each case is one construction episode with claude-opus-5 as the builder, run in the pi coding-agent harness; host-mediated endpoints serve the platform models used at inference. Wall-clock limits were 12 hours in earlier batches and 24 hours in later ones, and resource use was recorded without a common budget across tasks (Appendix A). 
+
+Scope of the reported results. These are demonstrated constructions selected because they cleared their configured bars; they are not a success rate over the collection. The bars are configured reference points rather than uniformly matched SOTA comparisons, and their comparability to each source protocol varies (§6). Each case is a single recorded build under one builder configuration with unequal development budgets, so the results do not measure build reliability, isolate component contributions, or support controlled comparisons of performance or resource use across tasks. 
+
+4.2 Delivered solver artifacts 
+
+Inspection of the 28 delivered artifacts identifies build-fitted predictive models in 10 cases, including neural networks, boosted-tree ensembles, and a lightweight lexical classifier. One further case fits retrieval-ranking weights, and the remaining 17 primarily assemble tools, knowledge resources, and control procedures around the platform LLM. These counts refer to reusable parameters fitted during construction; statistical estimation performed on task inputs is treated as analysis. The delivered systems differ in how these parts are combined. Polyadenylation signal detection combines a CNN sequence predictor with LLM arbitration in an uncertainty band (§5); protein– ligand affinity estimation combines structural descriptors with a fitted tree ensemble and bounded, evidence-guided refinement. Bioinformatics analysis delivers an executable scientific workspace with analysis recipes and offline gene-set resources; clinical text-to-SQL delivers schema search, a schema-faithful synthetic database, and query-execution checks. Clinical calculation separates LLM parameter extraction from 55 executable calculator specifications with unit conversion, and chemistry reasoning supplies molecular and formula tools, reference knowledge, and answer checks. Concept linking and fuel-cell literature classification add retrieval-and-rank designs. All share the delivery contract of §3; Appendix B gives each system’s input, components, and output. 54.3 Recorded task results 
+
+Figure 2 shows the host-side result of each of the 28 cases against its reference bar. Each column uses the task’s smallest-margin (binding) subtest. Scores are native task metrics rather than a common effect size, so each column is compared with its own reference marker. The two MAE cases are shown in a higher-is-better skill space; their native errors are 0.7533 BMI units and 9.0326 years. Exact values, sample counts, and bars for all 33 subtests are given in Appendix C, and the comparability of the reference bars is discussed in §6. Protein interaction Binding affinity Causal eQTL Bioinformatics 5mC methylation Poly(A) signals 3D CT organs BMI estimation ECG interpretation Age estimation Clinical reasoning Reasoning / abstention Biomedical reasoning Chemistry reasoning Medical reasoning Multi-step reasoning Academic reasoning Lab safety Rare-disease diagnosis Clinical calculation Clinical text-to-SQL Note error detection Dialogue summary Concept linking Health-answer checking Clinical note generation Fuel-cell literature Clinical note completion 
+
+> Task
+> 0.0 0.2 0.4 0.6 0.8 1.0
+> Performance
+> Molecules & proteins Genomics & omics Imaging Physiological signals Knowledge & reasoning Clinical decision support Clinical & biomedical text Reference bar
+
+Figure 2: Performance across 28 scientific tasks. Colored columns show host-side results of the delivered artifacts; dark horizontal ticks mark the task-specific reference bars. Colors distinguish scientific categories. Scores use heterogeneous metrics on their native scale (MAE cases use a higher-is-better skill transform), so column heights and gaps are not comparable effect sizes across tasks. Column labels abbreviate the task names of Table 2, which lists the tasks in the same order. 
+
+Prediction tasks. In the molecular, genomic, imaging, and physiological categories, most solvers contain a model fitted during construction and are scored on native prediction metrics. Protein–protein interaction reaches AUROC 0.9874 on 3,000 pairs (reference 0.70), causal eQTL prioritization AUPRC 0.9192 on 8,862 variants (0.596), and 5mC methylation AUROC 0.9530 (0.783). Protein– ligand affinity reaches Pearson r 0.9141 on the 285 CASF-2016 complexes (reference 0.803; Table 2, note 7). Poly(A) signal detection (F1 0.8977 vs. 0.88) and 3D abdominal organ classification (accuracy 0.9705 vs. 0.952) clear their references by less than two points. Among physiological signals, ECG question answering records accuracy 1.0000 on 2,500 questions from the single-ECG verification subset, rather than the full ECG-QA task. BMI and age estimation record MAEs of 0.7533 BMI units and 9.03 years, i.e. skill 0.7297 and 0.2358 against reference values of 0.0852 and 0.1624. 
+
+Knowledge and reasoning. The eight knowledge and reasoning cases assemble tools, retrieval, and answer checks around the platform LLM. Medical question answering reaches 0.9678 on MedQA, 0.8735 on MedMCQA, and 0.9123 on Medbullets; clinical decision tasks from MedAgentsBench reach 0.5557 against an agent-system reference of 0.303; ChemBench reaches 0.9268, and the two MMLU subsets 1.0000 (college physics) and 0.9554 (machine learning). For these accuracy-scored subtests, the matched raw-LLM comparison below shows what construction adds beyond clearing the reference. 
+
+Clinical decision support and text. Rare-disease diagnosis records judge accuracy of 0.5762 for the primary diagnosis and 0.7152 at follow-up, against multi-agent references of 0.3411 and 0.5386; clinical calculation records 0.9445 on 1,100 notes (strict string match 0.8755). Among text tasks, clinical text-to-SQL reaches execution accuracy 0.5470 on 1,000 questions (0.32), note-error detection 0.8526 (0.7016), concept linking Recall@1 0.7108 over 40,157 mentions (0.60), 6and consumer-health answer verification 0.8193 (0.78). The jury-scored generation tasks record 0.9864 for dialogue summarization, 0.9972 for note generation, and 0.9838 and 0.9258 for the two note-completion subtests; both these values and their references lie near the top of the jury scale. 
+
+Comparison with the raw platform LLM. Recorded comparisons include MedMCQA, where the constructed solver achieved 87.35% accuracy compared with 79.30% for the recorded raw-LLM baseline, and MEDIQA, where accuracy increased from 78.68% to 81.93%. The complete set of available accuracy comparisons, covering twelve subtests from nine selected cases, is reported in Appendix C.1. 
+
+4.4 Resource use 
+
+Hours are elapsed durations from the selected run’s harness log; tokens, GPU minutes, and tool credits are episode-level accounting values for that run, not inference latency or the total cost over all attempted builds. Tokens are reported as recorded, without assuming cached, input, and output tokens share a price, and tool credits are internal accounting units rather than a billed currency. Across the 28 episodes the medians are 15.67 hours, 25.80 million tokens, 117.4 GPU minutes, and 3.58 million tool credits, over a median of 196 agent turns and 205 tool calls per build (139–350 turns across cases). Table 1 gives group medians, and Figure 3 shows the episode-level distributions of duration, model tokens, and GPU use; GPU minutes cover the complete episode and are not restricted to model training. 5.0 7.5 10.0 12.5 15.0 17.5 20.0 22.5 Construction duration (hours) 10 20 30 40 50 60 70 Recorded LLM tokens (millions)   
+
+> (a) Time and model use
+> 10 110 210 3
+> Episode GPU minutes (log scale) 10 20 30 40 50 60 70 Recorded LLM tokens (millions)
+> (b) Compute and model use
+> Molecules & proteins Genomics & omics Imaging Physiological signals Knowledge & reasoning Clinical decision support Clinical & biomedical text
+
+Figure 3: Recorded time and resource consumption of the 28 selected runs. Each point is one episode, and colors identify task groups. These are descriptive construction-episode measurements, not inference costs. Table 1: Task-group counts and median selected-run resource use. Each resource column is a within-group median, not a sum. Imaging contains one case. Heterogeneous performance metrics are not averaged. 
+
+Task group Cases Hours Tokens M GPU min Credits M Molecules & proteins 2 19.54 23.86 544.5 1.04 Genomics & omics 4 12.59 39.16 299.4 2.10 Imaging 1 20.09 28.80 217.4 0.49 Physiological signals 3 18.72 59.38 957.7 0.45 Knowledge & reasoning 8 15.39 15.45 46.9 4.37 Clinical decision support 2 17.01 36.11 9.5 9.98 Clinical & biomedical text 8 14.72 28.15 40.1 6.63 All reported cases 28 15.67 25.80 117.4 3.58 
+
+75 Case Study: Polyadenylation Signal Detection 
+
+The task is to decide whether a candidate polyadenylation signal in a roughly 600-base DNA window is functional; the host evaluates positive-class F1 on 3,000 held-out windows against a reference bar of 0.88. We follow the construction process, the inference path of the delivered solver, and the result of the complete system. 
+
+5.1 Construction process 
+
+The builder first implements motif-relative canonicalization: each window is re-centred on its AATAAA 
+
+occurrence, keeping 294 bases on either side, so that downstream components see a fixed four-channel, 594-position input. From the public DeepGSR collection it assembles 22,604 human windows and partitions them before any fitting into 17,104 training, 2,500 validation, and 3,000 development-test windows. On this data it trains dilated residual 1D CNNs with sequence-shift augmentation, selects four of them greedily on the validation split into an ensemble, and tunes the decision threshold on the same split for positive-class F1, arriving at 0.495. Around the predictor the builder constructs three further resources: a 5-mer composition index that returns the nearest labelled reference windows, a biology knowledge card describing cis-elements around the signal, and a shared tool interface through which the aligned sequence, sequence features, the CNN score, retrieved neighbours, and a compact evidence summary are exposed. A driver connects these tools to the platform LLM through a pi agent and packages the solver behind the standard entry script. Self-checks run the packaged solver with fresh identifiers, shifted window boundaries, off-centre signals, and reordered inputs (Figure 4). The episode ended with a staged artifact and no explicit submission, so it reached host-side execution through operator closure. 
+
+Figure 4: Construction of the polyadenylation solver. The builder implements build utilities and a task interface, obtains data, constructs a 5-mer retrieval index, trains a CNN predictor, connects the LLM, performs development self-checks, and packages the artifact. The train, validation, and development-test split belongs to construction; the final box is the evaluation of §3.5. 
+
+5.2 Inference path 
+
+The delivered solver processes a batch of cases in four stages (Figure 5). 1. CNN score. For every case the ensemble returns p(x), the mean over its four members and three input shifts (0 and ±4 positions). The CNN decision is yW (x) = ⊮[p(x) ≥ 0.495] ,and a CNN-only prediction file is written immediately so that the delivery is never empty. 2. LLM review. For every case in the batch—no review deadline was configured—the platform LLM, operating through the tool interface, inspects the aligned window, sequence evidence, the CNN score, and retrieved neighbours, and returns a label yF (x).83. Uncertainty-band arbitration. The two decisions are combined as 
+
+˜y(x) = 
+
+yF (x), ℓ < p (x) < u and a valid LLM answer is available ,yW (x), otherwise , (4) with (ℓ, u ) = (0 .44 , 0.60) . A missing, timed-out, or unparsable LLM answer therefore leaves the CNN decision in place. 4. Positive-rate guard. Let n be the number of cases in the batch. If more than ⌊0.62 n⌋ cases are labelled positive after arbitration, the final output labels exactly the ⌊0.62 n⌋ cases with the highest CNN score p(x) as positive and all others as negative; otherwise ˜y is output unchanged. 
+
+Figure 5: Internal structure of the polyadenylation solver. A candidate DNA window enters the solver and produces a functional or non-functional prediction. The decision controller coordinates sequence tools, a CNN ensemble, biological guidance, and 5-mer retrieval; curved arrows summarize tool interaction and review at inference time. The LLM reviews every case; the box labelled “LLM review; uncertainty-gated adoption” marks where its decision is adopted, only inside the uncertainty band 0.44 < p (x) < 0.60 . The positive-rate guard caps positives at 62% of the batch before output (Eq. (4) and the four stages in the text). 
+
+5.3 Complete-system result 
+
+Independent evaluation of the complete Poly(A) solver recorded a positive-class F1 of 0.8977 on 3,000 cases (precision 0.8832, recall 0.9127), against a reference bar of 0.88. The host passed all 3,000 cases to the solver in a single batch, so the guard was applied once over the full set; the solver labelled 51.67% of the cases positive, below the 62% cap, and the guard left every prediction unchanged. The delivered artifact combines sequence processing, a fitted CNN ensemble, retrieval resources, and a task-specific inference controller. 
+
+## 6 Discussion 
+
+6.1 Scientific system construction across tasks 
+
+Across the cases, construction turns a task into an explicit representation and a set of usable resources rather than a single prompt—a coordinate system for a sequence, a trained predictor, a schema-search interface, a retrieval index—each inspectable in the delivered code. This decomposition also clarifies attribution. Because a solver pairs constructed resources with the platform LLM, the builder’s contribution cannot be read off the fraction of predictions the model changes at inference: a strong numerical tool can be the main product of construction even when the controller usually accepts its output, and conversely a task can be carried mostly by the assembled environment. Separating the two—resources versus controller—is what the builder/solver split makes possible. 9Construction also builds its own feedback. The builder’s development splits, self-checks, and perturbed re-runs give a signal during construction that is distinct from the host’s held-out evaluation; the worked example (§5) shows the resulting loop. 
+
+6.2 Where construction contributes 
+
+The reported cases show two forms of construction. In prediction tasks over sequences, structures, and signals, the builder develops the representation, prepares training data, and fits a task-specific predictor. The resulting predictive capability is retained in the delivered artifact and evaluated through its task metric. In tool-driven tasks, construction assembles retrieval resources, executable tools, and answer checks around a fixed platform LLM. Here the contribution is incremental and task-dependent: the matched raw-LLM delta measures the change relative to the platform model on the same inputs and metric, whereas reference-bar clearance records whether the delivered system meets its configured task target. The raw model already clears the configured bar on 11 of the 12 matched subtests. Individual gains, ties, and decreases are reported in Appendix C.1. 
+
+6.3 Interpreting bar clearance 
+
+Configured reference values serve as task-specific acceptance thresholds rather than uniformly matched reproductions of source results. Table 2 records the available source attribution, rescaling or recomputation, and provenance status. Its notes distinguish differences in question set, split, or scoring from inferred attributions and values for which no public source was found. 
+
+## 7 Conclusion 
+
+LAB FACTORY treats AI agents as builders of AI labs rather than only users of existing tools. What each construction leaves behind is a task-specific system with a fixed interface, together with the record that links how it was built to how it performs. Across the reported cases, the work is divided differently between constructed resources and inference-time control: in some labs a fitted predictor carries the result, in others the platform model operates tools and knowledge the builder assembled. Making that delivered lab, rather than the agent’s development narrative, the object of study is what allows its components to be inspected and its outputs to be checked under a specified task protocol. 
+
+## References      
+
+> Suhana Bedi, Hejie Cui, Miguel Fuentes, Alyssa Unell, Michael Wornow, Juan M. Banda, Nikesh Kotecha, Timothy Keyes, Yifan Mai, Mert Oez, et al. MedHELM: Holistic evaluation of large language models for medical tasks. arXiv preprint arXiv:2505.23802, 2025. Asma Ben Abacha, Chaitanya Shivade, and Dina Demner-Fushman. Overview of the MEDIQA 2019 shared task on textual inference, question entailment and question answering. In Proceedings of the 18th BioNLP Workshop and Shared Task , pages 370–379, Florence, Italy, 2019. Association for Computational Linguistics. doi: 10.18653/v1/W19-5039. Asma Ben Abacha, Wen-wai Yim, Yujuan Fu, Zhaoyi Sun, Meliha Yetisgen, Fei Xia, and Thomas Lin. MEDEC: A benchmark for medical error detection and correction in clinical notes. In Findings of the Association for Computational Linguistics: ACL 2025 , pages 22539–22550, Vienna, Austria, 2025. Association for Computational Linguistics. doi: 10.18653/v1/2025.findings-acl.1159. Dechao Bu, Jingbo Sun, Kun Li, Zihao He, Wei Huang, Jinlin Hu, Shanshan Zhang, Shuangshuang Lei, Peipei Huo, Zhihao Wang, Sheng Wang, Tao Wang, Kai Gao, Yang Wu, Lianhe Zhao, Kai Wang, Gen Li, Huan Song, Yang Jin, Kang Zhang, Runsheng Chen, and Yi Zhao. Empowering AI data scientists using a multi-agent LLM framework with self-evolving capabilities for autonomous, tool-aware biomedical data analyses. Nature Biomedical Engineering , 2026. doi: 10.1038/s41551-026-01634-6. Jun Shern Chan, Neil Chowdhury, Oliver Jaffe, et al. MLE-bench: Evaluating machine learning agents on machine learning engineering. arXiv preprint arXiv:2410.07095 , 2024. URL https://arxiv.org/abs/ 2410.07095 .
+
+10 Hanjie Chen, Zhouxiang Fang, Yash Singla, and Mark Dredze. Benchmarking large language models on answering and explaining challenging medical questions. In Proceedings of the 2025 Conference of the Nations of the Americas Chapter of the Association for Computational Linguistics: Human Language Technologies (Volume 1: Long Papers) , pages 3563–3599, Albuquerque, New Mexico, 2025a. Association for Computational Linguistics. doi: 10.18653/v1/2025.naacl-long.182. Xi Chen, Huahui Yi, Mingke You, WeiZhi Liu, Li Wang, Hairui Li, Xue Zhang, Yingman Guo, Lei Fan, Gang Chen, Qicheng Lao, Weili Fu, Kang Li, and Jian Li. Enhancing diagnostic capability with multi-agents conversational large language models. npj Digital Medicine , 8:159, 2025b. doi: 10.1038/s41746-025-01550-0. Ziru Chen, Shijie Chen, Yuting Ning, et al. ScienceAgentBench: Toward rigorous assessment of language agents for data-driven scientific discovery. In International Conference on Learning Representations , 2025c. URL 
+
+https://arxiv.org/abs/2410.05080 .Haonan Feng, Lang Wu, Bingxin Zhao, Chad Huff, Jianjun Zhang, Jia Wu, Lifeng Lin, Peng Wei, and Chong Wu. Benchmarking DNA foundation models for genomic and genetic tasks. Nature Communications , 16: 10780, 2025. doi: 10.1038/s41467-025-65823-8. Ali E. Ghareeb, Benjamin Chang, Ludovico Mitchener, Angela Yiu, Caralyn J. Szostkiewicz, Dmytro Shved, Gavin J. Gyimesi, Jon M. Laurent, Samantha M. Wright, Muhammed T. Razzak, Andrew D. White, Silvia C. Finnemann, Michaela M. Hinks, and Samuel G. Rodriques. A multi-agent system for automating scientific discovery. Nature , 655(8122):497–505, 2026. doi: 10.1038/s41586-026-10652-y. David Graber, Peter Stockinger, Fabian Meyer, Siddhartha Mishra, Claus Horn, and Rebecca Buller. Resolving data bias improves generalization in binding affinity prediction. Nature Machine Intelligence , 7(10):1713– 1725, 2025. doi: 10.1038/s42256-025-01124-5. Maxime Griot, Coralie Hemptinne, Jean Vanderdonckt, and Demet Yuksel. Large language models lack essential metacognition for reliable medical reasoning. Nature Communications , 16:642, 2025. doi: 10.1038/ s41467-024-55628-6. Xiao Gu, Wei Tang, Jinpei Han, Veer Sangha, Fenglin Liu, Shreyank N. Gowda, Antonio H. Ribeiro, Patrick Schwab, Kim Branson, Lei Clifton, Antonio Luiz P. Ribeiro, Zhangdaihong Liu, and David A. Clifton. Cardiac health assessment across scenarios and devices using a multimodal foundation model pretrained on data from 1.7 million individuals. Nature Machine Intelligence , 8(2):220–233, 2026. doi: 10.1038/s42256-026-01180-5. Qian Huang, Jian Vora, Percy Liang, and Jure Leskovec. MLAgentBench: Evaluating language agents on machine learning experimentation. In International Conference on Machine Learning , 2024. URL https: //arxiv.org/abs/2310.03302 .Nikhil Khandekar, Qiao Jin, Guangzhi Xiong, Soren Dunn, Serina S. Applebaum, Zain Anwar, Maame Sarfo-Gyamfi, Conrad W. Safranek, Abid A. Anwar, Andrew Zhang, Aidan Gilson, Maxwell B. Singer, Amisha Dave, Andrew Taylor, Aidong Zhang, Qingyu Chen, and Zhiyong Lu. MedCalc-Bench: Evaluating large language models for medical calculations. In Advances in Neural Information Processing Systems 37 (Datasets and Benchmarks Track) , 2024. Artus Krohn-Grimberghe. MedCalc-Bench doesn’t measure what you think: A benchmark audit and the case for open-book evaluation. arXiv preprint arXiv:2603.02222, 2026. Dan Liu, Francesca Young, Kieran D. Lamb, Adalberto Claudio Quiros, Alexandrina Pancheva, Crispin J. Miller, Craig Macdonald, David L. Robertson, and Ke Yuan. PLM-interact: extending protein language models to predict protein-protein interactions. Nature Communications , 16:9012, 2025. doi: 10.1038/ s41467-025-64512-w. Xiang Liu, Zhe Su, Yongyi Shi, Yiying Tong, Ge Wang, and Guo-Wei Wei. Manifold topological deep learning for biomedical data. Nature Communications , 17:4710, 2026a. doi: 10.1038/s41467-026-71392-1. Yunsong Liu, Zunamys I. Carrero, Xiaofeng Jiang, Dyke Ferber, Georg Wölflein, Li Zhang, Sanddhya Jayabalan, Tim Lenz, Zhouguang Hui, and Jakob Nikolas Kather. Benchmarking large language model-based agent systems for clinical decision tasks. npj Digital Medicine , 9:259, 2026b. doi: 10.1038/s41746-026-02443-6. Adrian Mirza, Nawaf Alampara, Sreekanth Kunchapu, Martiño Ríos-García, Benedict Emoekabu, Aswanth Krishnan, Tanya Gupta, Mara Schilling-Wilhelmi, Macjonathan Okereke, Anagha Aneesh, et al. A framework for evaluating the chemical knowledge and reasoning abilities of large language models against the expertise of chemists. Nature Chemistry , 17(7):1027–1034, 2025. doi: 10.1038/s41557-025-01815-x. Vaibhav Mishra, Somaditya Singh, Dhruv Ahlawat, Mohd Zaki, Vaibhav Bihani, Hargun Singh Grover, Biswajit Mishra, Santiago Miret, Mausam, and N. M. Anoop Krishnan. Foundational large language models for materials research. arXiv preprint arXiv:2412.09560, 2024. 
+
+11 Ludovico Mitchener, Jon M. Laurent, Alex Andonian, Benjamin Tenmann, Siddharth Narayanan, Geemi P. Wellawatte, Andrew White, Lorenzo Sani, and Samuel G. Rodriques. BixBench: a comprehensive benchmark for LLM-based agents in computational biology. arXiv preprint arXiv:2503.00096, 2025. Jaehyun Nam, Jinsung Yoon, Jiefeng Chen, Jinwoo Shin, Sercan Ö. Arık, and Tomas Pfister. MLE-STAR: Machine learning engineering agent via search and targeted refinement. arXiv preprint arXiv:2506.15692 ,2025. Harsha Nori, Nicholas King, Scott Mayer McKinney, Dean Carignan, and Eric Horvitz. Capabilities of GPT-4 on medical challenge problems. arXiv preprint arXiv:2303.13375, 2023a. Harsha Nori, Yin Tat Lee, Sheng Zhang, Dean Carignan, Richard Edgar, Nicolo Fusi, Nicholas King, Jonathan Larson, Yuanzhi Li, Weishung Liu, Renqian Luo, Scott Mayer McKinney, Robert Osazuwa Ness, Hoifung Poon, Tao Qin, Naoto Usuyama, Chris White, and Eric Horvitz. Can generalist foundation models outcompete special-purpose tuning? case study in medicine. arXiv preprint arXiv:2311.16452, 2023b. Jungwoo Oh, Gyubok Lee, Seongsu Bae, Joon-myoung Kwon, and Edward Choi. ECG-QA: A comprehensive question answering dataset combined with electrocardiogram. In Advances in Neural Information Processing Systems 36 (Datasets and Benchmarks Track) , 2023. Xilin Shen, Jia Xin Li, Meng Yang, Lei Shi, Kexin Chen, and Xiangchun Li. A foundation model for nucleotide sequences. Nucleic Acids Research , 54(6):gkag083, 2026. doi: 10.1093/nar/gkag083. Aowen Wang, Jiaqi Li, Hongyu Dong, Bocheng Xu, Qingyu Yin, Yanchao Xu, Jie Fu, and Junbo Zhao. OmniReg-GPT: a high-efficiency foundation model for comprehensive genomic sequence understanding. 
+
+Nature Communications , 16:10139, 2025. doi: 10.1038/s41467-025-65066-7. Taylor Webb, Shanka Subhra Mondal, and Ida Momennejad. A brain-inspired agentic architecture to improve planning with LLMs. Nature Communications , 16:8633, 2025. doi: 10.1038/s41467-025-63804-5. Yutaro Yamada, Robert Tjarko Lange, Cong Lu, Shengran Hu, Chris Lu, Jakob Foerster, Jeff Clune, and David Ha. The AI Scientist-v2: Workshop-level automated scientific discovery via agentic tree search. arXiv preprint arXiv:2504.08066 , 2025. URL https://arxiv.org/abs/2504.08066 .Mert Yuksekgonul, Federico Bianchi, Joseph Boen, Sheng Liu, Pan Lu, Zhi Huang, Carlos Guestrin, and James Zou. Optimizing generative AI by backpropagating language model feedback. Nature , 639(8055):609–616, 2025. doi: 10.1038/s41586-025-08661-4. Gongbo Zhang, Yilu Fang, Fangyi Chen, Casey Ta, George Hripcsak, Patrick Ryan, Yifan Peng, and Chunhua Weng. A neural-symbolic AI agent system for biomedical concept mapping. npj Digital Medicine , 9:425, 2026a. doi: 10.1038/s41746-026-02594-6. Jenny Zhang, Shengran Hu, Cong Lu, Robert Lange, and Jeff Clune. Darwin Gödel machine: Open-ended evolution of self-improving agents. In International Conference on Learning Representations (ICLR) , 2026b. Yujun Zhou, Jingdong Yang, Yue Huang, Kehan Guo, Zoe Emory, Bikram Ghosh, Amita Bedar, Sujay Shekar, Zhenwen Liang, Pin-Yu Chen, Tian Gao, Werner Geyer, Nuno Moniz, Nitesh V. Chawla, and Xiangliang Zhang. Benchmarking large language models on safety risks in scientific laboratories. Nature Machine Intelligence , 8(1):20–31, 2026. doi: 10.1038/s42256-025-01152-1. 
+
+12 A Implementation and evaluation configuration 
+
+Builder and model endpoints. The reported runs use the archived builder identifier 
+
+claude-opus-5 with the pi coding-agent harness, version 0.80.1. Host-mediated model endpoints in the archive serve claude-opus-5 and kimi-k3 . The evaluation records list the Opus endpoint as the solver’s platform-LLM upstream for all 33 subtests. The raw-LLM baseline in Appendix C.1 directly queries the host-configured baseline model on the evaluation inputs, without the constructed components, and is recorded in the same result records. The baseline and solver model endpoints are configured separately; their identity is not established by the archived result records. 
+
+Runtime dependencies and limits. The build VM can access public data, packages, and model weights. Earlier batches used a 12-hour wall-clock limit and later batches 24 hours; resource use was metered without a common fixed budget across tasks. 
+
+Delivery interface. Each artifact exposes a single entry script: it reads a batch of cases—each with an identifier and its task inputs—and writes a prediction file indexed by those identifiers, carrying labels, scores, ranked concepts, SQL, or textual answers as the task requires. The delivered environment may bundle trained weights, code, retrieval resources, and knowledge files, and its inference path may call the platform LLM through a host endpoint; it contains no newly trained LLM weights. At evaluation the host remints identifiers, permutes input fields, and substitutes a generic task description (§3.5). 
+
+Scoring methods. Primary metrics are computed by the host from the delivered predictions. Accuracy, exact match, F1, macro-F1, AUROC, AUPRC, Pearson r, and Recall@1 are computed against host-side references; SQL is scored by execution accuracy on the host grading database, including the task’s empty-answer convention. The two MAE tasks are reported in skill space (Eq. (3)); their native errors are 0.7533 BMI units and 9.0326 years. The normalizing constant ct is the error of always predicting the mean. Its configured value is not stored in the result records; back-solved from the recorded MAE and skill values, it is cBMI ≈ 2.787 BMI units and cage ≈ 11 .82 years. Two model-graded metric types are used and kept separate from each other and from classification accuracy: • Judge accuracy (bioinformatics analysis, clinical calculation, and both rare-disease subtests). A single host judge model receives the reference answer with its aliases and the solver’s answer, and returns whether the answer matches; judge accuracy is the fraction of cases accepted. The judge model is taken from the host configuration, with the baseline model as its default. The archived result records do not identify which setting was used for these runs. The same records also report strict string-match rates, a different metric: 0.2432 for bioinformatics, 0.8755 for clinical calculation, and 0.5960 and 0.4801 for the rare-disease follow-up and primary subtests. • Jury score (medical dialogue summarization and both clinical note tasks). Three host judge models— gpt-4o , claude-3-7-sonnet , and llama-3-3-70b —each rate the solver’s an-swer on accuracy, completeness, and clarity on a 1–5 Likert scale. Ratings are normalized to [0 , 1] and averaged over models and axes per case; a case without a usable rating counts as 0, and the jury score is the mean over cases. These answer-level judges grade solver outputs. They are distinct from the platform’s process judge, which rates how an artifact was built and is not used in this report. 
+
+Output checks. Every subtest requires predictions for at least half of the current identifiers and at least min(2 , n ) distinct top-1 outputs; failure zeros that subtest. Metric-specific rules can add constraints such as positive-rate guards. An evaluation case without a prediction is scored as incorrect (0 for graded and jury metrics). All 28 reported records passed these checks with predictions for every evaluation case, i.e. full coverage on all 33 subtests. 
+
+Episode termination. Of the 28 reported runs, 18 ended with an explicit submission. Ten were closed by the operator with a staged artifact—nine after the builder stopped without submitting and one at the wall-clock limit—and their staged solvers were then evaluated through the same host-side 13 path. Among the eleven cases described in Appendix B, polyadenylation, protein–ligand affinity, bioinformatics analysis, and fuel-cell literature classification were operator-closed. 
+
+## B Representative scientific constructions 
+
+This appendix records how each representative solver was constructed. Every case is described by its input and output, the components the builder constructed (stating which were fitted during construction), the data and development resources it used, and its inference procedure. Development splits and self-checks belong to construction; the reported values come only from independent evaluation (§3.5). Where a solver runs an agent loop, the recorded harness is pi; other paths implement a task-specific observation–action loop over the same resources. The records describe what enters the model context but do not measure per-case context length. 
+
+B.1 Polyadenylation signal detection Input and output. A roughly 600-base DNA window containing a candidate polyadenylation hexamer; the output is a functional or non-functional label. 
+
+Constructed components. Motif-relative canonicalization to a four-channel, 594-position input; an ensemble of four dilated residual 1D CNNs, fitted during construction; a 5-mer composition retrieval index; a biology knowledge card; and a shared tool interface exposing the aligned sequence, sequence evidence, the CNN score, and retrieved examples. 
+
+Data and development resources. 22,604 human windows from the public DeepGSR collection, split before training into 17,104 training, 2,500 validation, and 3,000 development-test windows; mouse and cow sequences were available as optional augmentation. Validation guided ensemble selection and the decision threshold. Self-checks ran the packaged solver with fresh identifiers, shifted window boundaries, off-centre signals, and reordered inputs. 
+
+Inference procedure. CNN scoring, LLM review, uncertainty-band arbitration, and a positive-rate guard, as specified in §5. 
+
+B.2 Protein–ligand binding affinity Input and output. A three-dimensional protein–ligand complex; the output is a continuous affinity estimate. 
+
+Constructed components. Geometry-based descriptors of the pocket and ligand (contact patterns, chemical interaction descriptors, molecular shape); an ensemble of eight gradient-boosted tree models, fitted during construction; a nearest-neighbour evidence index; and tools exposing complex inspection, structural features, the learned estimate, and ensemble disagreement. 
+
+Data and development resources. Public protein–ligand structures paired with affinity annotations, 5,311 training examples in the delivered metadata. Development code supports a sequence-similarity-based holdout. Structural self-checks rotate and translate coordinates, reorder atoms, and rename chains or residues. The available metadata do not verify that the CASF-2016 core set was excluded from the training data. 
+
+Inference procedure. The tree ensemble produces an affinity estimate; a platform-LLM tool loop examines the structural evidence and proposes a refinement bounded around that estimate. Without a usable review, the ensemble estimate is returned. 
+
+B.3 Bioinformatics analysis Input and output. A study data package and a scientific question; the output is an answer computed from the supplied data. 14 Constructed components. An executable analysis environment with the required scientific soft-ware; reusable procedures for table inspection, differential expression, enrichment analysis, gene-identifier mapping, regression, principal-component analysis, and phylogenetic distances; domain recipes covering contrast direction, multiple-testing correction, enrichment backgrounds, and out-put units; offline gene-set resources; and a data summarizer reporting file shapes, column types, representative values, and numeric ranges. No predictive model is fitted during construction. 
+
+Data and development resources. Development questions and reference answers reconstructed from public BixBench study packages. The complete workflow was run with changed identifiers and reordered inputs, with numeric, textual, and model-based answer comparisons. 
+
+Inference procedure. A pi coding agent works in a case-specific workspace: it reads the data summary, selects and executes an analysis, and formats the answer. Repeated sample files are summarized by representative profiles, and the harness compacts context in longer sessions. 
+
+B.4 Clinical text-to-SQL Input and output. A clinical database schema and a natural-language question; the output is an SQL query or an abstention for an unsupported request. 
+
+Constructed components. Schema search, column-encoding inspection, clinical synonym support, answerability checks, query-execution checks, and two schema-faithful synthetic databases. No predictive model is fitted during construction. 
+
+Data and development resources. Two populated development databases with eICU-like and MIMIC-like structures and about 350 template-generated questions with derived reference queries, covering counts, joins, aggregation, time windows, outcomes, and unanswerable requests. Self-checks shuffle schema order and compare returned row sets, separating invalid queries from correct abstentions. 
+
+Inference procedure. A pi tool loop, with a task-specific controller as an alternative path, inspects tables, drafts candidate queries, executes them on the synthetic databases, and revises them from the results; candidate trajectories are compared by their agreement on synthetic instances before a query is returned. 
+
+B.5 Clinical calculation Input and output. A patient note and a calculation question; the output is a score, numerical value, or date. 
+
+Constructed components. A catalogue of 55 clinical calculators with specifications, parameter schemas, and executable rules; unit conversion, rule tables, and rounding; evidence search over the note; per-criterion audit tools; and a deterministic extraction fallback. No predictive model is fitted during construction. 
+
+Data and development resources. Calculator checks pass reference parameters directly to each calculator; end-to-end checks vary question phrasing, field order, identifiers, and unit spellings. Error analysis refined evidence attribution, negation handling, and parameter normalization. 
+
+Inference procedure. The platform LLM identifies the calculation from its specification card, extracts the parameters with supporting evidence, and calls the calculator; tool feedback returns the parameters used and a derivation, and unit and plausibility checks flag inconsistent inputs for re-extraction. Arithmetic is done by the executable rules. 
+
+B.6 Chemistry reasoning Input and output. A chemistry question with answer options; the output is an answer choice. 15 Constructed components. Molecular and formula-processing tools, chemical-arithmetic and numerical utilities, and topic-specific reference material. No predictive model is fitted during construction. 
+
+Data and development resources. Development questions from public chemistry question sets, with separate slices for refining instructions and for end-to-end checks. Checks vary option order, question formatting, and identifiers, and separate incorrect choices from answer-parsing failures. 
+
+Inference procedure. Computed properties and composition summaries are added to the model’s observations where the question contains an interpretable structure or formula. A tool-driven attempt is checked against additional reasoning passes; disagreement triggers further verification, and the controller aggregates the choices. Interaction depth adapts to the remaining execution budget, with a shorter path when a longer rollout cannot finish. 
+
+Additional construction accounts 
+
+The following five solvers are also part of the 28 reported cases and show further designs. 
+
+B.7 Protein interaction Input and output. Two amino-acid sequences; the output is a real-valued interaction score for ranking pairs. 
+
+Constructed components. Frozen ESM-2 embeddings of each sequence combined with physico-chemical descriptors in a symmetric pair predictor, fitted and calibrated during construction; tools exposing charge, hydropathy, composition, and disorder propensity; a training-derived interaction knowledge resource; and a domain playbook. 
+
+Data and development resources. About 1.46 million labelled pairs over about 83,000 proteins from public interaction collections, normalized, deduplicated as unordered pairs, cleared of contra-dictory labels, and balanced by source and class. Proteins were partitioned before forming training, validation, and development-test pairs, and candidate predictors were selected on per-source valida-tion performance. Self-checks exchange pair order, alter input formatting, and simulate agent-call failures. 
+
+Inference procedure. The predictor scores the pair; a pi review of the biophysical evidence applies a bounded adjustment. The learned score is returned when review cannot complete. 
+
+B.8 Regulatory variants Input and output. Reference and alternate DNA windows; the output is a causal-eQTL relevance score. 
+
+Constructed components. Variant localization from the sequence pair; features for local compo-sition, sequence complexity, and regulatory motifs, including curated motif families and JASPAR vertebrate position-weight matrices; tree models and multilayer perceptrons on these features and a dilated CNN on one-hot paired windows, all fitted during construction; strand-aware and reverse-complement evaluation. 
+
+Data and development resources. 97,922 GTEx-derived fine-mapped eQTL examples with 256-base reference and alternate windows; chromosomes 9 and 10 held out for development checks. Self-checks reverse strand orientation, change window boundaries, and reorder inputs. 
+
+Inference procedure. The ensemble ranks the variants; an LLM assessment of motifs gained or lost and local regulatory plausibility, given compact sequence and motif summaries and a knowledge card, is fused with the ensemble in rank space. Cases without a usable assessment keep the ensemble ordering. 16 B.9 5mC methylation Input and output. A 41-base DNA context around a candidate cytosine; the output is a methylation score. 
+
+Constructed components. A CNN ensemble with an initial convolution and dilated residual blocks, combining the central-position representation with global mean and max pooling, fitted during construction; sequence-inspection and epigenetic-guidance tools; and a pi-compatible tool interface alongside a batch inference path. 
+
+Data and development resources. About 1.4 million labelled windows from the GRCh38 reference genome and methylation calls from ten ENCODE whole-genome bisulfite sequencing experiments, labelled by cross-tissue consensus. Chromosome-based splits separate training, selection, and self-testing; strand randomization, varied label thresholds, and GC-matched negatives were used in development. 
+
+Inference procedure. The deployed default returns the CNN ranking; LLM consultation is supple-mentary and serves as a fallback path. 
+
+B.10 Biomedical concept linking Input and output. A mention in a passage; the output is a ranked list of UMLS concept identifiers. 
+
+Constructed components. An offline UMLS terminology index with aliases, semantic types, and definitions; mention expansion and lexical candidate retrieval; and ranking weights fitted during construction. 
+
+Data and development resources. About 8,800 labelled examples from public BC5CDR and BioRED annotations, mapped into the UMLS identifier space, used for fitting the ranking weights and refining instructions, with held-back slices for local checks. Checks separate alias-reachable annotations from coarser ones and vary input order, casing, and passage context. 
+
+Inference procedure. The model first sees the passage and a ranked candidate list; it can retrieve definitions and semantic types, request further searches, and compare an ambiguous shortlist before returning identifiers drawn from the retrieved vocabulary. 
+
+B.11 Fuel-cell literature Input and output. A materials-science sentence; the output is its relevance label for a solid-oxide fuel-cell experiment. 
+
+Constructed components. Structured cues for device mentions, operating conditions, material composition, cell-level measurements, and non-experimental contexts; a regularized lexical classifier and cue statistics, fitted during construction; 260 class-balanced precedents for retrieval; and an annotation guide. 
+
+Data and development resources. 9,466 labelled sentences from 45 documents in SOFC-Exp and its MatSci-NLP representation, with document-based training, validation, and test partitions. Local checks compare lexical, cue-based, and combined decisions. 
+
+Inference procedure. A task-specific tool-calling loop starts from the sentence, annotation guid-ance, and precomputed evidence and calibration summaries; the agent can retrieve precedents, inspect the lexical estimate, or request guidance, and the final label combines these signals. 
+
+## C Complete task results and baseline comparisons 
+
+Table 2 lists every subtest of the 28 reported cases, which comprise 33 subtests, with its metric type, number of evaluated cases, recorded value, and configured reference. Margins over the reference 17 vary widely; three subtests clear it by less than 0.01: laboratory safety (0.8718 vs. 0.8655), fuel-cell literature classification (0.8068 vs. 0.8050), and clinical note completion on procedures (0.9258 vs. 0.9249). 
+
+Table 2: All subtests of the 28 reported cases, comprising 33 subtests. Solver is the delivered solver’s value under independent evaluation and Reference bar the configured reference value, both on the primary metric; the MAE rows are in skill space (native errors in Appendix A). These metric types (Appendix A) are reported separately and should not be interpreted interchangeably; jury scores and MAE skill values are not classification accuracies. Reference-source markers and notes 1–7 are explained below the table. Task Subtest Metric n Solver Reference bar Reference source Protein–protein interaction Bernett PPI AUROC 3000 0.9874 0.7000 Liu et al., 2025 Protein–ligand binding affinity PDBbind Pearson r 285 0.9141 0.8030 Graber et al., 2025 7
+
+Causal eQTL variants eQTL AUPRC 8862 0.9192 0.5960 Wang et al., 2025 §
+
+Bioinformatics data analysis BixBench Judge acc. 296 0.4561 0.2280 Ghareeb et al., 2026 1
+
+5mC methylation sites 5mC AUROC 1407 0.9530 0.7830 Feng et al., 2025 Polyadenylation signal detection Poly(A) signal F1 3000 0.8977 0.8800 Shen et al., 2026 Abdominal organ classification (3D CT) Organ 3D Accuracy 610 0.9705 0.9520 Liu et al., 2026a BMI estimation (physiological waveforms) VitalDB (BMI) MAE skill 2500 0.7297 0.0852 No public source found ‡,5
+
+ECG interpretation ECG-QA (PTB-XL) Accuracy 2500 1.0000 0.7460 Oh et al., 2023 §,3
+
+Age estimation (physiological waveforms) VitalDB (age) MAE skill 2500 0.2358 0.1624 Gu et al., 2026 ‡,§,6
+
+Clinical decision reasoning MedAgentsBench Accuracy 862 0.5557 0.3030 Liu et al., 2026b Medical reasoning with abstention MetaMedQA Accuracy 1373 0.8529 0.7330 Griot et al., 2025 Biomedical data-analysis reasoning Multiple choice Exact match 172 0.8488 0.7600 Bu et al., 2026 §
+
+Chemistry reasoning ChemBench Accuracy 942 0.9268 0.8482 Mirza et al., 2025 ‡
+
+Medical reasoning Medbullets Accuracy 308 0.9123 0.6331 Chen et al., 2025a Medical reasoning MedMCQA Accuracy 4183 0.8735 0.7366 Nori et al., 2023a Medical reasoning MedQA Accuracy 1273 0.9678 0.9020 Nori et al., 2023b Multi-step reasoning StrategyQA Accuracy 100 0.9400 0.8770 Webb et al., 2025 Academic reasoning MMLU college physics Accuracy 102 1.0000 0.9510 Yuksekgonul et al., 2025 Academic reasoning MMLU machine learning Accuracy 112 0.9554 0.8840 Yuksekgonul et al., 2025 Laboratory safety LabSafety Accuracy 632 0.8718 0.8655 Zhou et al., 2026 Case-based rare-disease diagnosis Follow-up Judge acc. 302 0.7152 0.5386 Chen et al., 2025b Case-based rare-disease diagnosis Primary Judge acc. 302 0.5762 0.3411 Chen et al., 2025b Clinical calculation MedCalc Judge acc. 1100 0.9445 0.8500 Krohn-Grimberghe, 2026 2
+
+Clinical text-to-SQL EHRSQL Exec. acc. 1000 0.5470 0.3200 Bedi et al., 2025 †
+
+Clinical note error detection MEDEC Accuracy 597 0.8526 0.7016 Ben Abacha et al., 2025 4
+
+Medical dialogue summarization iCliniq Jury score 1000 0.9864 0.8461 Bedi et al., 2025 †,‡
+
+Biomedical concept linking ST21pv Recall@1 40157 0.7108 0.6000 Zhang et al., 2026a Consumer-health answer verification MEDIQA Accuracy 1107 0.8193 0.7800 Ben Abacha et al., 2019 Clinical note generation ACI-Bench Jury score 120 0.9972 0.9646 Bedi et al., 2025 †,‡
+
+Fuel-cell literature classification LLaMat Macro-F1 1855 0.8068 0.8050 Mishra et al., 2024 Clinical note completion Procedures Jury score 128 0.9258 0.9249 Bedi et al., 2025 †,‡
+
+Clinical note completion Replicate Jury score 427 0.9838 0.9299 Bedi et al., 2025 †,‡
+
+Notes to Table 2. † Public leaderboard entry (MedHELM v4.0.0) rather than a value reported in a paper; EHRSQL is GPT-4o, the jury-scored subtests are GPT-5 or GPT-5 mini. ‡ Rescaled or recomputed: MedHELM jury means on the 1–5 scale are mapped to [0 , 1] by (x − 1) /4, and the host re-runs its own jury (Appendix A); ChemBench 0.8482 is o1-preview accuracy recomputed from the released per-question scores on the 942-question subset evaluated here and does not appear in the paper; the two MAE rows are in skill space (Eq. (3)). § Attribution inferred from task configuration; the attribution or numerical value was not independently confirmed (eQTL and biomedical multiple-choice values not located in accessible text; ECG-QA and age see notes 3 and 6). 1 BixBench: 0.228 is the Finch agent’s accuracy on a 170-question expert-selected panel reported by Ghareeb et al. [2026], not on the 296 BixBench questions [Mitchener et al., 2025] evaluated here. 2 MedCalc: the configured value 0.85 is not reported as such; the nearest reported result is 85.5% (open-book GLM-4.7) on a 275-case subsample, and the best open-book result on all 1,100 cases is 81.5% [Krohn-Grimberghe, 2026]; benchmark from Khandekar et al. [2024]. 3 ECG-QA: 0.746 matches the M3AE baseline on single-ECG verification questions only [Oh et al., 2023], not overall accuracy; the task package is not preserved, so the attribution is inferred. 4 MEDEC: 0.7016 is reported on the full MEDEC test set; the host evaluates the MEDEC-MS portion (597 cases), where the best reported result is 0.7286 18 (o1-preview). The recorded 0.8526 exceeds both. 5 VitalDB BMI: no public source was found for the configured value, which corresponds to an MAE of about 2.55 BMI units. 6 VitalDB age: the configured value corresponds to an MAE of 9.90 years, matching single CSFM-Large training runs in the source data of Gu et al. [2026]; the task package is not preserved, so the match is inferred. 
+
+7 Protein–ligand affinity: training/core-set overlap not verified. 
+
+C.1 Matched accuracy baselines 
+
+Figure 6 and Table 3 report every accuracy-scored subtest for which a recorded raw-LLM baseline is available: twelve subtests from nine of the 28 cases, each evaluated on the same held-out inputs and metric for both systems. Seven subtests improve, two are unchanged, and three show small decreases. On 11 of the 12 subtests the raw platform LLM already exceeds the configured reference; the exception is laboratory safety, where construction raises accuracy from 84.81% to 87.18%, crossing its 86.55% reference. 50 60 70 80 90 100 
+
+> Accuracy (%) Medical QA · MedMCQA Health-answer checking · MEDIQA Reasoning with abstention · MetaMedQA Laboratory safety · LabSafety Note error detection · MEDEC Medical QA · Medbullets Medical QA · MedQA Academic reasoning · College physics Academic reasoning · Machine learning Chemistry reasoning · ChemBench Clinical reasoning · MedAgentsBench Multi-step reasoning · StrategyQA +8.05 +3.25 +2.62 +2.37 +1.51 +1.29 +0.55 0.00 0.00 -0.10 -0.93 -1.00
+> Δ (pp)
+> Raw LLM Constructed solver Knowledge & reasoning Clinical & biomedical text
+
+Figure 6: Constructed solvers versus the raw-LLM baseline. All 12 matched accuracy comparisons from nine cases, sorted by the solver-minus-baseline difference. Open circles denote the raw LLM and filled circles the constructed solver; colors follow the scientific categories in Figures 2 and 3. Coincident markers indicate equal accuracy. The right column reports changes in percentage points (pp). Row labels give an abbreviated task name and the subtest; “Medical QA” is the medical reasoning task of Table 2. 19 Table 3: The 12 matched accuracy comparisons plotted in Figure 6, in the same order. Raw LLM and Solver are accuracies on a 0–1 scale; ∆ is Solver minus Raw LLM in percentage points. 
+
+Subtest n Raw LLM Solver ∆ (pp) MedMCQA 4183 0.7930 0.8735 +8.05 MEDIQA 1107 0.7868 0.8193 +3.25 MetaMedQA 1373 0.8267 0.8529 +2.62 LabSafety 632 0.8481 0.8718 +2.37 MEDEC 597 0.8375 0.8526 +1.51 Medbullets 308 0.8994 0.9123 +1.29 MedQA 1273 0.9623 0.9678 +0.55 MMLU college physics 102 1.0000 1.0000 +0.00 MMLU machine learning 112 0.9554 0.9554 +0.00 ChemBench 942 0.9278 0.9268 -0.10 MedAgentsBench 862 0.5650 0.5557 -0.93 StrategyQA 100 0.9500 0.9400 -1.00 
+
+20

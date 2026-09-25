@@ -1,0 +1,2575 @@
+ 
+ 
+1 
+ 
+Combining physical models with dynamically acquired experimental information 
+for the optimization of multicomponent NASICON fast ionic conductors in a self-
+driving laboratory 
+ 
+Bernardus Rendy1,2,3, Yuxing Fei1,2, Tanjin He4, Xiaochen Yang1,2, Andrea Giunto1,2, 
+Lauren N. Walters5,1, David Milsted2, Hao Qiu1, Matthew J. McDermott2, Bin Ouyang2,6, 
+Yan Zeng2,7,*, Gerbrand Ceder1,2,3,* 
+Abstract 
+Elemental substitution within existing structural frameworks is a widely applied strategy for 
+developing advanced materials. Yet, optimizing target properties while maintaining phase purity 
+usually demands extensive trial-and-error, which becomes substantially inefficient when 
+navigating a complex design space. Here, we introduce a strategy that simultaneously and 
+dynamically assesses composition-dependent synthetic accessibility and target properties via 
+aggregated cost functions that guide autonomous experimentation in a truly self-driving and self-
+learning mode. Specifically, we developed a cost-guided autonomous solid-state synthesis (CASS) 
+framework and demonstrate its application in the discovery of Na superionic conductor 
+(NASICON) solid electrolytes. CASS successfully optimizes ionic conductivity and phase purity, 
+leading to the identification of 18 promising compositions in 78 trials conducted in an autonomous 
+laboratory, the A-Lab. Among these, we identified two fast-conducting NASICONs yielding total 
+(bulk) ionic conductivity of 0.7 (3.96) and 0.3 (3.17) mS/cm. The successful deployment of CASS 
+reinforces the potential of coupling self-driving autonomous laboratories with physics-informed 
+ 
+1 Department of Materials Science & Engineering, University of California Berkeley, Berkeley, CA 
+94720, USA 
+2 Materials Sciences Division, Lawrence Berkeley National Laboratory, Berkeley, CA 94720, USA 
+3 Energy Storage Research Alliance, Argonne National Laboratory, 9700 South Cass Avenue, Lemont, IL 
+60439, USA 
+4 Argonne National Laboratory, 9700 South Cass Avenue, Lemont, IL 60439, USA 
+5 Bakar Institute of Digital Materials for the Planet, UC Berkeley, Berkeley, CA 94720, USA 
+6 Department of Chemical and Biomolecular Engineering, Vanderbilt University, Nashville, TN 37235, 
+USA 
+7 Department of Mechanical Engineering, Vanderbilt University, Nashville, TN 37235, USA 
+* Corresponding authors: gceder@berkeley.edu (G.C.), yan.zeng@vanderbilt.edu (Y.Z.) 
+ 
+
+
+ 
+ 
+2 
+ 
+generative models to accelerate materials discovery. Moreover, the interpretability of the design 
+factors, informed by outcomes from both successful and failed syntheses, enables model 
+refinement and generation of new chemical insights. 
+ 
+Keywords: autonomous synthesis; self-driving laboratories; NASICON; sodium solid electrolytes; 
+synthesizability; ionic conductivity 
+ 
+1. Introduction 
+Elemental substitution constitutes a fundamental strategy in materials science, enabling the 
+continuous tuning of functional properties to meet complex performance criteria1. Almost all 
+technological materials in engineering have very specific compositions adjusted for target 
+properties, even defining very different materials classes within a given solid-solution space. 
+Examples can be found in the LiNixMnyCozO2 (NMC) family of Li-ion cathode materials2, Ti3 and 
+Al4 alloys, stainless steels5, and others6–11. While novel compound discovery is often the focus of 
+academic research, this compositional tuning to satisfy multiple (often opposing) property 
+constraints forms the bread and butter of most technological materials innovation. This vast 
+compositional flexibility is also essential for discovering the diverse portfolio of candidate 
+materials required to address the multi-objective challenges in next-generation energy storage12. 
+Specifically, for all-solid-state sodium-ion batteries, a sustainable alternative to lithium-ion battery 
+technologies, the development of solid-state electrolytes (SSEs) must simultaneously optimize 
+ionic conductivity, stability, and processability13–19. For this purpose, oxide-based phosphosilicate 
+Na superionic conductors (NASICONs) with the general formula NawM2(PO4)3-z(SiO4)z offer a 
+versatile SSE platform with good stability and wide electrochemical windows20,21. This structure 
+allows for systematic property tuning via extensive cation (M) and polyanion (PO4, SiO4) 
+substitution, followed by sodium (Na) content adjustment to maintain charge balance21–26. Given 
+their structural flexibility to accommodate vast chemical variations, accelerating the discovery of 
+optimal NASICONs requires exploiting established compositional design rules. Strategies such as 
+aliovalent cation doping to optimize charge-carrier concentration, and anion substitution to tune 
+the lattice bottleneck size, are well-established approaches for designing fast-conducting 
+NASICON-type materials27–29. However, synthesizing these tailored NASICONs remains 
+
+
+ 
+ 
+3 
+ 
+experimentally challenging due to the formation of impurity or competing phases that can impede 
+ionic conductivity29,30. 
+To tackle this synthesis challenge, materials discovery campaigns often rely on either static 
+computational funnels31 or Bayesian optimization (BO) for systematic screening and decision-
+making. Incorporating these methods has become increasingly important, particularly given the 
+proven acceleration offered by self-driving and automated laboratories25,32–40. However, static 
+funnels cascade candidates through rigid filters25,36 without adapting to mid-campaign 
+experimental feedback, thereby limiting the design space. Conversely, while BO has successfully 
+tuned NASICON compositions41,42, these campaigns are largely restricted to the close 
+compositional vicinity of known materials. Within such constrained single-phase solid-solution 
+regimes, elemental substitutions often yield smooth and stationary property landscapes well-suited 
+to standard Gaussian process kernels43,44. However, navigating beyond these local regimes to map 
+new phase boundaries exposes a highly rugged and non-stationary global property landscape45, 
+characterized by vast regions of competing phases punctuated by the abrupt emergence of the 
+target phase. We demonstrate in this paper that by utilizing experimental feedback to update prior 
+models in an autonomous way, it is possible to rapidly identify target phase domains45–47.  
+To practically implement this dynamic prior approach and navigate the non-stationary 
+synthesis landscapes, we established the Cost-guided Autonomous Solid-state Synthesis (CASS) 
+active learning framework. CASS initializes the design space using model estimates of synthetic 
+accessibility and ionic conductivity, which serve as the foundational prior model. To efficiently 
+identify the optimal composition within a complex chemical space, the framework couples an 
+evolutionary algorithm with a gradient-based optimizer. Rather than relying on static 
+computational filters, CASS submits candidate compositions to an autonomous synthesis 
+laboratory, the A-Lab32, to acquire mid-campaign experimental feedback. Crucially, the 
+framework utilizes experimental characterization results, specifically the synthetically accessible 
+compositions inferred from observed lattice parameters and the presence and characterization of 
+impurity phases, to actively recalibrate the design space. This closed-loop process iteratively steers 
+the system toward synthesizable candidates that adhere to the targeted ionic conductivity design 
+rule. We demonstrate that CASS successfully navigated high-dimensional chemical spaces and 
+strategically designed and synthesized promising fast conducting NASICONs. This success lays 
+
+
+ 
+ 
+4 
+ 
+the foundation for integrating additional design rules into the framework, enabling the 
+simultaneous execution of multiple predictive models alongside probabilistic synthetic 
+accessibility assessments. 
+2. Results 
+2.1. Overview of the CASS framework 
+Discovering functional materials in multicomponent chemical spaces requires decision-making 
+strategies that can jointly account for target properties and synthetic accessibility. While it is 
+possible to rely on models to predict properties, any optimization campaign needs to account for 
+the physical reality of laboratory observations which may be inconsistent with prior models. To 
+meet this need, we established the CASS framework, which combines prior physical models with 
+iterative experimental feedback in a closed-loop design process. We use this framework here to 
+identify NASICON solid electrolytes with high ionic conductivity. Figure 1a shows how CASS 
+explores a predefined chemical space of NASICON by minimizing an aggregated cost function 
+over candidate compositions. Each candidate is represented by its cation composition (excluding 
+Na) and polyanion stoichiometry. To navigate the resulting search space efficiently, CASS 
+combines global exploration by a genetic algorithm followed by gradient-based refinement for 
+precise local optimization (Methods). The selected compositions are then synthesized through 
+automated experimentation in the A-Lab32, characterized by X-ray diffraction (XRD), and the 
+resulting phase information is returned to the framework to inform the next design iteration. 
+Figure 1b shows how the aggregated cost function evolves over the course of the closed-loop 
+search. The first design iteration is guided by static cost functions (Π!"#"$%) derived from prior 
+physical knowledge, specifically synthetic accessibility and ionic conductivity. In subsequent 
+iterations, dynamic cost functions (Π&'(#)$%) inferred from experimental characterization 
+outcomes (phase identification and refined lattice parameters of the NASICON phase) are added 
+to update the total cost landscape. This allows CASS to move from prior-guided exploration to 
+feedback-informed redesign as the campaign progresses. 
+
+
+ 
+ 
+5 
+ 
+ 
+Figure 1. CASS framework overview. (a) Closed-loop workflow integrating design, synthesis, 
+and XRD characterization. Feedback from phase analysis updates the dynamic components of the 
+aggregated cost function for subsequent iterations. (b) Evolution of the cost function. Initial 
+designs rely on static priors (Π!"#"$%), while subsequent iterations incorporate characterization-
+derived dynamic costs (Π&'(#)$%) into a total cost function (Π*+"#,). Color gradients indicate 
+relative cost magnitude. 
+ 
+Dosing and mixing
+Heating
+Powder Recovery & XRD
+XRD reﬁnement and impurity phase search
+Optimal composition
+Design #
+1.0
+1
+0.4 1.5
+Cation
+Anion
+N
+…
+0.2 0.6 2.4
+Cost
+Genetic algorithm (GA)
+Optimal GA composition
+Gradient-based optimizer
+Synthesis and characterization
+Update 
+cost 
+functions
+Aggregated cost function (𝜋𝑇𝑜𝑡𝑎𝑙)
+Design using static cost functions
+Redesign using static and dynamic cost functions
+Second 
+synthesis trial
+First 
+synthesis trial
+(a)
+(b)
+Third to N-th
+synthesis trial
+…
+Π𝑇𝑜𝑡𝑎𝑙= Π𝑆𝑡𝑎𝑡𝑖𝑐+ Π𝐷𝑦𝑛𝑎𝑚𝑖𝑐
+Updated 
+dynamic cost 
+function
+
+
+ 
+ 
+6 
+ 
+2.2. 
+Static and dynamic cost functions for CASS 
+The aggregated cost function comprises three static terms and two dynamic terms. The static cost 
+functions encode prior physical knowledge available before any experiment is performed and 
+initialize the search toward compositions that are both synthetically accessible and likely to exhibit 
+high ionic conductivity. Specifically, we defined static terms, explained in detail below, to 
+represent thermodynamic stability, structural stability, and ionic conductivity, respectively. 
+Thermodynamic stability (𝜋*-./)+) is configured to rule out compositions that do not form 
+single-phase materials, classifying them as synthetically inaccessible. As shown in Figure 2a, 
+𝜋*-./)+ employs a linear support vector classifier (SVC) to distinguish synthetically accessible 
+(A) from inaccessible (I) compositions. We utilized previously published stability descriptors 
+capable of separating stable and unstable NASICONs48 to build the feature space. To enable rapid 
+design, we excluded the Ewald energy (𝐸01#,2) from this feature space, as its calculation can 
+require the combinatorially expensive generation and energy evaluation of large, ordered 
+supercells for certain compositions48–50. Because the exact thermodynamic limit for synthetic 
+accessibility is unknown, and the prior knowledge is dynamically modified with observations in 
+the synthesis campaign, we modified the synthesizability model from reference 48 to make it more 
+inclusive, ensuring that all experimentally observed compositions are classified as synthetically 
+accessible. This was done by retraining the linear SVC with the original methodology and the 
+3,881 computed NASICON compositions of reference 48. The energy above hull (𝐸-3,,) limit was 
+increased to a value, 𝐸"-/.4-+,2, at which all 524 experimentally verified, literature-mined 
+NASICON compositions were correctly classified as synthetically accessible (Supplementary 
+Figure 1b). This value of 𝐸"-/.4-+,2 was 62.22 meV/atom, which we adopted as the synthetic 
+accessibility threshold for this study. We ensured that this reduced descriptor set and final updated 
+classifier retained comparable accuracy, recall, and F1-scores (see Methods). Consequently, the 
+final decision boundary (Figure 2a) relies on four remaining descriptors from the prior study48: 
+the electronegativity difference between Na and the cations (𝑋5
+6#), cation radius deviation (𝑅5
+!*&), 
+sodium content (𝑁6#), and anion charge deviation (𝑄7
+!*&). Based on this boundary, the 𝜋*-./)+ 
+cost is set to zero for synthetically accessible compositions and scales proportionally with the Platt-
+scaled instability probability48,51 for synthetically inaccessible regions. 
+As low energy above hull is only a required condition but not a sufficient condition for 
+synthesizability52, we add more information through a structural stability (𝜋&$4"+/"$+() cost 
+
+
+ 
+ 
+7 
+ 
+function (Figure 2b) which enforces a ceiling on the local lattice distortion53–55 quantified by the 
+root-mean-square (RMS) variation of the cation sizes, 𝑅5
+!*&, that tightens with increasing 
+compositional complexity. This limit is crucial, as excessive distortion of the cation polyhedra 
+imposes a severe enthalpic penalty that overcomes the system's entropic stabilization, destabilizing 
+the NASICON framework and driving the formation of competing phases. Derived from the 524 
+experimentally verified compositions mined from the literature, this empirical boundary assigns 
+zero cost to synthetically accessible (A) compositions and a linear penalty to those exceeding the 
+threshold (synthetically inaccessible (I)). 
+The model for ionic conductivity (𝜋89) (Figure 2c) defines a likely high ionic conductivity 
+domain25 (LHIC) surrogate model based on average metal cation radius (𝑅)5), sodium content 
+(𝑁6#), and average polyanion center ion radius (𝑅)7), adapting data from 484 published NASICON 
+composition-conductivity pairs25. Compositions within this domain incur zero cost, while outliers 
+face a linear penalty proportional to their distance from the boundary. 
+To incorporate the feedback from experiments in this campaign, we additionally define two 
+dynamic cost functions, one related to impurity phases, and the other related to the lattice 
+parameters of the obtained NASICON phase, based on the outcome of prior synthesis trials. 
+Impurity minimization (𝜋8):3/$"') constrains the design space by penalizing new candidate 
+compositions if their concentration of ions (except Na) that are found in impurity phases exceeds 
+that of the previous impurity-forming target composition (Figure 2d). For example, in the Na-Zr-
+La-Ti-Si-P-O NASICON system, detection of a Na3La(PO4)2 impurity phase penalizes candidates 
+with higher La or P contents than in the prior composition that generated the Na3La(PO4)2 impurity. 
+Such feedback allows the system to correct for any deficiencies in its prior model. 
+When a NASICON phase forms during a synthesis attempt, identifying its composition 
+expands the known library of synthesizable NASICONs. To approximate this NASICON 
+composition in a sample that is not phase-pure, we extract its lattice parameters by automated XRD 
+refinement and map them to candidate solid-solution compositions using Vegard’s approximation. 
+In the subsequent iterations, the lattice-parameter cost function (𝜋;<) steers subsequent candidates 
+toward compositions consistent with the experimentally realized NASICON phase (Figure 2e). 
+𝜋;< applies a linear penalty to deviations between the experimentally observed lattice parameters 
+and those predicted by a fine-tuned model for the corresponding chemical space (Methods). 
+
+
+ 
+ 
+8 
+ 
+Consequently, the cost minima explicitly pinpoint candidate compositions whose predicted lattice 
+parameters match the experimental NASICON phase. 
+These static and dynamic terms are combined into a single aggregated cost function that guides 
+the global search toward synthetically accessible compositions with high ionic conductivity while 
+incorporating feedback from prior synthesis trials. The total cost is constructed as a weighted sum 
+of 𝑤=𝜋*-./)+ + 𝑤>𝜋&$4"+/"$+( + 𝑤?𝜋89 + 𝑤@𝜋8):3/$"' + 𝑤A𝜋;<, with weights (𝑤$) assigned 
+empirically to ensure comparable magnitudes across the five terms (Methods). 
+ 
+ 
+Figure 2. Static and dynamic cost functions for CASS. (a-b) Underlying model (top) and cost 
+function (bottom) of the static synthetic accessibility costs. (a) Thermodynamic stability (𝜋*-./)+) 
+(e)
+524 text-mined compositions
+3881 Eℎ𝑢𝑙𝑙,𝑖𝑑𝑒𝑎𝑙
+(b) Cation site distortion limit
+(a) Thermodynamic stability
+𝜋𝑇ℎ𝑒𝑟𝑚𝑜
+𝜋𝐷𝑖𝑠𝑡𝑜𝑟𝑡𝑖𝑜𝑛
+I
+A
+I
+A
+I
+A
+I
+A
+(c) Optimal lattice for ionic conductivity
+LHIC
+𝜋𝐼𝐶
+484 text-mined ionic conductivity & composition pairs
+Synthesized 
+NASICON
+Na3La(PO4)2
+Impurity
+Prior synthesis trial
+(d)
+𝜋𝐼𝑚𝑝𝑢𝑟𝑖𝑡𝑦
+𝜋𝐿𝑃
+Previous target 
+composition
+
+
+ 
+ 
+9 
+ 
+utilizes a four-descriptor classifier to penalize compositions in synthetically inaccessible (I) 
+regions based on their probability of instability, while applying no penalty to those within the 
+accessible (A) region based on reference 48. (b) Structural stability (𝜋&$4"+/"$+() applies a linear 
+penalty to candidates exceeding an empirical lattice distortion (𝑅5
+!*&) ceiling that tightens with 
+compositional complexity. (c) Static ionic conductivity cost function (𝜋89) penalizes deviations 
+from a likely high-ionic conductivity (LHIC, inside) domain defined by 𝑅)5, 𝑁6#, and 𝑅)7. (d, e) 
+Dynamic costs derived from synthesis feedback. (d) Detection of an impurity phase (e.g., 
+Na3La(PO4)2) and NASICON primary phase in a prior trial parameterizes 𝜋8):3/$"' and 𝜋;< 
+dynamic cost functions. Impurity minimization (𝜋8):3/$"') penalizes candidates with impurity-
+forming ion concentrations exceeding the prior target (yellow triangle). (e) Lattice parameter 
+feedback (𝜋;<) minimizes the deviation between theoretical (Vegard’s approximation) and 
+observed lattice parameters to match the next design with the synthesized stoichiometry. Color 
+gradients indicate cost magnitude. 
+ 
+2.3. 
+CASS synthetic accessibility optimization 
+We first evaluated the capability of the CASS framework in optimizing synthetic accessibility 
+using synthesis-related cost functions (static cost functions 𝜋*-./)+, 𝜋&$4"+/"$+(, and dynamic cost 
+functions 𝜋8):3/$"', 𝜋;<). We initialized the synthesis with compositions containing equimolar 
+cations in the Hf-Zr-Ge pseudoternary (Figure 3a-b) and Hf-Zr-Ti-Ge pseudoquaternary (Figure 
+3c-d) phosphate (PO4) systems, intentionally selected for their plausibility to exceed solubility 
+limits considering the large size difference between cations such as Zr4+ and Ge4+. In this 
+accessibility demonstration the initial equimolar compositions were chosen deliberately rather than 
+by minimizing the static cost functions. In each column of Figure 3, the top subfigure (a, c) shows 
+the XRD pattern of the first synthesis attempt while the bottom subfigure (b, d) shows the result 
+after a single iteration in which the composition was adjusted following the guidance of the cost 
+functions. For these two systems, the CASS algorithm was able to reduce the impurity peaks 
+substantially in a single iteration. 
+For example, in the Hf-Zr-Ge system, the composition NaHf0.67Zr0.67Ge0.67(PO4)3 was 
+initially attempted. The XRD pattern of the obtained material (Figure 3a) indicates a NASICON 
+phase purity of approximately 53 wt%, accompanied by impurity phases containing NaGe2(PO4)3 
+
+
+ 
+ 
+10 
+ 
+and ZrP2O7. In the next iteration, the dynamic cost function 𝜋8):3/$"' guided the design of new 
+compositions to contain lower concentrations of the identified impurity-forming cations, in this 
+case, Ge and Zr. Simultaneously, the 𝜋;< cost function required the new composition to possess 
+lattice parameters similar to the NASICON phase observed in the first trial, a constraint that prefers 
+higher Zr and Hf contents. Balancing these competing objectives, CASS proposed 
+NaHf1.0Zr0.89Ge0.11(PO4)3 for the second trial. The XRD pattern of this updated composition 
+(Figure 3b) demonstrates a successfully synthesized, single-phase NASICON product. Similarly, 
+in a higher-dimensional Hf-Zr-Ti-Ge system, starting with equimolar cations yielded about 90 
+wt% NASICON, accompanied by TiO2 and GeO2 impurities (Figure 3c). After just one iteration 
+of 
+CASS 
+guidance, 
+a 
+single-phase 
+NASICON 
+with 
+the 
+composition 
+NaHf0.76Zr0.89Ti0.23Ge0.12(PO4)3 (Figure 3d) was successfully synthesized. Here, the Ti and Ge 
+contents were specifically reduced due to the 𝜋8):3/$"' constraints.  
+Additional examples of phase purity enhancement across one to three iterations are 
+provided in the Supplementary Information for various NASICON systems. These include PO4-
+based NASICONs (Zr-Sn-Ti-Ge, Zr-Ti-Ge, Zr-Sn-Ge, and Zr-Nb-Ge) and an SiO4-based 
+NASICON (Zr-Sn-Ti-Ge) (Supplementary Figures 2-6). Notably, these improvements occurred 
+even when the automated refinement occasionally failed to identify specific minor impurity 
+phases. These results demonstrate that redesigning compositions based on both synthetic 
+accessibility models and characterized synthesis outcomes effectively optimizes target phase 
+purity. Note that even when the impurity detection cannot provide quantitative information, the 
+effort to find compositions that reproduce the lattice parameter of the observed NASICON may 
+drive the synthesis towards single phases, though with a more ambiguous signal.  
+
+
+ 
+ 
+11 
+ 
+ 
+Figure 3. Validation of synthetic accessibility cost functions. Comparative Rietveld refinements 
+of initial (top) versus CASS-optimized (bottom) synthesis trials for the (a, b) Hf-Zr-Ge and (c, d) 
+Hf-Zr-Ti-Ge systems of PO4 polyanion-NASICON after a single iteration. The CASS-optimized 
+trials exhibit substantially decreased impurity peak intensities relative to the primary NASICON 
+phase. 
+ 
+2.4. 
+CASS iterative design for fast NASICON ionic conductors 
+After confirming that CASS is capable of performing synthetic accessibility optimization, we 
+further demonstrate joint optimization of single-phase synthesis with ionic conductivity as an 
+additional target. To demonstrate optimization against these multiple (sometimes conflicting) 
+requirements, we deployed the CASS framework using all cost functions (static cost functions 
+𝜋*-./)+, 𝜋&$4"+/"$+(, 𝜋89 and dynamic cost functions 𝜋8):3/$"', 𝜋;<) to explore the high-
+dimensional NASICON space NawM2(PO4)3-z(SiO4)z for single phases with high ionic 
+conductivity. M contains a mix of at least three types of cations chosen from the following: Mg2+, 
+Zn2+, Al3+, Sc3+, Y3+, In3+, Ga3+, La3+, Ti4+, Zr4+, Hf4+, Ge4+, Sn4+, Nb5+, and Ta5+. The Na content 
+(c) NaHf0.50Zr0.50Ti0.50Ge0.50(PO4)3
+NaHf0.76Zr0.89Ti0.23Ge0.12(PO4)3
+Single iteration
+𝑅𝑤𝑝= 5.93%
+𝑅𝑤𝑝= 6.91%
+NaHf0.67Zr0.67Ge0.67(PO4)3
+(a)
+NaHf1.00Zr0.89Ge0.11(PO4)3
+Single iteration
+𝑅𝑤𝑝= 8.00%
+𝑅𝑤𝑝= 7.75%
+(b)
+(d)
+
+
+ 
+ 
+12 
+ 
+is determined by charge neutrality. Success of a trial was assessed using a Purity Score, a 
+quantifiable metric derived from XRD peak intensities that assesses the relative content of a 
+NASICON phase against impurity phases. Benchmarking of the purity score is discussed in 
+Methods. On this calibrated scale, a score > 0.7 indicates NASICON as the major phase with 
+minor impurities, while 1.0 refers to a single-phase NASICON with negligible impurities. To 
+ensure that the NASICON phase likely has a composition close to the targeted composition, a 
+check on the lattice parameters of the phase was done. We classified target compositions as failures 
+(Purity Score = 0.0) if the deviation between the experimentally measured lattice parameters and 
+those predicted by Vegard’s approximation exceeded the model’s inherent uncertainty, plus an 
+additional tolerance of 15% of the chemical space range (defined by the predicted lattice 
+parameters of the NASICON end members). This extra tolerance of deviation accounts for 
+potential slight off-stoichiometry in the synthesized products and was calibrated against 
+pseudobinary phosphate NASICONs with independently synthesized end members (Methods, 
+Supplementary Information 1). For a subset of samples that contain NASICON as the major 
+phase (Purity Score > 0.7), Electrochemical impedance spectroscopy (EIS) was employed to 
+measure their ionic conductivities.  
+To test whether the CASS framework could leverage immediate experimental feedback to 
+design higher-purity and high-ionic-conductivity compositions, up to two synthesis trials (an initial 
+design and a single optimization) were executed across 54 NASICON compositional spaces. To 
+start, 62 compositions were generated, constrained to having the (SiO4)2(PO4) anion composition, 
+using the static cost functions and subject to automated synthesis in the A-Lab. The results are 
+summarized in Figure 4. In the first trial, 24 of 62 compositions (39%) produced an observable 
+NASICON phase, with 12 forming NASICON as the major phase (Purity Score > 0.7). In the 
+second trial, which incorporated updated dynamic cost functions, 16 compositions from those 
+containing an observable NASICON phase were subject to further optimization. These 
+compositions were chosen for practical reasons (excluding Sc to minimize experimental cost) and 
+in multiples of 8 to maximize experimental efficiency (as each box furnace in the A-Lab has a 
+capacity of heating 8 samples per batch). Of these, 11 compounds maintained or enhanced their 
+phase purity, 3 showed poorer purity, and 2 failed to form a NASICON phase close to the target 
+composition. Cumulatively, after two iterations, 23 of the 78 total attempted compositions yielded 
+NASICON as the major phase. These 23 compositions were evaluated against the targeted domain 
+
+
+ 
+ 
+13 
+ 
+for ionic conductivity (Figure 2c, quantified by 𝜋89 ≤0.025, where 𝜋89 > 0 indicates a 
+composition falls outside the strict target boundary, with the penalty value scaling by distance from 
+that boundary). Eighteen (78%) fell within or near this domain. Ultimately, these 78 trials produced 
+a robust set of major-phase NASICON candidates that can serve as excellent starting points for 
+subsequent Bayesian optimization41,42. 
+The formation of the NASICON phase in the first trial and the subsequent phase-purity 
+improvement in the second trial highlight CASS's dual capability: generating initial designs from 
+static priors and refining them by dynamically integrating experimental feedback. For example, 
+the initial static design for the Sn-Zr-In-Ti system, Na3.5Zr0.6Ti0.2In0.5Sn0.7(SiO4)2(PO4), yielded a 
+modest 
+Purity 
+Score 
+of 
+~0.53. 
+By 
+dynamically 
+adjusting 
+the 
+target 
+to 
+Na3.6Zr0.9Ti0.1In0.8Sn0.2(SiO4)1.8(PO4)1.2 based on the identified phases and NASICON lattice 
+parameters feedback, the second iteration successfully suppressed competing impurities, forming 
+NASICON as the major phase with a Purity Score of ~0.81. However, occasional regressions in 
+phase-purity, such as the three compositions that decreased in purity and the two that failed to form 
+the target phase, highlight the limitations of the current method. These optimization failures likely 
+originate from the inability of 𝜋;< to uniquely determine the composition of the NASICON when 
+it is first found in a multi-phase sample given the wide range of solutions allowed by Vegard’s 
+approximation in these high-dimensional composition spaces. Furthermore, the drift of 
+composition designs from within to outside the target domain for ionic conductivity (𝜋89) during 
+optimization, even as purity increased, reveals a key tradeoff. Returning to the Sn-Zr-In-Ti system, 
+although iterative optimization successfully elevated the Purity Score to ~0.81, the algorithm 
+achieved this increased purity by pushing the target composition severely outside the optimal ionic 
+conductivity domain (drifting from 𝜋89 = 0 to 𝜋89 ≈0.14). This demonstrates that while new 
+synthesizable compositions exist within the chemical spaces, their resulting structures and Na 
+content may not yield high ionic conductivity, highlighting the competition between property 
+optimization and synthesizability. 
+Overall, CASS successfully designed and synthesized 18 major-phase NASICON 
+compositions within or near the 𝜋89 target domain (𝜋89 ≤0.025), confirming its ability to balance 
+synthetic accessibility with ionic conductivity screening. A complete record of all 78 synthesis 
+trials is provided in the Supplementary Data. To illustrate the broad chemical space and complex 
+
+
+ 
+ 
+14 
+ 
+stoichiometries accessible by the framework, Table 1 highlights a subset of successful multi-cation 
+designs that were not selected for the full evaluation detailed below. 
+ 
+Figure 4. Assessment of iterative design optimization in multicomponent phosphosilicate 
+NASICONs. Comparison of Purity Scores between initial (blue) and CASS-redesigned (orange) 
+synthesis trials for 16 selected samples. Green and red arrows denote improved/maintained or 
+declined purity, respectively. Dashed lines define thresholds for negligible impurities (1.0) and 
+major NASICON product phase formation (> 0.7). Donut chart inset: Cumulative campaign 
+success, showing 23 of 78 trials yielded a major NASICON phase. 
+ 
+Table 1. Nominal compositions of samples containing NASICON as the major phase, with 
+nominal compositions near or within the target ionic-conductivity domain, as quantified by 𝝅𝑰𝑪≤
+𝟎. 𝟎𝟐𝟓 
+Nominal global composition 
+Purity score 
+𝝅𝑰𝑪 
+Na3.5Hf0.58Zr1.28In0.08Ga0.06(SiO4)2.36(PO4)0.64 
+0.93 
+0 
+Na3.5Hf1.3In0.5Ge0.2(SiO4)2(PO4) 
+0.83 
+0 
+Major
+Minor/None
+
+
+ 
+ 
+15 
+ 
+Nominal global composition 
+Purity score 
+𝝅𝑰𝑪 
+Na3.4Hf0.4Zr1.4Zn0.2(SiO4)2(PO4) 
+0.82 
+0 
+Na3.5Y0.2Zr1.5Ga0.3(SiO4)2(PO4) 
+0.81 
+0 
+Na3.4Hf0.4Zr0.3Sc0.3Ta0.2Ti0.1Nb0.2In0.5(SiO4)2(PO4) 
+0.77 
+0 
+Na2.5La0.2Hf1.1Nb0.7(SiO4)2(PO4) 
+0.77 
+0 
+Na3.49Hf0.15Mg0.45Zr1.4(SiO4)1.59(PO4)1.41 
+0.76 
+0 
+Na2.9Y0.2Hf0.4Zr0.3Nb0.4In0.6Sn0.1(SiO4)1.5(PO4)1.5 
+0.74 
+0.0014 
+Na3.11Y0.06Hf0.4Zr0.42Nb0.35In0.4Sn0.37(SiO4)2(PO4) 
+0.73 
+0 
+Na3.5Hf0.41Mg0.09Zr0.26Sc0.25Ta0.26Ti0.06Nb0.17In0.5(SiO4)2(PO4) 
+0.72 
+0 
+Na3.5La0.2Zr1.3Ti0.5(SiO4)2.3(PO4)0.7 
+0.71 
+0.00053 
+ 
+To evaluate the efficacy of the target ionic conductivity domain, we measured the ionic 
+conductivity of six NASICON samples newly synthesized in this study (Figure 5a). These samples 
+contain NASICON as the primary phase, and they featured nominal target compositions 
+representing various distances from the target domain (i.e., different 𝜋89 values). The 
+stoichiometry of the primary NASICON phase of each sample was assessed by combining Rietveld 
+refinement of XRD (Supplementary Figures 7-9), 𝜋*-./)+ analysis, lattice parameters 
+verification, and compositions measured via scanning electron microscopy and energy-dispersive 
+X-ray spectroscopy (SEM-EDS) (Methods). Deviations between the assessed composition of the 
+primary NASICON phase and the nominal composition were observed, which we attributed to the 
+presence of small amounts of secondary phases. Elemental homogeneity of the NASICON phase 
+was verified, though it was slightly less homogeneous than common mineral standards 
+(Supplementary Information 2). Before ionic-conductivity measurements, the as-synthesized 
+powders were cold-pressed and sintered near their synthesis temperatures to over 85% of 
+theoretical density (Methods, Supplementary Information 3, Supplementary Data). Note that 
+this post synthetic process may decrease the presence of minor impurities (Supplementary Figure 
+10). 
+
+
+ 
+ 
+16 
+ 
+ 
+Figure 5. Total ionic conductivity as a function of 𝝅𝑰𝑪 and electrochemical characterization 
+of the promising NASICON ionic conductors. (a) Various nominal target compositions 
+containing NASICON as the major phase are plotted according to their calculated 𝜋89 and 
+measured total ionic conductivities. A lower cost function value indicates a closer proximity to the 
+target domain for ionic conductivity, while a value of zero denotes that the target composition falls 
+inside the target domain. (b-c) Nyquist plots for two of the promising NASICON ionic conductors 
+(purple and blue data points) measured at (b) 25 °C and (c) -30 °C. Characteristic frequencies and 
+the equivalent circuit model (inset, b) are shown; solid lines represent fits to the experimental data 
+(circles). 
+4 MHz
+100 kHz
+R0
+R1
+R2
+CPE2
+CPE1
+CPE3
+1 MHz
+6 kHz
+(b)
+(c)
+(a)
+
+
+ 
+ 
+17 
+ 
+Of the six samples, three compositions were positioned near or within the target domain for 
+ionic conductivity (𝜋89 ≤0.025), while the other three were located farther outside the domain 
+(𝜋89 > 0.025). 
+Among 
+the 
+compositions 
+near 
+or 
+within 
+the 
+target 
+domain, 
+Na3.4Hf0.8Zr0.8In0.3Ga0.1(SiO4)2(PO4) and Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4) exhibited room-
+temperature total ionic conductivities of 0.7 and 0.3 mS/cm, with activation energies of 0.34 and 
+0.33 eV, respectively (Supplementary Figure 11a-b). Their corresponding bulk ionic 
+conductivities reached 3.96 and 3.17 mS/cm consistent with their low activation energies. Low-
+temperature EIS resolved the bulk and grain boundary contributions by shifting the relaxation 
+frequency into a more measurable range, from ~4 MHz (at room temperature, Figure 5b) down to 
+~1 MHz (at -30 °C, Figure 5c), visibly revealing the bulk semicircle. The bulk ionic conductivities 
+of these compositions are comparable to state-of-the-art Na NASICON56 (~5 mS/cm for optimized 
+Na3.4Zr2(SiO4)2.4(PO4)0.6) and other polycrystalline oxide Na solid-state conductors (0.23 to 2.9 
+mS/cm57–60). This is particularly promising given that post-synthetic processing (e.g., 
+densification, sintering conditions, and binder selection) has not been optimized in the current 
+study. However, the third sample, Na3.5Hf0.7In1.2Ge0.1(SiO4)1.3(PO4)1.7, is also very near the high 
+conductivity domain and yielded only 0.01 mS/cm total ionic conductivity. Conversely, samples 
+located 
+farther 
+outside 
+the 
+domain, 
+Na4.3Hf0.3Zr1.3Zn0.4(SiO4)2.5(PO4)0.5, 
+Na3.5Hf0.9In1.0Ga0.1(SiO4)1.4(PO4)1.6, and Na2.8Y0.7Hf0.9Ti0.4(SiO4)1.1(PO4)1.9, exhibited low ionic 
+conductivities of 0.01 to 0.06 mS/cm, and the latter two showed correspondingly higher activation 
+energies of 0.40 and 0.42 eV, respectively (Supplementary Figure 11c-d). These results support 
+the conclusion that minimizing the ionic conductivity cost function (𝜋89), that is, designing the 
+nominal global composition to fall close to or within the target domain, generally leads to higher 
+total ionic conductivity, despite the occasional false positives. 
+ 
+2.5. 
+Assessment of synthetic accessibility estimators 
+To assess whether the synthetic accessibility estimators deployed in CASS reflect experimental 
+synthesizability, we evaluated them against a dataset comprising results from the synthesis of 281 
+unique nominal compositions of mixed-anion phosphosilicate NASICONs (NawM2(PO4)3-
+z(SiO4)z, 0 < z < 3) (Supplementary Data). This dataset includes both the synthesis trials 
+mentioned in previous sections and additional data generated during preliminary testing of each 
+CASS cost function in its design phase. Figure 6a-b show how these compositions are distributed 
+
+
+ 
+ 
+18 
+ 
+across the parameter spaces of our cost functions 𝜋*-./)+ and 𝜋&$4"+/"$+(. These compositions 
+populate both the positive and the negative data domain, representing compositions that are 
+penalized or prohibited by the cost functions (e.g., 𝜋*-./)+ > 0, 𝜋&$4"+/"$+( > 0).  The domains 
+shaded in lighter colors in Figure 6a-b indicate higher cost and hence less likely synthetic 
+accessibility. Because the 𝜋*-./)+ and 𝜋&$4"+/"$+( feature spaces were chosen to capture ranking 
+of energetic and structural distortion as evaluation metrics for synthesizability, the efficacy of both 
+can be evaluated against the success rate of forming a primary NASICON phase across different 
+regions of the feature space. This region-wise evaluation follows the established practice of 
+binning a continuous predictor and comparing empirical success rates across bins to gauge its 
+predictive power61. We bin each feature space by the stability factor it is meant to rank. For 
+𝜋*-./)+, regions are defined by the lowest value of Ehull threshold in the SVC (See 5.12) at which 
+the phase is predicted as stable (𝐸D$/4" 4"#F,. "-/.4-+,2, details in Methods). Hence, compositions 
+with a high value of this 𝐸D$/4" 4"#F,. "-/.4-+,2 are less likely to be stable.  The fact that this is a 
+good predictor is confirmed by the data in Figure 6c, which shows the percentage of compositions 
+in each bin that led to samples with a major phase NASICON.  The data further reveals that 
+thermodynamically stable compositions (𝐸D$/4" 4"#F,. "-/.4-+,2 = 0 meV/atom above the hull, or 
+“on the hull”) achieved a 90% success rate of forming a major NASICON phase indicating the 
+success of our synthesis campaign in actually synthesizing these compounds. Compositions with 
+intermediate stability (𝐸D$/4" 4"#F,. "-/.4-+,2 > 0 to 41 meV/atom) were successful in 37-40% of 
+trials. The success rate dropped to 21% beyond 41 meV/atom, interpreted here somewhat 
+arbitrarily as a practical synthesis limit, and to 0% when exceeding the 𝜋*-./)+ synthetic 
+accessibility threshold (62.22 meV/atom) that we inclusively approximated by encompassing 524 
+experimentally verified compositions (as described in section 2.2). Changing the evaluation 
+temperature T to 1373 K does not alter this trend or the practical metastability limit 
+(Supplementary Figure 12a). 
+For 𝜋&$4"+/"$+(, we binned the cation size mismatch relative to the maximum mismatch (𝑅5
+!*& −
+𝑅5,)#H
+!*&
+). These binned regions form the horizontal axis of Figure 6d. The data in Figure 6d shows 
+that the distortion cost function 𝜋&$4"+/"$+( is also a reasonable measure of synthesizability, though 
+its outcome is more binary than the Ehull value.  For 𝜋&$4"+/"$+(, success rates declined slightly as 
+values approached the maximum mismatch limit, before dropping to just 6% for samples 
+exceeding this ceiling (Figure 6d). Ultimately, these results confirm that establishing an inclusive 
+
+
+ 
+ 
+19 
+ 
+synthetic accessibility threshold based on experimentally verified compositions within an 
+optimized stability feature space creates a successful estimator. Further sampling within this 
+feature space can narrow down the practical limits, specifically adjusting for the exact synthesis 
+methods employed in a given study. 
+ 
+Figure 6. Validation of static synthetic accessibility priors via large-scale sampling. (a-b) 
+Distribution of 281 synthesis trials (black dots) across (a) thermodynamic (𝜋*-./)+) and (b) 
+structural stability (𝜋&$4"+/"$+() cost landscapes, where lighter colors indicate higher cost. 
+Synthetically accessible (A) and inaccessible (I) regions are sampled with various compositions. 
+(c) Success rate of forming major-phase NASICON versus the minimum threshold required for a 
+composition to be considered stable (𝐸D$/4" 4"#F,. "-/.4-+,2). The dashed vertical line marks the 
+practical metastability limit, and numbers above the bars indicate the sample count within each 
+bin. (d) Success rate versus the deviation from the maximum allowable cation size mismatch 
+(𝑅5
+!*& −𝑅5,)#H
+!*&
+(𝑛)). Error bars denote the standard error calculated via bootstrap/Monte Carlo 
+methods. 
+(b)
+(a)
+(d)
+(c)
+I
+A
+I
+A
+Sampled 𝜋𝑇ℎ𝑒𝑟𝑚𝑜
+Sampled 𝜋𝐷𝑖𝑠𝑡𝑜𝑟𝑡𝑖𝑜𝑛
+𝜋𝑇ℎ𝑒𝑟𝑚𝑜success rate
+𝜋𝐷𝑖𝑠𝑡𝑜𝑟𝑡𝑖𝑜𝑛success rate
+Samples 
+count
+
+
+ 
+ 
+20 
+ 
+ 
+To more accurately understand the thermodynamic synthetic accessibility factors behind 
+NASICON synthesis, we investigated the single-cation and equimolar two-cation NASICON 
+subspaces in phosphates, as well as single-cation silicate NASICONs. The relatively simple 
+formulas of these subspaces allow for the straightforward identification of the lowest-energy 
+ordering in the NASICON phase, enabling a more accurate approximation of 𝐸-3,,,$2.#, (T = 1000 
+K was chosen to maintain magnitude comparability with the prior study48; calculation details are 
+provided in Supplementary Information 4). We attempted to synthesize various compositions 
+by varying the cation pairs (Supplementary Data). Figure 7 correlates these synthesis outcomes 
+with 𝐸-3,,,$2.#,, demonstrating that variations in the metal cations strongly correlate with synthesis 
+success. Successful phosphate syntheses were confined to compositions at or below approximately 
+15 meV/atom above the hull. However, some compositions below this value, including 
+NaSnHf(PO₄)₃ and Na₃Al₂(PO₄)₃, did not form the targeted NASICON phase. Na3Al2(PO4)3 
+formed an amorphous phase, which is consistent with prior studies conducted at ambient 
+pressure62. For single-cation silicate NASICONs, successful syntheses were similarly restricted to 
+𝐸-3,,,$2.#, < 15 meV/atom. If the ideal configurational entropy is evaluated at the synthesis 
+temperature of T = 1373 K rather than at 1000K, this 15 meV/atom empirical metastability limit 
+further decreases to 9.5 meV/atom (Supplementary Figure 12b). Note that, particularly for 
+silicates, our current sparse sampling prohibits establishing a definitive ceiling without more 
+extensive testing. The corresponding comparison of these phosphate and silicate trials with the 
+phosphosilicates in the machine-learned stability feature space is provided in Supplementary 
+Information 5. 
+
+
+ 
+ 
+21 
+ 
+ 
+Figure 7. Empirical metastability limit for phosphate and silicate NASICONs. Density 
+functional theory (DFT)-calculated energy above the hull augmented with ideal configurational 
+entropy evaluated at 1000 K (𝐸-3,,,$2.#,) for various phosphate (circles) and silicate (triangles) 
+NASICON compositions. Blue and cyan markers denote successful synthesis, whereas red markers 
+denote failure. The horizontal dashed line at approximately 15 meV/atom marks an empirical 
+upper bound for successful syntheses under the conditions tested; a few unsuccessful trials also 
+occur below this value. 
+ 
+ 
+
+
+ 
+ 
+22 
+ 
+3. Discussion 
+3.1. 
+Autonomous synthetic accessibility-guided navigation in multicomponent 
+design space 
+The CASS framework navigates complex multicomponent NASICON spaces by integrating static 
+(𝜋*-./)+, 𝜋&$4"+/"$+() models that combine prior physics-based information and dynamic (𝜋;<, 
+𝜋8):3/$"') models that incorporate the data obtained in the experimental campaign. We 
+demonstrated that with this approach CASS successfully steers designs toward high phase-purity 
+compositions. While Gaussian process (GP)-based Bayesian optimization could also offer rigorous 
+global search capabilities, deploying it effectively often requires substantial initial sampling to 
+establish useful priors41,42, and, in this setting, complex data pipelines to probabilistically model 
+noisy phase-purity estimates from automated XRD refinements. In contrast, by directly embedding 
+physical domain knowledge into its cost functions, CASS sidesteps the abrupt phase-boundary 
+modeling challenges that can complicate standard stationary GP kernels. Consequently, CASS 
+typically requires only one to three experimental iterations to achieve satisfactory phase purity. 
+This efficiency relies on the synergy between anchoring the search in theoretical priors and 
+iteratively refining local solubility maps via immediate experimental feedback. Broadly, this 
+positions CASS as a pragmatic active learning framework capable of identifying single-phase 
+regions within high-dimensional chemical spaces, enabling the exploration of complex 
+multicomponent materials53,63. Furthermore, the system’s adaptive learning provides resilience 
+against systematic uncertainties, such as variations in precursor properties that shift solubility 
+limits64,65, by dynamically recalibrating the search to implicitly account for these unmodeled 
+factors. This combination of prior knowledge and in-context experimental data has recently been 
+employed in large language model (LLM)-driven campaigns66,67. However, as evidenced by the 
+few iterations needed to achieve improved phase purity in this study, we expect explicit models 
+that map prior knowledge and new experimental data onto the experimental input space, such as 
+the CASS approach, to be more efficient, albeit biased toward regions where the mapping holds. 
+Configuring the models to be more inclusive systematically decreases this bias, a strategic dial for 
+balancing exploration and exploitation within a fixed experimental budget68, potentially useful as 
+a tool for agentic LLM-driven campaigns67,69. 
+
+
+ 
+ 
+23 
+ 
+3.2. 
+Multi-objective design via modular property surrogates 
+By integrating synthetic accessibility estimators with an ionic conductivity surrogate (𝜋89), CASS 
+designed and synthesized 23 major-phase NASICONs across 78 total trials in the A-Lab. Notably, 
+18 of these compositions fell within or near the high-conductivity target domain. This success is 
+driven by a unified, computationally efficient architecture that couples a gradient-free evolutionary 
+solver with a gradient-based optimizer to navigate complex cost functions. Because the framework 
+is highly modular, it allows for rapid adaptation as physical understanding improves, permitting 
+the testing of new hypotheses or the updating of existing models. More broadly, this capability 
+unlocks multi-objective optimization within complex solid-solution frameworks. Equipped with 
+proven synthetic accessibility optimizers, CASS can readily integrate additional design objectives, 
+such as precursor cost, elemental scarcity, and interfacial stability21,22, transforming it into a 
+customizable platform for multi-objective solid electrolyte design. 
+ 
+3.3. 
+Improvement via interpretable models 
+Conductivity measurements validated our design strategy, confirming that compositions falling 
+within the 𝜋89 target domain can yield high ionic conductivity. However, exceptions such as 
+Na3.5Hf0.7In1.2Ge0.1(SiO4)1.3(PO4)1.7, which sits close to the target domain but fails to achieve high 
+conductivity, highlight the limitations of the current predictive model. Despite its favorable 
+placement, it is possible that excessive cation size mismatch broadens the site energy distribution 
+beyond the percolation optimum63, a factor not yet explicitly modeled. Future framework 
+improvements can mitigate this by explicitly selecting compositional descriptors to explain site 
+energy distributions or by directly learning their mapping. Another approach would be to bring 
+molecular dynamics modeling of ionic conductivity directly in-line with the optimization 
+framework, though this would require very significant computing resources to deliver the 
+conductivity results in a reasonable time over large parameter spaces. When coupled with an 
+autonomous synthesis laboratory32, such modified approaches would transform the framework into 
+a powerful tool for real-time hypothesis testing and materials discovery. 
+Beyond the capability to easily integrate new physical models, CASS also enables the 
+refinement of existing priors by recalibrating them against experimental outcomes. For instance, 
+our synthesis data revealed that the practical thermodynamic stability thresholds for NASICONs 
+are anion-dependent: the threshold for NASICONs containing only phosphate (PO4) or silicate 
+
+
+ 
+ 
+24 
+ 
+(SiO4) anion groups (~15 meV/atom) is significantly lower than that for mixed-anion 
+phosphosilicates ((PO4)3-z(SiO4)z) (~41 meV/atom). This agrees well with a previous study on the 
+thermodynamic limits for metastable inorganic materials, which showed that stoichiometry and 
+constituent elements affect these boundaries70. Notably, while these empirical limits significantly 
+exceed a conservative heuristic of 0 meV/atom48, the observed success rates align with the 
+prediction that synthetic inaccessibility scales with energy above the hull. Fundamentally, shifting 
+from pure silicate (SiO4) or phosphate (PO4) anion groups into mixed-anion phosphosilicates 
+((PO4)3-z(SiO4)z) could increase the diversity of synthesis pathways due to the incorporation of 
+new anion groups that would enable the elements within the system to form various intermediates. 
+This supports theoretical models linking metastability and selectivity to specific synthesis 
+pathways32,53,70–73. Meanwhile, the formation of amorphous Na3Al2(PO4)3 prohibits the crystalline 
+version from forming, supporting the understanding that the metastability limit is also governed 
+by the relative stability of the amorphous phase70. These findings expose a critical design trade-
+off: leveraging lattice distortion via elemental substitution (e.g., in high entropy materials) 
+improves ionic conductivity by controlled flattening of site energy landscapes63, but doing so risks 
+violating thermodynamic and lattice stability limits, especially when changing anion groups. 
+Consequently, rather than rigid cutoffs, the probability distributions of success rate to form a major 
+NASICON phase established here could serve as more flexible proxies for synthetic accessibility 
+to expand the accessible design space. 
+ 
+3.4. 
+Bridging discovery and scale-up through automated bulk synthesis 
+This work employs bulk powder solid-state synthesis32,35, closely emulating current industrial 
+conditions74 while enabling a more representative evaluation of ionic conductivity with the 
+differentiation of intragrain versus intergrain transport. A current limitation is the production of 
+loose powder, which requires manual densification (~700 MPa pressing and sintering) for ionic 
+conductivity testing within most current laboratories. However, the system's modular architecture 
+(spanning CASS, AlabOS75, and hardware32) supports the future integration of automated grinding 
+and pressing units, paving the way for autonomous scalable solid electrolyte engineering beyond 
+compositional discovery. 
+Advancements in automated characterization are also critical to identify the composition of a 
+NASICON when it is first detected in a multi-phase sample. Some estimates of the observed 
+
+
+ 
+ 
+25 
+ 
+NASICON composition satisfied lattice parameters constraints (𝜋;<) but missed the actual 
+compositions due to the mathematical non-uniqueness of Vegard’s law in high-dimensional 
+spaces, where lattice parameters map to solution surfaces rather than unique points. Addressing 
+this requires integrating automated phase-specific elemental analysis (e.g., SEM-EDS76). Coupling 
+chemical data with structural refinement enables multimodal cost functions that precisely pinpoint 
+phase composition and capture key microstructural features, such as elemental distribution and 
+particle size, providing deeper insights into processing-performance relationships. 
+ 
+4. Conclusion 
+This work establishes a robust system for the accelerated discovery of multicomponent solid-state 
+electrolytes by coupling an automated robotic solid-state synthesis laboratory with the Cost-guided 
+Autonomous Solid-state Synthesis (CASS) framework. By anchoring the autonomous search in 
+interpretable physical descriptors, we enabled model refinement where failed syntheses proved as 
+valuable as successes. This closed-loop approach actively recalibrated synthesizability boundaries, 
+navigating the high-dimensional phosphosilicate NASICON space to overcome traditional 
+bottlenecks of inaccessibility and competing phases, achieving high purity designs in fewer trials 
+than those necessary for rigorous global search algorithms to warm up useful initial priors. 
+Consequently, the framework discovered 23 unique compositions yielding NASICON as the major 
+phase, 18 of which are located within or near the target domain for potentially high ionic 
+conductivity. These discoveries include promising fast ionic conductors, such as 
+Na3.4Hf0.8Zr0.8In0.3Ga0.1(SiO4)2(PO4), which exhibited measured total and bulk ionic conductivities 
+of 0.7 mS/cm and 3.96 mS/cm, respectively. 
+We demonstrated that optimizing for synthetic accessibility via interpretable cost functions 
+yields improved phase purity, effectively guiding the system toward thermodynamically stable 
+regions even though purity was optimized only indirectly, through the synthetic-accessibility and 
+impurity-feedback terms rather than an explicit phase purity (wt%) quantified from XRD. 
+Integrating experimental feedback allowed us to empirically quantify distinct metastability limits 
+for phosphates (~15 meV/atom) and mixed anion phosphosilicates (~41 meV/atom). These refined 
+priors provide data-driven design rules, underscoring the necessity of balancing the pursuit of high 
+ionic conductivity, often driven by lattice distortion, with thermodynamic stability. 
+
+
+ 
+ 
+26 
+ 
+The modular architecture comprising CASS, AlabOS orchestration, and flexible hardware 
+offers a scalable blueprint for an autonomous materials acceleration platform. This framework is 
+readily expandable to address higher-order multi-objective challenges, such as particle 
+morphology, grain boundary optimization, and electrode compatibility. Ultimately, the successful 
+deployment of CASS reinforces the transformative potential of synergistic collaboration between 
+autonomous laboratories and domain experts, moving beyond static high-throughput screening 
+toward intelligent laboratories capable of navigating the complex landscape of energy materials 
+discovery. 
+
+
+ 
+ 
+27 
+ 
+5. Methods 
+5.1. 
+Automated robotic solid-state synthesis 
+Synthesis trials were performed using the automated robotic solid-state synthesis and 
+characterization platform within the A-Lab32, orchestrated by AlabOS75, which integrates modular 
+stations for precursor dosing and mixing, heating, and solid recovery and XRD sample preparation 
+for characterization. The following summarizes the synthesis orchestration steps performed by the 
+A-Lab. 
+• Precursor dosing and mixing: The powder feeding and slurry handling system was 
+custom-built by Labman Automation. A Mitsubishi robotic arm handled sample transfers. 
+The following steps were performed sequentially for each individual sample, with multiple 
+samples processed in parallel depending on instrument availability. Stoichiometric masses 
+of precursors (Sigma-Aldrich, Supplementary Information 6) were dispensed using a 
+Mettler Toledo Quantos balance. A 10 wt% excess of Na2CO3 was added to all samples to 
+compensate for high-temperature sodium loss77. The powders were wet-mixed in ethanol 
+using ten 5 mm zirconia milling balls within a plastic vial in a Hauschild Smart DAC250 
+centrifugal mixer. The resulting slurry was then transferred to alumina crucibles via a 
+robotic pipettor (Sartorius) and dried at 80°C. 
+• Heating: A Mitsubishi robotic arm transferred the dried samples to a transfer station. From 
+there, a UR5e robotic arm (Universal Robots) mounted on a linearly actuated rail loaded 
+them into box furnaces, subsequently unloading them upon completion of the heating 
+profile. The thermal protocol comprised an initial ramp to 300°C (2°C/min), a second ramp 
+to 1100°C (5°C/min), a 12-hour dwell at this peak temperature, and natural cooling within 
+the closed furnace down to 300°C. At this threshold, the furnace door automatically opened 
+to facilitate faster cooling. 
+• Characterization: A third robotic arm performed the following steps sequentially for each 
+individual sample, with multiple samples processed in parallel depending on instrument 
+availability. Sintered samples were recovered and ground using a modified Fritsch Mini-
+mill Pulverisette 23. They were then prepared on a clean (verified by scanning prior to 
+preparation) XRD sample holder (> 100 mg of powder) and loaded into the diffractometer, 
+followed by automated unloading upon scan completion. Diffraction scans were performed 
+using an Aeris Minerals diffractometer (Malvern Panalytical). 
+
+
+ 
+ 
+28 
+ 
+5.2. 
+Composition design algorithm 
+The total cost function (Π*+"#,) evaluated by CASS presents a potentially rugged, non-convex 
+landscape, defined as:  
+Π*+"#, = 𝑤=𝜋*-./)+ + 𝑤>𝜋&$4"+/"$+( + 𝑤?𝜋89 + 𝑤@𝜋8):3/$"' + 𝑤A𝜋;< 
+𝑤= = 𝑤> = 𝑤? = 𝑤A = 50; 𝑤@ = 1 
+Each component (𝑤$𝜋$) of the total cost function is constructed to be as simple as possible. 
+Mimicking a rectified linear unit (ReLU), each term incorporates a linear penalty that evaluates to 
+0 when a design falls within the preferred domain and increases linearly as it deviates. We 
+deliberately chose this formulation over rigid step functions so that individual components still 
+provide non-zero directional gradients to help guide the solver toward preferred regions. 
+To navigate this complex terrain, CASS utilizes a hybrid optimization architecture that couples 
+a Real-Coded Genetic Algorithm (RCGA) with a Broyden-Fletcher-Goldfarb-Shanno (BFGS) 
+gradient-based solver. Purely gradient-based methods are prone to "greedy" local convergence in 
+such landscapes, where the solver becomes trapped in the nearest local minimum rather than 
+exploring the broader search space. To overcome this, the RCGA provides essential global 
+exploration. Unlike purely random sampling, which lacks memory and search direction, the RCGA 
+leverages information persistence across G=4 generations. By employing deterministic truncation 
+to preserve the top P=30 candidates per generation and randomized blended crossover for the 
+reproduction of K=30 offspring, the algorithm effectively focuses computational effort on 
+promising domains rather than independent, blind guesses. To prevent premature convergence in 
+local minima, stochastic injection (N=40 random candidates per generation) maintains the global 
+exploration benefits of random sampling. This evolutionary warm start identifies the most viable 
+region for the global minimum, which is then refined via BFGS to ensure rapid local convergence 
+and high numerical precision. 
+ 
+5.3. 
+𝝅𝑻𝒉𝒆𝒓𝒎𝒐 formulation 
+For each candidate composition (Υ), where “I” and “A” represent synthetically inaccessible and 
+accessible respectively, the 𝜋*-./)+ cost function is defined as: 
+𝜋*-./)+(Υ) = ?𝑃(𝑦= "I"|Υ),
+if Class (Υ) = "I"
+0,
+if Class (Υ) = "A" 
+
+
+ 
+ 
+29 
+ 
+where Class (Υ) is determined by a support vector classifier (SVC), and 𝑃(𝑦= "I"|Υ) is the Platt-
+scaled probability48,51 from the SVC output. 
+The 𝜋*-./)+ SVC was defined by adjusting NASICON thermodynamic stability descriptors 
+and energy threshold (𝐸"-/.4-+,2) from a previously published study48. This adjustment ensured 
+that 524 experimental NASICON compositions, sourced from text-mined literature and the 
+Inorganic Crystal Structure Database (ICSD)78, were correctly classified as synthetically 
+accessible, while also enabling rapid computational evaluation. Specifically, the Ewald energy 
+(𝐸01#,2) was excluded from the descriptor set and the 𝐸"-/.4-+,2 was increased from 0 to 62.22 
+meV/atom. To validate the classifier’s ability to accurately separate synthetically accessible from 
+inaccessible NASICON compositions, we evaluated its performance scores before and after the 
+descriptor modifications, as well as after the 𝐸"-/.4-+,2 increased. Using five-fold cross-validation, 
+the final classifier achieved an average test accuracy of 87.25%, a recall of 86.91%, and an F1-
+score of 84.78%, demonstrating that robust performance was maintained following these changes 
+(details in Supplementary Information 7). 
+ 
+5.4. 
+𝝅𝑫𝒊𝒔𝒕𝒐𝒓𝒕𝒊𝒐𝒏 formulation 
+Recognizing that local lattice distortion governs the stability of multicomponent systems like 
+high-entropy alloys55 and solid solutions53,54, we bound this factor by using 𝑅5
+!*& (standard 
+deviation of the metal cation radii) as a quantitative descriptor. Because the reference dataset of 
+524 crystalline compositions extends only to 7-cation systems, we conservatively apply the 
+stability limit observed for 7 cations to all compositions with higher complexity. Formally, 
+𝜋&$4"+/"$+( is defined as: 
+𝜋&$4"+/"$+((Υ) = N
+0,
+if 𝑅5
+!*& ≤𝑅5,)#H
+!*&
+(𝑛(Υ))
+𝑅5
+!*& − 𝑅5,)#H
+!*&
+O𝑛(Υ)P,
+otherwise
+ 
+where 𝑛(Υ) is the number of cations of the candidate composition (Υ) and 𝑅5,)#H
+!*&
+(𝑛(Υ)) is the 
+maximum limit of 𝑅5
+!*&. 
+ 
+ 
+
+
+ 
+ 
+30 
+ 
+5.5. 
+𝝅𝑰𝑪 formulation 
+The ionic conductivity cost function (𝜋89) sums linear penalties for mean cation radius, sodium 
+content, and polyanion center ion radius (detailed in Supplementary Information 8) as adapted 
+from a boundary proposed in a previous study25. 
+𝜋89 = 𝜋IJ7 + 𝜋689 + 𝜋IJ: 
+Where 𝜋IJ7, 𝜋689, and 𝜋IJ: represent the cost components bounding the average cationic radius, 
+sodium content, and average polyanion center ion radius, respectively. 
+ 
+5.6. 
+𝝅𝑰𝒎𝒑𝒖𝒓𝒊𝒕𝒚 formulation 
+Following each synthesis trial, the XRD characterization identifies the set of cations present in 
+detected impurities (𝑉$):), including P and Si but excluding Na since it is defined by the cation 
+and anion ratios alongside the charge neutrality constraint, based on XRD phase analysis. We 
+define a Boolean indicator function, 𝑚(Υ, 𝑉$):, Υ:/$+/), which evaluates to True if the normalized 
+concentration of any element 𝑖∈𝑉$): in the candidate composition Υ exceeds its concentration in 
+the prior synthesis attempt Υ:/$+/. The cost function is formally defined as: 
+𝜋8):3/$"'(Υ) = ? 3 + ΣK𝑐$,
+If 𝑚(Υ, 𝑉$):, ΥLMKNM)
+ΣK𝑐$,
+otherwise
+ 
+where 𝑐$ represents the concentration of element 𝑖 normalized by its crystallographic site 
+multiplicity. The static penalty of 3 serves as a barrier against increasing the concentration of 
+impurity-prone elements, while the gradient term ∑𝑐$
+$
+ drives the optimization toward their 
+minimization or complete removal. If no impurities are detected in the prior trial, 𝜋$):3/$"' is set 
+to 0. We understand that this is a conservative approximation as it is possible that the presence of 
+an element 𝑖 in the impurities is strongly influenced by another element 𝑗. 
+ 
+5.7. 
+Fine-tuned Vegard’s approximation and 𝝅𝑳𝑷 formulation 
+Two multiple linear regression models predict lattice parameter 𝑎 and cell volume 𝑉, respectively, 
+based on 𝑅)5 (average cationic radius), 𝑅)7 (average polyanion center ion anionic radius), and NOP 
+(Na content) as the input features (predictors). The decision to employ two separate models is 
+based on empirical observations of the correlations between these predictors and the respective 
+outputs (responses). To improve accuracy within a specific chemical space, we applied adaptive 
+
+
+ 
+ 
+31 
+ 
+fine-tuning by assigning a weight of 𝑤= 10,000 to local compositions during fitting. This large 
+weighting essentially forces the model to fit the compositions inside the target chemical space, 
+while utilizing out-of-space compositions for general guidance when local data is sparse. The cost 
+function is defined as the mean percentage difference between predicted and experimentally 
+refined parameters (𝑎, 𝑐, 𝑉). 
+ 
+𝜋;< = 1
+3 b
+|𝑎QI& −𝑎R|
+𝑎QI&
++
+|𝑐QI& −𝑐R|
+𝑐QI&
++
+|𝑉QI& −𝑉R|
+𝑉QI&
+c × 100% 
+ 
+where 𝑎QI&, 𝑐QI&, and 𝑉QI& are the unit cell 𝑎 and 𝑐 lattice parameters and volume, respectively, 
+obtained from the experimentally refined values. The variables with the Υ subscript denote the 
+corresponding structural values predicted by the regressors. Training and testing details are 
+provided in Supplementary Information 9. 
+ 
+5.8. 
+XRD measurement, refinement, and phase analysis 
+Powder XRD measurements were conducted using Cu-Kα radiation over a 2θ range of 10°-
+100° (8 minutes duration, ~0.01° step size, and a detector active length of 5.542° in 2θ), with 
+diffractograms automatically uploaded to a central server for analysis. For structural refinement, a 
+set of candidate rhombohedral NASICON structures with varying Na-site occupancies was 
+generated, utilizing initial lattice parameters predicted by the fine-tuned Vegard’s approximation. 
+Rietveld refinement to extract the lattice parameters of the NASICON phase was performed for 
+each candidate using BGMN software79, and the solution yielding the lowest weighted residual 
+error (𝑅1:) was selected. To ensure the refined phase corresponded to the target NASICON 
+structure, its validity was confirmed by comparing the extracted 𝑎 lattice parameter and unit cell 
+volume against model predictions. A phase was flagged as unlikely to form if deviations exceeded 
+a composite threshold of the model's intrinsic uncertainty (95% confidence interval) plus 15% of 
+the model-predicted end-member range within the chemical space (Supplementary Information 
+1). 
+Subsequently, phases were identified using the DARA80 algorithm. Non-NASICON phases 
+were classified as impurities; if multiple NASICON phases were detected, those with lower weight 
+percentages were also deemed impurities. The compositions of these impurity phases are the input 
+
+
+ 
+ 
+32 
+ 
+for the 𝜋8):3/$"' cost function. The phase search space comprised generated NASICON structures 
+alongside known phases from the ICSD78 and Crystallography Open Database (COD)81. However, 
+to mitigate combinatorial explosion in complex compositional spaces (≥ 7 elements), the search 
+pool was restricted to common phases identified during attempts in lower-dimensional subspaces. 
+The samples selected for ionic conductivity measurements underwent comprehensive manual 
+phase identification and refinement using GSAS-II82 software. The following parameters were 
+refined: background, sample displacement and transparency, phase fractions, isotropic crystallite 
+size and microstrain, lattice parameters, and surface roughness. 
+ 
+5.9. 
+Purity Score and calibration 
+Because automated phase search and refinement often fail to capture all impurity phases, we 
+assessed phase purity using the Estimated Purity (EP). This metric is defined as the ratio of the 
+integrated intensity of the refined NASICON phase to the total background-subtracted pattern 
+intensity83 (which captures residuals due to both unidentified impurities and suboptimal refinement 
+parameters): 
+EP(%) =
+|I67!89S6|
+|𝐼67!89S6| + |𝐼I.4$23#,| × 100% 
+To normalize this metric against experimental baselines and decouple physical purity from 
+automated refinement artifacts, we convert EP into a Purity Score. Using a calibration set of high-
+purity samples (Supplementary Information 10), we established a reference baseline (EPTLLUM =
+78.33%) representing negligible impurity content. To ensure the synthesized phase matches the 
+design, we enforce a strict stoichiometric validation check. The Purity Score is calculated as: 
+ 
+Purity Score = q
+0.0,
+If |ΔL| > (δVNWUX+0.15⋅RYLPZU)
+min b1.0,
+EP
+EPTLLUM
+c ,
+otherwise
+ 
+ 
+A score of 1.0 indicates a high-purity sample, while a score > 0.7 identifies a major NASICON 
+phase. However, a sample is reclassified as a failure (Purity Score = 0.0) if the absolute deviation 
+(|ΔL|) of the 𝑎 lattice parameter or the unit cell volume from its predicted value exceeds the 
+composite threshold defined by the model's intrinsic uncertainty (δVNWUX) plus 15% of the 
+
+
+ 
+ 
+33 
+ 
+parameter’s maximum range (RYLPZU) within the chemical space, as defined by the predicted lattice 
+parameters of the NASICON end members. The value of 15% follows from the calibration against 
+the pseudobinary phosphate NASICONs whose single-cation end members were themselves 
+synthesized in this work (Supplementary Information 1). 
+ 
+5.10. Multimodal NASICON composition analysis 
+NASICON phase composition for the selected samples was resolved by coupling lattice-
+parameter and thermodynamic stability screening with automated SEM-EDS (Thermo Fisher 
+Phenom XL G2) using the AutoEMX framework76. The analysis followed a three-step process: (1) 
+automated SEM-EDS data acquisition, filtering, and k-means clustering; (2) identification of the 
+most likely experimental NASICON composition via hybrid optimization minimizing 𝜋*-./)+ 
+and Euclidean distance to centroids, constrained by lattice parameter validity; and (3) final phase 
+identification, including impurities, conditional on the XRD refinement. Details in 
+Supplementary Information 11. 
+ 
+5.11. Ionic conductivity measurement 
+Ionic conductivity was measured by electrochemical impedance spectroscopy (EIS) on 
+sintered pellets of the as-synthesized powders. Powders were ball-milled, cold-pressed into green 
+bodies, and sintered near their synthesis temperature to over 85% of theoretical density 
+(Supplementary Data), then rapidly cooled to preserve the target phase. Indium electrodes were 
+applied and impedance recorded from 7 MHz to 100 mHz. Spectra were fit to an equivalent circuit 
+from which bulk, grain-boundary, and total ionic conductivities were extracted. Activation 
+energies were obtained from Arrhenius fits of subsets of temperature-dependent measurements 
+from -30 to 85 °C. Full instrument settings, pellet-processing parameters, the equivalent-circuit 
+definition, the fitting procedure, and the activation-energy analysis are provided in 
+Supplementary Information 3. 
+ 
+5.12. Determining the stabilizing energy above hull threshold (𝑬𝒇𝒊𝒓𝒔𝒕 𝒔𝒕𝒂𝒃𝒍𝒆 𝒕𝒉𝒓𝒆𝒔𝒉𝒐𝒍𝒅) 
+The 𝜋*-./)+ linear SVC uses machine-learned descriptors48 to rule out synthetically 
+inaccessible compositions. It uses a large training data set of NASICONs for which Ehull is 
+computed and augmented with the ideal configurational entropy (𝐸-3,,,$2.#,)48. The SVC used in 
+
+
+ 
+ 
+34 
+ 
+this work used an 𝐸"-/.4-+,2 of 62.22 meV/atom for the hull energy to divide synthesizable 
+NASICONs from non-synthesizable ones. To evaluate if this value is optimal, we can retrain the 
+SVC with different values for this threshold on the hull energy. We trained 83 individual SVCs 
+using the 3,881 unique NASICON composition and 𝐸-3,,,$2.#, pairs from the previous study48 
+using 𝐸"-/.4-+,2 values ranging from 0 to 82 meV/atom in increments of 1 meV/atom (T = 1000 
+K was chosen to maintain magnitude comparability with the prior study48). We trained the 
+classifiers using five-fold cross-validation, selecting the models with an accuracy closest to the 
+fold average as the final classifiers. These 83 SVCs act as variants of 𝜋*-./)+ that disqualify 
+compositions exceeding their specific 𝐸"-/.4-+,2. For each target composition in our experimental 
+campaign, 𝐸D$/4" 4"#F,. "-/.4-+,2 was obtained by identifying the SVC with the lowest Ehull 
+threshold used in its training that identified the phase as stable. 
+ 
+ 
+
+
+ 
+ 
+35 
+ 
+Author contributions 
+B.R., Y.Z., and G.C. developed the theoretical formalism. B.R. and Y.Z. developed the 
+experimental formalism. B.R. developed the CASS design system (optimization scheme, design 
+rules adjustment, and cost function definition); conceived and planned synthesis experiments; 
+developed NASICON structure generation and lattice parameter-composition relation; executed 
+and verified the automated XRD analysis results; analyzed the synthesizability data; and wrote the 
+manuscript. B.R. and Y.F. developed the synthesis and XRD characterization automation and data 
+handling. B.R., Y.F., D.M., and M.J.M. developed the automation for solid handling. T.H. 
+developed the text-mining pipeline for NASICON compositions and ionic conductivity. B.R., 
+X.Y., and H.Q. prepared the as-synthesized samples for EIS characterization. B.R. and A.G. 
+carried out the multimodal XRD, SEM, and EDS measurement and analysis. B.R., Y.F., L.N.W., 
+D.M., and M.J.M. executed synthesis experiments. Y.F. and M.J.M. developed the automated 
+XRD refinement and phase search. B.O. contributed to the theoretical formalism for synthetic 
+accessibility of NASICONs. Y.Z. supervised the development of synthesis and XRD 
+characterization automation and execution; and supervised the sample preparation for EIS 
+measurement. G.C. supervised the project. All authors contributed to the manuscript revision. 
+Data availability 
+The comprehensive dataset supporting this study is publicly available in the figshare repository at 
+https://doi.org/10.6084/m9.figshare.31829305. This deposit includes the refined XRD patterns 
+(incorporating both NASICON and impurity phases), SEM images and EDS clustering results, and 
+EIS fitting data for the six selected samples. Additionally, the repository contains comprehensive 
+synthesis results for 345 samples, comprising 281 phosphosilicates (78 of which were designed 
+with ionic conductivity considerations) and 64 phosphates and silicates, indexed by their global 
+target composition. These high-throughput data include expected versus refined lattice parameters, 
+Purity Scores, lattice parameter validations, and refined X-ray diffractograms (NASICON phase 
+only), alongside the refined XRD patterns of the high-purity samples used for Purity Score 
+calibration. All other raw data are available from the corresponding authors upon reasonable 
+request. 
+ 
+
+
+ 
+ 
+36 
+ 
+Code availability 
+Code for the design algorithm, cost function implementations, Vegard’s approximation, and 
+composition verification is available at https://github.com/CederGroupHub/cass. This repository 
+also includes the scripts used for the multimodal (XRD and SEM-EDS) NASICON composition 
+analysis and general plotting. Additional scripts for raw data visualization are available in the 
+figshare repository at https://doi.org/10.6084/m9.figshare.31829305. 
+ 
+Supporting Information 
+Supporting Information and Supplementary Data accompany this manuscript. 
+ 
+Acknowledgement 
+This research was primarily supported as part of the Energy Storage Research Alliance (ESRA), 
+an Energy Innovation Hub funded by the U.S. Department of Energy (DOE), Office of Science, 
+Basic Energy Sciences (BES), under Contract No. DE-AC02-06CH11357 for the development of 
+the Cost-guided Autonomous Solid-state Synthesis (CASS) framework, synthesis planning, 
+electrochemical characterization, and overall project leadership. Additional support was provided 
+by the D2S2 program within the U.S. DOE, Office of Science, BES, Materials Sciences and 
+Engineering Division under Contract No. DE-AC02-05-CH11231 for the development of 
+automated solid-state synthesis and XRD analysis workflows, and multimodal phase analysis 
+using SEM-EDS and XRD. Implementation of the ideas in this work as an AI-campaign was 
+supported by the U.S. Department of Energy, Office of Science, Basic Energy Sciences, Materials 
+Sciences and Engineering Division, and the Office of Advanced Scientific Computing Research 
+(ASCR) under Contract No. DE-AC02-05-CH11231 within the LBNL GENESIS program. B.R. 
+acknowledges support from the Kavli ENSI Graduate Student Fellowship. L.N.W. acknowledges 
+funding support from the BIDMaP postdoctoral fellowship. The authors thank Marilyn Sargent at 
+Berkeley Lab for capturing photos of the A-Lab. 
+ 
+Conflict of Interest 
+The authors declare no conflict of interest. 
+ 
+
+
+ 
+ 
+37 
+ 
+References 
+1. Li, C. et al. NaSICON: A promising solid electrolyte for solid‐state sodium batteries. 
+Interdisciplinary Materials 1, 396–416 (2022). 
+2. Myung, S.-T. et al. Nickel-Rich Layered Cathode Materials for Automotive Lithium-Ion 
+Batteries: Achievements and Perspectives. ACS Energy Lett. 2, 196–223 (2017). 
+3. Banerjee, D. & Williams, J. C. Perspectives on Titanium Science and Technology. Acta 
+Materialia 61, 844–879 (2013). 
+4. Li, S. et al. Development and applications of aluminum alloys for aerospace industry. 
+Journal of Materials Research and Technology 27, 944–983 (2023). 
+5. Lo, K. H., Shek, C. H. & Lai, J. K. L. Recent developments in stainless steels. Materials 
+Science and Engineering: R: Reports 65, 39–104 (2009). 
+6. Pollock, T. M. & Tin, S. Nickel-Based Superalloys for Advanced Turbine Engines: 
+Chemistry, Microstructure and Properties. Journal of Propulsion and Power 22, 361–374 
+(2006). 
+7. Zhou, Y. et al. Composition Optimization in Alloy Design for Nickel-Based Single Crystal 
+Superalloy: A Review. Metals 15, 793 (2025). 
+8. George, E. P., Raabe, D. & Ritchie, R. O. High-entropy alloys. Nat Rev Mater 4, 515–534 
+(2019). 
+9. Saliba, M. et al. Cesium-containing triple cation perovskite solar cells: improved stability, 
+reproducibility and high efficiency. Energy Environ. Sci. 9, 1989–1997 (2016). 
+10. Vurgaftman, I., Meyer, J. R. & Ram-Mohan, L. R. Band parameters for III–V compound 
+semiconductors and their alloys. Journal of Applied Physics 89, 5815–5875 (2001). 
+11. Li, A., Fu, C., Zhao, X. & Zhu, T. High-Performance Mg3 Sb 2- x  Bi x  Thermoelectrics: 
+Progress and Perspective. Research 2020, 2020/1934848 (2020). 
+
+
+ 
+ 
+38 
+ 
+12. Ouyang, B. & Zeng, Y. The rise of high-entropy battery materials. Nat Commun 15, 973 
+(2024). 
+13. Si, H. et al. Solid‐State Sodium‐Ion Batteries: Theories, Challenges and Perspectives. 
+Chemistry A European J 31, e202403247 (2025). 
+14. Yao, A., Benson, S. M. & Chueh, W. C. Critically assessing sodium-ion technology 
+roadmaps and scenarios for techno-economic competitiveness against lithium-ion batteries. 
+Nat Energy 10, 404–416 (2025). 
+15. Radjendirane, A. C. et al. Overview of Inorganic Electrolytes for All-Solid-State Sodium 
+Batteries. Langmuir 40, 16690–16712 (2024). 
+16. Xiao, Y. et al. Understanding interface stability in solid-state batteries. Nat Rev Mater 5, 
+105–126 (2019). 
+17. Shi, K. et al. Recent Progress and Prospects on Sodium-Ion Battery and All-Solid-State 
+Sodium Battery: A Promising Choice of Future Batteries for Energy Storage. Energy Fuels 
+38, 9280–9319 (2024). 
+18. Vaalma, C., Buchholz, D., Weil, M. & Passerini, S. A cost and resource analysis of sodium-
+ion batteries. Nat Rev Mater 3, 18013 (2018). 
+19. Zhao, C. et al. Solid‐State Sodium Batteries. Advanced Energy Materials 8, 1703012 (2018). 
+20. Lacivita, V., Wang, Y., Bo, S.-H. & Ceder, G. Ab initio investigation of the stability of 
+electrolyte/electrode interfaces in all-solid-state Na batteries. J. Mater. Chem. A 7, 8144–
+8155 (2019). 
+21. Ran, L. et al. Sc, Ge co-doping NASICON boosts solid-state sodium ion batteries’ 
+performance. Energy Storage Materials 40, 282–291 (2021). 
+
+
+ 
+ 
+39 
+ 
+22. Wang, X. et al. Sc/Mg Co‐Doping in Na3 Zr2 Si2 PO12 Solid‐State Electrolytes Enables 
+Outstanding Performance of Sodium Metal Batteries. Advanced Science e15463 (2025) 
+doi:10.1002/advs.202515463. 
+23. Yang, S. et al. Regulating the Interfacial Performance of All-Solid-State Sodium Batteries 
+Using Lanthanum Substitution in a Na3 Zr2 Si2 PO12 Solid Electrolyte. ACS Appl. Energy 
+Mater. 7, 9863–9871 (2024). 
+24. Xu, J., Tao, H., Deng, Z., Yang, X. & Fan, L.-Z. Simultaneously enhancing ionic 
+conductivity and interfacial stability by Fe2O3 for solid-state sodium metal batteries. Journal 
+of Materiomics 10, 1243–1251 (2024). 
+25. Wang, J. et al. Design principles for NASICON super-ionic conductors. Nat Commun 14, 
+5210 (2023). 
+26. Cheng, E. J. et al. Correlation between mechanical properties and ionic conductivity of 
+polycrystalline sodium superionic conductors: A relative density-dominant relationship. 
+Materials Today Energy 44, 101644 (2024). 
+27. Shen, L., Yang, J., Liu, G., Avdeev, M. & Yao, X. High ionic conductivity and dendrite-
+resistant NASICON solid electrolyte for all-solid-state sodium batteries. Materials Today 
+Energy 20, 100691 (2021). 
+28. Böger, T. et al. On the Thermal Conductivity and Local Lattice Dynamical Properties of 
+NASICON Solid Electrolytes. J. Am. Chem. Soc. 146, 32678–32688 (2024). 
+29. Samiee, M. et al. Divalent-doped Na3Zr2Si2PO12 natrium superionic conductor: Improving 
+the ionic conductivity via simultaneously optimizing the phase and chemistry of the primary 
+and secondary phases. Journal of Power Sources 347, 229–237 (2017). 
+
+
+ 
+ 
+40 
+ 
+30. Xu, C. et al. Guiding Design of Mn‐Rich Phosphate Cathodes with Less Intrinsic Antisite 
+Defects. Angew Chem Int Ed 64, e202502758 (2025). 
+31. Jain, A. et al. A high-throughput infrastructure for density functional theory calculations. 
+Computational Materials Science 50, 2295–2310 (2011). 
+32. Szymanski, N. J. et al. An autonomous laboratory for the accelerated synthesis of inorganic 
+materials. Nature 624, 86–91 (2023). 
+33. MacLeod, B. P. et al. Self-driving laboratory for accelerated discovery of thin-film materials. 
+Sci. Adv. 6, eaaz8867 (2020). 
+34. MacLeod, B. P. et al. A self-driving laboratory advances the Pareto front for material 
+properties. Nat Commun 13, 995 (2022). 
+35. Omidvar, M. et al. Accelerated discovery of perovskite solid solutions through automated 
+materials synthesis and characterization. Nat Commun 15, 6554 (2024). 
+36. Woods-Robinson, R. et al. Assessing High-Throughput Descriptors for Prediction of 
+Transparent Conductors. Chem. Mater. 30, 8375–8389 (2018). 
+37. Nikolaev, P. et al. Autonomy in materials research: a case study in carbon nanotube growth. 
+npj Comput Mater 2, 16031 (2016). 
+38. Waelder, R., Kim, W., Pitt, M. A., Myung, J. I. & Maruyama, B. Multi-objective Bayesian 
+optimization of carbon nanotube yield and diameter control at synthesis. APL Machine 
+Learning 3, 026114 (2025). 
+39. Epps, R. W., Volk, A. A., Ibrahim, M. Y. S. & Abolhasani, M. Universal self-driving 
+laboratory for accelerated discovery of materials and molecules. Chem 7, 2541–2545 (2021). 
+40. Burger, B. et al. A mobile robotic chemist. Nature 583, 237–241 (2020). 
+
+
+ 
+ 
+41 
+ 
+41. Harada, M. et al. Bayesian-optimization-guided experimental search of NASICON-type 
+solid electrolytes for all-solid-state Li-ion batteries. J. Mater. Chem. A 8, 15103–15109 
+(2020). 
+42. Fukuda, H. et al. Bayesian optimisation with transfer learning for NASICON-type solid 
+electrolytes for all-solid-state Li-metal batteries. RSC Adv. 12, 30696–30703 (2022). 
+43. Will-Cole, A. R. et al. Application of Bayesian Optimization and Regression Analysis to 
+Ferromagnetic Materials Development. IEEE Trans. Magn. 58, 1–8 (2022). 
+44. Wang, Z. et al. Active learning design of bcc solid solution alloys with gigapascal strength 
+and elemental metal–level ductility. Proc. Natl. Acad. Sci. U.S.A. 123, e2530922123 (2026). 
+45. Kusne, A. G. et al. On-the-fly closed-loop materials discovery via Bayesian active learning. 
+Nat Commun 11, 5966 (2020). 
+46. Raccuglia, P. et al. Machine-learning-assisted materials discovery using failed experiments. 
+Nature 533, 73–76 (2016). 
+47. Karniadakis, G. E. et al. Physics-informed machine learning. Nat Rev Phys 3, 422–440 
+(2021). 
+48. Ouyang, B. et al. Synthetic accessibility and stability rules of NASICONs. Nat Commun 12, 
+5752 (2021). 
+49. Ong, S. P. et al. Python Materials Genomics (pymatgen): A robust, open-source python 
+library for materials analysis. Computational Materials Science 68, 314–319 (2013). 
+50. Hart, G. L. W. & Forcade, R. W. Algorithm for generating derivative structures. Phys. Rev. B 
+77, 224115 (2008). 
+51. Platt, J. Probabilistic Outputs for Support Vector Machines and Comparisons to Regularized 
+Likelihood Methods. Adv. Large Margin Classif. 10, 61–74 (2000). 
+
+
+ 
+ 
+42 
+ 
+52. Sun, W. et al. The thermodynamic scale of inorganic crystalline metastability. Sci. Adv. 2, 
+e1600225 (2016). 
+53. Almishal, S. S. I. et al. Thermodynamics-inspired high-entropy oxide synthesis. Nat 
+Commun 16, 8211 (2025). 
+54. Oses, C., Toher, C. & Curtarolo, S. High-entropy ceramics. Nat Rev Mater 5, 295–309 
+(2020). 
+55. Zhang, Y., Zhou, Y. J., Lin, J. P., Chen, G. L. & Liaw, P. K. Solid‐Solution Phase Formation 
+Rules for Multi‐component Alloys. Adv Eng Mater 10, 534–538 (2008). 
+56. Ma, Q. et al. Room temperature demonstration of a sodium superionic conductor with grain 
+conductivity in excess of 0.01 S cm−1 and its primary applications in symmetric battery 
+cells. J. Mater. Chem. A 7, 7766–7776 (2019). 
+57. Michalak, A., Behara, S. & M, A. R. Reinvestigation of Na5GdSi4O12: A Potentially Better 
+Solid Electrolyte than Sodium β Alumina for Solid-State Sodium Batteries. ACS Appl. 
+Mater. Interfaces 16, 7112–7118 (2024). 
+58. Sun, G. et al. Na5YSi4O12: A sodium superionic conductor for ultrastable quasi-solid-state 
+sodium-ion batteries. Energy Storage Materials 41, 196–202 (2021). 
+59. Li, Y. et al. A P2-Type Layered Superionic Conductor Ga-Doped Na2Zn2TeO6 for All-
+Solid-State Sodium-Ion Batteries. Chemistry – A European Journal 24, 1057–1061 (2018). 
+60. Li, Y. et al. New P2-Type Honeycomb-Layered Sodium-Ion Conductor: Na2Mg2TeO6. ACS 
+Appl. Mater. Interfaces 10, 15760–15766 (2018). 
+61. Zeng, G. A necessary condition for a good binning algorithm in credit scoring. ams 8, 3229–
+3242 (2014). 
+
+
+ 
+ 
+43 
+ 
+62. Gammond, L. V. D. et al. Structure of crystalline and amorphous materials in the NASICON 
+system Na1+ x Al x Ge2− x (PO4)3. The Journal of Chemical Physics 155, 074501 (2021). 
+63. Zeng, Y. et al. High-entropy mechanism to boost ionic conductivity. Science 378, 1320–
+1324 (2022). 
+64. Lin, M., Gottstein, G. & Shvindlerman, L. S. Generalized Gibbs-Thomson equation for 
+nanoparticles at grain boundaries. Acta Materialia 129, 361–365 (2017). 
+65. Perez, M. Gibbs-Thomson effects in phase transformations. Scripta Materialia 52, 709–712 
+(2005). 
+66. Boiko, D. A., MacKnight, R., Kline, B. & Gomes, G. Autonomous chemical research with 
+large language models. Nature 624, 570–578 (2023). 
+67. Fei, Y. et al. Agentic LLM Reasoning in a Self-Driving Laboratory for Air-Sensitive 
+Lithium Halide Spinel Conductors. Preprint at https://doi.org/10.48550/arXiv.2604.11957 
+(2026). 
+68. Zhang, Z. et al. A multimodal robotic platform for multi-element electrocatalyst discovery. 
+Nature 647, 390–396 (2025). 
+69. Huang, X. et al. CASCADE: Cumulative Agentic Skill Creation through Autonomous 
+Development and Evolution. Preprint at https://doi.org/10.48550/arXiv.2512.23880 (2026). 
+70. Aykol, M., Dwaraknath, S. S., Sun, W. & Persson, K. A. Thermodynamic limit for synthesis 
+of metastable inorganic materials. Sci. Adv. 4, eaaq0148 (2018). 
+71. Divilov, S. et al. Disordered enthalpy–entropy descriptor for high-entropy ceramics 
+discovery. Nature 625, 66–73 (2024). 
+72. McDermott, M. J. et al. Assessing Thermodynamic Selectivity of Solid-State Reactions for 
+the Predictive Synthesis of Inorganic Materials. ACS Cent. Sci. 9, 1957–1975 (2023). 
+
+
+ 
+ 
+44 
+ 
+73. Szymanski, N. J., Nevatia, P., Bartel, C. J., Zeng, Y. & Ceder, G. Autonomous and dynamic 
+precursor selection for solid-state materials synthesis. Nat Commun 14, 6956 (2023). 
+74. Schnell, J. et al. All-solid-state lithium-ion and lithium metal batteries – paving the way to 
+large-scale production. Journal of Power Sources 382, 160–175 (2018). 
+75. Fei, Y. et al. AlabOS: a Python-based reconfigurable workflow management framework for 
+autonomous laboratories. Digital Discovery 3, 2275–2288 (2024). 
+76. Giunto, A. et al. Accurate SEM-EDS quantification, automation, and machine learning 
+enable high-throughput compositional characterization of powders. Nat Commun 17, 9735 
+(2026). 
+77. Narayanan, S., Reid, S., Butler, S. & Thangadurai, V. Sintering temperature, excess sodium, 
+and phosphorous dependencies on morphology and ionic conductivity of NASICON 
+Na3Zr2Si2PO12. Solid State Ionics 331, 22–29 (2019). 
+78. Zagorac, D., Müller, H., Ruehl, S., Zagorac, J. & Rehme, S. Recent developments in the 
+Inorganic Crystal Structure Database: theoretical crystal structure data and related features. J 
+Appl Crystallogr 52, 918–925 (2019). 
+79. Bergmann, J. & Taut, T. Manual: Rietveld Analysis Program BGMN. (Dr. Jörg Bergmann, 
+Dresden, Germany, 2005). 
+80. Fei, Y., McDermott, M. J., Rom, C. L., Wang, S. & Ceder, G. Dara: Automated Multiple-
+Hypothesis Phase Identification and Refinement from Powder X-ray Diffraction. Chem. 
+Mater. 38, 1364–1376 (2026). 
+81. Gražulis, S. et al. Crystallography Open Database (COD): an open-access collection of 
+crystal structures and platform for world-wide collaboration. Nucleic Acids Research 40, 
+D420–D427 (2012). 
+
+
+ 
+ 
+45 
+ 
+82. Toby, B. H. & Von Dreele, R. B. GSAS-II : the genesis of a modern open-source all purpose 
+crystallography software package. J Appl Crystallogr 46, 544–549 (2013). 
+83. Chen, J. et al. Navigating phase diagram complexity to guide robotic inorganic materials 
+synthesis. Nat. Synth 3, 606–614 (2024). 
+ 
+
+
+ 
+ 
+1 
+ 
+Combining physical models with dynamically acquired experimental 
+information for the optimization of multicomponent NASICON fast ionic 
+conductors in a self-driving laboratory (Supplementary Information) 
+ 
+Bernardus Rendy1,2,3, Yuxing Fei1,2, Tanjin He4, Xiaochen Yang1,2, Andrea Giunto1,2, Lauren N. 
+Walters5,1, David Milsted2, Hao Qiu1, Matthew J. McDermott2, Bin Ouyang2,6, Yan Zeng2,7,*, 
+Gerbrand Ceder1,2,3,* 
+ 
+Table of Contents 
+ 
+1. Provenance of the 15% off-stoichiometry tolerance 
+2. Multimodal NASICON composition analysis results 
+3. Measurement of ionic conductivity and activation energies 
+4. Ideal configurational entropy formulation and 𝐸!"##,%&'(# 
+5. Empirical metastability limits of phosphate, silicate, and phosphosilicate NASICONs 
+6. Precursor details 
+7. Support vector classifier (SVC) test set performance comparison (5-fold cross-validation) 
+8. Ionic conductivity cost-function components 
+9. Vegard’s approximation training and details 
+10. Calibration for high purity and major NASICON samples 
+11. Multimodal NASICON composition analysis 
+12. Supplementary Figures 1-19 
+ 
+ 
+1 Department of Materials Science & Engineering, University of California Berkeley, Berkeley, CA 
+94720, USA 
+2 Materials Sciences Division, Lawrence Berkeley National Laboratory, Berkeley, CA 94720, USA 
+3 Energy Storage Research Alliance, Argonne National Laboratory, 9700 South Cass Avenue, Lemont, IL 
+60439, USA 
+4 Argonne National Laboratory, 9700 South Cass Avenue, Lemont, IL 60439, USA 
+5 Bakar Institute of Digital Materials for the Planet, UC Berkeley, Berkeley, CA 94720, USA 
+6 Department of Chemical and Biomolecular Engineering, Vanderbilt University, Nashville, TN 37235, 
+USA 
+7 Department of Mechanical Engineering, Vanderbilt University, Nashville, TN 37235, USA 
+* Corresponding authors: gceder@berkeley.edu (G.C.), yan.zeng@vanderbilt.edu (Y.Z.) 
+
+
+ 
+ 
+2 
+ 
+1. Provenance of the 15% off-stoichiometry tolerance 
+The validity check compares the refined 𝑎 lattice parameter and unit-cell volume V with the fine-
+tuned model (Supplementary Information 9) predictions, and flags the target phase as unlikely 
+to have formed when either deviates by more than the model uncertainty plus 15% of the range 
+between the model-predicted end-member values (Methods). The tolerance accommodates slight 
+off-stoichiometry, potentially arising from the loss of volatile components at synthesis 
+temperatures1. This section reports the measurements from which the 15% was set. 
+The position of the refined phase relative to the two single-cation end members A and B is given 
+by the fractional coordinate: 
+𝑥(𝑞) = 𝑞)'*%+'& − 𝑞,
+|𝑞- − 𝑞,|
+= 𝑞)'*%+'& − 𝑞,
+R./012
+ 
+where q is either the 𝑎 or V, and 𝑞3 and 𝑞4 (with 𝑞4 > 𝑞3) are its measured values at the end 
+members A and B. R./012 = |𝑞- − 𝑞,| is the range of 𝑞 across the pair. 
+For an equimolar target following Vegard’s law2, 𝑥(𝑞) = 0.5, and the distance from the target 
+along the pair is: 
+Δ𝑥'5"%67#() 9():'9 = |𝑥 (𝑞) −0.5| 
+The Vegard’s-approximation models for 𝑎 and V carry an intrinsic uncertainty δ;<=2> = 2𝜎5, 
+taken as the 95% confidence interval. Here 𝜎5 is the root-mean-square residual of the fine-tuned 
+regression for 𝑞 over the NASICON structures within the chemical system of that pair, so δ;<=2> 
+differs from pair to pair. Accounting for this uncertainty gives: 
+Δ𝑥'5"%,?3 = max 70, Δ𝑥'5"%67#() 9():'9 −2σ5
+𝑅@A(B'
+; 
+Δ𝑥'5"%,?3 is zero when the refined value lies within δ;<=2> of the midpoint between the end 
+members, and otherwise is the part of that distance lying beyond δ;<=2>, expressed as a fraction 
+of 𝑅@A(B'. Values are reported as percentages (×100). 
+
+
+ 
+ 
+3 
+ 
+The calibration set is the thirteen equimolar two-cation phosphate pairs for which both single-
+cation end members were also synthesized and refined in this work, so that 𝑞, and 𝑞- are measured 
+rather than extrapolated. Four of these trials did not form their target phase, either because the 
+target reflection is split or because the refined cell is incompatible with the equimolar phase. In 
+NaSnHf(PO₄)₃, the (110) reflection splits into two components and the single-phase fit sits between 
+them. The refined 𝑎 values of NaHfGe(PO₄)₃ and NaZrGe(PO₄)₃ fall within 0.016 and 0.021 Å of 
+measured NaHf₂(PO₄)₃ and NaZr₂(PO₄)₃, respectively, on pairs spanning 0.664 and 0.708 Å, 
+placing both at 𝑥(𝑞) ≥0.967 on 𝑎 and V; this is consistent with little or no germanium entering 
+the structure, and GeO₂ was identified in NaZrGe(PO₄)₃. In Na₂ZrY(PO₄)₃, the distance from the 
+equimolar target, Δ𝑥'5"%67#() 9():'9, is 0.08 for 𝑎 and 0.39 for V, compared with normalized model 
+uncertainties of 0.01 and 0.05, respectively. In the remaining nine trials the target phase formed 
+without showing any split reflections. 
+Supplementary Figure 13 shows Δ𝑥'5"%,?3 for all thirteen pairs, on 𝑎 (circles) and V (diamonds), 
+against the adopted 15% tolerance. Taking the larger of the two values for each pair, the largest 
+among trials that formed their target phase is 11.5%, and the smallest among those that did not is 
+18.2%. Any tolerance between these values separates the two groups, and the adopted 15% lies 
+within this window. Supplementary Figures 14 and 15 show each pair for 𝑎 and V, respectively. 
+Each panel plots the fine-tuned model across the pair, with δ;<=2> as the dark band and δ;<=2> 
+plus 15% of the model-predicted end-member range as the light band. The measured end members 
+are squares, the model value at the equimolar target is an open circle, and the refined value is a 
+filled circle. The percentage on each panel is 𝑥(𝑞) × 100 measured from A, so an ideal equimolar 
+product reads 50%. 
+2. Multimodal NASICON composition analysis results 
+All possible phases and confidences from AutoEMX are accessible in Supplementary Data. The 
+refined XRD patterns are shown in Supplementary Figure 7-9. Cluster homogeneity in these 
+synthetic samples, quantified by the root mean square of point-to-centroid distances (𝑑CDE)3 of the 
+EDS compositional spectra (3.89<𝑑CDE<6.64 at%), is slightly worse than that of mineral standards 
+(𝑑CDE<3 at%)3. Below are the phase compositions per target global composition: 
+• Na3.4Hf0.8Zr0.8In0.3Ga0.1(SiO4)2(PO4) 
+
+
+ 
+ 
+4 
+ 
+o NASICON: Na3.30Hf0.71Zr0.97In0.22Ga0.10(SiO4)1.98(PO4)1.02 
+o Impurities: 
+§ HfZrO4 
+§ Na2HfSi2O7 
+§ Na2.22Hf0.71Zr0.94In0.34Ga0.01(SiO4)0.87(PO4)2.13  
+• Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4) 
+o NASICON: Na3.46Hf1.74In0.19Ga0.07(SiO4)2.20(PO4)0.8 
+o Impurities: 
+§ Na2HfSi2O7 
+§ HfO2 
+§ Na3.23Hf0.59In1.33Ga0.08(SiO4)0.82(PO4)2.18 
+• Na3.5Hf0.7In1.2Ge0.1(SiO4)1.3(PO4)1.7 
+o NASICON: Na3.16Hf0.76In0.88Ge0.36(SiO4)1.29(PO4)1.71 
+o Impurities: 
+§ In2O3 
+§ HfO2 
+§ Na3.21In2(SiO4)0.21(PO4)2.79 
+• Na4.3Hf0.3Zr1.3Zn0.4(SiO4)2.5(PO4)0.5 
+o NASICON: Na3.57Hf0.33Zr1.67(SiO4)2.57(PO4)0.43 
+o Impurities: 
+§ HfZrO4 
+§ Na2Zn(Si2O6) 
+• Na3.5Hf0.9In1.0Ga0.1(SiO4)1.4(PO4)1.6 
+o NASICON: Na3.27Hf0.95In0.86Ga0.19(SiO4)1.22(PO4)1.78 
+o Impurities: 
+§ In2O3 
+§ HfO2 
+§ Na3.33In2(SiO4)0.33(PO4)2.67 
+• Na2.8Y0.7Hf0.9Ti0.4(SiO4)1.1(PO4)1.9 
+o NASICON: Na2.87Y0.19Hf1.14Ti0.67(SiO4)1.68(PO4)1.32 
+o Impurities 
+
+
+ 
+ 
+5 
+ 
+§ Na4Hf2(SiO4)3 
+§ Na3.05Y1.60Hf0.28Ti0.12(SiO4)0.45(PO4)2.55 
+ 
+3. Measurement of ionic conductivity and activation energies 
+Ionic conductivities were determined via electrochemical impedance spectroscopy (EIS). The as-
+synthesized powders were ball-milled (SPEX 8000M, 30 min), cold-pressed into 6 mm pellets 
+under ~700 MPa, sintered at 1050-1100 °C for 1-2 hours (Supplementary Data), and fast-cooled, 
+all under air atmosphere. Indium electrodes were applied via cold isostatic pressing at 30 MPa. 
+EIS spectra were collected using a BioLogic VMP-300 potentiostat (7 MHz - 100 mHz, 10 mV 
+amplitude). The EIS spectra were fitted using the impedance.py library4 with an equivalent circuit 
+of series setup resistance (𝑅F), bulk (𝑅G||𝐶𝑃𝐸G), grain boundary (𝑅H||𝐶𝑃𝐸H), and diffusion element 
+(𝐶𝑃𝐸I). Parameter initialization was automated via a valley search algorithm applied to Savitzky-
+Golay smoothed data, followed by differential evolution optimization5. 
+To determine activation energies (𝐸() for four of the six samples, temperature-dependent AC 
+impedance spectroscopy was conducted at a subset of discrete intervals: -30, -10, 25, 35, 45, 55, 
+65, 75, and 85 °C (Supplementary Figure 11). To preserve high-frequency signal integrity (~ 7 
+MHz) within the thermal chamber during low-temperature measurements, the cell was 
+mechanically isolated using a thick foam base to dampen vibrations, and physical contact between 
+cabling and chamber walls was also minimized. The activation energy (𝐸() was derived by 
+performing a linear regression of the data according to the linearized Arrhenius equation: 
+ln(𝜎979(#𝑇) = 𝑚G1000
+𝑇
+I + 𝑐 
+where 𝑚 is the slope, 𝑐 is the intercept, 𝜎979(# is the total ionic conductivity, and 𝑇 is temperature 
+in Kelvin. The activation energy is then calculated as: 
+𝐸( = −1000 ⋅ 𝑚⋅𝑘4 
+where 𝑘4 is the Boltzmann constant. 
+ 
+4. Ideal configurational entropy formulation and 𝑬𝒉𝒖𝒍𝒍,𝒊𝒅𝒆𝒂𝒍 
+The rhombohedral NASICON unit cell contains five distinct crystallographic sites: Na (6b, 18e, 
+36f), M (12c), and P/Si (18e). 
+
+
+ 
+ 
+6 
+ 
+ 
+Assuming a fully random configuration for each site, NASICONs with a sodium content of 𝑤≤4 
+only occupy the 6b and 18e sites, whereas those with 𝑤> 4 access all three Na sites. This 
+assumption provides an upper bound, as partial or full cation ordering typically decreases the true 
+configurational entropy. Based on this framework, the ideal configurational entropy per atom 
+(𝑠%&'(#,B7+*%:) is defined as: 
+𝑠%&'(#,B7+*%: = −
+𝑘4
+𝑤+ 17 (𝑤𝑠̃Q( + 2𝑠̃D + 3𝑠̃3) 
+ 
+𝑠̃Q( = U
+𝑤
+4 ln V𝑤
+4W + V1 −𝑤
+4W ln V1 −𝑤
+4W ,
+0 ≤𝑤≤4
+𝑤
+10 ln V 𝑤
+10W + V1 −𝑤
+10W ln V1 −𝑤
+10W ,
+𝑤> 4
+ 
+ 
+𝑠̃D = X 𝑦%
+2 ln V𝑦%
+2W
+%
+ 
+ 
+𝑠̃3 = 𝑧
+3 ln V𝑧
+3W + V1 −𝑧
+3W ln V1 −𝑧
+3W 
+ 
+Na (18e)
+Na (36f)
+Na (6b)
+P/Si (18e) – Polyanion site
+M (12c) – Metal cation site
+NawM2(PO4)3-z(SiO4)z
+Metal cation Polyanion
+
+
+ 
+ 
+7 
+ 
+where 𝑘4 is the Boltzmann constant, 𝑤 is the sodium content, 𝑦% is the stoichiometric content of 
+metal cation 𝑖, and 𝑧 is the silicon content per normalized formula unit of NawM2(PO4)3-z(SiO4)z. 
+ 
+Note that 𝑤 is used as the prefactor for 𝑠̃Q( (rather than the total site multiplicity of 4 or 10) to act 
+as an empirical dampening factor. A fully random distribution across all Na sites is physically 
+unlikely, as the sites fill sequentially (6b, then 18e, then 36f); substituting 𝑤 prevents artificial 
+inflation of the sodium entropy contribution. To calculate the contribution of this entropy to the 
+energy above the hull at temperature 𝑇, the augmented energy above the hull (𝐸!"##,%&'(#) is 
+evaluated as: 
+𝐸!"##,%&'(# = 𝐸!"## −𝑇𝑠%&'(#,B7+*%: 
+ 
+where the 𝐸!"## of the NASICON phase is obtained from the Materials Project6,7. 
+ 
+5. Empirical metastability limits of phosphate, silicate, and phosphosilicate NASICONs 
+To compare the synthesis outcomes of the phosphates, silicates, and phosphosilicates with their 
+thermodynamic stability, we mapped the phosphate, silicate, and phosphosilicate trials into the 
+𝜋R!')67 feature space (Supplementary Figure 16). We overlaid the synthetic accessibility 
+boundaries derived from the SVCs across four distinct 𝐸9!)'@!7#& limits: the thermodynamically 
+stable limit (0 meV/atom), the empirical metastability limit for phosphates and silicates (15 
+meV/atom), the practical metastability limit for phosphosilicates (41 meV/atom), and the absolute 
+𝜋R!')67 accessibility limit for phosphosilicates (62.22 meV/atom). Synthesizable phosphates and 
+silicates are completely encompassed within the 15 meV/atom boundary, whereas several 
+successful phosphosilicates are not. Distinctively, most (and eventually all) phosphosilicates are 
+captured within the synthetically accessible domains defined by the 41 meV/atom and 62.22 
+meV/atom thresholds, respectively. While we did not establish a direct 𝐸!"##,%&'(# limit for 
+phosphosilicates, these findings indicate that NASICONs with pure phosphate or pure silicate 
+anion groups possess a distinct empirical metastability limit that is significantly lower than that of 
+mixed phosphosilicate systems. 
+ 
+
+
+ 
+ 
+8 
+ 
+6. Precursor details 
+Prior to use in the A-Lab, the Na2CO3 and NH4H2PO4 powders were each pre-processed separately 
+in 10 g batches to achieve a finer particle size. This milling was performed in a polypropylene vial 
+containing ten 5 mm ZrO2 balls using a Hauschild Smart DAC250 centrifugal mixer. 
+Formula 
+Purity 
+Notes and product number 
+Na2CO3 
+≥99.5% 
+Anhydrous, 222321 
+HfO2 
+98% 
+202118 
+ZrO2 
+99% trace metals basis 
+5 μm, 230693 
+Ta2O5 
+99% trace metals basis 
+303518 
+Sc2O3 
+99.9% trace rare earth metals basis 
+307874 
+Nb2O5 
+99.9% trace metals basis 
+325 mesh, 208515 
+MgO 
+≥99% trace metals basis 
+325 mesh, 342793 
+TiO2 
+99.8% trace metals basis 
+Anatase, 232033 
+In2O3 
+99.99% trace metals basis 
+289418 
+SnO2 
+99.9% trace metals basis 
+325 mesh, 244651 
+Y2O3 
+99.99% trace metals basis 
+205168 
+Ga2O3 
+≥ 99.99% trace metals basis 
+215066 
+Al2O3 
+N/A 
+Nanopowder <50 nm particle 
+size (TEM), 544833 
+ZnO 
+N/A 
+Nanopowder <50 nm particle 
+size, 544906 
+GeO2 
+99.998% trace metals basis 
+199478 
+La2O3 
+≥ 99.9% 
+L4000 
+NH4H2PO4 
+≥ 98% 
+216003 
+SiO2 
+99.5% trace metals basis 
+325 mesh, 342890 
+ 
+7. Support vector classifier (SVC) test set performance comparison (5-fold cross-validation) 
+Classifier 
+Average 
+accuracy 
+(%) 
+Average 
+recall 
+(%) 
+Average 
+F1-score 
+(%) 
+Average training and test data amount 
+(A = Synthetically Accessible,  
+I = Synthetically Inaccessible) 
+Before descriptor 
+change 
+82.08 
+83.26 
+74.70 
+Training: 512 (A) and 2592 (I) 
+Test: 129 (A) and 648 (I) 
+
+
+ 
+ 
+9 
+ 
+Classifier 
+Average 
+accuracy 
+(%) 
+Average 
+recall 
+(%) 
+Average 
+F1-score 
+(%) 
+Average training and test data amount 
+(A = Synthetically Accessible,  
+I = Synthetically Inaccessible) 
+After descriptor 
+change 
+81.60 
+82.22 
+74.00 
+Training: 512 (A) and 2592 (I) 
+Test: 129 (A) and 648 (I) 
+After descriptor and 
+threshold changes 
+87.25 
+86.91 
+84.78 
+Training: 2259 (A) and 845 (I) 
+Test: 565 (A) and 212 (I) 
+ 
+8. Ionic conductivity cost-function components 
+𝜋CS! = ^
+0.70 −𝑅_D,
+If 𝑅_D < 0.70 Å
+𝑅_D −0.74,
+Else If 𝑅_D > 0.74
+0,
+otherwise
+ Å 
+𝜋Q"# = e
+2.5 −𝑁Q(,
+If 𝑁Q( < 2.5
+𝑁Q( −3.5,
+Else If 𝑁Q( > 3.5
+0,
+otherwise
+ 
+𝜋CS$ = ^
+0.215 −𝑅_3,
+If 𝑅_3 < 0.215 Å
+𝑅_3 −0.245,
+Else If 𝑅_3 > 0.245 Å
+0,
+otherwise
+ 
+ 
+9. Vegard’s approximation training and 𝝅𝑳𝑷 details  
+To link composition to structural metrics, we constructed two multiple linear regression models8 
+rooted in Vegard’s approximation2,9–11. The training dataset comprised 102 literature-reported 
+structures from ICSD and 11 in-house synthesized single-cation NASICONs; to ensure 
+consistency, we exclusively selected data collected at ambient pressure and near room temperature 
+(250 K < T < 305 K). Using the average polyanion center ion radius (𝑅h3), cation radius (𝑅hD), and 
+sodium content (𝑁Q() as predictors, these models independently estimate the 𝑎-lattice parameter 
+and unit cell volume (𝑉), from which the 𝑐-lattice parameter is geometrically derived. While the 
+global models yield high predictive accuracy (𝑅H values of 0.93 and 0.89 for 𝑎 and 𝑉, respectively; 
+Supplementary Figure 17a-b), precise decision-making within specific sub-systems requires 
+minimized local error. To achieve this, we implemented an adaptive fine-tuning strategy for each 
+chemical space: during the fitting process, compositions within the target chemical space are 
+assigned a weight of 10,000. This forces the regressor to prioritize local data fidelity while still 
+leveraging global trends to constrain predictions in sparse regions. An example for NASICONs in 
+the Na-Mn-V-Ti-P-O chemical space is shown in Supplementary Figure 17c-d, where the 
+general Vegard’s approximation model yields a significantly higher mean absolute error (MAE) 
+
+
+ 
+ 
+10 
+ 
+and a lower R2 value compared to the fine-tuned model. Finally, the lattice parameters feedback 
+cost function (𝜋VW) is defined as the mean percentage difference between the model-predicted 
+values for a candidate composition (Υ) and the experimentally refined values obtained from a prior 
+synthesis trial: 
+𝜋VW = 1
+3 7
+|𝑎XCY −𝑎Z|
+𝑎XCY
++
+|𝑐XCY −𝑐Z|
+𝑐XCY
++
+|𝑉XCY −𝑉Z|
+𝑉XCY
+; × 100% 
+where 𝑎XCY, 𝑐XCY, and 𝑉XCY are the unit cell 𝑎 and 𝑐 lattice parameters and volume, respectively, 
+obtained from the experimentally refined values. The variables with the Υ subscript denote the 
+corresponding structural values predicted by the regressors. An example using the as-synthesized 
+Na2TiSc(PO4)3 NASICON is shown in Supplementary Figure 17e, where the minimum of 𝜋VW 
+accurately corresponds to Na2TiSc(PO4)3 composition. This demonstrates that the experimentally 
+refined lattice parameters and volume of the synthesized material closely match those predicted 
+by the linear regressors, confirming the self-consistency of the predictive model against the 
+experimental result. 
+ 
+10. Calibration for high purity and major NASICON samples 
+To mitigate the influence of automated refinement artifacts on the purity assessment, we calibrated 
+the Purity Score such that a value of 1.0 corresponds to samples with negligible impurity content. 
+We assembled a calibration dataset of 20 high-purity samples (Supplementary Data), with 
+representative refined diffractograms shown in Supplementary Figure 18a-c. Since the raw 
+Estimated Purity (EP) is sensitive to fit quality, suboptimal automated refinement can result in 
+artificially low scores. This is exemplified in Supplementary Figure 18c, where automated 
+refinement yielded a low EP due to poor fit (Rwp=14.52%). In contrast, manual refinement of the 
+same pattern (Supplementary Figure 18e) achieved a significantly better fit (Rwp=6.78%), 
+confirming the sample's actual high purity and necessitating this calibration.  
+To establish the threshold defining a "major" NASICON phase, we performed a sensitivity 
+analysis by incrementally increasing the Purity Score threshold in steps of 0.1. The criterion for a 
+major phase was defined as the NASICON maximum peak intensity exceeding that of any 
+unidentified secondary peaks. Representative diffractograms for samples meeting this criterion are 
+shown in Supplementary Figure 19a-c, while a sample falling below it is shown in 
+Supplementary Figure 19d. This comparison determined that a Purity Score threshold of 0.7 
+
+
+ 
+ 
+11 
+ 
+conservatively distinguishes samples with a predominant NASICON phase from those dominated 
+by impurities. 
+ 
+11. Multimodal NASICON composition analysis 
+To resolve the composition of the synthesized NASICON phase, we employed a multimodal 
+approach integrating thermodynamic and lattice-parameter-based screening with automated SEM-
+EDS characterization. The analysis followed a three-step workflow: (1) Automated SEM-EDS 
+data acquisition, filtering, and k-means clustering; (2) Hybrid optimization for composition 
+assignment; and (3) Final phase identification. The specific details of each step are outlined below: 
+1. Automated SEM-EDS data acquisition, filtering, and k-means clustering: 
+Compositional measurement was performed using the AutoEMX framework3 on a Thermo 
+Fisher Phenom XL G2 desktop SEM equipped with an Ametek FAST SDD (controlled via 
+the PyPhenom Python API). Powder samples were dispersed onto carbon tape on 
+aluminum stubs, and for each sample, 200 individual 50,000-count EDS spot spectra were 
+autonomously acquired at 15 kV on randomly selected particles. Following the automated 
+acquisition, principled filtering of unreliable spectra and k-means clustering were 
+performed to identify and extract the compositions of the individual constituent phases in 
+each sample, as established in prior work3. 
+2. Hybrid optimization for composition assignment: Each resulting cluster possesses a 
+centroid representing the mean of its compositional distribution. To identify the best-fitting 
+NASICON composition for each cluster, we employed a hybrid optimization scheme. To 
+ensure an exhaustive evaluation, we utilized the composition-to-structure relationships 
+derived from Vegard’s approximation (see Methods and Supplementary Information 9). 
+This, alongside the uncertainty-aware verification described in the XRD phase analysis 
+(see Methods), constrained the viable NASICON candidates to those matching the 
+observed lattice parameters. We performed a global search to identify 100 distinct 
+compositions satisfying this constraint. Simultaneously, a fine-grid search was conducted 
+around the nominal target composition, generating an additional 5,000 proximate 
+candidates. These candidates were screened using the thermodynamic cost function 
+(𝜋R!')67) to eliminate synthetically inaccessible phases, yielding a final pool of 67-92 
+globally diverse and 3,974-5,000 local candidate compositions per sample. Initialized with 
+
+
+ 
+ 
+12 
+ 
+these globally diverse candidates and a subset of the local candidates (totaling 250 points), 
+the algorithm executed differential evolution followed by gradient-based BFGS 
+optimization. The objective function minimized a composite cost comprising 𝜋R!')67, the 
+Euclidean compositional distance to the cluster centroid, and a lattice parameter penalty 
+restricting candidates to within the intrinsic uncertainty of Vegard’s approximation plus 
+15% of the chemical system's total parameter or volume range. By incorporating these 
+constraints, this hybrid optimization resolves an optimal solution that accounts for the 
+inherent experimental uncertainties of both XRD and SEM-EDS techniques. 
+3. Final phase identification: To rigorously determine which candidate compositions best 
+match each measured cluster, the best-fitting NASICON compositions for each cluster, 
+together with impurity phases identified from XRD pattern refinement, were fed as 
+candidate phases into the AutoEMX clustering analysis routine. This routine systematically 
+evaluates whether clusters stem from single-phase or two-phase mixtures of candidate 
+phases to accurately resolve the constituent phases for each cluster. The compositions and 
+phase combinations with the highest statistical confidence were ultimately selected and 
+reported. 
+ 
+ 
+ 
+ 
+ 
+
+
+ 
+ 
+13 
+ 
+12. Supplementary Figures 1-19 
+ 
+ 
+Supplementary Figure 1. Threshold adjustment to resolve classification discrepancies and 
+define 𝝅𝑻𝒉𝒆𝒓𝒎𝒐. Mapping of 524 experimentally verified, literature-mined NASICON 
+compositions (dark blue dots) into the reduced thermodynamic feature space. The background 
+shading delineates the support vector classifier (SVC) prediction regions: synthetically accessible 
+(A, light region) and synthetically inaccessible (I, dark gray region).  (a) The SVC decision 
+boundary trained using the original strict stability threshold of 𝐸!"##,%&'(# = 0 meV/atom. Under 
+this stringent threshold, a significant number of known, experimentally verified compositions are 
+incorrectly classified as inaccessible, as highlighted by the red box. The black arrow between the 
+panels represents the threshold relaxation process. (b) The updated SVC decision boundary trained 
+using an adjusted stability threshold of 𝐸!"##,%&'(# ≤62.22 meV/atom. The blue arrows in both 
+panels illustrate the resulting rightward shift of the decision boundary. This shifted boundary 
+represents the minimum threshold required to correctly encompass all 524 verified compositions 
+within the accessible (A) region, effectively resolving the prior discrepancy. The axes represent 
+combinations of the four retained stability descriptors: the electronegativity difference between Na 
+and the cations (𝑋D
+Q(), cation radius deviation (𝑅D
+ERY), sodium content (𝑁Q(), and anion charge 
+deviation (𝑄3
+ERY). 
+
+
+ 
+ 
+14 
+ 
+ 
+Supplementary Figure 2. Validation of synthetic accessibility cost functions (Zr-Sn-Ti-Ge 
+phosphate). Diffractograms from Rietveld refinements of XRD patterns comparing the initial 
+synthesis trial (top) and the subsequent CASS-designed trial (bottom) for the Zr-Sn-Ti-Ge 
+pseudoquaternary phosphate system. 
+NaZr0.5Sn0.5Ti0.5Ge0.5(PO4)3
+NaZr0.64Sn0.81Ti0.36Ge0.19(PO4)3
+Single iteration
+𝑅𝑤𝑝= 6.51%
+𝑅𝑤𝑝= 7.31%
+
+
+ 
+ 
+15 
+ 
+ 
+Supplementary Figure 3. Validation of synthetic accessibility cost functions (Zr-Sn-Ti-Ge 
+silicate). Comparison of Rietveld-refined XRD patterns for an initial synthesis trial (top) and a 
+subsequent CASS-designed trial (bottom). The initial trial resulted in a phase with lattice 
+parameters deviating significantly from theoretical predictions for the target composition, 
+indicating a failure to form the desired solid solution. In contrast, the CASS-designed trial yielded 
+lattice parameters closely matching expected values of the new design, demonstrating the system's 
+ability to successfully navigate toward synthetically accessible regions of the design space. 
+Na4Zr0.5Sn0.5Ti0.5Ge0.5(SiO4)3
+Na4Zr0.99Sn0.79Ti0.09Ge0.13(SiO4)3
+Single iteration
+Lattice parameters are too far from the 
+expectation
+𝑅𝑤𝑝= 5.55%
+Lattice parameters are close 
+to expectation
+𝑅𝑤𝑝= 6.15%
+
+
+ 
+ 
+16 
+ 
+ 
+Supplementary Figure 4. Validation of synthetic accessibility cost functions (Zr-Sn-Ge 
+phosphate). Diffractograms from Rietveld refinements of XRD patterns comparing the initial 
+synthesis trial (top) and the subsequent CASS-designed trials (middle, bottom) for the Zr-Sn-Ge 
+pseudoternary phosphate system. “NUFO” label indicates that the impurity was not used for 
+optimization since it was later added manually and was not detected within the automated phase 
+search during the CASS loop. 
+NaZr0.85Sn0.72Ge0.43(PO4)3 (𝑅𝑤𝑝= 5.70%)
+NaZr1.42Sn0.43Ge0.15(PO4)3 (𝑅𝑤𝑝= 6.86%)
+NaZr1.74Sn0.13Ge0.13(PO4)3 (𝑅𝑤𝑝= 5.47%)
+Single iteration
+Single iteration
+
+
+ 
+ 
+17 
+ 
+ 
+Supplementary Figure 5. Validation of synthetic accessibility cost functions (Zr-Nb-Ge 
+phosphate). Diffractograms from Rietveld refinements of XRD patterns comparing the initial 
+synthesis trial (top) and the subsequent CASS-designed trials (middle, bottom) for the Zr-Nb-Ge 
+pseudoternary phosphate system. “NUFO” label indicates that the impurity was not used for 
+optimization since it was later added manually and was not detected within the automated phase 
+search during the CASS loop. 
+Na0.33Zr0.14Nb0.67Ge1.19(PO4)3 (𝑅𝑤𝑝= 10.30%)
+Single iteration
+Na0.29Zr0.16Nb0.71Ge1.12(PO4)3 (𝑅𝑤𝑝= 9.79%)
+Na0.12Zr0.12Nb0.88Ge(PO4)3 (𝑅𝑤𝑝= 9.41%)
+Single iteration
+
+
+ 
+ 
+18 
+ 
+ 
+Supplementary Figure 6. Validation of synthetic accessibility cost functions (Zr-Ti-Ge 
+phosphate). Diffractograms from Rietveld refinements of XRD patterns comparing the initial 
+synthesis trial (top) and the subsequent CASS-designed trials (second, third, bottom) for the Zr-
+Ti-Ge pseudoternary phosphate system. “NUFO” label indicates that the impurity was not used for 
+optimization since it was later added manually and was not detected within the automated phase 
+search during the CASS loop. 
+NaZr0.29Ti0.64Ge1.07(PO4)3(𝑅𝑤𝑝= 11.06%)
+NaZr0.26Ti0.52Ge1.22(PO4)3(𝑅𝑤𝑝= 12.16%)
+Single iteration
+NaZr0.16Ti0.63Ge1.21(PO4)3(𝑅𝑤𝑝= 10.38%)
+Single iteration
+NaZr0.13Ti0.74Ge1.13(PO4)3(𝑅𝑤𝑝= 10.12%)
+Single iteration
+
+
+ 
+ 
+19 
+ 
+ 
+Supplementary Figure 7. Diffractograms from Rietveld refinements of XRD patterns for the 
+respective 
+as-synthesized 
+promising 
+NASICON 
+ionic 
+conductors. 
+(a) 
+Na3.4Hf0.8Zr0.8In0.3Ga0.1(SiO4)2(PO4) and (b) Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4), displaying observed 
+(blue), calculated (green), background (red), and difference (cyan) profiles alongside weighted 
+profile R-factors (𝑅_A). 
+(a) Na3.4Hf0.8Zr0.8In0.3Ga0.1(SiO4)2(PO4) (𝑅𝑤𝑝= 6.43%)
+(b) Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4) (𝑅𝑤𝑝= 6.64%)
+
+
+ 
+ 
+20 
+ 
+ 
+Supplementary Figure 8. Diffractograms from Rietveld refinements of XRD patterns for the 
+respective as-synthesized less ionically conducting samples. The observed (blue crosses), 
+calculated (green line), background (red line), and difference (cyan line) profiles are shown. The 
+weighted 
+profile 
+R-factors 
+(𝑹𝒘𝒑) 
+are 
+indicated 
+for 
+each 
+refinement. 
+(a) 
+Na3.5Hf0.7In1.2Ge0.1(SiO4)1.3(PO4)1.7 and (b) Na4.3Hf0.3Zr1.3Zn0.4(SiO4)2.5(PO4)0.5. 
+Na4.3Hf0.3Zr1.3Zn0.4(SiO4)2.5(PO4)0.5 (𝑅𝑤𝑝= 8.41%)
+(b)
+Na3.5Hf0.7In1.2Ge0.1(SiO4)1.3(PO4)1.7 (𝑅𝑤𝑝= 7.60%)
+(a)
+Intensity (a.u.)
+Intensity (a.u.)
+
+
+ 
+ 
+21 
+ 
+ 
+Supplementary Figure 9. Diffractograms from Rietveld refinements of XRD patterns for the 
+respective as-synthesized less ionically conducting samples (cont.). The observed (blue 
+crosses), calculated (green line), background (red line), and difference (cyan line) profiles are 
+shown. The weighted profile R-factors (𝐑𝐰𝐩) are indicated for each refinement. (a) 
+Na3.5Hf0.9In1.0Ga0.1(SiO4)1.4(PO4)1.6 and (b) Na2.8Y0.7Hf0.9Ti0.4(SiO4)1.1(PO4)1.9. 
+ 
+Na3.5Hf0.9In1.0Ga0.1(SiO4)1.4(PO4)1.6 (𝑅𝑤𝑝= 6.53%)
+(a)
+Na2.8Y0.7Hf0.9Ti0.4(SiO4)1.1(PO4)1.9 (𝑅𝑤𝑝= 5.53%)
+(b)
+Intensity (a.u.)
+Intensity (a.u.)
+
+
+ 
+ 
+22 
+ 
+ 
+Supplementary Figure 10. Post-processing result of Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4). 
+Diffractograms from Rietveld refinements of XRD patterns comparing the as-synthesized sample 
+(top) and the subsequent post-processed sample (bottom). 
+ 
+Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4) before  (𝑅𝑤𝑝= 6.64%)
+Grind, cold press, sinter, quench
+After (𝑅𝑤𝑝= 6.78%)
+
+
+ 
+ 
+23 
+ 
+ 
+Supplementary Figure 11. Temperature-dependent ionic conductivity profiles. Arrhenius 
+plots displaying the total ionic conductivity (𝜎979(#), alongside resolvable bulk (𝜎d"#e) and grain 
+boundary 
+(𝜎:d) 
+components, 
+for: 
+(a) 
+Na3.4Hf0.8Zr0.8In0.3Ga0.1(SiO4)2(PO4), 
+(b) 
+Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4), 
+(c) 
+Na3.5Hf0.9In1.0Ga0.1(SiO4)1.4(PO4)1.6, 
+and 
+(d) 
+Na2.8Y0.7Hf0.9Ti0.4(SiO4)1.1(PO4)1.9. 
+ 
+(a)
+(b)
+(d)
+(c)
+
+
+ 
+ 
+24 
+ 
+ 
+(a)
+(b)
+
+
+ 
+ 
+25 
+ 
+Supplementary Figure 12. Practical and empirical metastability limits at T = 1000 K and T 
+= 1373 K. (a) Success rate of forming a major-phase NASICON versus the initial stability 
+threshold (𝐸*%)@9 @9(d#' 9!)'@!7#&) calculated at T = 1373 K. The dashed vertical line denotes the 
+practical metastability limit at 41 meV/atom, which remains consistent across both 1000 K and 
+1373 K evaluations. Numbers above the bars indicate the sample count within each bin, and error 
+bars represent the standard error. (b) DFT-calculated energy above the hull augmented with ideal 
+configurational entropy (𝐸!"##,%&'(#) evaluated at the synthesis temperature of T = 1373 K for 
+various phosphate (circles) and silicate (triangles) NASICON compositions. Synthesizable 
+compositions (blue and cyan markers) are separated from failed syntheses (red markers) by an 
+empirical metastability limit. The horizontal dashed lines highlight the temperature-dependent 
+shift of this empirical limit: from 15 meV/atom at T = 1000 K (black dashed line) down to 9.5 
+meV/atom at T = 1373 K (blue dashed line). 
+ 
+
+
+ 
+ 
+26 
+ 
+ 
+Supplementary Figure 13. Distance of each product from its equimolar target, beyond the model 
+uncertainty, Δ𝑥'5"%,?3, for the thirteen pseudobinary phosphate pairs. Each product is located on 
+its pair by the refined a (circles) and unit-cell volume (V, diamonds), between the measured end 
+members. Blue, target phase formed; red, not formed. Dashed line, the adopted tolerance of 15%. 
+Products that formed reach at most 11.5% on both quantities; those that did not form reach at least 
+18.2% on at least one. NaSnHf(PO₄)₃ exceeds on a only and Na₂ZrY(PO₄)₃ on V only. 
+ 
+
+
+ 
+ 
+27 
+ 
+ 
+Supplementary Figure 14. Pseudobinary sections in the 𝑎 lattice parameter for the thirteen 
+phosphate pairs. Solid line, fine-tuned model; dark band, δ;<=2>; light band, δ;<=2> plus 15% of 
+the model-predicted end-member range; squares with dotted levels, measured end members; open 
+circle, model value at the equimolar target; filled circle, refined value, blue where the target phase 
+formed and red where it did not. Percentages are 𝑥(𝑞) × 100 measured from the left, so an ideal 
+equimolar product reads 50%. NaGeHf(PO₄)₃ and NaGeZr(PO₄)₃ read 98% and 97%, placing them 
+at the Hf and Zr end members. NaSnHf(PO₄)₃ is marked for its split (110) reflection. 
+
+
+ 
+ 
+28 
+ 
+ 
+Supplementary Figure 15. As Supplementary Figure 14, for the unit-cell volume V. 
+Na₂ZrSc(PO₄)₃ reads -5%, its refined volume falling just outside the end-member interval; that pair 
+spans only 9.5 Å³ against δ;<=2>= 4.6 Å³, so 𝑥(𝑉) is poorly resolved there. 
+ 
+
+
+ 
+ 
+29 
+ 
+ 
+Supplementary Figure 16. Stability boundaries in the machine-learned feature space for 
+NASICONs. Distribution of phosphate (circles), silicate (triangles), and phosphosilicate (squares) 
+compositions within the machine-learned stability feature space, defined by descriptors. All 
+compositions are categorized by synthesis success: phosphates and silicates are differentiated by 
+successful (blue/cyan) versus failed (red) syntheses, while phosphosilicates are distinguished by 
+forming a major (green) or minor/no (red) NASICON phase. The plot illustrates four distinct linear 
+decision boundaries corresponding to different energy thresholds (𝐸9!)'@!7#& = 0, 15, 41, and 62.22 
+meV/atom), which divide the feature space into synthetically accessible (A) and inaccessible (I) 
+domains. 
+
+
+ 
+ 
+30 
+ 
+ 
+ 
+Supplementary Figure 17. Validation of Vegard’s approximation models and 𝝅𝑳𝑷. Multiple 
+linear regression fits over all structures (ICSD and single-cation phosphate NASICON syntheses) 
+for predicting the unit cell (a) 𝑎 lattice parameter and (b) volume. The R2 and mean absolute error 
+(MAE) of each regressor are shown at the top of each plot. Comparison between the fine-tuned 
+and general regressors for NASICON in the Na-Mn-V-Ti-P-O chemical space for (c) 𝑎 lattice 
+
+
+ 
+ 
+31 
+ 
+parameter and (d) volume predictions. The blue (black) dots represent predictions from the fine-
+tuned (general) regressors, while the red line shows the ideal condition where predicted and true 
+values are equal. (e) Visualization of 𝜋VW for composition variation in Na1+xTi2-xScx(PO4)3 
+evaluated against the experimental volume and lattice parameters of as-synthesized 
+Na2TiSc(PO4)3. Each dot represents one generated composition. 
+ 
+
+
+ 
+ 
+32 
+ 
+ 
+Supplementary Figure 18. Validation of high-purity samples via X-ray diffraction for Purity 
+Score upper threshold determination. (a-c) Representative diffractograms and weighted profile 
+R-factors (𝑅_A) obtained from the automated Rietveld refinement of samples with no impurity 
+peaks. (d) Distribution of Estimated Purity (EP) percentages across the high-purity sample set from 
+the automated refinements; the red dashed line indicates the average EP (78.33%). (e) Manual 
+Rietveld refinement of the sample shown in panel c (Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4)). This sample 
+yielded the lowest EP in the automated analysis; the significant improvement in fit quality between 
+the automated (c, 𝑅_A = 14.52%) and manual (e, 𝑅_A = 6.78%) refinements highlights the 
+limitations of the automated routine in resolving complex peak profiles. In all plots, experimental 
+data (blue dots in a-c, blue crosses in e), calculated profiles (green lines), background (red lines), 
+and difference (cyan lines) are shown. 
+Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4) Manual reﬁnement (Rwp=6.78%)
+(a)
+(b)
+(c)
+(d)
+(e)
+Na3.5Hf1.5In0.4Ga0.1(SiO4)2(PO4) (Rwp=14.52%)
+Na3ZrMg(PO4)3 (Rwp=6.59%)
+NaSn2(PO4)3 (Rwp=10.41%)
+Intensity (a.u.)
+Intensity (a.u.)
+Intensity (a.u.)
+
+
+ 
+ 
+33 
+ 
+ 
+Supplementary Figure 19. Validation of Purity Score threshold via X-ray diffraction. 
+Representative diffractograms obtained from automated Rietveld refinement used to calibrate the 
+Purity Score threshold. Panels (a–c) display samples identified as having a major NASICON 
+phase, characterized by high Purity Scores (>0.7). Panel (d) shows a sample 
+(Na3.5Zr0.6Ti0.2In0.5Sn0.7(SiO4)2(PO4)) where the NASICON phase is only a minor phase, resulting 
+in a low Purity Score of 0.53. In all plots, experimental data (blue dots), calculated profiles (green 
+lines), background (red lines), and difference curves (light-blue lines) and NASICON reflection 
+positions (red ticks) are shown. 
+ 
+ 
+Purity score = 0.82
+Purity score = 0.53
+Purity score = 0.81
+Purity score = 0.77
+(a)
+(b)
+(c)
+(d)
+Purity score = 0.53
+Intensity (a.u.)
+Intensity (a.u.)
+Intensity (a.u.)
+Intensity (a.u.)
+
+
+ 
+ 
+34 
+ 
+References 
+1. Narayanan, S., Reid, S., Butler, S. & Thangadurai, V. Sintering temperature, excess sodium, 
+and phosphorous dependencies on morphology and ionic conductivity of NASICON 
+Na3Zr2Si2PO12. Solid State Ionics 331, 22–29 (2019). 
+2. Denton, A. R. & Ashcroft, N. W. Vegard’s law. Phys. Rev. A 43, 3161–3164 (1991). 
+3. Giunto, A. et al. Accurate SEM-EDS quantification, automation, and machine learning 
+enable high-throughput compositional characterization of powders. Nat Commun 17, 9735 
+(2026). 
+4. Murbach, M., Gerwe, B., Dawson-Elli, N. & Tsui, L. impedance.py: A Python package for 
+electrochemical impedance analysis. JOSS 5, 2349 (2020). 
+5. Virtanen, P. et al. SciPy 1.0: fundamental algorithms for scientific computing in Python. Nat 
+Methods 17, 261–272 (2020). 
+6. Horton, M. K. et al. Accelerated data-driven materials science with the Materials Project. 
+Nat. Mater. 24, 1522–1532 (2025). 
+7. Jain, A. et al. Commentary: The Materials Project: A materials genome approach to 
+accelerating materials innovation. APL Materials 1, 011002 (2013). 
+8. Pedregosa, F. et al. Scikit-learn: Machine Learning in Python. Journal of Machine Learning 
+Research 12, 2825–2830 (2011). 
+9. Rusdi, H. et al. The Role of Sintering Temperature and Dual Metal Substitutions (Al3+, 
+Ti4+) in the Development of NASICON-Structured Electrolyte. Materials 14, 7342 (2021). 
+10. Zhang, H., Su, Y., Zhang, J., Ni, Z. & Zhang, X. Controllable structural ordering via 
+chemical substitution to the efficient and thermally stable luminescence in NASICON-type 
+phosphor Series: Na1+Hf2−Sc (PO4)3:Eu. Chemical Engineering Journal 426, 130778 
+(2021). 
+
+
+ 
+ 
+35 
+ 
+11. Asabina, E., Sedov, V., Pet’kov, V., Deyneko, D. & Kovalsky, A. Synthesis, structure and 
+luminescence properties of the europium–containing NASICON type phosphates. J Sol-Gel 
+Sci Technol 105, 547–554 (2023). 
+ 

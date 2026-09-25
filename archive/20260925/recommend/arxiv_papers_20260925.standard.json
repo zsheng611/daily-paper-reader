@@ -1,0 +1,465 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-25T18:59:18.168906+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 4,
+    "deep_cap": 7,
+    "deep_selected": 4,
+    "quick_candidates": 6,
+    "quick_skim_target": 12,
+    "quick_selected": 6
+  },
+  "deep_dive": [
+    {
+      "id": "2609.29105v1",
+      "source": "arxiv",
+      "title": "A System-Independent Metadynamics Strategy for Reactive Training Data: Application to Gas-Phase Organic Reactions",
+      "abstract": "General-purpose machine-learning interatomic potentials (MLIPs) for organic reactions need to be accurate on both the minimum energy path (MEP) for static evaluation of basic properties and the broader configurational space for simulating reaction dynamics. Existing general datasets for gas-phase organic reactions rely on quasi-static relaxation that confines configurations to the MEP vicinity, so models trained on them could fail on direct molecular-dynamics trajectories; the gap is methodological, not a question of dataset size. We introduce a spatiotemporally resolved, system-independent collective variable (CV): Cartesian RMSD within randomly partitioned local domains against an expanding list of time-averaged reference geometries. The CV drives metadynamics as the main exploration engine, supplemented by structural relaxation towards transition state (TS) to augment the coverage around TS. Within a concurrent-learning workflow, this produces OpenRxn26, a dataset of 1.8~M DFT-labeled configurations covering neutral singlet unimolecular reactions in the H/C/N/O chemical space ($N_\\mathrm{heavy} \\leq 30$), containing reactive atomic environments underrepresented in community datasets. Trained on OpenRxn26, a DPA3 model (denoted DPA3_rxn) achieves transferable accuracy on barrier heights and reaction energies. On off-MEP reactive trajectories, DPA3_rxn is the only model in the benchmark suite to reach 1.0 kcal/mol energy accuracy compared with the labeling method, where the domain MLIP leading on static benchmarks degrades several-fold (e.g. MACE_OMol25), showing the insufficiency of quasi-static sampling and MEP-anchored benchmarks for guaranteeing dynamics reliability of MLIPs. OpenRxn26 thus provides MD-ready reactive training data for gas-phase neutral singlet organic reactions, verifying the generality and efficiency of the sampling strategy.",
+      "authors": [
+        "Wanrun Jiang",
+        "Jinzhe Zeng",
+        "Manyi Yang",
+        "Tong Zhu",
+        "Han Wang"
+      ],
+      "primary_category": "physics.chem-ph",
+      "categories": [
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-24T06:36:18+00:00",
+      "link": "https://arxiv.org/pdf/2609.29105v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "reactive training data for machine-learning interatomic potentials and molecular dynamics",
+      "llm_evidence_cn": "面向机器学习原子间势与分子动力学的反应性训练数据",
+      "llm_evidence": "面向机器学习原子间势与分子动力学的反应性训练数据",
+      "canonical_evidence": "面向机器学习原子间势与分子动力学的反应性训练数据",
+      "llm_tldr_en": "A system-independent metadynamics strategy generates reactive training data covering the wider configurational space, fixing the gap between quasi-static datasets and direct molecular-dynamics simulations for organic reactions.",
+      "llm_tldr_cn": "论文针对通用机器学习原子间势在有机反应中难以兼顾最低能量路径与反应动力学构型空间的问题展开研究。现有气相有机反应数据集多依赖准静态弛豫，将构型限制在最低能量路径附近，导致模型在直接分子动力学轨迹上可能失效。作者提出一种时空分辨、系统无关的集合变量，在随机划分的局域域内以笛卡尔RMSD对构型进行度量。该方法能够覆盖更广的构型空间，为反应动力学训练数据生成提供了方法论支撑，弥合了数据集与真实模拟之间的差距。",
+      "llm_tldr": "论文针对通用机器学习原子间势在有机反应中难以兼顾最低能量路径与反应动力学构型空间的问题展开研究。现有气相有机反应数据集多依赖准静态弛豫，将构型限制在最低能量路径附近，导致模型在直接分子动力学轨迹上可能失效。作者提出一种时空分辨、系统无关的集合变量，在随机划分的局域域内以笛卡尔RMSD对构型进行度量。该方法能够覆盖更广的构型空间，为反应动力学训练数据生成提供了方法论支撑，弥合了数据集与真实模拟之间的差距。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for molecular dynamics and DFT",
+      "matched_requirement_id": "req-3",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.29344v1",
+      "source": "arxiv",
+      "title": "Combining physical models with dynamically acquired experimental information for the optimization of multicomponent NASICON fast ionic conductors in a self-driving laboratory",
+      "abstract": "Elemental substitution within existing structural frameworks is a widely applied strategy for developing advanced materials. Yet, optimizing target properties while maintaining phase purity usually demands extensive trial-and-error, which becomes substantially inefficient when navigating a complex design space. Here, we introduce a strategy that simultaneously and dynamically assesses composition-dependent synthetic accessibility and target properties via aggregated cost functions that guide autonomous experimentation in a truly self-driving and self-learning mode. Specifically, we developed a cost-guided autonomous solid-state synthesis (CASS) framework and demonstrate its application in the discovery of Na superionic conductor (NASICON) solid electrolytes. CASS successfully optimizes ionic conductivity and phase purity, leading to the identification of 18 promising compositions in 78 trials conducted in an autonomous laboratory, the A-Lab. Among these, we identified two fast-conducting NASICONs yielding total (bulk) ionic conductivity of 0.7 (3.96) and 0.3 (3.17) mS/cm. The successful deployment of CASS reinforces the potential of coupling self-driving autonomous laboratories with physics-informed generative models to accelerate materials discovery. Moreover, the interpretability of the design factors, informed by outcomes from both successful and failed syntheses, enables model refinement and generation of new chemical insights.",
+      "authors": [
+        "Bernardus Rendy",
+        "Yuxing Fei",
+        "Tanjin He",
+        "Xiaochen Yang",
+        "Andrea Giunto",
+        "Lauren N. Walters",
+        "David Milsted",
+        "Hao Qiu",
+        "Matthew J. McDermott",
+        "Bin Ouyang",
+        "Yan Zeng",
+        "Gerbrand Ceder"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-24T10:17:50+00:00",
+      "link": "https://arxiv.org/pdf/2609.29344v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "self-driving laboratory optimizing multicomponent NASICON ionic conductors",
+      "llm_evidence_cn": "自主驾驶实验室优化多组分NASICON离子导体",
+      "llm_evidence": "自主驾驶实验室优化多组分NASICON离子导体",
+      "canonical_evidence": "自主驾驶实验室优化多组分NASICON离子导体",
+      "llm_tldr_en": "Optimizing multicomponent materials while keeping phase purity is slow trial-and-error. The authors combine physical models with dynamically acquired experimental information and cost-guided autonomous solid-state synthesis, driving a self-driving, self-learning loop that efficiently optimizes NASICON fast ionic conductors.",
+      "llm_tldr_cn": "在复杂设计空间中优化多组分材料并保持相纯度往往依赖大量试错，效率低下。本文提出将物理模型与动态获取的实验信息相结合，通过聚合成本函数引导自主实验，构建了成本引导的自主固相合成框架。该系统以自驱动、自学习方式同时评估合成可行性与目标性质，高效优化了NASICON快离子导体，展示了自驱动实验室在材料研发中的潜力。",
+      "llm_tldr": "在复杂设计空间中优化多组分材料并保持相纯度往往依赖大量试错，效率低下。本文提出将物理模型与动态获取的实验信息相结合，通过聚合成本函数引导自主实验，构建了成本引导的自主固相合成框架。该系统以自驱动、自学习方式同时评估合成可行性与目标性质，高效优化了NASICON快离子导体，展示了自驱动实验室在材料研发中的潜力。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "self-driving laboratory",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.30133v1",
+      "source": "arxiv",
+      "title": "AI-guided high-throughput discovery of iridium- and ruthenium-free palladium-oxide catalysts for durable acidic oxygen evolution",
+      "abstract": "Catalyzing acidic oxygen evolution at the proton-exchange-membrane water electrolysis (PEMWE) anode relies almost entirely on iridium or ruthenium, drawn from concentrated supply chains that constrain gigawatt-scale deployment. We report an artificial intelligence (AI)-guided, human-supervised closed-loop platform (>90% automation) integrating combinatorial sputter synthesis, high-throughput screening, machine-learning composition-property models, adaptive multi-objective optimization, and context-aware large-language-model reasoning, where lead catalysts advanced to long-term validation in 1 M H2SO4 at 10 mA cm-2. Navigating a combinatorial metal oxide space, the platform iteratively evaluated the activity-stability trade-off of 2,942 catalysts across 53 material systems and 26 elements, surfacing Ir- and Ru-free complex oxides such as InMnPdOx and NiTaPdOx that conventional design logic, and off-the-shelf language models, would not predict. In retrospective benchmarking, our sequential learning agent advanced the activity-stability frontier faster than fixed-policy Bayesian optimization or in-context language-model selection. During long-term testing, NiTaPdOx operated at lower overpotential than PdOx, but both eventually exceeded 0.5 V: PdOx at ~200 h and NiTaPdOx at ~470 h. InMnPdOx showed a similar overpotential improvement in addition to a dramatic increase in operational stability, retaining overpotential below 0.5 V over 1,000 h of operation. The additive elements promote the formation of a nanostructure that is associated with catalytic activity while stabilizing Pd against corrosion. The results highlight the power of AI-driven science in addressing long-standing challenges in materials chemistry, and the greater availability of Pd relative to incumbent Ir and Ru offers a near-term option to ease supply constraints on scaled electrochemical H2 generation.",
+      "authors": [
+        "Ken J. Jenewein",
+        "Faezeh Habib Zadeh",
+        "Xiaoxiao Wang",
+        "Gustavo Malkomes",
+        "Huafan Zhang",
+        "Natalie Page",
+        "Jae Jin Bang",
+        "Peter J. Santiago",
+        "Karla V. Contreras",
+        "Katherine K. Li",
+        "Allison Perna",
+        "Lorena M. Britton",
+        "Fahrettin Kilic",
+        "Kevin J. Cruse",
+        "Armin Taheri",
+        "Krishnanand Mallayya",
+        "Harley Quinn",
+        "Rebecca A. Durr",
+        "Peter A. Beaucage",
+        "John M. Gregoire",
+        "Rafael Gómez-Bombarelli"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-24T17:04:37+00:00",
+      "link": "https://arxiv.org/pdf/2609.30133v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 9.0,
+      "llm_evidence_en": "AI-guided human-supervised closed-loop autonomous platform for catalyst discovery",
+      "llm_evidence_cn": "AI引导、人工监督的闭环自动化催化剂发现平台",
+      "llm_evidence": "AI引导、人工监督的闭环自动化催化剂发现平台",
+      "canonical_evidence": "AI引导、人工监督的闭环自动化催化剂发现平台",
+      "llm_tldr_en": "Reports an AI-guided, human-supervised closed-loop platform integrating combinatorial sputter synthesis, high-throughput screening, ML property models, adaptive optimization and LLM reasoning to discover Ir- and Ru-free Pd-oxide catalysts.",
+      "llm_tldr_cn": "酸性析氧反应几乎完全依赖铱、钌等稀缺贵金属，制约了质子交换膜电解水的大规模部署。本文报道一个AI引导、人工监督的闭环平台，整合组合溅射合成、高通量筛选、机器学习成分-性能模型、自适应多目标优化与上下文感知的LLM推理，自动迭代探索金属氧化物空间。筛选出的先导催化剂在1 M硫酸中经受长期验证，展示了自动化闭环加速材料发现的潜力。",
+      "llm_tldr": "酸性析氧反应几乎完全依赖铱、钌等稀缺贵金属，制约了质子交换膜电解水的大规模部署。本文报道一个AI引导、人工监督的闭环平台，整合组合溅射合成、高通量筛选、机器学习成分-性能模型、自适应多目标优化与上下文感知的LLM推理，自动迭代探索金属氧化物空间。筛选出的先导催化剂在1 M硫酸中经受长期验证，展示了自动化闭环加速材料发现的潜力。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "self-driving laboratory",
+      "matched_requirement_id": "req-10",
+      "selection_source": "fresh_fetch"
+    },
+    {
+      "id": "2609.29361v1",
+      "source": "arxiv",
+      "title": "Hamiltonian learning reveals optoelectronic mechanisms across thermodynamic state space in soft semiconductors",
+      "abstract": "Predicting optoelectronic response across thermodynamic state space requires coupling finite-temperature nuclear dynamics to electronic structure at scales where direct first-principles calculations are impractical. Machine-learning force fields and Hamiltonian-learning models provide scalable predictions, but integrating them into reliable and interpretable workflows remains challenging. Here, we introduce FLOW-OTTER, a modular, model-agnostic framework that automates molecular dynamics, Hamiltonian prediction, observable extraction, reliability assessment, and Hamiltonian-level interpretation. We demonstrate FLOW-OTTER in halide perovskites, soft semiconductors whose anharmonic fluctuations strongly modulate electronic response. Using FLOW-OTTER, we show that independently learned nuclear and electronic models remain predictive when composed end-to-end, reproducing experimental temperature- and pressure-dependent band-gap trends using models trained only on first-principles targets at zero pressure. By resolving the nonlinear evolution of Pb-$s$/Br-$p$ antibonding at the valence-band maximum, it identifies the microscopic origin of the asymmetric pressure response. FLOW-OTTER thus establishes Hamiltonian learning as a general route from thermodynamic trajectories to experimentally grounded optoelectronic mechanisms.",
+      "authors": [
+        "Frederik Vonhoff",
+        "Jesper R. Pedersen",
+        "Frederico P. Delgado",
+        "Martin Schwade",
+        "Peter Beck",
+        "Jonas A. Oldenstaedt",
+        "Ivano E. Castelli",
+        "David A. Egger"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-24T10:39:39+00:00",
+      "link": "https://arxiv.org/pdf/2609.29361v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 8.0,
+      "llm_evidence_en": "ML force fields and Hamiltonian learning integrated into automated MD workflow",
+      "llm_evidence_cn": "机器学习力场与哈密顿量学习整合进自动化分子动力学流程",
+      "llm_evidence": "机器学习力场与哈密顿量学习整合进自动化分子动力学流程",
+      "canonical_evidence": "机器学习力场与哈密顿量学习整合进自动化分子动力学流程",
+      "llm_tldr_en": "FLOW-OTTER is a modular, model-agnostic framework that automates MD, Hamiltonian prediction, observable extraction and reliability assessment, using ML force fields to reveal how anharmonic fluctuations shape optoelectronic response in halide perovskites.",
+      "llm_tldr_cn": "在热力学状态空间上预测软半导体的光电响应，需要将有限温核动力学与电子结构耦合，而直接第一性原理计算难以承受其尺度。机器学习力场与哈密顿量学习模型虽可扩展预测，但整合为可靠且可解释的工作流仍具挑战。本文提出FLOW-OTTER，一个模块化、模型无关的框架，自动完成分子动力学、哈密顿量预测、可观测量提取、可靠性评估与哈密顿量层面的解释。在卤化物钙钛矿上的验证表明该框架能揭示其非谐涨落对光电性质的调制机制。",
+      "llm_tldr": "在热力学状态空间上预测软半导体的光电响应，需要将有限温核动力学与电子结构耦合，而直接第一性原理计算难以承受其尺度。机器学习力场与哈密顿量学习模型虽可扩展预测，但整合为可靠且可解释的工作流仍具挑战。本文提出FLOW-OTTER，一个模块化、模型无关的框架，自动完成分子动力学、哈密顿量预测、可观测量提取、可靠性评估与哈密顿量层面的解释。在卤化物钙钛矿上的验证表明该框架能揭示其非谐涨落对光电性质的调制机制。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics",
+      "matched_requirement_id": "req-7",
+      "selection_source": "fresh_fetch"
+    }
+  ],
+  "quick_skim": [
+    {
+      "id": "2609.28697v1",
+      "source": "arxiv",
+      "title": "LabFactory: Building and Evaluating Executable AI Labs",
+      "abstract": "Scientific tasks specify a desired capability, but realizing it often requires building a computational system tailored to the task---acquiring data, designing representations, training models, implementing tools, and deciding how they are used at inference. We present LabFactory, a framework in which an AI builder turns a scientific brief into an executable AI lab: a task-specific solver that integrates models, knowledge resources, tools, and a controller behind a fixed interface. The builder develops and packages the lab in a metered workspace; a separate host then executes the delivered artifact on held-out inputs, with reference labels kept outside the solver's input interface, and scores its outputs under the task's protocol. This makes the delivered system, rather than the builder's account of its progress, the object of evaluation. We document 28 selected constructions across seven scientific task categories---from molecular and genomic prediction to physiological signals, clinical decision support, and biomedical text---whose delivered labs exceeded their configured reference values on all 33 subtests under host-side execution. Ten contain predictive models fitted during construction; the others assemble retrieval systems, executable analysis environments, and tool-driven workflows around a fixed platform LLM. Together they show that an AI agent can carry a scientific brief all the way to a working lab that can still be invoked, inspected, and checked after construction ends.",
+      "authors": [
+        "Jinge Wu",
+        "Hongjian Zhou",
+        "Mingde Zeng",
+        "Jiayuan Zhu",
+        "Junde Wu",
+        "Jiazhen Pan",
+        "Lei Clifton",
+        "Andrew Liu",
+        "David A. Clifton"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG"
+      ],
+      "published": "2026-09-23T18:35:18+00:00",
+      "link": "https://arxiv.org/pdf/2609.28697v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "AI builder turns a scientific brief into an executable AI lab",
+      "llm_evidence_cn": "AI构建者将科学任务说明转化为可执行AI实验室",
+      "llm_evidence": "AI构建者将科学任务说明转化为可执行AI实验室",
+      "canonical_evidence": "AI构建者将科学任务说明转化为可执行AI实验室",
+      "llm_tldr_en": "Presents LabFactory, where an AI builder turns a scientific brief into an executable AI lab that integrates models, knowledge, tools and a controller, then is executed and scored on held-out inputs.",
+      "llm_tldr_cn": "科学任务往往需要针对性地构建计算系统，包括获取数据、设计表示、训练模型与实现工具，这一过程繁琐且难以复用。本文提出LabFactory框架，让AI构建者把科学任务说明转化为可执行的AI实验室，即集成模型、知识资源、工具与控制器的任务专用求解器，并在隔离工作区中打包交付。独立主机在留出输入上执行该产物并按其协议评分，使评估对象从代码转向可运行系统。",
+      "llm_tldr": "科学任务往往需要针对性地构建计算系统，包括获取数据、设计表示、训练模型与实现工具，这一过程繁琐且难以复用。本文提出LabFactory框架，让AI构建者把科学任务说明转化为可执行的AI实验室，即集成模型、知识资源、工具与控制器的任务专用求解器，并在隔离工作区中打包交付。独立主机在留出输入上执行该产物并按其协议评分，使评估对象从代码转向可运行系统。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "AI scientist",
+      "matched_requirement_id": "req-14",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.25991v1",
+      "source": "arxiv",
+      "title": "Knowledge-as-Skill: A Structural Design for Autonomous Knowledge-Base Use by LLM Agents",
+      "abstract": "Retrieval-augmented generation (RAG) gives large language models (LLMs) access to external knowledge, but its conventional retrieve-concatenate-generate pipeline makes retrieval decisions on behalf of the model. As tool use and agent loops become more reliable, an agent can decide whether to retrieve, what to inspect, and when to stop. This shift exposes a new bottleneck: the agent may not know what a knowledge base contains. Traditional knowledge bases expose documents as anonymous text chunks with limited information about scope, purpose, provenance, or relations.   We propose Knowledge-as-Skill, an organization scheme that makes a knowledge base discoverable, navigable, and self-descriptive. It has three layers: a discovery layer centered on SKILL.md; a navigation layer with one index.md per directory; and a knowledge layer containing documents with YAML frontmatter for topic, type, provenance, and lifecycle. The design follows the Open Knowledge Format (OKF) and the Skill protocol without modifying the agent framework. We also provide knowledge-as-skill, a pipeline for converting heterogeneous collections of PDFs, Word files, web exports, and notes into this structure.   In a preliminary evaluation on the WixQA enterprise customer-support benchmark, our setup obtains 0.889 Factuality and 0.816 Context Recall, compared with reported Corpus2Skill values of 0.767 and 0.708. It obtains slightly lower Faithfulness, lower Context Precision, and more interaction turns. Because the models, prompts, and knowledge-package construction differ, these results are directional cross-work evidence rather than a controlled comparison.",
+      "authors": [
+        "Jiangxu Wu"
+      ],
+      "primary_category": "cs.IR",
+      "categories": [
+        "cs.IR"
+      ],
+      "published": "2026-09-22T10:44:10+00:00",
+      "link": "https://arxiv.org/pdf/2609.25991v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM agents autonomously decide retrieval and knowledge-base use",
+      "llm_evidence_cn": "LLM智能体自主决定检索与知识库使用",
+      "llm_evidence": "LLM智能体自主决定检索与知识库使用",
+      "canonical_evidence": "LLM智能体自主决定检索与知识库使用",
+      "llm_tldr_en": "RAG forces retrieval decisions on the model; this work proposes Knowledge-as-Skill, a three-layer scheme making knowledge bases discoverable and navigable so LLM agents can autonomously decide what to inspect and when to stop.",
+      "llm_tldr_cn": "传统检索增强生成由流水线代替模型做检索决策，限制了智能体的自主性。论文提出Knowledge-as-Skill组织方案，通过发现层、导航层与自描述结构让知识库可被智能体自主探查。该设计使智能体能决定是否检索、检查什么以及何时停止，为自主研究智能体的知识使用提供了结构化基础设施。",
+      "llm_tldr": "传统检索增强生成由流水线代替模型做检索决策，限制了智能体的自主性。论文提出Knowledge-as-Skill组织方案，通过发现层、导航层与自描述结构让知识库可被智能体自主探查。该设计使智能体能决定是否检索、检查什么以及何时停止，为自主研究智能体的知识使用提供了结构化基础设施。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.28782v1",
+      "source": "arxiv",
+      "title": "The Mechanics of Delta Learning: Target Design for Generalizable Scientific Machine Learning",
+      "abstract": "In scientific machine learning, $Δ$-learning trains models on residual errors relative to physical baselines, assuming that more accurate baselines with smaller residual scales inherently improve downstream performance. Here, we demonstrate that residual scale alone is an insufficient heuristic for learnability. Evaluating molecular graph neural networks on total energy targets, we show that complex local descriptor baselines can yield small residual targets that are disproportionately rough within architecture-informed proxy spaces and harder to learn relative to their scale. Conversely, semi-empirical baseline reduces both scale and normalized roughness, improving in-domain and out-of-domain prediction. We introduce scale-normalized graph Dirichlet roughness ($D_{\\text{IQR}}$) as a pre-training diagnostic for residual learnability and establish baseline complementarity as a core target-design principle, elevating target space formulation alongside model architecture as a key axis for scientific machine learning.",
+      "authors": [
+        "Kareem M. Gameel",
+        "Ihor Neporozhnii",
+        "Sjoerd Hoogland",
+        "Oleksandr Voznyy"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "physics.chem-ph",
+        "physics.comp-ph"
+      ],
+      "published": "2026-09-23T20:57:09+00:00",
+      "link": "https://arxiv.org/pdf/2609.28782v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "molecular graph neural networks on total energy targets",
+      "llm_evidence_cn": "分子图神经网络用于总能量预测",
+      "llm_evidence": "分子图神经网络用于总能量预测",
+      "canonical_evidence": "分子图神经网络用于总能量预测",
+      "llm_tldr_en": "Delta-learning assumes smaller residual scale means better learnability. Evaluating molecular graph neural networks on total energies, the authors show residual scale alone is insufficient, and introduce scale-normalized roughness for target design.",
+      "llm_tldr_cn": "该研究针对科学机器学习中Δ学习依赖残差尺度选择物理基线这一假设，指出残差尺度本身不足以衡量可学习性。作者在总能量目标上评估分子图神经网络，发现复杂局域描述符基线虽产生小残差，却在架构相关代理空间中更粗糙、更难学习。半经验基线同时降低尺度与归一化粗糙度，改善域内与域外预测。研究提出尺度归一化启发式，为可泛化科学机器学习的目标设计提供指导。",
+      "llm_tldr": "该研究针对科学机器学习中Δ学习依赖残差尺度选择物理基线这一假设，指出残差尺度本身不足以衡量可学习性。作者在总能量目标上评估分子图神经网络，发现复杂局域描述符基线虽产生小残差，却在架构相关代理空间中更粗糙、更难学习。半经验基线同时降低尺度与归一化粗糙度，改善域内与域外预测。研究提出尺度归一化启发式，为可泛化科学机器学习的目标设计提供指导。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "equivariant graph neural networks for materials modeling, energy prediction, and force prediction",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.28935v1",
+      "source": "arxiv",
+      "title": "Response-state Learning for Transferable Vibrational Spectroscopic Characterization with Electron Prior",
+      "abstract": "Vibrational spectral prediction can become inaccurate when localized stereoelectronic environments perturb intermediate response states and high-risk response units dominate characteristic spectral fingerprints, making prediction across external chemical space difficult. SO(3) Equivariant Neural Kalman Networks (SENK) form a response-state cascade that combines an equivariant transformer backbone for Hessian, dipole-derivative and polarizability-derivative learning, an Equivariant Neural Kalman bridge for state-dependent refinement and reliability sensing, and an NBO-informed electronic-prior pathway coupling consistency regularization with bounded, branch-specific guided spectral calibration. SENK outperforms DetaNet on QM9S and QMe14S while preserving full-spectrum IR and Raman fidelity from small molecules to drug-like systems. SENK remains stable and selectively improves spectrally sensitive features in biomolecular systems with complex stereoelectronic effects. It therefore integrates tensor prediction, reliability diagnosis and physics-informed calibration, supporting transferable vibrational spectroscopy from molecular systems to functional molecular materials.",
+      "authors": [
+        "Zetong Li",
+        "Zhuosong Xie",
+        "Hengyu Fan",
+        "Jiaao Yu",
+        "Qiyao Hua",
+        "Zheng Lu",
+        "Liming Xu",
+        "Juanni Wu",
+        "Honglin Li"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-24T02:36:10+00:00",
+      "link": "https://arxiv.org/pdf/2609.28935v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "equivariant neural network for molecular Hessian and response properties",
+      "llm_evidence_cn": "面向分子响应性质的等变神经网络",
+      "llm_evidence": "面向分子响应性质的等变神经网络",
+      "canonical_evidence": "面向分子响应性质的等变神经网络",
+      "llm_tldr_en": "SENK combines an SO(3)-equivariant transformer backbone with an Equivariant Neural Kalman bridge and NBO electronic priors to predict vibrational spectra, outperforming DetaNet and improving transferability.",
+      "llm_tldr_cn": "振动光谱预测在局域立体电子环境扰动响应态时易失准，难以跨化学空间迁移。作者提出SO(3)等变神经卡尔曼网络SENK，用等变Transformer学习Hessian、偶极与极化率导数，并引入NBO电子先验做一致性正则与校准。实验表明SENK优于DetaNet等基线，提升了迁移性与可靠性感知。该框架为分子光谱表征提供了可迁移的等变深度学习方案。",
+      "llm_tldr": "振动光谱预测在局域立体电子环境扰动响应态时易失准，难以跨化学空间迁移。作者提出SO(3)等变神经卡尔曼网络SENK，用等变Transformer学习Hessian、偶极与极化率导数，并引入NBO电子先验做一致性正则与校准。实验表明SENK优于DetaNet等基线，提升了迁移性与可靠性感知。该框架为分子光谱表征提供了可迁移的等变深度学习方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "equivariant graph neural networks for materials modeling, energy prediction, and force prediction",
+      "matched_requirement_id": "req-8",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.29978v1",
+      "source": "arxiv",
+      "title": "Atom-Resolved Machine Learning of Dielectric and Piezoelectric Response",
+      "abstract": "Predicting dielectric and piezoelectric responses in structurally complex materials requires large simulation cells, for which density-functional perturbation theory (DFPT) calculations scale as $\\mathcal{O}(N^4)$ and become computationally prohibitive. However, machine-learning approaches have remained challenging, limited either by the large amounts of expensive DFPT data required for direct regression or by the cubic cost of reconstruction. We here propose a machine-learning framework that learns the ionic response as an atom-indexed field: DART (Direct Atom-Resolved response-Tensor learning) learns these fields directly and achieves high accuracy from small training sets, whereas LARS (Linear-scaling Atom-Resolved Response Solver) reconstructs them from learned microscopic ingredients through sparse linear solves and requires no DFPT labels for the ionic dielectric or piezoelectric tensors. Using DART, we extrapolate to 314 stackings of AlN/ScN superlattices absent from training and identify a high-response polar candidate, for which DFPT gives a laterally clamped piezoelectric strain coefficient $d_{33,f}=14.511$ pC/N and $k_t^2=20.46\\%$, exceeding the ordered 1AlN/1ScN reference by 63% and 66%.",
+      "authors": [
+        "Jinyu Liu",
+        "Yingwei Chen",
+        "Liyang Ma",
+        "Hongyu Yu",
+        "Hongjun Xiang"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci"
+      ],
+      "published": "2026-09-24T15:30:39+00:00",
+      "link": "https://arxiv.org/pdf/2609.29978v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "machine learning for dielectric and piezoelectric response of materials",
+      "llm_evidence_cn": "用机器学习预测材料介电与压电响应",
+      "llm_evidence": "用机器学习预测材料介电与压电响应",
+      "canonical_evidence": "用机器学习预测材料介电与压电响应",
+      "llm_tldr_en": "DART learns atom-indexed ionic response fields directly and LARS reconstructs them in linear scaling, giving accurate dielectric and piezoelectric predictions from small training sets where DFPT is prohibitive.",
+      "llm_tldr_cn": "论文针对复杂材料介电与压电响应预测中密度泛函微扰理论计算随体系四次方增长、难以承受的问题展开研究。既有机器学习方法要么需要大量昂贵DFPT数据做直接回归，要么重构成本随体系三次方增长。作者提出原子分辨响应学习框架，DART直接学习以原子索引的响应张量场，少量训练集即可达到高精度；LARS则以线性标度重构响应。该工作为复杂材料介电压电性质的高效机器学习预测提供了可行方案。",
+      "llm_tldr": "论文针对复杂材料介电与压电响应预测中密度泛函微扰理论计算随体系四次方增长、难以承受的问题展开研究。既有机器学习方法要么需要大量昂贵DFPT数据做直接回归，要么重构成本随体系三次方增长。作者提出原子分辨响应学习框架，DART直接学习以原子索引的响应张量场，少量训练集即可达到高精度；LARS则以线性标度重构响应。该工作为复杂材料介电压电性质的高效机器学习预测提供了可行方案。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.30199v1",
+      "source": "arxiv",
+      "title": "ExplorationBench: Measuring AI Systems' Exploration in Verifiable Alien Worlds",
+      "abstract": "Scientific discovery begins where known problems end. There, AI systems must engage in exploration: framing hypotheses, designing experiments, and iterating on the results. However, evaluating this ability is difficult: (1) how to verify whether a genuinely new hypothesis holds, and (2) how to determine whether a system has discovered it through exploration or merely recalled related knowledge from pre-training data. To this end, we introduce ExplorationBench, which turns the wicked problem of evaluating scientific exploration into a concrete and tractable framework built on verifiable Alien Worlds: their rules are executable, so every answer can be checked exactly, and they conflict with familiar knowledge, so recall alone cannot solve the tasks. The benchmark contains two sandboxes, AlienCode (31 discovery targets, 70 tasks) and AlienLogic (24 discovery targets, 70 tasks). Each sandbox provides a flawed manual, task-specific environmental feedback, and a dedicated tool-call schema. Systems use these resources to explore the sandbox, then solve held-out tasks. We evaluate 10 AI systems and find that the strongest systems can acquire and apply unfamiliar rules, while performance varies substantially across trajectories and continued exploration can stall or reverse earlier gains. ExplorationBench represents a step towards AI systems that can acquire and apply genuinely new knowledge through exploration in unknown environments.",
+      "authors": [
+        "Ming Zhang",
+        "Zhenghao Xiang",
+        "Peizhong Gao",
+        "Yujiong Shen",
+        "Yuhui Wang",
+        "Zhonghan Yue",
+        "Shihan Dou",
+        "Zhangyue Yin",
+        "Junjie Ye",
+        "Shichun Liu",
+        "Weihuang Zheng",
+        "Jiahao Chen",
+        "Jiayi Chen",
+        "Hongzhang Liu",
+        "Jiaqi Shao",
+        "Tao Gui",
+        "Qi Zhang",
+        "Xuanjing Huang",
+        "Suncong Zheng",
+        "Maxm Pan"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.CL"
+      ],
+      "published": "2026-09-24T17:37:14+00:00",
+      "link": "https://arxiv.org/pdf/2609.30199v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "benchmark for AI scientific exploration and hypothesis framing",
+      "llm_evidence_cn": "衡量AI科学探索与假设提出的基准",
+      "llm_evidence": "衡量AI科学探索与假设提出的基准",
+      "canonical_evidence": "衡量AI科学探索与假设提出的基准",
+      "llm_tldr_en": "ExplorationBench evaluates AI scientific exploration using verifiable Alien Worlds whose executable rules allow exact checking and whose unfamiliar rules prevent solving by recall alone.",
+      "llm_tldr_cn": "科学发现始于已知问题的边界之外，AI系统需在此开展探索，即提出假设、设计实验并依据结果迭代，但评估这种能力十分困难：既需验证假设是否真正成立，又需判断系统是通过探索发现还是仅从预训练数据中回忆。本文提出ExplorationBench，将科学探索评估转化为基于可验证异世界的可执行框架，其规则可执行因而答案可精确校验，且与常识冲突使回忆无法奏效。该基准为衡量AI系统的科学探索能力提供了严格而可验证的手段。",
+      "llm_tldr": "科学发现始于已知问题的边界之外，AI系统需在此开展探索，即提出假设、设计实验并依据结果迭代，但评估这种能力十分困难：既需验证假设是否真正成立，又需判断系统是通过探索发现还是仅从预训练数据中回忆。本文提出ExplorationBench，将科学探索评估转化为基于可验证异世界的可执行框架，其规则可执行因而答案可精确校验，且与常识冲突使回忆无法奏效。该基准为衡量AI系统的科学探索能力提供了严格而可验证的手段。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery",
+      "matched_requirement_id": "req-15",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    }
+  ]
+}

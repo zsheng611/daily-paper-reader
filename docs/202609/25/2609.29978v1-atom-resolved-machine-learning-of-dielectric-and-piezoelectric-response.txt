@@ -1,0 +1,667 @@
+Atom-Resolved Machine Learning of Dielectric and Piezoelectric Response
+Jinyu Liu, Yingwei Chen, Liyang Ma, Hongyu Yu,∗and Hongjun Xiang†
+Key Laboratory of Computational Physical Sciences (Ministry of Education),
+Institute of Computational Physical Sciences, State Key Laboratory of Surface Physics,
+and Department of Physics, Fudan University, Shanghai, 200433, China
+Predicting dielectric and piezoelectric responses in structurally complex materials requires large
+simulation cells, for which density-functional perturbation theory (DFPT) calculations scale as O(N 4)
+and become computationally prohibitive. However, machine-learning approaches have remained
+challenging, limited either by the large amounts of expensive DFPT data required for direct regression
+or by the cubic cost of reconstruction. We here propose a machine-learning framework that learns
+the ionic response as an atom-indexed field: DART (Direct Atom-Resolved response-Tensor learning)
+learns these fields directly and achieves high accuracy from small training sets, whereas LARS (Linear-
+scaling Atom-Resolved Response Solver) reconstructs them from learned microscopic ingredients
+through sparse linear solves and requires no DFPT labels for the ionic dielectric or piezoelectric
+tensors. Using DART, we extrapolate to 314 stackings of AlN/ScN superlattices absent from training
+and identify a high-response polar candidate, for which DFPT gives a laterally clamped piezoelectric
+strain coefficient d33,f = 14.511 pC/N and k2
+t = 20.46%, exceeding the ordered 1AlN/1ScN reference
+by 63% and 66%.
+Accurate dielectric and piezoelectric tensors are re-
+quired to evaluate electrical polarization and electrome-
+chanical coupling across functional materials and to
+screen candidates for electronic and electromechani-
+cal applications[1–4].
+Lattice-mediated (ionic) contri-
+butions often provide the largest and most structure-
+sensitive components of static dielectric and piezoelec-
+tric responses[5, 6]. The relevant structural spaces in-
+clude amorphous solids, defects, interfaces, and config-
+urationally complex crystals, whose representation and
+sampling demand large or numerous simulation cells[7–
+11]. DFPT is the established first-principles framework
+for these response tensors[12, 13], but obtaining the ionic
+contribution in an N-atom cell requires up to 3N force-
+constant response calculations, each costing O(N 3), and
+therefore scales as O(N 4)[14]. This computational cost
+limits routine DFPT calculations for large structural mod-
+els and extensive materials searches, creating a need for
+more scalable response-prediction methods[15].
+Existing machine-learning strategies have mainly re-
+duced response-prediction costs through direct regression
+of macroscopic tensors. Direct tensor models, including
+ETGNN, GoeCTP, GMTNet, dielectric tensor regressors,
+and EATGNN-like piezoelectric predictors[16–21], directly
+predict macroscopic dielectric or piezoelectric tensors from
+structure at low inference cost. Related crystal-level stud-
+ies have used learned dielectric properties for screening
+and descriptor-based structure–property analysis[22, 23],
+as well as for the discovery of highly anisotropic dielec-
+tric crystals[24]. However, because each O(N 4) DFPT
+calculation contributes only a macroscopic tensor target,
+these models require large training datasets and make
+inefficient use of the available response information. Com-
+plementary studies have begun to move beyond macro-
+scopic tensor targets by predicting microscopic response
+quantities, including Born effective charges and real-space
+response fields[25, 26]. Established lattice-dynamical and
+DFPT formulations express the ionic dielectric tensor
+as a contraction of Born effective charges with the pseu-
+doinverse of the lattice force-constant matrix[12, 13, 27].
+A recent machine-learning implementation predicts the
+Born effective charges and obtains the force constants
+from a pretrained machine-learning force field, then recon-
+structs the ionic dielectric tensor[28]. By predicting Born
+effective charges and phonon properties separately and
+combining them analytically, the factorized model sub-
+stantially improves ionic dielectric prediction over direct
+regression; however, the reconstruction remains computa-
+tionally expensive. The dominant bottleneck is the dense
+eigendecomposition required to construct the pseudoin-
+verse of the 3N × 3N force-constant matrix, whose cost
+scales as O(N 3). The preceding finite-difference Hessian
+construction evaluates an O(N)-cost MLFF on O(N) dis-
+placed configurations and therefore scales as O(N 2). Its
+output is also limited to the macroscopic ionic dielectric
+tensor and therefore does not resolve atom-indexed local
+contributions to the ionic response.
+To predict dielectric and piezoelectric tensors accu-
+rately and efficiently, we introduce DART (Direct Atom-
+Resolved response-Tensor learning) and LARS (Linear-
+scaling Atom-Resolved Response Solver). DART learns
+atom-indexed ionic response fields, improving data ef-
+ficiency, accuracy, and generalization even with small
+training sets. LARS reconstructs these fields from learned
+Born effective charges and interatomic potentials with
+linear scaling throughout the reconstruction workflow,
+enabling dielectric and piezoelectric predictions for large
+systems. Both DART and LARS return per-atom ionic
+dielectric and piezoelectric contributions defined below,
+enabling local structure–response analysis unavailable
+from macroscopic tensors.
+For conciseness, we show only the piezoelectric case;
+arXiv:2609.29978v1  [cond-mat.mtrl-sci]  24 Sep 2026
+
+
+2
+��
+�/��
+�
+����
+���/����
+���
+(a)
+��
+�/��
+�
+��
+�/��
+�
+��
+�/��
+�
+……
+Ω−1Σ� 
+DART loss  =  atomic-response loss  +  macroscopic-tensor loss  
+= Conventional loss
+��
+�, ����
+���
+����
+���
+Conventional dense workflow
+LARS linear-scaling workflow
+�, �
+�(��)�
+Dense 
+inverse
+�(��)
+�∗
+�(�)
+�(�)
+�
+�
+Sparse 
+solve
+�(�)
+�(�) ��
+�, ����
+���
+(b)
+Sparse 
+solve
+�, �
+�∗
+DREAM
+FIG. 1.
+Local-response framework.
+(a) DART learns the
+DFPT-derived fields Rϵ and Re, whose volume averages give
+the macroscopic dielectric and piezoelectric tensors. (b) LARS
+reconstructs the same atom-indexed fields from learned Born
+effective charges, force constants, and internal-strain couplings
+through sparse applications of (K−1)′.
+the dielectric case is analogous and is given in the Supple-
+mental Material. The established DFPT expression for
+the ionic piezoelectric tensor is
+eion
+αµ = Ω−1Ce
+X
+i,j,γ,δ
+Z∗
+i,αγ(K−1)′
+iγ,jδΛjδ,µ
+= Ω−1 X
+i
+Re
+i,αµ.
+(1)
+Here, i, j label atoms, α, γ, δ are Cartesian indices, and
+µ labels the strain component. Z∗
+i,αγ denotes the Born
+effective charge, Kiγ,jδ the force-constant matrix, Λjδ,µ
+the internal-strain force coupling, Ωthe cell volume, and
+Ce a conversion factor. We define Kiγ,jδ = ∂2U/∂uiγ∂ujδ
+and Λiγ,µ = ∂Fiγ/∂ηµ, where U is the energy, u the
+atomic displacement, and F the force. The units of Z∗,
+the conversion factor Ce, and the Voigt convention are
+specified in the Supplemental Material. (K−1)′ denotes
+the pseudoinverse of K. For machine-learning purposes,
+we define the atomic piezoelectric response in Eq. (1) as
+Re
+i,αµ = Ce
+X
+j,γ,δ
+Z∗
+i,αγ(K−1)′
+iγ,jδΛjδ,µ.
+(2)
+Thus, both response fields are atom-resolved quantities
+independent of system size. Because these contributions
+contain the lattice Green function, they are not strictly
+local functions of the surrounding geometry.
+The de-
+composition nevertheless provides physically well-scaled
+atom-level labels for neural-network learning.
+DART learns these atom-indexed ionic dielectric and
+piezoelectric response fields from structure.
+For each
+training structure, the DFPT-derived local response
+fields and the corresponding macroscopic tensors serve
+as the supervision targets.
+Within DART, a shared
+DREAM equivariant representation learns the local-
+response coordinates[29, 30]. Task-specific tensor readouts
+map this representation to the local ionic fields and the
+corresponding electronic or clamped-ion responses. With
+hi denoting the learned feature of atom i and θ the train-
+able model parameters, the piezoelectric branch predicts
+the local field and its macroscopic volume average:
+bRe
+i,αµ = f e
+θ,αµ(hi),
+beion
+αµ = Ω−1 X
+i
+bRe
+i,αµ.
+(3)
+Besides, the loss jointly supervises the macroscopic
+ionic piezoelectric tensor and the atomic response tensors,
+as illustrated in Fig. 1(a):
+Le
+ion = λe MSE(beion, eion) + λR
+N
+N
+X
+i=1
+MSE( bRe
+i, Re
+i).
+(4)
+The loss is written for a structure with N atoms, with
+MSE averaging over tensor components; λe and λR weight
+the macroscopic and atomic terms, respectively. Pooled
+system-level features separately predict the electronic
+dielectric and clamped-ion piezoelectric tensors.
+Trained on DFPT response labels, DART bypasses the
+inverse-Hessian solve at inference and directly predicts the
+macroscopic response together with its atom-indexed local
+response field. We evaluate DART against direct macro-
+scopic regression under an independent and identically
+distributed (IID) test and two out-of-distribution (OOD)
+schemes: Scheme 1 trains on unstrained disordered alloys
+and strained ordered 1AlN/1ScN configurations, reserving
+the complete strained-disordered trajectories for testing,
+and Scheme 2 extrapolates from η ≤0.02 to η = 0.03–0.06
+(Fig. 2(a)). Under Scheme 1, Re supervision reduces the
+ionic piezoelectric MAE from 0.5539 to 0.0741 C/m2 and
+improves R2 from −3.1938 to 0.9511. Figure 2(a) shows
+that DART substantially improves the accuracy of ionic
+dielectric and piezoelectric predictions over direct macro-
+scopic regression in the OOD tests. Additional results are
+provided in the Supplemental Material.
+Using the DART model trained under Scheme 1,
+we predict the strain-dependent response of disordered
+Al0.5Sc0.5N and compare it with direct macroscopic re-
+gression. Along a representative path, DFPT identifies a
+polar branch under compression and weak tension, along
+which ionic e33 rises as biaxial tension approaches the
+transition and collapses near η ≃0.0075. DART tracks
+
+
+3
+IID
+S1
+S2
+0
+1
+2
+3
+4
+5
+MAE (dimensionless)
+Dielectric
+εion
+IID
+S1
+S2 0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+1.2
+MAE (C m−2)
+Piezoelectric
+eion
+DART
+Macro
+−0.04
+−0.02
+0.00
+0.02
+Biaxial strain η
+−5
+0
+5
+10
+15
+Ionic e33 (C m−2)
+DFPT
+DART
+Macro
+3k
+10k
+30k
+System size, N (atoms)
+10
+100
+1k
+10k
+100k
+Solve time, t (s)
+∼O(N)
+∼O(N
+3)
+LARS
+α = 1.09
+Dense
+α = 2.93
+12.5×
+speedup
+N = 30,576
+(a)
+(b)
+(c)
+FIG. 2. Validation of DART and LARS. (a) Structure-level MAEs of DART and direct macroscopic regression for the ionic
+dielectric and piezoelectric tensors across an independent and identically distributed (IID) test and two out-of-distribution
+(OOD) schemes: Scheme 1 trains on unstrained disordered alloys and strained ordered configurations and tests on held-out
+strained-disordered configurations, whereas Scheme 2 extrapolates from η ≤0.02 to η = 0.03–0.06. Pink shading identifies IID.
+(b) Ionic e33 along a biaxial-strain path in disordered Al0.5Sc0.5N, predicted using the Scheme 1 models. The shaded region
+indicates the phase-transition region. (c) Single-CPU sparse-MINRES and dense-pseudoinverse timings for the piezoelectric
+reconstruction in HZO supercells containing 1,440–30,576 atoms.
+both the rise and the collapse. The direct tensor regres-
+sor instead predicts the wrong trend and sign in part of
+the compressed region and exaggerates the pretransition
+spike (Fig. 2(b)). This extrapolation test shows why
+local-response supervision is useful beyond interpolation.
+Whereas DART learns the local response fields directly,
+LARS reconstructs the same atom-indexed fields from
+learned microscopic ingredients without O(N 4) DFPT re-
+sponse labels. The sparse reconstruction is performed for
+the finite-range learned potential trained with DREAM.
+The DREAM model supplies the Born effective charges,
+force constants, and internal-strain couplings used by
+LARS[29, 30].
+The piezoelectric form in Eq.
+(1), to-
+gether with the dielectric counterpart in the Supplemen-
+tal Material, shows that each reconstruction applies the
+force-constant pseudoinverse to its own right-hand side:
+Z∗for the dielectric response and Λ for the piezoelectric
+response. For either reconstruction, collect the perturba-
+tion directions in a matrix B, with Biγ,β = Z∗
+i,βγ for the
+dielectric response and Biγ,µ = Λiγ,µ for the piezoelectric
+response, and define the response matrix
+XB ≡(K−1)′B.
+(5)
+The acoustic sum rules ensure zero net driving force for
+both right-hand sides; residuals in the learned quantities
+are treated in the Supplemental Material. LARS obtains
+XB by solving the linear system:
+KXB = B.
+(6)
+We fix the arbitrary rigid translation by requiring the
+atomic displacements in each column of XB to sum to zero.
+Substituting XB into the appropriate DFPT expression
+gives the atomic polarizability or atomic piezoelectric re-
+sponse field defined above. For the piezoelectric response
+(B = Λ),
+Re
+i,αµ = Ce
+X
+γ
+Z∗
+i,αγ(XB)iγ,µ.
+(7)
+As shown in Fig. 1(b), conventional reconstruction
+forms the pseudoinverse of the dense 3N × 3N force-
+constant matrix at O(N 3) cost. LARS instead uses pre-
+conditioned MINRES to solve KXB = B; finite-range
+interactions give K only O(N) nonzero entries, so each
+iteration costs O(N) and the solve scales linearly when
+the iteration count is independent of N. The local-block
+decomposition (see Supplemental Material) enables par-
+allel sparse operations across multiple CPUs. The same
+locality also makes construction of the force-constant ma-
+trix K linear in system size [Fig. 1(b)]. Conventional
+finite differences cost O(N 2), requiring O(N) full-system
+force evaluations at O(N) cost each. We achieve O(N)
+construction by modifying DREAM to evaluate N local
+Hessian blocks of bounded size in parallel and assemble
+the global sparse Hessian.
+For HZO supercells containing 1,440–30,576 atoms, the
+LARS piezoelectric solve time grows nearly linearly with
+system size [Fig. 2(c)]. At N = 30,576, the measured
+LARS solve is 12.5 times faster than the dense-method
+fit extrapolation. We further test LARS on 768-atom
+amorphous HfO2 supercells, linking local coordination
+environments to atomic polarizability and providing a
+microscopic explanation for the enhanced ionic dielectric
+response (see Supplemental Material).
+DART directly yields the dielectric and piezoelectric
+tensors in a single inference pass, whereas LARS retains
+the reconstruction cost and soft-mode error amplifica-
+tion inherent to reconstruction methods. When DFPT
+dielectric and piezoelectric response data are available,
+DART therefore usually provides faster and more accurate
+predictions; LARS, however, requires no O(N 4) DFPT re-
+sponse labels from dataset preparation through inference
+and retains linear scaling for large systems.
+
+
+4
+1AlN
+3ScN
+1ScN
+1AlN
+1ScN
+1AlN
+1AlN
+2ScN
+1ScN
+1AlN
+2ScN
+1AlN
+Nonpolar
+Polar S-I
+S-II
+FIG. 3. DART screening of AlScN superlattices. (a) Ball-and-stick side view of the top verified candidate S-I. (b) Nonpolar
+relaxed state obtained from the 1AlN/1ScN/1AlN/2ScN/1AlN/2ScN stacking at the same average composition x = 0.625,
+compared with S-I in panel (a). (c) ML ranking of the 314 zero-strain AlN/ScN superlattices by the laterally clamped longitudinal
+piezoelectric strain coefficient d33,f and the thickness-mode electromechanical coupling coefficient k2
+t . The ordered 1AlN/1ScN
+superlattice is marked as the reference; the DFPT-verified responses are reported in the Supplemental Material.
+We next apply DART to screen AlScN superlat-
+tices.
+The ferroelectricity and polarization switching
+of AlScN[31, 32] have attracted considerable attention,
+and its piezoelectric response has also been extensively
+studied[33, 34]. In AlScN, Sc substitution in wurtzite AlN
+enhances the piezoelectric response through structural
+softening and internal-strain sensitivity, while residual
+stress provides an additional modulation[35]. This elec-
+tromechanical coupling makes AlScN suitable for acous-
+tic resonators and surface-acoustic-wave devices[2, 36–
+38]. We exhaustively enumerate 314 periodic, symmetry-
+unique binary AlN/ScN sequences along the c axis, span-
+ning the Sc fraction x in Al1−xScxN over x ∈[1/3, 2/3]
+and periods of 4–12 layers, with no cyclic AlN or ScN
+block longer than four layers (Fig. 3(c)). The search
+covers structures with split ScN blocks, moderately thick
+ScN slabs, and high interface densities.
+We rank the
+zero-strain polar candidates by d33,f = e33/CE
+33 and the
+thickness-mode electromechanical coupling coefficient k2
+t
+against the ordered one-layer AlN/one-layer ScN refer-
+ence, using CE
+33 from DFT calculations. The in-plane
+and shear strains are clamped, with zero normal stress;
+superscript E denotes fixed electric field. The dielectric
+and piezoelectric training sets contain no complex super-
+lattices; predictions for all 314 candidates are therefore
+structure-level extrapolations. For six DFPT-rechecked
+superlattices, the dielectric and piezoelectric MAEs are
+1.07 in the relative permittivity ϵ33 and 0.133 C/m2 in e33,
+respectively. Candidates are verified with DFT/DFPT
+response calculations in VASP[39] and finite-strain CE
+33.
+We evaluate k2
+t from the calculated material tensors under
+the thickness-mode convention,
+k2
+t =
+e2
+33
+ϵ0ϵη
+33CE
+33 + e2
+33
+,
+(8)
+where e33 = eel
+33 + eion
+33 is the total proper piezoelectric
+coefficient and ϵη
+33 = ϵel
+33 + ϵion
+33 is the total relative per-
+mittivity at fixed strain; ϵ0 is the vacuum permittivity. It
+is used as a screening metric rather than a device-level
+effective coupling coefficient.
+Under this convention, the 1AlN/1ScN reference gives
+d33,f = 8.9239 pC/N and k2
+t ≃12.29%. DFPT gives
+d33,f = 14.511 pC/N and k2
+t = 20.46% for S-I, com-
+pared with 8.9239 pC/N and 12.29%, respectively, for
+the 1AlN/1ScN reference.
+Figure 3(a,c) shows the S-
+I structure and the screening ranking. Other stacking
+sequences in the broader superlattice screen also show
+high response.
+Increasing Sc content strengthens the
+competition between the polar wurtzite-derived state of
+AlScN and other structural minima[34]. At x = 0.625,
+the selected 1AlN/1ScN/1AlN/1ScN/1AlN/3ScN stack-
+ing yields the polar S-I candidate, whereas the comparison
+stacking shown in Fig. 3(b) relaxes to a nonpolar state
+with e33 ≃0 and is therefore excluded from the piezo-
+electric ranking. For the S-I cation sequence, the polar
+structure lies 2.14 meV/atom below the tested c-axis-
+collapsed configuration. Phonon calculations support its
+dynamical stability, with the near-Γ convergence limits
+documented in the Supplemental Material. In 100 ps NVT
+molecular-dynamics simulations with a fine-tuned DPA-4
+potential[40], 512-atom S-I supercells remain structurally
+stable at 300, 600, 900, and 1200 K: the Al/Sc layer
+sequence is preserved, the drift-corrected mean-square
+displacement stays below 0.10 Å2, and no N–N dimer is
+detected in the saved trajectories. The enhanced d33,f
+and k2
+t of S-I point to layer ordering as a route to tune
+electromechanical response.
+In summary, we develop an atom-resolved framework
+for ionic dielectric and piezoelectric response, in which
+atomic polarizability and atomic piezoelectric response
+fields are obtained either by direct learning in DART or
+
+
+5
+by sparse reconstruction in LARS. DART learns atom-
+indexed responses for extrapolative screening, whereas
+LARS reconstructs them from learned microscopic ingre-
+dients with linear scaling and without O(N 4) DFPT re-
+sponse labels. By learning atom-indexed responses, DART
+makes high-throughput screening of complex AlN/ScN
+stacking spaces possible and shows that layer ordering
+tunes piezoelectric response. We identify S-I, an AlN/ScN
+superlattice that retains a stable polar structure at a high
+Sc fraction of 0.625, with d33,f and k2
+t exceeding those
+of the ordered 1AlN/1ScN reference by 63% and 66%,
+respectively. This framework provides a general basis for
+atom-resolved ionic dielectric and piezoelectric response
+calculations across structurally complex materials spaces,
+supporting high-throughput screening, physical interpre-
+tation, and large-system simulations.
+Acknowledgments.— We acknowledge financial support
+from the National Key R&D Program of China (Grant No.
+2022YFA1402901), the National Natural Science Founda-
+tion of China (NSFC, Grant No. 12188101), the Shanghai
+Science and Technology Program (No. 23JC1400900), the
+Guangdong Major Project of Basic and Applied Basic
+Research (Future Functional Materials under Extreme
+Conditions, Grant No. 2021B0301030005), the Shanghai
+Pilot Program for Basic Research at Fudan University
+(No. 23TQ017), the robotic AI-Scientist platform of the
+Chinese Academy of Sciences, and the New Cornerstone
+Science Foundation.
+∗Corresponding author: hongyuyu20@fudan.edu.cn
+† Corresponding author: hxiang@fudan.edu.cn
+[1] W. Banerjee, A. Kashir, and S. Kamba, Small 18, 2107575
+(2022).
+[2] M. Moreira, J. Bjurström, I. Katardjev, and V. Yantchev,
+Vacuum 86, 23 (2011).
+[3] I. Petousis, D. Mrdjenovich, E. Ballouz, M. Liu, D. Win-
+ston, W. Chen, T. Graf, T. D. Schladt, K. A. Persson,
+and F. B. Prinz, Scientific Data 4, 160134 (2017).
+[4] K. Choudhary, K. F. Garrity, V. Sharma, A. J. Biacchi,
+A. R. Hight Walker, and F. Tavazza, npj Computational
+Materials 6, 64 (2020).
+[5] J. Robertson, The European Physical Journal Applied
+Physics 28, 265 (2004).
+[6] C. Ederer and N. A. Spaldin, Physical Review Letters 95,
+257601 (2005).
+[7] D. Ceresoli and D. Vanderbilt, Physical Review B 74,
+125108 (2006).
+[8] Y. Wang, F. Zahid, J. Wang, and H. Guo, Physical Review
+B 85, 224110 (2012).
+[9] J. Chai, H. Xu, J. Xiang, Y. Zhang, L. Zhou, S. Zhao,
+F. Tian, J. Duan, K. Han, X. Wang, J. Luo, W. Wang,
+T. Ye, and Y. Guo, Journal of Applied Physics 132, 105301
+(2022).
+[10] T. Hwang, W. Aigner, T. Metzger, A. C. Kummel, and
+K. Cho, ACS Applied Electronic Materials 6, 3257 (2024).
+[11] S. Das, T.-S. Nguyen, C. Savant, K. Gothandapani,
+H. Xing, D. Jena, and B. Mazumder, Applied Physics
+Letters 128, 142905 (2026).
+[12] X. Gonze and C. Lee, Physical Review B 55, 10355 (1997).
+[13] X. Wu, D. Vanderbilt, and D. R. Hamann, Physical Re-
+view B 72, 035105 (2005).
+[14] S. Baroni, S. de Gironcoli, A. Dal Corso, and P. Giannozzi,
+Reviews of Modern Physics 73, 515 (2001).
+[15] F. Macheda, P. Barone, and F. Mauri, Physical Review
+B 110, 094306 (2024).
+[16] Y. Zhong, H. Yu, X. Gong, and H. Xiang, The Journal of
+Physical Chemistry Letters 14, 6339 (2023).
+[17] H. Hua, J. Yang, W. Lin, and P. Zhou, Proc. AAAI Conf.
+Artif. Intell. 40, 417 (2026).
+[18] H. Hua, C. Liang, D. Pan, I. King, S. Liu, K. Tsuda, and
+W. Lin, Scalable Dielectric Tensor Predictions for Inor-
+ganic Materials using Equivariant Graph Neural Networks
+(2026), arXiv:2601.04755 [cond-mat.mtrl-sci].
+[19] K. Yan, A. Saxton, X. Qian, X. Qian, and S. Ji, in Pro-
+ceedings of the 41st International Conference on Machine
+Learning, Vol. 235 (PMLR, 2024) pp. 55797–55813.
+[20] Z. Mao, W. Li, and J. Tan, npj Computational Materials
+10, 265 (2024).
+[21] L. Dong, X. Zhang, Z. Yang, L. Shen, and Y. Lu, npj
+Computational Materials 11, 63 (2025).
+[22] K. Morita, D. W. Davies, K. T. Butler, and A. Walsh,
+The Journal of Chemical Physics 153, 024503 (2020).
+[23] Y. Shimano, A. Kutana, and R. Asahi, Scientific Reports
+13, 22236 (2023).
+[24] Y. Lou and A. M. Ganose, Faraday Discussions 256, 255
+(2025).
+[25] A. Kutana, K. Shimizu, S. Watanabe, and R. Asahi,
+Scientific Reports 15, 16719 (2025).
+[26] O. Malenfant-Thuot, K. Ryczko, I. Tamblyn, and M. Côté,
+Journal of Physics: Condensed Matter 36, 425901 (2024).
+[27] A. A. Maradudin, E. W. Montroll, G. H. Weiss, and I. P.
+Ipatova, Theory of Lattice Dynamics in the Harmonic
+Approximation, 2nd ed., Solid State Physics, Suppl. 3
+(Academic Press, New York, 1971).
+[28] A. Takigawa, S. Kiyohara, and Y. Kumagai, Physical
+Review X 16, 021006 (2026).
+[29] S. Deng, H. Yu, J. Ji, C. Xu, and H. Xiang, Physical
+Review B 111, 174105 (2025).
+[30] H. Yu, S. Deng, H. Zhu, M. Xie, Y. Zhang, X. Shi,
+J. Zhong, C. He, and H. Xiang, Physical Review Let-
+ters 135, 156801 (2025).
+[31] S. Fichtner, N. Wolff, F. Lofink, L. Kienle, and B. Wagner,
+Journal of Applied Physics 125, 114103 (2019).
+[32] H. Wang, N. L. Adamski, S. Mu, and C. G. Van de Walle,
+Journal of Applied Physics 130, 104101 (2021).
+[33] M. Akiyama, T. Kamohara, K. Kano, A. Teshigahara,
+Y. Takeuchi, and N. Kawahara, Advanced Materials 21,
+593 (2009).
+[34] F. Tasnádi, B. Alling, C. Höglund, G. Wingqvist, J. Birch,
+L. Hultman, and I. A. Abrikosov, Physical Review Letters
+104, 137601 (2010).
+[35] E. Österlund, G. Ross, M. A. Caro, M. Paulasto-Kröckel,
+A. Hollmann, M. Klaus, M. Meixner, C. Genzel, P. Kop-
+pinen, T. Pensala, A. Žukauskait˙e, and M. Trebala, Phys-
+ical Review Materials 5, 035001 (2021).
+[36] W. Wang, P. M. Mayrhofer, X. He, M. Gillinger, Z. Ye,
+X. Wang, A. Bittner, U. Schmid, and J. K. Luo, Applied
+Physics Letters 105, 133502 (2014).
+[37] M. Park, J. Wang, R. Dargis, A. Clark, and A. Ansari, in
+2019 IEEE International Ultrasonics Symposium (IUS)
+
+
+6
+(IEEE, 2019) pp. 1689–1692.
+[38] J. Wang, M. Park, S. Mertin, T. Pensala, F. Ayazi, and
+A. Ansari, Journal of Microelectromechanical Systems 29,
+741 (2020).
+[39] G. Kresse and J. Furthmüller, Physical Review B 54,
+11169 (1996).
+[40] T. Li, W. Li, A. Peng, J. Xue, L. Zhang, D. Zhang,
+and H. Wang, DPA4: Pushing the accuracy–cost frontier
+of interatomic potentials with EMFA SO(2) convolution
+(2026), arXiv:2606.02419 [physics.chem-ph].

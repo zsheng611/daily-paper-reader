@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-24</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-25</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 9 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 10 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>2</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>7</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>4</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>6</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-24 18:39:44 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-25 19:00:51 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,9 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>2026-09-24日报筛出9篇，精读2篇、速读7篇，主线集中在机器学习势、材料数据与自主科学工具。</p>
-<p>最值得看的是两篇8.0精读：晶格多体动力学的精确等变性，以及面向机器学习原子间势的固-液界面第一性原理数据集。</p>
-<p>普通读者可先扫这两篇摘要，若关心材料、聚合物或铁电建模，再从7.0速读里挑基准、主动学习或Agent语言相关一篇跟进。</p>
+<p>今日精选10篇AI4Science论文，精读4篇、速读6篇，重点聚焦反应训练数据生成与自驱动实验室优化。</p>
+<p>最值得看的是两篇9分工作：金属动力学策略为气相有机反应构建反应性训练数据，以及物理模型结合动态实验信息优化多组分NASICON快离子导体。</p>
+<p>普通读者可优先从自驱动实验室和可执行AI实验室方向入手，理解AI如何闭环加速材料与化学发现。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -80,12 +80,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">2 篇</strong>
+    <strong class="dpr-home-dashboard-count">4 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics">Exact Equivariance from Ordinary Neural Networks for Lattice Many-Body Dynamics</span></li><li><span class="dpr-home-dashboard-paper-title" title="SoLiD26: A First Principles Solid-Liquid Interface Dataset for Machine-learned Interatomic Potentials">SoLiD26: A First Principles Solid-Liquid Interface Dataset for Machine-learned Interatomic Potentials</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="A System-Independent Metadynamics Strategy for Reactive Training Data: Application to Gas-Phase Organic Reactions">A System-Independent Metadynamics Strategy for Reactive Training Data: Application to Gas-Phase Organic Reactions</span></li><li><span class="dpr-home-dashboard-paper-title" title="Combining physical models with dynamically acquired experimental information for the optimization of multicomponent NASICON fast ionic conductors in a self-driving laboratory">Combining physical models with dynamically acquired experimental information for the optimization of multicomponent NASICON fast ionic conductors in a self-driving laboratory</span></li><li><span class="dpr-home-dashboard-paper-title" title="AI-guided high-throughput discovery of iridium- and ruthenium-free palladium-oxide catalysts for durable acidic oxygen evolution">AI-guided high-throughput discovery of iridium- and ruthenium-free palladium-oxide catalysts for durable acidic oxygen evolution</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>2</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>2</strong></span><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span></div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -93,12 +93,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">7 篇</strong>
+    <strong class="dpr-home-dashboard-count">6 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Beyond Natural Language: An Agent-Native Language for Autonomous Science">Beyond Natural Language: An Agent-Native Language for Autonomous Science</span></li><li><span class="dpr-home-dashboard-paper-title" title="An open benchmark for machine learning-based polymer property prediction">An open benchmark for machine learning-based polymer property prediction</span></li><li><span class="dpr-home-dashboard-paper-title" title="Towards Extended Active Learning for Modelling Ferroelectric Switching: the Need for &#x27;Gold Standards&#x27;">Towards Extended Active Learning for Modelling Ferroelectric Switching: the Need for &#x27;Gold Standards&#x27;</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="LabFactory: Building and Evaluating Executable AI Labs">LabFactory: Building and Evaluating Executable AI Labs</span></li><li><span class="dpr-home-dashboard-paper-title" title="The Mechanics of Delta Learning: Target Design for Generalizable Scientific Machine Learning">The Mechanics of Delta Learning: Target Design for Generalizable Scientific Machine Learning</span></li><li><span class="dpr-home-dashboard-paper-title" title="Response-state Learning for Transferable Vibrational Spectroscopic Characterization with Electron Prior">Response-state Learning for Transferable Vibrational Spectroscopic Characterization with Electron Prior</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>4</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
 </section>
 </div>
 

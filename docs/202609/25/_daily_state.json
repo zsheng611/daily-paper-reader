@@ -1,0 +1,169 @@
+{
+  "date": "20260925",
+  "date_label": "",
+  "generated_at": "2026-09-25 19:00:51 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.29105v1",
+      "route": "202609/25/2609.29105v1-a-system-independent-metadynamics-strategy-for-reactive-training-data-application-to-gas-phase-organic-reactions",
+      "title": "A System-Independent Metadynamics Strategy for Reactive Training Data: Application to Gas-Phase Organic Reactions",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "面向机器学习原子间势与分子动力学的反应性训练数据",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.29344v1",
+      "route": "202609/25/2609.29344v1-combining-physical-models-with-dynamically-acquired-experimental-information-for-the-optimization-of-multicomponent-nasicon-fast-ionic-conductors-in-a-self-driving-laboratory",
+      "title": "Combining physical models with dynamically acquired experimental information for the optimization of multicomponent NASICON fast ionic conductors in a self-driving laboratory",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "自主驾驶实验室优化多组分NASICON离子导体",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.30133v1",
+      "route": "202609/25/2609.30133v1-ai-guided-high-throughput-discovery-of-iridium--and-ruthenium-free-palladium-oxide-catalysts-for-durable-acidic-oxygen-evolution",
+      "title": "AI-guided high-throughput discovery of iridium- and ruthenium-free palladium-oxide catalysts for durable acidic oxygen evolution",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 9.0,
+      "evidence": "AI引导、人工监督的闭环自动化催化剂发现平台",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.29361v1",
+      "route": "202609/25/2609.29361v1-hamiltonian-learning-reveals-optoelectronic-mechanisms-across-thermodynamic-state-space-in-soft-semiconductors",
+      "title": "Hamiltonian learning reveals optoelectronic mechanisms across thermodynamic state space in soft semiconductors",
+      "section": "deep",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 8.0,
+      "evidence": "机器学习力场与哈密顿量学习整合进自动化分子动力学流程",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.28697v1",
+      "route": "202609/25/2609.28697v1-labfactory-building-and-evaluating-executable-ai-labs",
+      "title": "LabFactory: Building and Evaluating Executable AI Labs",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "AI构建者将科学任务说明转化为可执行AI实验室",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.28782v1",
+      "route": "202609/25/2609.28782v1-the-mechanics-of-delta-learning-target-design-for-generalizable-scientific-machine-learning",
+      "title": "The Mechanics of Delta Learning: Target Design for Generalizable Scientific Machine Learning",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "分子图神经网络用于总能量预测",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.28935v1",
+      "route": "202609/25/2609.28935v1-response-state-learning-for-transferable-vibrational-spectroscopic-characterization-with-electron-prior",
+      "title": "Response-state Learning for Transferable Vibrational Spectroscopic Characterization with Electron Prior",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "面向分子响应性质的等变神经网络",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.29978v1",
+      "route": "202609/25/2609.29978v1-atom-resolved-machine-learning-of-dielectric-and-piezoelectric-response",
+      "title": "Atom-Resolved Machine Learning of Dielectric and Piezoelectric Response",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "用机器学习预测材料介电与压电响应",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.30199v1",
+      "route": "202609/25/2609.30199v1-explorationbench-measuring-ai-systems-exploration-in-verifiable-alien-worlds",
+      "title": "ExplorationBench: Measuring AI Systems' Exploration in Verifiable Alien Worlds",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "衡量AI科学探索与假设提出的基准",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    },
+    {
+      "paper_id": "2609.25991v1",
+      "route": "202609/25/2609.25991v1-knowledge-as-skill-a-structural-design-for-autonomous-knowledge-base-use-by-llm-agents",
+      "title": "Knowledge-as-Skill: A Structural Design for Autonomous Knowledge-Base Use by LLM Agents",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "LLM智能体自主决定检索与知识库使用",
+      "first_seen_at": "2026-09-25 19:00:51 UTC",
+      "updated_at": "2026-09-25 19:00:51 UTC"
+    }
+  ]
+}
