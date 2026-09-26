@@ -48,17 +48,17 @@
 <section class="dpr-home-dashboard-card dpr-home-report-card">
   <div class="dpr-home-dashboard-header">
     <div>
-      <span class="dpr-home-dashboard-kicker">2026-09-25</span>
+      <span class="dpr-home-dashboard-kicker">2026-09-26</span>
       <h3 class="dpr-home-dashboard-title">今日汇总</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">共 10 篇</strong>
+    <strong class="dpr-home-dashboard-count">共 4 篇</strong>
   </div>
   <dl class="dpr-home-dashboard-stats">
     <div class="dpr-home-dashboard-stat"><dt>累计更新</dt><dd>1 次</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>4</dd></div>
-    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>6</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>精读</dt><dd>0</dd></div>
+    <div class="dpr-home-dashboard-stat"><dt>速读</dt><dd>4</dd></div>
   </dl>
-  <p class="dpr-home-dashboard-body">最近更新：2026-09-25 19:00:51 UTC<br>状态：成功</p>
+  <p class="dpr-home-dashboard-body">最近更新：2026-09-26 18:03:04 UTC<br>状态：成功</p>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-brief-card">
   <div class="dpr-home-dashboard-header">
@@ -69,9 +69,7 @@
     <strong class="dpr-home-dashboard-count">AI</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<p>今日精选10篇AI4Science论文，精读4篇、速读6篇，重点聚焦反应训练数据生成与自驱动实验室优化。</p>
-<p>最值得看的是两篇9分工作：金属动力学策略为气相有机反应构建反应性训练数据，以及物理模型结合动态实验信息优化多组分NASICON快离子导体。</p>
-<p>普通读者可优先从自驱动实验室和可执行AI实验室方向入手，理解AI如何闭环加速材料与化学发现。</p>
+<p>今天速读 4 篇，精读为 0，重点集中在材料计算与智能体应用。最值得看的是《Physics-residual machine learning predicts oxygen-evolution catalyst activity beyond the training range from sparse polarization measurements》（7.0），用稀疏极化数据预测训练范围外的析氧催化剂活性；另一篇 7.0 的 AgentX 长程自主性也值得关注。普通读者可先挑这两篇看摘要，再决定是否深入。</p>
   </div>
 </section>
 <section class="dpr-home-dashboard-card dpr-home-deep-card">
@@ -80,12 +78,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">精读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">4 篇</strong>
+    <strong class="dpr-home-dashboard-count">0 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="A System-Independent Metadynamics Strategy for Reactive Training Data: Application to Gas-Phase Organic Reactions">A System-Independent Metadynamics Strategy for Reactive Training Data: Application to Gas-Phase Organic Reactions</span></li><li><span class="dpr-home-dashboard-paper-title" title="Combining physical models with dynamically acquired experimental information for the optimization of multicomponent NASICON fast ionic conductors in a self-driving laboratory">Combining physical models with dynamically acquired experimental information for the optimization of multicomponent NASICON fast ionic conductors in a self-driving laboratory</span></li><li><span class="dpr-home-dashboard-paper-title" title="AI-guided high-throughput discovery of iridium- and ruthenium-free palladium-oxide catalysts for durable acidic oxygen evolution">AI-guided high-throughput discovery of iridium- and ruthenium-free palladium-oxide catalysts for durable acidic oxygen evolution</span></li></ul>
+<p class="dpr-home-dashboard-empty">今日暂无推荐。</p>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>2</strong></span><span class="dpr-home-dashboard-tag">ar <strong>2</strong></span></div>
+
 </section>
 <section class="dpr-home-dashboard-card dpr-home-skim-card">
   <div class="dpr-home-dashboard-header">
@@ -93,12 +91,12 @@
       <span class="dpr-home-dashboard-kicker">今日累计</span>
       <h3 class="dpr-home-dashboard-title">速读推荐</h3>
     </div>
-    <strong class="dpr-home-dashboard-count">6 篇</strong>
+    <strong class="dpr-home-dashboard-count">4 篇</strong>
   </div>
   <div class="dpr-home-dashboard-body">
-<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="LabFactory: Building and Evaluating Executable AI Labs">LabFactory: Building and Evaluating Executable AI Labs</span></li><li><span class="dpr-home-dashboard-paper-title" title="The Mechanics of Delta Learning: Target Design for Generalizable Scientific Machine Learning">The Mechanics of Delta Learning: Target Design for Generalizable Scientific Machine Learning</span></li><li><span class="dpr-home-dashboard-paper-title" title="Response-state Learning for Transferable Vibrational Spectroscopic Characterization with Electron Prior">Response-state Learning for Transferable Vibrational Spectroscopic Characterization with Electron Prior</span></li></ul>
+<ul class="dpr-home-dashboard-paper-list"><li><span class="dpr-home-dashboard-paper-title" title="Physics-residual machine learning predicts oxygen-evolution catalyst activity beyond the training range from sparse polarization measurements">Physics-residual machine learning predicts oxygen-evolution catalyst activity beyond the training range from sparse polarization measurements</span></li><li><span class="dpr-home-dashboard-paper-title" title="Advancing Model Research in AgentX: Long-Horizon Autonomy for Industrial Recommender Systems">Advancing Model Research in AgentX: Long-Horizon Autonomy for Industrial Recommender Systems</span></li><li><span class="dpr-home-dashboard-paper-title" title="The AI Neuroscientist: An Interactive Agentic Interface for Neuroimaging Analysis">The AI Neuroscientist: An Interactive Agentic Interface for Neuroimaging Analysis</span></li></ul>
   </div>
-  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ai-materials <strong>3</strong></span><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span></div>
+  <div class="dpr-home-dashboard-tags"><span class="dpr-home-dashboard-tag">ar <strong>3</strong></span><span class="dpr-home-dashboard-tag">ai-materials <strong>1</strong></span></div>
 </section>
 </div>
 

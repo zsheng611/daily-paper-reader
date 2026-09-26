@@ -1,0 +1,196 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-26T18:02:26.455393+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 0,
+    "deep_cap": 7,
+    "deep_selected": 0,
+    "quick_candidates": 4,
+    "quick_skim_target": 12,
+    "quick_selected": 4
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.23549v1",
+      "source": "arxiv",
+      "title": "Physics-residual machine learning predicts oxygen-evolution catalyst activity beyond the training range from sparse polarization measurements",
+      "abstract": "Screening oxygen-evolution catalysts on combinatorial libraries requires deciding which candidates receive the remaining measurements. The deciding activity lies beyond each candidate's measured potential window and often above every activity recorded during fitting. We predict it by physics-residual machine learning: the Tafel equation extrapolates the candidate's own measured current and slope, a learned residual attenuated with feature-space distance corrects the magnitude, and an applicability-domain score identifies predictions above the training range before measurement. In a separately fabricated 322-candidate library, 282 above the training maximum, two measurements per candidate gave a mean absolute error of 0.203 mA cm$^{-2}$ against 1.330 for the selected data-driven machine-learning model. Errors inside the training range remained comparable, and 35 labelled catalysts were enough to fit it. In two independent datasets the same construction lowered the overpotential error by 29 to 52%. Campaigns can therefore shorten each measurement and still rank the most active compositions.",
+      "authors": [
+        "Yong-Woon Kim",
+        "Jihyeok Lee",
+        "Sungtae Park",
+        "Sooseok Choi",
+        "Yung-Cheol Byun"
+      ],
+      "primary_category": "cs.LG",
+      "categories": [
+        "cs.LG",
+        "cs.AI",
+        "cs.ET"
+      ],
+      "published": "2026-09-20T11:03:10+00:00",
+      "link": "https://arxiv.org/pdf/2609.23549v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "physics-residual machine learning predicts catalyst activity for materials screening",
+      "llm_evidence_cn": "物理残差机器学习预测催化剂活性用于材料筛选",
+      "llm_evidence": "物理残差机器学习预测催化剂活性用于材料筛选",
+      "canonical_evidence": "物理残差机器学习预测催化剂活性用于材料筛选",
+      "llm_tldr_en": "A physics-residual ML model combines Tafel extrapolation with a distance-attenuated learned correction to predict oxygen-evolution catalyst activity beyond the training range.",
+      "llm_tldr_cn": "在组合库中筛选析氧催化剂时，需决定哪些候选继续测量，而关键活性常超出其电位窗口与训练数据范围。本文提出物理残差机器学习：用Tafel方程外推候选自身电流与斜率，用随特征空间距离衰减的学习残差校正幅值，并以适用域评分在测量前识别超训练范围的预测。在含322个候选的独立制备库（其中282个超出训练最大值）上验证。该工作为材料发现中的外推式活性预测提供了可靠方法。",
+      "llm_tldr": "在组合库中筛选析氧催化剂时，需决定哪些候选继续测量，而关键活性常超出其电位窗口与训练数据范围。本文提出物理残差机器学习：用Tafel方程外推候选自身电流与斜率，用随特征空间距离衰减的学习残差校正幅值，并以适用域评分在测量前识别超训练范围的预测。在含322个候选的独立制备库（其中282个超出训练最大值）上验证。该工作为材料发现中的外推式活性预测提供了可靠方法。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.25254v1",
+      "source": "arxiv",
+      "title": "The AI Neuroscientist: An Interactive Agentic Interface for Neuroimaging Analysis",
+      "abstract": "Analyzing neuroimaging data requires specialized coding and statistical expertise, which limits accessibility for researchers without computational backgrounds. We present the AI Neuroscientist, a language agent for interactive data exploration. The system integrates a large language model (LLM) with a neuroimaging toolset to perform quality control, modeling, and visualization. This allows researchers to query data quality and specify analysis parameters directly in natural language, providing a transparent and interactive alternative to conventional scripted pipelines for small-scale data exploration. We demonstrate these capabilities using functional near-infrared spectroscopy (fNIRS) data, and evaluate the agent on a custom fNIRS benchmarking suite against general-purpose LLM agents with code sandboxes. Future extensions will generalize the architecture to additional modalities, including functional magnetic resonance imaging (fMRI) data, and expand the benchmarking suite to additional fNIRS tasks.",
+      "authors": [
+        "Aakash Patel",
+        "Panos Ketonis",
+        "Shreya Saxena",
+        "Smita Krishnaswamy",
+        "David van Dijk"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI"
+      ],
+      "published": "2026-09-21T18:05:59+00:00",
+      "link": "https://arxiv.org/pdf/2609.25254v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM agent coupling a neuroimaging toolset for interactive scientific data analysis",
+      "llm_evidence_cn": "集成神经影像工具集的LLM智能体用于交互式科学数据分析",
+      "llm_evidence": "集成神经影像工具集的LLM智能体用于交互式科学数据分析",
+      "canonical_evidence": "集成神经影像工具集的LLM智能体用于交互式科学数据分析",
+      "llm_tldr_en": "The AI Neuroscientist couples an LLM with a neuroimaging toolset so researchers can run quality control, modeling, and visualization via natural language, offering a transparent agentic alternative to scripted pipelines.",
+      "llm_tldr_cn": "针对神经影像分析门槛高、需要专业编程与统计知识的问题，作者提出AI神经科学家，将大语言模型与神经影像工具集结合，支持用自然语言完成质量控制、建模与可视化。系统在功能近红外光谱数据上演示，并在自建基准上评估，为无计算背景的研究者提供了透明可交互的分析方式，展示了LLM科研智能体在专业数据分析中的可行性。",
+      "llm_tldr": "针对神经影像分析门槛高、需要专业编程与统计知识的问题，作者提出AI神经科学家，将大语言模型与神经影像工具集结合，支持用自然语言完成质量控制、建模与可视化。系统在功能近红外光谱数据上演示，并在自建基准上评估，为无计算背景的研究者提供了透明可交互的分析方式，展示了LLM科研智能体在专业数据分析中的可行性。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.30001v1",
+      "source": "arxiv",
+      "title": "Advancing Model Research in AgentX: Long-Horizon Autonomy for Industrial Recommender Systems",
+      "abstract": "Sustaining industrial recommendation research requires using the results of one experiment to decide what to investigate next. We present AgentX-Model, the next generation of AgentX's model research framework, which connects proposal development and model experimentation within sandboxes defined by business inputs and prediction tasks. AgentX-Model adopts a dual-agent architecture comprising a Research Agent and a Model Agent. The Research Agent develops independently reviewed proposals from papers and experimental findings, while the Model Agent conducts multi-round investigations and returns code, measurements, and unresolved questions. Using the returned results, the Research Agent selects a starting implementation and formulates the next research question, allowing subsequent experiments to build on earlier findings. We organize this continuing research around four actions: Reproduce, Follow-up, Composition, and Diagnose. The first three actions drive routine research, while Diagnose acquires the evidence needed to choose a repair, including for issues raised by business feedback and online evaluation, such as prediction bias measured by PCOC. Across the production evaluation, 560 of 636 completed model-changing experiments recorded AUC above their business baselines. As research continued, some experiments recorded AUC above every comparable ancestor in their lineages. The five latest online A/B evaluations across different business settings reported gains including 10-15% in acquisition efficiency, 15-20% in target-segment advertising spend, and 0.3-0.8% in watch time; the watch-time model used approximately 10% fewer FLOPs and parameters. A dependency-aware historical-replay benchmark further evaluates research allocation, with initial results showing no consistent efficiency gain from more complex scheduling when agents already analyze and select concrete candidates.",
+      "authors": [
+        "Shuang Yang",
+        "Zijie Zhuang",
+        "Changxin Lao",
+        "Pengbo Xu",
+        "Hanwen Xu",
+        "Yusheng Huang",
+        "Han Gao",
+        "Guanchen Wang",
+        "Tianbao Ma",
+        "Linxun Chen",
+        "Peilin Song",
+        "Xuming Wang",
+        "Chen Li",
+        "Fan Wu",
+        "Tao Wang",
+        "Zibo Zhao",
+        "Xiangyu Wu",
+        "An Liu",
+        "Fei Pan",
+        "Peng Jiang",
+        "Chen Yang",
+        "Zhaojie Liu",
+        "Wenwu Ou"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.IR"
+      ],
+      "published": "2026-09-24T15:45:07+00:00",
+      "link": "https://arxiv.org/pdf/2609.30001v1",
+      "tags": [
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "dual Research Agent and Model Agent for autonomous experimentation",
+      "llm_evidence_cn": "研究智能体与模型智能体协作自主实验",
+      "llm_evidence": "研究智能体与模型智能体协作自主实验",
+      "canonical_evidence": "研究智能体与模型智能体协作自主实验",
+      "llm_tldr_en": "AgentX-Model pairs a Research Agent and a Model Agent to autonomously develop proposals, run multi-round experiments, and feed results back into next-step research decisions for industrial recommenders.",
+      "llm_tldr_cn": "持续开展工业推荐研究需要用一次实验的结果决定下一步探索，过程难以自动化。本文提出AgentX-Model框架，采用Research Agent与Model Agent的双智能体架构，前者基于论文与实验发现形成经独立评审的提案，后者在沙箱中进行多轮实验并返回代码、测量结果与未解决问题。Research Agent再据此选择起点实现并规划后续研究。该工作展示了长时程自主智能体在工业推荐模型研发中的闭环能力。",
+      "llm_tldr": "持续开展工业推荐研究需要用一次实验的结果决定下一步探索，过程难以自动化。本文提出AgentX-Model框架，采用Research Agent与Model Agent的双智能体架构，前者基于论文与实验发现形成经独立评审的提案，后者在沙箱中进行多轮实验并返回代码、测量结果与未解决问题。Research Agent再据此选择起点实现并规划后续研究。该工作展示了长时程自主智能体在工业推荐模型研发中的闭环能力。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.29016v1",
+      "source": "arxiv",
+      "title": "EvoTreeNAD: Genealogy-Guided Evolution for LLM-Driven Neural Architecture Discovery",
+      "abstract": "AI-driven scientific discovery accelerates research by autonomously developing solutions and designs. Large language model (LLM) agents support this process through iterative generation and evaluation. Yet these iterations alone do not ensure cumulative progress or establish which directions to pursue next. Costly evaluation further constrains the scope of exploration. Neural architecture discovery brings these challenges together, coupling open-ended design with resource-intensive experimentation. We introduce EvoTreeNAD, a genealogy-guided evolutionary algorithm that constructs trainable architectures without a supplied seed or a hand-specified search space. Starting from an empty root, it grows a persistent genealogy in which each new node represents a complete architecture. Top-percentile values computed from each node and its descendants guide lineage selection. Using the selected design history, an Idea Agent proposes a variant and a Code Agent implements it. Each evaluated variant becomes a child node, expanding the genealogy while providing evidence for subsequent lineage selection. Our theoretical analysis establishes the existence of stationary variation regimes as the genealogy grows. Under specified variation assumptions, sustained top-percentile family values quantify the probability of generating high-reward architectures in these regimes. EvoTreeNAD discovers architectures that outperform the compared NAS and NAD baselines, achieving CIFAR-10/100 test errors of $2.05{\\pm}0.06\\%$ and $15.09{\\pm}0.22\\%$. On all six MedMNIST-v2 tasks, the discovered architectures surpass the strongest listed baselines. A controlled CIFAR-10 study further shows that EvoTreeNAD outperforms direct generation, best-of-$N$ greedy continuation, and full-family-mean routing.",
+      "authors": [
+        "Lishan Yu",
+        "Derek Jiu",
+        "Qizhen Lan",
+        "Xiaoqian Jiang"
+      ],
+      "primary_category": "cs.NE",
+      "categories": [
+        "cs.NE",
+        "cs.LG"
+      ],
+      "published": "2026-09-24T04:30:34+00:00",
+      "link": "https://arxiv.org/pdf/2609.29016v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM-driven autonomous discovery with iterative generation and evaluation of architectures",
+      "llm_evidence_cn": "LLM驱动的自主发现，迭代生成与评估架构",
+      "llm_evidence": "LLM驱动的自主发现，迭代生成与评估架构",
+      "canonical_evidence": "LLM驱动的自主发现，迭代生成与评估架构",
+      "llm_tldr_en": "EvoTreeNAD is a genealogy-guided evolutionary algorithm that grows trainable neural architectures from an empty root without a seed or hand-specified search space, addressing open-ended design under costly evaluation.",
+      "llm_tldr_cn": "针对LLM智能体迭代生成与评估难以保证累积进展、且评估代价高昂的问题，作者提出EvoTreeNAD。该方法以谱系引导的进化算法从空根节点出发，在无种子与手工搜索空间的情况下逐步生长可训练架构，形成持久谱系。工作面向神经架构发现这一开放式设计任务，为自主科学发现中的迭代设计与评估提供了思路。",
+      "llm_tldr": "针对LLM智能体迭代生成与评估难以保证累积进展、且评估代价高昂的问题，作者提出EvoTreeNAD。该方法以谱系引导的进化算法从空根节点出发，在无种子与手工搜索空间的情况下逐步生长可训练架构，形成持久谱系。工作面向神经架构发现这一开放式设计任务，为自主科学发现中的迭代设计与评估提供了思路。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "autonomous scientific discovery",
+      "matched_requirement_id": "req-15",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
