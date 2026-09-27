@@ -1,0 +1,89 @@
+{
+  "date": "20260927",
+  "date_label": "",
+  "generated_at": "2026-09-27 18:03:47 UTC",
+  "recommend_exists": true,
+  "run_count": 1,
+  "papers": [
+    {
+      "paper_id": "2609.26502v1",
+      "route": "202609/27/2609.26502v1-deep-generative-crystal-structure-prediction-a-benchmark-study-and-a-controlled-test-of-prototype-dependence",
+      "title": "Deep Generative Crystal Structure Prediction: A Benchmark Study and a Controlled Test of Prototype Dependence",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 7.0,
+      "evidence": "生成式AI晶体结构预测基准评测",
+      "first_seen_at": "2026-09-27 18:03:47 UTC",
+      "updated_at": "2026-09-27 18:03:47 UTC"
+    },
+    {
+      "paper_id": "2609.25523v1",
+      "route": "202609/27/2609.25523v1-learning-continuous-reaction-paths-for-transition-state-prediction",
+      "title": "Learning continuous reaction paths for transition-state prediction",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "用于连续反应路径与过渡态预测的机器学习框架",
+      "first_seen_at": "2026-09-27 18:03:47 UTC",
+      "updated_at": "2026-09-27 18:03:47 UTC"
+    },
+    {
+      "paper_id": "2609.26544v1",
+      "route": "202609/27/2609.26544v1-neural-network-backflow-with-low-rank-multi-determinant-updates",
+      "title": "Neural Network Backflow with Low-Rank Multi-Determinant Updates",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "神经网络回流结合变分蒙特卡洛用于强关联材料模拟",
+      "first_seen_at": "2026-09-27 18:03:47 UTC",
+      "updated_at": "2026-09-27 18:03:47 UTC"
+    },
+    {
+      "paper_id": "2609.27349v1",
+      "route": "202609/27/2609.27349v1-moldesignbench-evaluating-llm-based-agent-for-scenario-grounded-molecular-design",
+      "title": "MolDesignBench: Evaluating LLM-based Agent for Scenario-grounded Molecular Design",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ai-materials"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "面向情景化分子设计的LLM智能体基准",
+      "first_seen_at": "2026-09-27 18:03:47 UTC",
+      "updated_at": "2026-09-27 18:03:47 UTC"
+    },
+    {
+      "paper_id": "2609.29444v1",
+      "route": "202609/27/2609.29444v1-itersynth-rethinking-deep-search-agents-via-role-decoupled-iterative-synthesis",
+      "title": "IterSynth: Rethinking Deep Search Agents via Role-Decoupled Iterative Synthesis",
+      "section": "quick",
+      "tags": [
+        {
+          "kind": "query",
+          "label": "ar"
+        }
+      ],
+      "score": 6.0,
+      "evidence": "角色解耦的深度搜索LLM智能体",
+      "first_seen_at": "2026-09-27 18:03:47 UTC",
+      "updated_at": "2026-09-27 18:03:47 UTC"
+    }
+  ]
+}

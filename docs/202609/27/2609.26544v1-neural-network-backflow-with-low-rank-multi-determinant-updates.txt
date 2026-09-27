@@ -1,0 +1,1585 @@
+Neural Network Backflow with Low-Rank Multi-Determinant Updates
+Tianshu Huang,1, 2, ∗Xiaowei Ou,1, 3, † and Vidvuds Ozoli¸nˇs1, 2, ‡
+1Energy Sciences Institute, Yale University, West Haven, Connecticut 06516, USA
+2Department of Applied Physics, Yale University, New Haven, Connecticut 06520, USA
+3Department of Physics, Yale University, New Haven, Connecticut 06520, USA
+(Dated: September 23, 2026)
+Simulating strongly correlated fermions remains a long-standing challenge due to the exponential
+complexity of the Hilbert space and the intricate sign structure of many-body wavefunctions. We in-
+troduce a variational framework centered on a neural network backflow transformation that combines
+deep learning with variational Monte Carlo. The proposed ansatz employs a multi-determinant ex-
+pansion with low-rank shifts to capture non-local correlations and complex sign structures. Applied
+to the two-dimensional Hubbard model at both half-filling and 1/8 doping, the method achieves en-
+ergies within 0.45% of auxiliary-field quantum Monte Carlo at half-filling and captures intertwined
+charge- and spin-density stripe patterns at 1/8 doping. These results demonstrate the potential
+of this framework as a scalable and interpretable approach to variational simulations of strongly
+correlated fermionic systems.
+I.
+INTRODUCTION
+Solving many-body fermionic systems remains one of
+the most formidable challenges in computational physics,
+primarily due to the exponential growth of the Hilbert
+space and the emergence of non-trivial wavefunction sign
+structures. These complexities often render traditional
+numerical methods either computationally prohibitive or
+systematically biased.
+To address this, many numeri-
+cal methods are under active development, including the
+density matrix renormalization group (DMRG) [1, 2],
+projected entangled pair states (PEPS) [3–5], and various
+quantum Monte Carlo (QMC) [6–10] techniques. Despite
+their successes, these methods face inherent limitations:
+tensor networks like DMRG and PEPS are constrained
+by high entanglement in two dimensions, while quantum
+Monte Carlo remains hampered by the fermionic sign
+problem, particularly in the computationally challenging
+doped regime.
+In recent years, neural quantum states (NQS) [11]
+have emerged as a transformative paradigm for address-
+ing these gaps. By utilizing neural networks as flexible
+variational wavefunction ansatzes, NQS methods have
+demonstrated a remarkable ability to capture intricate
+many-body correlations [12–18]. For fermionic systems,
+the application of NQS typically adapts the Slater de-
+terminant formalism to satisfy the requisite antisymme-
+try.
+To incorporate higher-order correlations, Jastrow
+factors, backflow transformations, and their variants are
+introduced [19–28]. In this framework, the neural net-
+work performs a backflow transformation that maps bare
+particle coordinates into a set of collective, quasiparti-
+cle features. The neural network backflow transforma-
+tion has consistently provided some of the most accurate
+∗tianshu.huang@yale.edu
+† xiaowei.ou@yale.edu
+‡ vidvuds.ozolins@yale.edu
+variational energies to date, as it is uniquely capable of
+deforming the nodal surfaces of the wavefunction to con-
+verge toward the true physical ground state.
+However, the expressive power of deep neural network
+backflow transformations comes at a high cost: mod-
+els with a large number of parameters are computation-
+ally expensive to store and involve intensive evaluation
+times, often limiting their scalability for larger systems.
+One established path to enhancing performance without
+simply scaling the network depth is the adoption of a
+multi-determinant wavefunction format. By representing
+the state as a linear combination of several Slater deter-
+minants, the model can capture different sectors of the
+Hilbert space more effectively. When calculating neural
+network backflow coefficients, one could directly generate
+unique backflow matrices for each determinant by mod-
+ifying the number of network outputs [28]. Meanwhile,
+the parameter count blows up linearly with the number
+of determinants, quickly leading to memory bottlenecks.
+Alternatively, one can utilize the physical symmetries of
+the lattice to generate a multi-determinant state by eval-
+uating a single backflow network on various symmetry-
+transformed versions of the electron configuration [29–
+34]. While this approach is extremely parameter-efficient
+for reusing the same weights for all determinants while
+enforcing physical symmetries, it introduces additional
+computational cost for calculating the character of irre-
+ducible representations of the symmetry operations and
+the network evaluation of all symmetry-equivalent con-
+figurations.
+We present matrix shifts as an alternative approach
+for generating multi-determinant expansions. To main-
+tain computational efficiency, these determinant-specific
+shifts are implemented in a low-rank factorized form.
+By decomposing the updates into low-rank products
+rather than full-rank matrices, this architecture enables
+a multi-determinant ansatz while avoiding the over-
+parameterization and prohibitive scaling typically asso-
+ciated with traditional methods. This property ensures
+that both the parameter count and the cost of determi-
+arXiv:2609.26544v1  [cond-mat.str-el]  22 Sep 2026
+
+
+2
+nant updates remain numerically tractable.
+II.
+MODEL AND METHOD
+A.
+The 2D Hubbard Hamiltonian
+We focus on the standard Hubbard Hamiltonian,
+which considers only nearest-neighbor hopping and on-
+site Coulomb interactions. The Hamiltonian is expressed
+as
+ˆH = −t
+X
+σ=↑,↓
+Nsite
+X
+<i,j>
+(ˆc†
+iσˆcjσ + ˆc†
+jσˆciσ) + U
+Nsite
+X
+j
+ˆnj↑ˆnj↓, (1)
+where Nsite is the total number of lattice sites.
+The
+operators ˆc†
+iσ and ˆciσ denote the creation and annihi-
+lation of an electron with spin σ at site i, respectively.
+The notation ⟨i, j⟩indicates that hopping is restricted to
+nearest-neighbor pairs with an associated hopping am-
+plitude t. The occupation number operator is given by
+ˆnjσ = ˆc†
+jσˆcjσ, and U represents the energy penalty for
+two electrons of opposite spin occupying the same site.
+The first term in Eq. (1) represents the kinetic energy
+of the system, while the second term accounts for the
+on-site Coulomb repulsion.
+B.
+Variational Monte Carlo and Optimization
+To determine the ground state of the Hubbard Hamil-
+tonian, we optimize the variational parameters θ of the
+neural backflow ansatz using the Variational Monte Carlo
+(VMC) method. The primary objective is to minimize
+the energy expectation value, which serves as the loss
+function:
+E(θ) = ⟨Ψθ| ˆH|Ψθ⟩
+⟨Ψθ|Ψθ⟩
+= Ex∼|Ψθ(x)|2[EL(x)]
+(2)
+where EL(x) = P
+x′ Hx,x′ Ψθ(x′)
+Ψθ(x) is the local energy. We
+estimate this quantity and its gradients by sampling the
+configuration space according to the probability distribu-
+tion |Ψθ(x)|2.
+To update the parameters θ, we utilize the Sub-
+sampled Projected-Increment Natural Gradient Descent
+(SPRING) method [35]. While the standard stochastic
+reconfiguration (SR) method [36] identifies an update by
+minimizing the norm of the difference between the vari-
+ational parameter shifts and the local energy gradient,
+SPRING also prioritizes stability by minimizing the de-
+viation from the previous parameter update.
+C.
+Neural network ansatz
+We solve the ground-state properties of the two-
+dimensional Hubbard model using a variational Monte
+Carlo (VMC) framework enhanced by a deep neural net-
+work wavefunction ansatz. The central challenge in sim-
+ulating the doped Hubbard regime lies in the intricate
+nodal structure of the fermionic wavefunction, which tra-
+ditional trial states often fail to capture with sufficient
+flexibility. To address this, we introduce a hierarchical
+architecture that combines a deep neural network back-
+flow transformation with a low-rank factorized multi-
+determinant expansion. Fig. 1 presents our neural net-
+work architecture design. In the following subsections,
+we detail the components of this architecture.
+1.
+Input embedding
+The network architecture begins with an input embed-
+ding block that converts the input configuration x, a 2D
+grid representing site occupations and spin states, into
+a format the model can ingest. Inspired by the vision
+transformer architecture [37], we first split the lattice
+grid into Npatch fixed-size patches of shape p × p, each
+capturing a subset of the spatial occupation and spin in-
+formation. Following the partitioning, each patch’s spa-
+tial information is transformed into a single row vector,
+where the electron occupations are represented in a one-
+hot encoding format, and these rows are stacked to form
+a structured token matrix. The token matrix then passes
+through a linear layer that performs a trainable projec-
+tion. This layer maps the discrete, sparse information
+of the electron occupations into a high-dimensional la-
+tent space. The resulting output is an embedded vector
+xembedded ∈RNpatch×d, where d is the embedding dimen-
+sion.
+2.
+Static kernel encoder
+The embedded variable is fed into an encoder featuring
+a residual-based structure designed for efficient feature
+extraction.
+Each of the Nl consecutive layers consists
+of two primary sub-blocks, both of which utilize layer
+normalization to ensure training stability. The first sub-
+block processes the input through a feed-forward net-
+work, followed by a projection from a static kernel α.
+As an input-independent learnable parameter matrix, α
+enables the model to enforce specific spatial correlations
+directly within the mapping, a process analogous to a fac-
+tored attention mechanism without translation-invariant
+modulation [18].
+A secondary feed-forward sub-block
+provides further feature refinement. Both stages incor-
+porate residual connections (⊕), which facilitate efficient
+gradient flow and allow the network to learn incremental
+updates to the data representation. The encoder finally
+outputs the processed state xencoded ∈RNsite×d.
+
+
+3
+FIG. 1: Schematic of the neural network architecture. (a) The overall workflow, where the lattice configuration x is
+processed through an input embedding and encoder to feed both the backflow network and the determinant
+expansion. (b) The Encoder architecture, featuring Nl layers of layer normalization, feed-forward blocks, and a
+static kernel projection α with residual connections to produce the encoded features xencoded. (c) The Backflow
+Network, which utilizes an electron feature projector and a spatial feature projector to generate mixed backflow
+coefficients F(x). (d) The Multi-Determinant Expansion block, where encoded features are spatially averaged and
+passed through a linear layer with a Softmax activation to produce configuration-dependent weights cij(x). These
+weights are combined with the backflow-transformed features to evaluate the final weighted multi-determinant
+wavefunction Ψ(x).
+3.
+Neural network backflow transformation
+Neural network backflow transformation generalizes
+the traditional Feynman-Cohen backflow [38] by using
+deep learning architectures to map bare electronic coor-
+dinates to a high-dimensional space [24]. The backflow-
+transformed wavefunction has the form
+ΨBF (x) = det[M + F(x)],
+(3)
+where M is the single-particle orbital matrix, and F(x)
+is the neural network backflow coefficient matrix calcu-
+lated from the given electronic configuration x.
+Both
+M and F(x) has the same shape R2Nsite×Nelectron, where
+Nelectron is the number of electrons in the configuration.
+We stack the two spin sectors into one matrix, hence the
+shape 2Nsite along the row dimension. When calculating
+the determinant, we select the electrons’ corresponding
+occupied rows from M + F(x) to obtain the matrix with
+proper shape RNelectron×Nelectron.
+Instead of using a single linear layer to merely trans-
+form the output backflow matrix to the proper shape,
+we emphasize the expressive power of the backflow
+network by constructing a deep separable bilinear ar-
+chitecture.
+The latent vector xencoded is first passed
+through an electron feature projector followed by a spa-
+tial feature projector.
+Each projector is a three-layer
+feed-forward network with Gaussian Error Linear Unit
+(GELU) [39] activation functions in between. These two
+modules decouple and transform the particle-specific and
+
+
+4
+coordinate-specific information into intermediate rep-
+resentations, denoted as F ′(x) ∈RNsite×Nelectron and
+F ′′(x) ∈R2Nsite×Nelectron. Both the intermediate feature
+maps and the original encoded input are fed into a cen-
+tral backflow coefficient mixing module. This final stage
+acts as a fusion layer, combining the transformed spatial
+and electron features with a residual path from the ini-
+tial encoding. This ensures that the final output F(x)
+preserves global context while being conditioned on the
+specific local features extracted by the projectors. The
+final backflow matrix is expressed as
+F(x) = F ′′(x)⊙(J + W1xencodedY1 + W2F ′(x)Y2) , (4)
+where ⊙represents element-wise multiplications; J is the
+matrix whose entries are all ones; Wi and Yi are learnable
+parameter matrices that transform xencoded and F ′(x) to
+the same shape as F ′′(x).
+D.
+Multi-determinant wavefunction with low-rank
+shifts
+Our multi-determinant wavefunction with low-rank
+shifts takes the form:
+Ψ(x) =
+X
+i,j
+cij(x) det[M + ∆Mi + (F0 + ∆Fj) ⊙F(x)],
+(5)
+where cij(x) are configuration-dependent weights; M and
+F0 denote full-rank base matrices; ∆Mi and ∆Fj repre-
+sent low-rank shifts that introduce the multi-determinant
+character; and F(x) is the output of the neural network
+backflow transformation.
+Instead of using fixed mean-field orbitals, both M and
+F0 are treated as learnable parameter matrices to pro-
+vide greater variational flexibility. Each of the ∆matri-
+ces is constructed as the product of two low-rank learn-
+able matrices U ∈R2Nsite×r and V ∈Rr×Nelectron; that
+is, ∆Mi = U M
+i V M
+i
+and ∆Fj = U F
+j V F
+j . Here the rank
+r is chosen to be small (r ≪Nelectron) to maintain pa-
+rameter efficiency. We use the same value of r for both
+∆Mi and ∆Fj matrices. In practice, we also include the
+zero matrices ∆M0 = ∆F0 = 0, thereby retaining the
+original backflow-transformed determinant in the multi-
+determinant expansion.
+The configuration-dependent weights are generated via
+a simple one-layer network. Specifically, average pooling
+is performed along the spatial dimension of the encoded
+variable xencoded before the features are passed through
+a linear layer.
+Finally, a softmax activation function
+is applied to produce the normalized coefficients cij(x).
+This normalization effectively treats the expansion as a
+weighted superposition of determinant components of the
+same state.
+E.
+Efficient determinant evaluation via the matrix
+determinant lemma
+Our multi-determinant wavefunction requires us to cal-
+culate the determinant
+det [M + ∆Mi + (F0 + ∆Fj) ⊙F(x)]
+for all ∆Mi and ∆Fj. The main computational bottle-
+neck is the matrix determinant calculation, whose num-
+ber scales as the product of the number of low-rank ma-
+trices N∆M × N∆F .
+Using the matrix determinant lemma [40], we can sig-
+nificantly accelerate these calculations. The matrix de-
+terminant lemma states that, for an invertible matrix A
+of shape n × n and matrices U and V of shape n × r, the
+following relation holds:
+det
+ A + UV ⊤
+= det(A) det
+ Ir + V ⊤A−1U
+
+(6)
+By construction, our matrix ∆Mi is the product of two
+low-rank matrices ∆Mi = U M
+i V M
+i
+. Defining Aj = M +
+(F0 + ∆Fj) ⊙F(x), with Aj restricted to occupied rows,
+we can apply the matrix determinant lemma with A =
+Aj, U = U M
+i , and V ⊤= V M
+i
+:
+det [M + ∆Mi + (F0 + ∆Fj) ⊙F(x)]
+= det
+
+Aj + U M
+i V M
+i
+
+(7)
+= det [Aj] det
+
+Ir + V M
+i
+A−1
+j U M
+i
+
+.
+(8)
+Rather than calculating the full N∆M × N∆F determi-
+nants, we now only need to compute the N∆F determi-
+nants of the matrices Aj.
+In addition to det[Aj], the new formulation requires
+to calculate the inverse of each Aj. In practice, modern
+numerical libraries such as NumPy and JAX treat the
+matrix determinant and the matrix inverse as indepen-
+dent operations. However, both calculations fundamen-
+tally rely on an initial matrix factorization, such as the
+LU decomposition. After this factorization is obtained,
+the determinant and the required solves are cheaper than
+forming a full inverse: the determinant det[Aj] is simply
+the product of the diagonal elements of U (adjusted by
+the pivot sign), and A−1
+j U M
+i
+is found by forward and
+backward substitution at cost O(N 2
+electronr). Since the
+O(N 3
+electron) factorization step constitutes the primary
+computational bottleneck, while the subsequent products
+and substitutions are significantly less demanding, call-
+ing these functions separately results in redundant and
+costly decompositions. By explicitly performing a single
+factorization, we can reuse the factors for the determi-
+nant and all the required solves.
+The
+remaining
+computation
+is
+the
+matrix
+mul-
+tiplication
+and
+the
+determinant
+calculation
+of
+det
+
+Ir + V M
+i
+A−1
+j U M
+i
+
+.
+The former has a complex-
+ity of O(N 2
+electron), and the latter scales as O(r3). Given
+that r ≪Nelectron, these computations are significantly
+cheaper
+than
+the
+original
+O(N 3
+electron)
+determinant
+
+
+5
+Algorithm 1: Efficient Multi-Determinant
+Evaluation via Low-Rank Updates
+Inputs: M, F0, U M
+i , V M
+i
+, U F
+j , V F
+j , F(x) ;
+for j ←1 to N∆F do
+∆Fj ←U F
+j V F
+j
+;
+Aj ←M + (F0 + ∆Fj) ⊙F(x) ;
+[Lj, Uj, Pj] ←LU Decomposition(Aj) ;
+det(Aj) ←det from LU(Lj, Uj, Pj) ;
+for i ←1 to N∆M do
+Xij ←LU Solve(Lj, Uj, Pj, U M
+i ) ;
+Bij ←Ir + V M
+i
+Xij ;
+ψij = det(Aj) det(Bij) ;
+end
+end
+return Vector ψij
+calculation.
+Therefore,
+we can reduce the overall
+computational
+cost
+from
+O(N∆MN∆F N 3
+electron)
+to
+O(N∆F N 3
+electron) + O(N∆MN∆F N 2
+electronr).
+Algorithm
+1 describes the efficient multi-determinant calculation
+that utilizes the low-rank updates.
+We tested the speed improvement of the low-rank up-
+dates at 1/8 doping with U/t = 8. Fig. 2 compares the
+training time per iteration between direct determinant
+evaluation and the low-rank update method. We ran the
+experiments on a single NVIDIA H200 GPU. Panel (a)
+shows that as the lattice size increases, the training time
+for the direct determinant method rises from roughly 2
+seconds to over 100 seconds. Over the same range, the
+time for the low-rank updates increases from approxi-
+mately 1.5 seconds to 11 seconds. At the largest system
+size, the direct method is approximately 10 times slower
+than the low-rank approach. In panel (b), increasing the
+nonzero shift counts from (2, 2) to (16, 16) results in the
+direct determinant time rising from approximately 6 sec-
+onds to 105 seconds, while the low-rank method reaches
+only approximately 11 seconds for shift counts (16, 16).
+III.
+ENERGY BENCHMARKS AND
+CONVERGENCE
+We test our neural network wavefunction ansatz on the
+2D Hubbard model for both the half-filling and 1/8 dop-
+ing cases, with periodic boundary conditions applied on
+both spatial directions. For both cases, we test on the
+strong correlation regime where U/t = 8. After train-
+ing convergence, the variational energy and its associ-
+ated error bar are calculated by generating 10 indepen-
+dent Monte Carlo runs, each consisting of 16,384 sam-
+ples. These runs measure sampling uncertainty at fixed
+parameters, not variation between training runs.
+FIG. 2: Scaling of computational cost for direct
+determinant evaluation versus the low-rank lemma
+application with r = 2. (a) Training time per iteration
+as a function of the lattice sizes for a fixed nonzero shift
+counts (16, 16). (b) Training time per iteration relative
+to the nonzero shift counts (N∆M, N∆F ) for a fixed
+4 × 16 lattice. Both plots utilize a logarithmic scale for
+the vertical axis.
+A.
+Ground state energy
+To evaluate the accuracy of the proposed architecture,
+we first consider the 2D Hubbard model at half-filling.
+Fig. 3 illustrates the variational energy per site across dif-
+ferent square lattices. We adopt the energy results from
+AFQMC [42] as the numerical benchmarks for compari-
+son. On the 6 × 6 lattice, the Deep BF model achieves
+a variational energy of −0.5268 per site, lying below the
+BW1 and BW2 point estimates.
+For the intermediate
+8 × 8 geometry, Deep BF yields an energy of −0.5245
+per site, again lying below the BW1 and BW2 point esti-
+mates. On the largest 10×10 lattice, the Deep BF result
+reaches −0.5231 per site, lying below BW1 and very close
+to BW2.
+To assess the performance of our network architecture
+across different correlation regimes, we analyze the rela-
+tive error of the variational energy as a function of the
+on-site interaction strength U at half-filling on the 8 × 8
+lattice. As shown in Fig. 4, the relative error is computed
+directly against the AFQMC ground-state energy bench-
+mark. In the weakly correlated regime at U/t = 2, the
+Deep BF method achieves its highest precision, yielding
+
+
+6
+TABLE I: Comparison of different network architectures. The last column reports total energies.
+Model
+Backflow
+Coefficients
+Embedding Dim. (d)
+# Params
+Energy (E)
+Net 1
+Simple
+Independent
+32
+44,861
+−24.394
+Net 2
+Simple
+Dependent
+32
+54,109
+−24.419
+Net 3
+Deep
+Dependent
+32
+61,317
+−24.464
+Net 4
+Deep
+Dependent
+40
+81,693
+−24.474
+FIG. 3: Variational energy per site for the 2D Hubbard
+model at half-filling with respect to different lattice
+sizes. The plot compares the performance of our deep
+backflow (Deep BF) to various neural network backflow
+architectures, including spin-block-separated (BW1)
+and spin-mixing (BW2) tensor backflow, both with one
+Lanczos step [41], and the auxiliary-field quantum
+Monte Carlo (AFQMC) benchmarks [42] for different
+L × L lattice sizes. The Deep BF error bars are smaller
+than the markers.
+a remarkably low relative error of approximately 0.0021.
+As the interaction strength increases into the intermedi-
+ate coupling regime, the relative error rises to approxi-
+mately 0.0032 at U/t = 4 and peaks at roughly 0.0034
+near U/t = 6.
+Interestingly, as the system enters the
+strongly correlated regime at U/t = 8, the trend reverses,
+and the relative error decreases slightly to approximately
+0.0032.
+We further extend our analysis to the 1/8 doped
+regime.
+To assess the quality of the optimized varia-
+tional wave function |Ψ⟩, we apply a one-step Lanczos
+correction after training.
+This procedure enlarges the
+variational space to the Krylov subspace spanned by |Ψ⟩
+and ˆH|Ψ⟩, yielding the corrected state
+|ΨL⟩= (1 + α ˆH)|Ψ⟩,
+(9)
+where α is a variational parameter. The optimal α is ob-
+FIG. 4: Relative error of the variational energy for the
+8 × 8 Hubbard model at half-filling with respect to
+different U/t values. The relative error is calculated
+with respect to the AFQMC benchmarks [42].
+tained by solving the associated 2 × 2 generalized eigen-
+value problem for the projected Hamiltonian and over-
+lap matrices and selecting the lowest eigenvalue solution.
+All required matrix elements are estimated from Monte
+Carlo samples drawn from the optimized reference state
+|Ψ⟩. The energy variance after the Lanczos step requires
+higher-order moments up to ⟨ˆH4⟩, which are computed
+using the same stochastic estimators.
+Fig. 5 presents the training results for the doped case,
+where a network embedding dimension of 64 was used.
+On the 4 × 8 lattice, the Deep BF result reaches an en-
+ergy of −0.7659 per site, which is higher than only HFPS
+and Deep BF Lanczos, the latter of which yields the low-
+est energy point estimate on this geometry at −0.7671
+per site. For the 4 × 12 system, the Deep BF energy is
+−0.7640 per site, placing it below FF, BW1 and BW2,
+but above HFPS and Deep BF Lanczos. Deep BF Lanc-
+zos achieves an energy of −0.7662 per site, sitting slightly
+below HFPS. On the largest 4 × 16 lattice, the Deep
+BF model achieves an energy of −0.7598 per site, out-
+performing FF and HFDS. Deep BF Lanczos finishes
+at −0.7622 per site, which lies slightly below BW2 but
+above HFPS.
+
+
+7
+FIG. 5: Variational energy per site for the 2D Hubbard
+model at 1/8 doping. The plot compares our proposed
+deep backflow network with feed-forward backflow (FF)
+[24], hidden fermion determinant state (HFDS) [25],
+tensor backflow (BW1 and BW2) [41], and hidden
+fermion Pfaffian state (HFPS) [27] for different 4 × L
+lattice sizes. The gray triangles represent our deep
+backflow result, and the black triangles represent the
+deep backflow result with a Lanczos step. The deep
+backflow error bars are smaller than the markers.
+To evaluate the impact of architectural complexity on
+variational accuracy, we designed four neural network
+models with varying degrees of flexibility in their back-
+flow transformations and determinant coefficients (Ta-
+ble I).
+We tested these models on a 4 × 8 lattice at
+1/8 doping with U/t = 8. The models range from Net
+1, a baseline architecture with simple backflow and in-
+dependent coefficients, to Net 4, a high-capacity model
+utilizing deep backflow transformations and a larger em-
+bedding dimension. This hierarchy allows us to perform
+a variance extrapolation to estimate the exact ground-
+state energy. Furthermore, these configurations serve as
+the basis for the architectural analysis and interpretabil-
+ity studies conducted in the following sections.
+As shown in Fig. 6, our models exhibit a consistent lin-
+ear trend. The systematic reduction in variance, achieved
+by transitioning from simple backflow (Net 1) to a deeper,
+higher-dimensional transformer architecture (Net 4), di-
+rectly corresponds to a lowering of the variational en-
+ergy.
+By performing a linear least-squares fit to these
+data points and extrapolating to the zero-variance limit,
+we arrive at an estimated ground-state energy of −0.7681
+FIG. 6: Variance extrapolation of the ground-state
+energy for the 4x8 lattice. The energy per site for the
+four network architectures (Net 1–4) is plotted against
+the local energy variance per site. The dashed gray line
+represents a linear fit to the data. The y-intercept
+indicates the extrapolated ground-state energy in the
+limit of zero variance, yielding Eextrap = −0.7681.
+per site.
+B.
+Hyperparameter sensitivity
+To assess sensitivity of our variational results, we ex-
+amine the dependence of the ground-state energy with
+respect to the key hyperparameters of the neural back-
+flow ansatz. As shown in Fig. 7, we evaluate the energy
+per site for the 4 × 8 lattice at 1/8 hole doping with
+U/t = 8. We define our reference setup for these exper-
+iments as d = 32, (N∆M, N∆F ) = (16, 16), and r = 2.
+Specifically, panel (a) illustrates the dependence on the
+embedding dimension for d = 8, 16, 32, 64. The energy
+per site exhibits a sharp decrease between d = 8 and d =
+16, followed by smaller energy gains as d approaches 64.
+In panel (b), we observe the impact of the determinant
+expansion (N∆M, N∆F ) at values of (2, 2), (4, 4), (8, 8),
+and (16, 16). The plot shows a consistent monotonic re-
+duction in energy across the entire range, with the most
+significant improvement occurring between the (2, 2) and
+(4, 4) configurations. Finally, panel (c) shows the sensi-
+tivity to the low-rank cutoff for r = 1, 2, 4, 8. The energy
+per site displays a steady, nearly linear decrease as the
+rank is increased.
+IV.
+PHYSICS OF THE DOPED STATE
+We investigate the optimized variational-state proper-
+ties of the 1/8-doped 4×16 Hubbard model at U/t = 8 us-
+ing a multi-scale analysis. We begin with local real-space
+observables of spin and charge, followed by an analysis of
+collective behavior and pairing tendencies via structure
+factors.
+
+
+8
+FIG. 7: Energy per site for the 4 × 8 lattice at 1/8
+doping as a function of key model hyperparameters. (a)
+Network embedding dimension. (b) Number of
+additional low-rank matrices (N∆M, N∆F ). (c) Rank r
+of the additional ∆matrices.
+A.
+Real-Space Stripe Pattern
+We first examine real-space signatures of stripe order
+through local observables on the 4 × 16 lattice. Specifi-
+cally, we compute the spin–spin correlation
+Cs(r) = 1
+N
+X
+i
+⟨ˆSz
+i ˆSz
+i+r⟩,
+(10)
+the local hole density
+hi = 1 −⟨ˆni⟩,
+(11)
+and the local magnetic moment
+mi = 1
+2 (⟨ˆni↑⟩−⟨ˆni↓⟩) .
+(12)
+Fig. 8(a) displays Cs(r), revealing a robust but spa-
+tially modulated antiferromagnetic (AFM) background.
+Notably, we observe two distinct domain walls character-
+ized by a sign flip in the AFM order. These magnetic
+boundaries align precisely with regions of high hole con-
+centration, as further elucidated in panel (b). The visual-
+ization reveals that the high-density regions (hi ≈0.18)
+at the lattice boundaries and the central column align
+perfectly with the magnetic domain walls. In these re-
+gions, the local magnetic moments are suppressed to a
+minimum of 0.03.
+Conversely, in the lower-density re-
+gions (h ≈0.06), the magnetic moments recover to val-
+ues as high as 0.25, maintaining a standard checkerboard
+pattern. These observations indicate the synchronization
+of a spin-density wave (SDW) and a charge-density wave
+(CDW).
+B.
+Momentum-Space Correlations and Pairing
+The collective behavior of the system is further char-
+acterized by the spin structure factor
+S(q) =
+1
+Nsite
+X
+j,k
+eiq·(rj−rk)⟨ˆSz
+j ˆSz
+k⟩
+(13)
+and the charge structure factor
+N(q) =
+1
+Nsite
+X
+j,k
+eiq·(rj−rk)(⟨ˆnjˆnk⟩−⟨ˆnj⟩⟨ˆnk⟩). (14)
+As presented in Fig. 9(a), the spin structure fac-
+tor S(q) exhibits prominent symmetric peaks at qx =
+±7π/8. This incommensurate shift from the AFM point
+(π) is consistent with the magnetic periodicity observed
+in real space. In panel (b), N(q) shows distinct CDW
+peaks located at qx = ±π/4.
+We examine long-range pairing tendencies via the pair–
+pair correlation function defined as
+P(r) =
+1
+Nsite
+X
+i
+D
+ˆ∆†
+i ˆ∆i+r
+E
+(15)
+where ˆ∆†
+i is the creation operator for a singlet Cooper
+pair with dx2−y2 symmetry anchored at site i:
+ˆ∆†
+i =
+1
+√
+2
+X
+δ
+f(δ)
+
+ˆc†
+i↑ˆc†
+i+δ,↓−ˆc†
+i↓ˆc†
+i+δ,↑
+
+,
+(16)
+where δ ∈{±ˆx, ±ˆy} denotes the nearest-neighbor vec-
+tors, and the form factor f(δ) is defined as +1 for bonds
+along the x-direction and −1 for bonds along the y-
+direction.
+Panel (c) plots P(r) on a semi-logarithmic
+
+
+9
+FIG. 8: Real-space behaviors of the doped Hubbard model. (a) Real-space spin-spin correlation function Cs(r) with
+the origin of the displayed displacement at the center. (b) Snapshot of local observables; the radius of green circles
+represents the local hole density hi and the arrows represent the local magnetic moment mi. The lower values are
+column-averaged hole densities, while the upper values describe moment magnitudes.
+scale for distances r ∈[0, 8]. The pair correlations be-
+yond the first shell are zero to within statistical uncer-
+tainty. The correlation magnitude is highest at r = 0 and
+undergoes a sharp decrease of approximately two orders
+of magnitude by r = 2. For r > 2, P(r) exhibits oscil-
+latory behavior with local maxima at r = 3 and r = 8,
+fluctuating within the range of 10−3 to 10−4.
+V.
+ARCHITECTURAL ANALYSIS AND
+INTERPRETABILITY
+A.
+Static kernel heatmaps
+To gain insight into how the neural network captures
+the underlying lattice structure, we examine the learned
+weights of the static kernels α across different layers of
+the encoder.
+Unlike the dynamic components of the
+network that respond to specific electron configurations,
+these static kernels represent an input-independent map-
+ping that enforces global spatial correlations. In a phys-
+ical context, these kernels act as real-space filters that
+mix features across lattice patches. By visualizing these
+weights as heatmaps, we can directly observe the geo-
+metric prior the model develops during the variational
+optimization process.
+Fig. 10 plots the static kernel heatmap for different
+numbers of layers and independent kernels trained on the
+4 × 8 lattice at 1/8 doping with PBCs applied on both
+dimensions. The first encoder layer serves as a geometric
+preprocessor, mapping the input sequence onto a 2D lat-
+tice topology. Despite the linear indexing of patches, the
+network identifies wrap-around connectivity by placing
+significant weight on the off-diagonal corners, providing
+evidence for learned periodic boundary conditions. These
+learned interactions remain highly localized, prioritizing
+the nearest-neighbor connections necessary to optimize
+the system’s kinetic energy.
+In the second layer, the kernels show more diagonal
+structure, marked by the emergence of strong diagonal
+elements that may reflect self-interactions within each
+patch. This diagonal dominance suggests that the en-
+
+
+10
+FIG. 9: Computed observables for the 4 × 16 Hubbard
+model at 1/8 doping. (a) S(q) showing incommensurate
+SDW peaks at qx = ±7π/8. (b) N(q) displaying CDW
+peaks at qx = ±π/4. (c) Pair-pair correlation P(r)
+along the long axis on a semi-log scale. Error bars
+denote the statistical uncertainty from Monte Carlo
+sampling; their lower portions are truncated due to the
+logarithmic scale.
+coder may be placing greater emphasis on local renor-
+malization, potentially reflecting the need to account for
+the high energy costs associated with electron-electron in-
+teractions. By the final layer, the kernels transition into
+a more complex, stochastic distribution, with the strict
+symmetries observed in earlier stages no longer apparent.
+The absence of a simple real-space pattern may be consis-
+tent with the representation of higher-order many-body
+correlations.
+FIG. 10: Learned static kernels α across 3 encoder
+layers, each with 8 independent kernels. The heatmaps
+show how the model learns to map spatial relationships
+on the lattice, with red and blue representing positive
+and negative patch-mixing weights.
+B.
+Determinant-basis orthogonality
+The accuracy of a neural-network backflow wavefunc-
+tion depends not only on the expressive power of the
+network layers but also on the quality and flexibility of
+the multi-determinant expansion it generates.
+To elu-
+cidate the physical structure learned by the various ar-
+chitectures, we perform a systematic analysis of the de-
+terminant basis across four distinct network setups, as
+summarized in Table I.
+These analyses are conducted
+on a 4 × 8 lattice at 1/8 doping with PBCs applied in
+both dimensions.
+To construct the multi-determinant
+wavefunction in Eq. (4), we utilize an expansion set of
+17 ∆Mi and 17 ∆Fj matrices, each consisting of 16 dis-
+tinct low-rank factorized matrix shifts and a special zero
+matrix. For each network model, we generate a design
+matrix X ∈RNsample×Ndet, consisting of Nsample = 4, 096
+sampled test configurations as rows and Ndet = 289 de-
+terminants as columns.
+We begin with Net 1 as a baseline, featuring a sim-
+ple backflow network consisting of only two linear layers
+and configuration-independent coefficients for the linear
+combination of the determinants. In Net 2, we introduce
+configuration-dependent coefficients to increase the flexi-
+bility of the multi-determinant expansion. Net 3 marks a
+significant transition to a deep backflow architecture—as
+illustrated in Fig. 1—which enables the capture of more
+complex, non-local electronic correlations. Finally, Net 4
+extends the deep backflow by increasing the embedding
+dimension from d = 32 to d = 40, thereby increasing
+the overall expressive power of the network. As shown
+in the last two columns of Table I, each architectural
+refinement leads to an increase in the total number of
+parameters while simultaneously providing a systematic
+lowering of the variational energy, with Net 4 yielding
+the most accurate ground-state approximation.
+
+
+11
+FIG. 11: Gram matrices of the network models. The
+heatmaps display the correlation (cosine similarity)
+between the 289 determinants for architectures (a) Net
+1, (b) Net 2, (c) Net 3, and (d) Net 4.
+C.
+Gram matrices and singular value spectrum
+To characterize the pairwise similarity and redundancy
+of the learned determinant basis, we compute the Gram
+matrix G ∈RNdet×Ndet for each of the four network archi-
+tectures. Across the sampled configurations in our design
+matrix, we normalize the column vectors (determinants)
+to unit length, such that the elements of the Gram ma-
+trix, Gij = ⟨deti | detj⟩, represent the cosine similarity
+between the i-th and j-th determinant basis states.
+Fig 11 displays the Gram matrices for Net 1 through
+4. A notable feature present in all four Gram matrices
+is the recurring cross-hatch pattern. This structure is a
+direct consequence of the multi-determinant construction
+in Eq. (4), where the basis is formed by the outer prod-
+uct of 17 ∆Mi and 17 ∆Fj shifts. The determinant basis
+is therefore naturally grouped into blocks of 17 that ex-
+hibit inherent structural similarities within the sampled
+representation.
+As the network becomes deeper and more expressive,
+from Net 1 to Net 4, we observe an overall improvement
+in the energy results, together with a decrease in the
+density of the off-diagonal elements in the Gram matrix.
+This indicates that the determinant basis states exhibit
+less pairwise similarity in the later architectures. While
+this does not by itself establish linear independence or
+orthogonality, it may suggest that the more expressive
+networks learn to organize the multi-determinant basis
+such that the sampled determinants explore more dis-
+tinct directions in the basis space. This may allow the
+network to make more effective use of the available multi-
+determinant degrees of freedom.
+FIG. 12: Singular value spectrum of the network models
+in log scale. The plots show the singular values of the
+determinant design matrix X for architectures (a) Net
+1, (b) Net 2, (c) Net 3, and (d) Net 4. The red dashed
+line denotes a 1% threshold relative to the largest
+singular value, used to define the effective rank of the
+basis.
+To further characterize the redundancy observed in the
+Gram matrices, we compute the singular value spectrum
+of the determinant basis for each network. We define the
+effective rank as the number of singular values exceeding
+1% of the maximum singular value, providing an effective
+measure of the dimensionality of the 289-determinant ex-
+pansion.
+As shown in Fig. 12, Net 1 exhibits the strongest re-
+dundancy, with an effective rank of only 179. The intro-
+duction of configuration-dependent coefficients in Net 2
+increases the effective rank to the full basis size of 289,
+although the resulting energy remains higher than that of
+the deeper architectures. The transition to deep backflow
+in Net 3 is accompanied by a slight reduction in effective
+rank to 280, which may suggest some consolidation of
+the represented features. By increasing the embedding
+dimension in Net 4, the effective rank increases again to
+285, while the network achieves the lowest variational en-
+ergy. Across all four networks, the singular value spectra
+also exhibit a similar three-stage decay: an initial rapid
+drop, followed by a relatively stable intermediate region,
+and finally a more gradual decay toward the basis limit.
+This structure suggests that the determinant basis con-
+tains a small number of dominant modes together with
+a broader set of less dominant modes that contribute to
+the represented many-body state.
+
+
+12
+FIG. 13: PCA for the determinant basis. Projections of
+4, 096 configurations onto the first two principal
+components (PC1, PC2) for architectures (a) Net 1, (b)
+Net 2, (c) Net 3, and (d) Net 4. Points are colored by
+the sign of the total wavefunction Ψ. The value N99%
+indicates the number of principal components required
+to capture 99% of the total variance.
+D.
+Principal component analysis of the
+determinant basis
+To further examine how the determinant basis rep-
+resents the sampled configurations, we employ princi-
+pal component analysis (PCA) to visualize the high-
+dimensional configuration space. We project the 4, 096
+sampled test configurations from the original 289-
+dimensional determinant space onto the first two princi-
+pal components (PC1 and PC2), which correspond to the
+directions of largest variance in the data. This projection
+provides a low-dimensional view of the variation among
+the sampled configurations and allows us to compare how
+different network architectures organize the configuration
+space.
+Fig. 13 presents the PCA results for the four network
+models. The projections illustrate a systematic refine-
+ment of the wavefunction’s sign structure as the network
+architecture increases in complexity. In the baseline Net
+1 (a), despite PC1 capturing 90.6% of the variance, sig-
+nificant sign-mixing is observed near the origin, possibly
+indicating a poorly resolved nodal boundary. This model
+also exhibits the smallest N99% value of only 16.
+Net
+2 (b) demonstrates a shift toward a higher-dimensional
+basis representation, with N99% increasing to 148, yet
+the separation in the projection between the Ψ > 0 and
+Ψ < 0 domains remains diffuse.
+A qualitative transition occurs in the deep backflow ar-
+chitectures, Net 3 (c) and Net 4 (d), where the configura-
+tion clusters become clearly isolated along the PC1 axis.
+Notably, while these models achieve lower variational en-
+ergies, their N99% values drop significantly to around 60.
+This may indicate that the deep backflow mechanism rep-
+resents the relevant sign variations using a smaller num-
+ber of dominant principal components. With the larger
+embedding dimension, Net 4 (d) shows a more clearly de-
+fined boundary between the two clusters, with no visible
+sign-mixing. This model also exhibits a slight increase
+in the PC1 variance (72.1%) and N99% (63) compared
+to Net 3.
+Taken together, these results indicate that
+the deeper backflow architectures produce a more clearly
+separated representation of the wavefunction signs in the
+sampled configuration space. This separation, however,
+characterizes the learned representation rather than pro-
+viding an independent test of whether the exact ground-
+state signs are correctly reproduced.
+VI.
+DISCUSSION
+In this work, we have systematically evaluated the
+performance of a deep neural network backflow trans-
+formation with low-rank multi-determinant updates for
+the variational representation of the 2D Hubbard model
+at U/t = 8. We examined both the half-filled and 1/8-
+doped cases under periodic boundary conditions. By in-
+troducing a diagnostic framework based on Gram matrix
+analysis, singular-value spectra, and PCA of the determi-
+nant basis, we move beyond treating the neural network
+as a black box for energy minimization. Instead, these
+diagnostics provide an interpretable view of how differ-
+ent network architectures organize and utilize the multi-
+determinant basis, offering insight into the representation
+and efficiency of neural quantum states.
+This diagnostic framework provides a two-stage char-
+acterization of the neural network’s internal represen-
+tation. The Gram matrix and singular-value spectrum
+characterize the pairwise similarity and effective dimen-
+sionality of the determinant basis, while PCA and the
+N99% metric provide a complementary view of how effi-
+ciently the sampled configurations are represented in a
+lower-dimensional space.
+Our results reveal two direc-
+tions for improving the basis representation of the neural
+wavefunction. First, the introduction of configuration-
+dependent weights enhances the diversity and effective
+dimensionality of the determinant expansion. By mak-
+ing the determinant coefficients cij(x) functions of the
+input configurations, the network gains additional varia-
+tional flexibility in combining the multi-determinant ba-
+sis states. This is reflected in Nets 2, 3, and 4, which all
+achieve a threshold-dependent effective rank of approxi-
+mately 280–289.
+Second, the deep backflow network significantly im-
+proves the representation of the wavefunction. While Net
+2 increases basis diversity, its large N99% value, together
+
+
+13
+with the diffuse sign separation in the PCA projection,
+suggests that the resulting basis remains relatively dis-
+tributed across many principal components and does not
+exhibit a clearly resolved sign boundary. In contrast, de-
+spite having a slightly lower effective rank and N99% than
+Net 2, Net 3 and Net 4 achieve much lower variational
+energies and show a more distinct separation between the
+Ψ > 0 and Ψ < 0 configurations. This suggests that the
+deep backflow architectures can capture the relevant sign
+variations with a smaller number of dominant principal
+components while achieving lower variational energies.
+These results suggest that increasing the diversity of the
+determinant basis and improving the quality of its rep-
+resentation are distinct aspects of the neural wavefunc-
+tion: configuration-dependent weights allow more deter-
+minants to contribute distinctively, while deep backflow
+enables these determinants to be combined in a way that
+more effectively captures the complex sign structure of
+the 2D Hubbard model.
+Potential
+improvements
+to
+the
+multi-determinant
+ansatz could focus on increasing the expressivity and re-
+ducing redundancy of the basis. While low-rank matrix
+shifts reduce the number of parameters and accelerate
+determinant calculations (see Appendix II E), employ-
+ing full-rank matrices could provide greater flexibility in
+the determinant transformations, potentially leading to
+a more diverse basis at a higher computational cost. An-
+other possible direction is to introduce an explicit regu-
+larization term that encourages reduced pairwise overlap
+between determinant basis states, applied as an auxiliary
+loss alongside energy minimization. Such a regularization
+could provide a direct way to control basis redundancy
+during training rather than relying solely on the energy
+objective.
+VII.
+ACKNOWLEDGEMENTS
+Simulations for this work were performed using code
+built upon NetKet [43, 44]. The neural network mod-
+els and optimization pipelines were implemented with
+JAX [45], Flax [46], and Optax [47]. The implementation
+and training example are available in the accompanying
+GitHub repository [48]. We gratefully acknowledge the
+use of computational resources provided by the Yale Cen-
+ter for Research Computing.
+Appendix A: Training and network hyperparameters
+1.
+Training setup
+The parameter update δθ of the SPRING method at
+iteration t is given by
+δθt = ¯O⊤
+t ( ¯Ot ¯O⊤
+t +λI)−1(¯ϵt −µ ¯Otδθt−1)+µδθt−1, (A1)
+where
+¯O
+is
+the
+jacobian
+matrix
+with
+shape
+(Nsample, Nparameter)
+¯Omk =
+1
+p
+Nsample
+(Omk −⟨Ok⟩)
+(A2)
+and
+Omk = ∂ln Ψθ(xm)
+∂θk
+=
+1
+Ψθ(xm)
+∂Ψθ(xm)
+∂θk
+;
+(A3)
+I is the identity matrix with shape (Nsample, Nsample);
+¯ϵm = −δτ(EL(xm) −E)
+p
+Nsample
+(A4)
+where δτ is the imaginary time step; λ is the regular-
+ization diagonal shift for the ill-conditioned ¯O, and µ is
+a damping parameter used to stabilize the optimization
+process.
+TABLE II: Parameter setup for the training process.
+Parameter
+Symbol Value
+VMC Sampling
+Number of iteration
+Nstep
+60000
+Number of samples
+Nsample 4096
+Number of Markov chains
+Nchain
+16
+Sweep size
+Nsweep
+Nsite
+Discarded samples per chain Ndiscard Nsite
+SPRING Optimizer
+Learning rate
+η
+0.01
+Diagonal shift
+λ
+0.001
+Momentum parameter
+µ
+0.8
+Norm constraint
+C
+0.01 →0.01/9*
+*The value is adjusted after 50000 iterations.
+To
+ensure
+a
+stable
+optimization
+procedure,
+the
+SPRING algorithm introduces a norm constraint to the
+weight update. The constraint puts an additional lower
+bound on the constant learning rate η:
+δθ = δθ · min(η,
+C
+∥δw∥),
+(A5)
+where ∥δw∥is the Euclidean norm of the weight updates,
+and C is a scalar constraint.
+Unless otherwise specified, the parameter configura-
+tions for the VMC and SPRING optimizer used in our
+experiments are listed in Table II.
+2.
+Network setup
+Table III summarizes the default architectural hy-
+perparameters for the neural network models employed
+throughout this study.
+
+
+14
+TABLE III: Hyperparameters for the network model.
+Parameter
+Symbol
+Value
+Embedding dimension
+d
+32
+Number of encoder layers
+Nlayer
+3
+Number of static kernels
+Nkernel
+8
+Patch dimension
+p
+2
+Nonzero determinant shifts (N∆M, N∆F ) (16, 16)
+Low-rank cutoff
+r
+2
+3.
+Dimension of the matrices
+Table IV provides a comprehensive summary of the
+dimensions for all key matrices utilized throughout the
+neural network architecture.
+TABLE IV: Dimensionality of key matrices.
+Matrix
+Dimension
+M
+2Nsite × Nelectron
+F
+2Nsite × Nelectron
+F ′
+Nsite × Nelectron
+F ′′
+2Nsite × Nelectron
+J
+2Nsite × Nelectron
+W1
+2Nsite × Npatch
+Y1
+d × Nelectron
+W2
+2Nsite × Nsite
+Y2
+Nelectron × Nelectron
+∆Mi
+2Nsite × Nelectron
+∆Fj
+2Nsite × Nelectron
+F0
+2Nsite × Nelectron
+U
+2Nsite × r
+V
+r × Nelectron
+Appendix B: Derivation of matrix determinant
+lemma
+Consider the square block matrix M ∈R(n+r)×(n+r)
+defined as
+M =
+ A
+−U
+V ⊤
+Ir
+
+,
+(B1)
+where A ∈Rn×n is invertible, U, V ∈Rn×r, and Ir is the
+r × r identity matrix.
+We can perform a block Gaussian elimination to factor
+M as
+M =
+
+In
+0
+V ⊤A−1 Ir
+ A
+−U
+0 Ir + V ⊤A−1U
+
+.
+(B2)
+Both
+matrices
+on
+the
+right-hand
+side
+are
+block-
+triangular, so their determinants are given by the prod-
+uct of their diagonal blocks. Using multiplicativity of the
+determinant, we obtain
+det(M) = det(A) det
+ Ir + V ⊤A−1U
+
+.
+(B3)
+Alternatively, since Ir is invertible, we may factor M
+by pivoting on the lower-right block. Performing block
+elimination yields
+M =
+
+A + UV ⊤−U
+0
+Ir
+  In
+0
+V ⊤Ir
+
+.
+(B4)
+Taking determinants and using the block-triangular
+structure gives
+det(M) = det
+ A + UV ⊤
+.
+(B5)
+Equating the two expressions for det(M), we conclude
+det
+ A + UV ⊤
+= det(A) det
+ Ir + V ⊤A−1U
+
+,
+(B6)
+which proves the matrix determinant lemma.
+[1] U.
+Schollw¨ock,
+The
+density-matrix
+renormalization
+group, Reviews of modern physics 77, 259 (2005).
+[2] E. M. Stoudenmire and S. R. White, Studying two-
+dimensional systems with the density matrix renormal-
+ization group, Annu. Rev. Condens. Matter Phys. 3, 111
+(2012).
+[3] G. Vidal, Classical simulation of infinite-size quantum
+lattice systems in one spatial dimension, Physical review
+letters 98, 070201 (2007).
+[4] J. I. Cirac, D. Perez-Garcia, N. Schuch, and F. Ver-
+straete, Matrix product states and projected entangled
+pair states: Concepts, symmetries, theorems, Reviews of
+Modern Physics 93, 045003 (2021).
+[5] C. V. Kraus, N. Schuch, F. Verstraete, and J. I. Cirac,
+Fermionic projected entangled pair states, Physical Re-
+view A—Atomic, Molecular, and Optical Physics 81,
+052338 (2010).
+[6] S. Zhang, J. Carlson, and J. E. Gubernatis, Constrained
+path monte carlo method for fermion ground states,
+Physical Review B 55, 7464 (1997).
+[7] S. Zhang and H. Krakauer, Quantum monte carlo method
+using phase-free random walks with slater determinants,
+
+
+15
+Physical review letters 90, 136401 (2003).
+[8] S. Zhang, 15 auxiliary-field quantum monte carlo for cor-
+related electron systems, Emergent Phenomena in Cor-
+related Matter (2013).
+[9] F. Becca and S. Sorella, Quantum Monte Carlo ap-
+proaches for correlated systems (Cambridge University
+Press, 2017).
+[10] G. Sugiyama and S. Koonin, Auxiliary field monte-carlo
+for quantum many-body ground states, Annals of Physics
+168, 1 (1986).
+[11] G. Carleo and M. Troyer, Solving the quantum many-
+body problem with artificial neural networks, Science
+355, 602 (2017).
+[12] D. Wu,
+R. Rossi,
+F. Vicentini,
+N. Astrakhantsev,
+F. Becca, X. Cao, J. Carrasquilla, F. Ferrari, A. Georges,
+M. Hibat-Allah, et al., Variational benchmarks for quan-
+tum many-body problems, Science 386, 296 (2024).
+[13] M. Schmitt, M. M. Rams, J. Dziarmaga, M. Heyl, and
+W. H. Zurek, Quantum phase transition dynamics in the
+two-dimensional transverse-field ising model, Science Ad-
+vances 8, eabl6850 (2022).
+[14] J. Nys, G. Pescia, A. Sinibaldi, and G. Carleo, Ab-initio
+variational wave functions for the time-dependent many-
+electron schr¨odinger equation, Nature communications
+15, 9404 (2024).
+[15] A. Chen and M. Heyl, Empowering deep neural quantum
+states through efficient optimization, Nature Physics 20,
+1476 (2024).
+[16] R. Rende, L. L. Viteritti, L. Bardone, F. Becca, and
+S. Goldt, A simple linear algebra identity to optimize
+large-scale neural network quantum states, Communica-
+tions Physics 7, 260 (2024).
+[17] X. Ou, T. Huang, and V. Ozoli¸nˇs, Improving neural net-
+work performance for solving quantum sign structure,
+Physical Review B 112, 165122 (2025).
+[18] L. L. Viteritti, R. Rende, A. Parola, S. Goldt, and
+F. Becca, Transformer wave function for two dimensional
+frustrated magnets: Emergence of a spin-liquid phase in
+the shastry-sutherland model, Physical Review B 111,
+134411 (2025).
+[19] Y. Nomura, A. S. Darmawan, Y. Yamaji, and M. Imada,
+Restricted
+boltzmann
+machine
+learning
+for
+solving
+strongly correlated quantum systems, Physical Review
+B 96, 205152 (2017).
+[20] K. Choo, A. Mezzacapo, and G. Carleo, Fermionic
+neural-network states for ab-initio electronic structure,
+Nature communications 11, 2368 (2020).
+[21] D.
+Pfau,
+J.
+S.
+Spencer,
+A.
+G.
+Matthews,
+and
+W. M. C. Foulkes, Ab initio solution of the many-electron
+schr¨odinger equation with deep neural networks, Physical
+review research 2, 033429 (2020).
+[22] J. Hermann, Z. Sch¨atzle, and F. No´e, Deep-neural-
+network solution of the electronic schr¨odinger equation,
+Nature Chemistry 12, 891 (2020).
+[23] A.-J. Liu and B. K. Clark, Neural network backflow for
+ab initio quantum chemistry, Physical Review B 110,
+115137 (2024).
+[24] D. Luo and B. K. Clark, Backflow transformations via
+neural networks for quantum many-body wave functions,
+Physical review letters 122, 226401 (2019).
+[25] J. Robledo Moreno, G. Carleo, A. Georges, and J. Stokes,
+Fermionic wave functions from neural-network con-
+strained hidden states, Proceedings of the National
+Academy of Sciences 119, e2122059119 (2022).
+[26] Z. Liu and B. K. Clark, Unifying view of fermionic neural
+network quantum states: From neural network backflow
+to hidden fermion determinant states, Physical Review B
+110, 115124 (2024).
+[27] A. Chen, Z.-Q. Wan, A. Sengupta, A. Georges, and
+C.
+Roth,
+Neural
+network-augmented
+pfaffian
+wave-
+functions for scalable simulations of interacting fermions,
+arXiv preprint arXiv:2507.10705 (2025).
+[28] Y. Gu, W. Li, H. Lin, B. Zhan, R. Li, Y. Huang,
+D. He, Y. Wu, T. Xiang, M. Qin, et al., Solving the hub-
+bard model with neural quantum states, arXiv preprint
+arXiv:2507.02644 (2025).
+[29] L. Sharma, A. Shokry, R. Nutakki, O. Simard, M. Fer-
+rero, and F. Vicentini, Comparing symmetrized determi-
+nant neural quantum states for the hubbard model, arXiv
+preprint arXiv:2510.11710 (2025).
+[30] K. Loehr and B. K. Clark, Enhancing neural network
+backflow, arXiv preprint arXiv:2510.26906 (2025).
+[31] I. Romero, J. Nys, and G. Carleo, Spectroscopy of two-
+dimensional interacting lattice electrons using symmetry-
+aware neural backflow transformations, Communications
+Physics 8, 46 (2025).
+[32] R. Rodr´ıguez-Guzm´an, C. A. Jim´enez-Hoyos, R. Schut-
+ski,
+and
+G.
+E.
+Scuseria,
+Multireference
+symmetry-
+projected variational approaches for ground and excited
+states of the one-dimensional hubbard model, Physical
+Review B—Condensed Matter and Materials Physics 87,
+235129 (2013).
+[33] Y. Nomura, Helping restricted boltzmann machines with
+quantum-state representation by restoring symmetry,
+Journal of Physics: Condensed Matter 33, 174003 (2021).
+[34] M. Reh, M. Schmitt, and M. G¨arttner, Optimizing design
+choices for neural quantum states, Physical Review B
+107, 195115 (2023).
+[35] G. Goldshlager, N. Abrahamsen, and L. Lin, A kaczmarz-
+inspired approach to accelerate the optimization of neu-
+ral network wavefunctions, Journal of Computational
+Physics 516, 113351 (2024).
+[36] S. Sorella, Wave function optimization in the variational
+monte carlo method, Physical Review B—Condensed
+Matter and Materials Physics 71, 241103 (2005).
+[37] A. Dosovitskiy, L. Beyer, A. Kolesnikov, D. Weissenborn,
+X. Zhai, T. Unterthiner, M. Dehghani, M. Minderer,
+G. Heigold, S. Gelly, et al., An image is worth 16x16
+words: Transformers for image recognition at scale, arXiv
+preprint arXiv:2010.11929 (2020).
+[38] R. P. Feynman and M. Cohen, Energy spectrum of the
+excitations in liquid helium, Physical Review 102, 1189
+(1956).
+[39] D. Hendrycks and K. Gimpel, Gaussian error linear units
+(gelus), arXiv preprint arXiv:1606.08415 (2016).
+[40] J. Ding and A. Zhou, Eigenvalues of rank-one updated
+matrices with some applications, Applied Mathematics
+Letters 20, 1223 (2007).
+[41] Y.-T. Zhou, Z.-W. Zhou, and X. Liang, Solving fermi-
+hubbard-type models by tensor representations of back-
+flow corrections, Physical Review B 109, 245107 (2024).
+[42] M. Qin, H. Shi, and S. Zhang, Benchmark study of
+the two-dimensional hubbard model with auxiliary-field
+quantum monte carlo method, Physical Review B 94,
+085103 (2016).
+[43] F. Vicentini, D. Hofmann, A. Szab´o, D. Wu, C. Roth,
+C. Giuliani, G. Pescia, J. Nys, V. Vargas-Calder´on,
+N. Astrakhantsev, and G. Carleo, Netket 3:
+Machine
+
+
+16
+learning toolbox for many-body quantum systems, Sci-
+Post Phys. Codebases , 7 (2022).
+[44] G. Carleo, K. Choo, D. Hofmann, J. E. Smith, T. Wester-
+hout, F. Alet, E. J. Davis, S. Efthymiou, I. Glasser, S.-H.
+Lin, M. Mauri, G. Mazzola, C. B. Pereira, and F. Vicen-
+tini, Netket: A machine learning toolkit for many-body
+quantum systems, SoftwareX 10, 100311 (2019).
+[45] J. Bradbury, R. Frostig, P. Hawkins, M. J. Johnson,
+C. Leary, D. Maclaurin, G. Necula, A. Paszke, J. Van-
+derPlas, S. Wanderman-Milne, and Q. Zhang, JAX: com-
+posable transformations of Python+NumPy programs
+(2018).
+[46] J. Heek, A. Levskaya, A. Oliver, M. Ritter, B. Ronde-
+pierre, A. Steiner, and M. van Zee, Flax: A neural net-
+work library and ecosystem for JAX (2024).
+[47] DeepMind, I. Babuschkin, K. Baumli, A. Bell, S. Bhu-
+patiraju, J. Bruce, P. Buchlovsky, D. Budden, T. Cai,
+A. Clark, I. Danihelka, A. Dedieu, C. Fantacci, J. God-
+win, C. Jones, R. Hemsley, T. Hennigan, M. Hes-
+sel, S. Hou, S. Kapturowski, T. Keck, I. Kemaev,
+M. King, M. Kunesch, L. Martens, H. Merzic, V. Miku-
+lik, T. Norman, G. Papamakarios, J. Quan, R. Ring,
+F. Ruiz, A. Sanchez, L. Sartran, R. Schneider, E. Sezener,
+S. Spencer, S. Srinivasan, M. Stanojevi´c, W. Stokowiec,
+L. Wang, G. Zhou, and F. Viola, The DeepMind JAX
+Ecosystem (2020).
+[48] https://github.com/sweetpotat5/
+Multi-determinant-nerual-network-backflow.

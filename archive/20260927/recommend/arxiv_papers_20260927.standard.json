@@ -1,0 +1,228 @@
+{
+  "mode": "standard",
+  "generated_at": "2026-09-27T18:01:52.151493+00:00",
+  "stats": {
+    "mode": "standard",
+    "tag_count": 2,
+    "deep_divecandidates": 0,
+    "deep_cap": 7,
+    "deep_selected": 0,
+    "quick_candidates": 5,
+    "quick_skim_target": 12,
+    "quick_selected": 5
+  },
+  "deep_dive": [],
+  "quick_skim": [
+    {
+      "id": "2609.26502v1",
+      "source": "arxiv",
+      "title": "Deep Generative Crystal Structure Prediction: A Benchmark Study and a Controlled Test of Prototype Dependence",
+      "abstract": "Deep generative models are widely reported to enable de novo crystal structure prediction (CSP), but their capability has not been measured consistently against template-based methods. We evaluate 12 representative generative CSP models, spanning latent-variable, diffusion, flow-matching, autoregressive, and manifold random-walk architectures, against TCSP 2.0 on 180 test structures and a leakage-controlled subset of 46. All methods use identical structure-matching, symmetry, and consensus criteria. Template retrieval is the strongest single method, reaching 68.3% top-1 success; symmetry-aware EquiCSP (66.4%) and Uni-3DAR (62.9%) form the next tier. However, comparison with TCSP 2.0 shows that most structures correctly predicted by generative models are also correctly predicted by template substitution. Thus, the set of structures uniquely reachable by generation is small, limiting its practical advantage for discovering structures outside existing prototype libraries. To test the source of this performance, we removed entire stoichiometric prototype families from the training set and retrained the strongest generative model. Accuracy declined by 50-78% across four families, establishing that performance is substantially prototype-dependent. A small minority of structures survived removal of their prototype family, demonstrating a real but limited retrieval-independent predictive capacity. Present generative CSP models therefore function largely as implicit, softer-edged prototype libraries rather than genuinely de novo predictors. Enlarging this residual capacity, rather than aggregate match rate alone, is the central open problem.",
+      "authors": [
+        "Lai Wei",
+        "Rongzhi Dong",
+        "Ying Feng",
+        "Madeline Miklos",
+        "Jianjun Hu"
+      ],
+      "primary_category": "cond-mat.mtrl-sci",
+      "categories": [
+        "cond-mat.mtrl-sci",
+        "cs.LG"
+      ],
+      "published": "2026-09-22T14:35:38+00:00",
+      "link": "https://arxiv.org/pdf/2609.26502v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 7.0,
+      "llm_evidence_en": "AI generative models for crystal structure prediction benchmark",
+      "llm_evidence_cn": "生成式AI晶体结构预测基准评测",
+      "llm_evidence": "生成式AI晶体结构预测基准评测",
+      "canonical_evidence": "生成式AI晶体结构预测基准评测",
+      "llm_tldr_en": "Deep generative models are claimed to enable de novo crystal structure prediction, but are not consistently compared with template methods. This benchmark evaluates 12 generative CSP models against TCSP 2.0 on 180 structures; template retrieval leads at 68.3% top-1, with EquiCSP and Uni-3DAR next.",
+      "llm_tldr_cn": "深度生成模型被广泛宣称可实现晶体结构从头预测，但其能力尚未与模板方法进行一致比较。本文在统一的结构匹配、对称性与共识准则下，对12个代表性生成式晶体结构预测模型与TCSP 2.0在180个测试结构及46个泄漏控制子集上展开基准评测。结果显示模板检索最强，达68.3%的top-1成功率，对称性感知的EquiCSP与Uni-3DAR次之。研究揭示了生成模型的性能边界与对原型的依赖，为晶体结构预测方法评估提供了可靠基准。",
+      "llm_tldr": "深度生成模型被广泛宣称可实现晶体结构从头预测，但其能力尚未与模板方法进行一致比较。本文在统一的结构匹配、对称性与共识准则下，对12个代表性生成式晶体结构预测模型与TCSP 2.0在180个测试结构及46个泄漏控制子集上展开基准评测。结果显示模板检索最强，达68.3%的top-1成功率，对称性感知的EquiCSP与Uni-3DAR次之。研究揭示了生成模型的性能边界与对原型的依赖，为晶体结构预测方法评估提供了可靠基准。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "7"
+    },
+    {
+      "id": "2609.25523v1",
+      "source": "arxiv",
+      "title": "Learning continuous reaction paths for transition-state prediction",
+      "abstract": "Transition states are defined by reaction pathways, yet most machine-learning methods predict them as isolated geometries. We introduce MARC-TS, a two-stage framework that learns a continuous, endpoint-conditioned path, queries it at any resolution and uses local path context to refine a transition-state candidate. We construct T1x-IRC-8K, a dataset of 8,209 reactions and 1,088,725 path-resolved geometries. On held-out reactions, the path model reduced complete-path error by 48.4% relative to endpoint interpolation, and the localizer achieved a mean aligned structural error of 0.127 Å. Quantum-chemical optimization and vibrational analysis yielded 405 frequency-confirmed first-order saddle-point candidates from 410 predictions. In a 100-reaction nudged elastic band comparison, learned-path initialization reached a joint geometry-and-force target for 66% of reactions, compared with 12% for geometric interpolation after 100 optimizer steps. By treating the path as a reusable representation rather than an auxiliary output, MARC-TS connects transition-state prediction, mechanistic interpretation and quantum-chemical refinement.",
+      "authors": [
+        "Yexiang Yang",
+        "Linlin Zhong"
+      ],
+      "primary_category": "physics.comp-ph",
+      "categories": [
+        "physics.comp-ph",
+        "physics.chem-ph"
+      ],
+      "published": "2026-09-22T00:34:52+00:00",
+      "link": "https://arxiv.org/pdf/2609.25523v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "machine learning framework for continuous reaction paths and transition-state prediction",
+      "llm_evidence_cn": "用于连续反应路径与过渡态预测的机器学习框架",
+      "llm_evidence": "用于连续反应路径与过渡态预测的机器学习框架",
+      "canonical_evidence": "用于连续反应路径与过渡态预测的机器学习框架",
+      "llm_tldr_en": "Most ML methods predict transition states as isolated geometries despite reactions being defined by pathways; this work proposes MARC-TS, learns a continuous endpoint-conditioned path, and reports large path-error reductions and frequency-confirmed saddle points.",
+      "llm_tldr_cn": "过渡态本质上由反应路径定义，但多数机器学习方法只把它当作孤立几何构型来预测。本文提出 MARC-TS 两阶段框架，学习以端点为条件的连续反应路径，并利用局部路径上下文精修过渡态候选。作者构建了含 8209 个反应、逾百万路径几何的数据集，路径模型将完整路径误差降低 48.4%，并从 410 个预测中得到 405 个经频率验证的一阶鞍点，提升了过渡态预测的物理可信度。",
+      "llm_tldr": "过渡态本质上由反应路径定义，但多数机器学习方法只把它当作孤立几何构型来预测。本文提出 MARC-TS 两阶段框架，学习以端点为条件的连续反应路径，并利用局部路径上下文精修过渡态候选。作者构建了含 8209 个反应、逾百万路径几何的数据集，路径模型将完整路径误差降低 48.4%，并从 410 个预测中得到 405 个经频率验证的一阶鞍点，提升了过渡态预测的物理可信度。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.26544v1",
+      "source": "arxiv",
+      "title": "Neural Network Backflow with Low-Rank Multi-Determinant Updates",
+      "abstract": "Simulating strongly correlated fermions remains a long-standing challenge due to the exponential complexity of the Hilbert space and the intricate sign structure of many-body wavefunctions. We introduce a variational framework centered on a neural network backflow transformation that combines deep learning with variational Monte Carlo. The proposed ansatz employs a multi-determinant expansion with low-rank shifts to capture non-local correlations and complex sign structures. Applied to the two-dimensional Hubbard model at both half-filling and $1/8$ doping, the method achieves energies within $0.45\\%$ of auxiliary-field quantum Monte Carlo at half-filling and captures intertwined charge- and spin-density stripe patterns at $1/8$ doping. These results demonstrate the potential of this framework as a scalable and interpretable approach to variational simulations of strongly correlated fermionic systems.",
+      "authors": [
+        "Tianshu Huang",
+        "Xiaowei Ou",
+        "Vidvuds Ozolins"
+      ],
+      "primary_category": "cond-mat.str-el",
+      "categories": [
+        "cond-mat.str-el",
+        "cond-mat.supr-con",
+        "quant-ph"
+      ],
+      "published": "2026-09-22T15:01:01+00:00",
+      "link": "https://arxiv.org/pdf/2609.26544v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "query:AI-Materials"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "Neural network backflow combined with variational Monte Carlo for correlated materials",
+      "llm_evidence_cn": "神经网络回流结合变分蒙特卡洛用于强关联材料模拟",
+      "llm_evidence": "神经网络回流结合变分蒙特卡洛用于强关联材料模拟",
+      "canonical_evidence": "神经网络回流结合变分蒙特卡洛用于强关联材料模拟",
+      "llm_tldr_en": "Strongly correlated fermion simulation is limited by Hilbert-space complexity and sign structure. This work combines a neural-network backflow transformation with variational Monte Carlo and low-rank multi-determinant updates, reaching energies within 0.45% of AFQMC on the 2D Hubbard model and capturing stripe order.",
+      "llm_tldr_cn": "强关联费米子模拟长期受制于希尔伯特空间的指数复杂性与波函数符号结构；传统方法难以兼顾精度与效率。本文提出以神经网络回流变换为核心的变分框架，结合变分蒙特卡洛与低秩多行列式展开来刻画非局域关联和复杂符号。在二维Hubbard模型半填充时能量误差小于百分之零点四五，并在八分之一掺杂下重现了电荷与自旋交织的条纹序，展示了深度学习在量子多体材料模拟中的潜力。",
+      "llm_tldr": "强关联费米子模拟长期受制于希尔伯特空间的指数复杂性与波函数符号结构；传统方法难以兼顾精度与效率。本文提出以神经网络回流变换为核心的变分框架，结合变分蒙特卡洛与低秩多行列式展开来刻画非局域关联和复杂符号。在二维Hubbard模型半填充时能量误差小于百分之零点四五，并在八分之一掺杂下重现了电荷与自旋交织的条纹序，展示了深度学习在量子多体材料模拟中的潜力。",
+      "llm_tags": [
+        "query:ai-materials:composite"
+      ],
+      "matched_query_tag": "query:ai-materials:composite",
+      "matched_query_text": "Papers central to AI for Materials：重点追踪 GNN/等变网络、机器学习原子间势、MACE 及 AI 加速 DFT/MD 原子模拟。, especially work that connects or combines: a; geometric deep learning for molecules and materials; machine learning interatomic potentials for molecular dynamics and DFT; foundation models for materials and atomistic systems; artificial intelligence methods for materials discovery and simulation; machine learning accelerated molecular dynamics simulations; machine learning interatomic potentials for accelerating atomistic simulations and molecular dynamics; equivariant graph neural networks for materials modeling, energy prediction, and force prediction; MACE, NequIP, CHGNet and related machine learning potentials for materials simulation.",
+      "matched_requirement_id": "req-composite-ai-materials",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.27349v1",
+      "source": "arxiv",
+      "title": "MolDesignBench: Evaluating LLM-based Agent for Scenario-grounded Molecular Design",
+      "abstract": "Real-world molecular design remains challenging for large language model (LLM)-based agents. It requires them to interpret design contexts, satisfy multiple constraints, identify infeasible specifications, and reason over multi-step tool outputs. Existing benchmarks do not capture this complexity, focusing instead on explicit and narrow constraints, only feasible problems, and single-path solutions. To address this gap, we propose MolDesignBench, a scenario-grounded benchmark that more closely reflects real-world molecular design for evaluating tool-augmented LLM agents. MolDesignBench comprises 2K generation and optimization instances that combine implicit requirements embedded in design narratives with explicit property and functional-group constraints, including infeasible cases, and require the effective use of 17 specialized chemistry tools. Experiments across diverse frontier LLMs reveal low success rates--with the best achieving only $\\sim43$\\%--and frequent failures in implicit-constraint reasoning, infeasibility detection, and tool reasoning. The corresponding fine-grained failure-mode analysis identifies implicit constraint interpretation and infeasibility detection as the primary bottlenecks, establishing MolDesignBench as a rigorous testbed to guide future research on chemical agents. The benchmark, tool interface, and evaluation code are publicly available.",
+      "authors": [
+        "Yongjun Jeong",
+        "Hanbum Ko",
+        "Ye Rin Kim",
+        "Chanhui Lee",
+        "Rodrigo Hormazabal",
+        "Jaewan Lee",
+        "Sehui Han",
+        "Sungbin Lim",
+        "Sungwoong Kim"
+      ],
+      "primary_category": "cs.AI",
+      "categories": [
+        "cs.AI",
+        "cs.LG"
+      ],
+      "published": "2026-09-23T04:39:56+00:00",
+      "link": "https://arxiv.org/pdf/2609.27349v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:AI-Materials",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "LLM agent benchmark for scenario-grounded molecular design",
+      "llm_evidence_cn": "面向情景化分子设计的LLM智能体基准",
+      "llm_evidence": "面向情景化分子设计的LLM智能体基准",
+      "canonical_evidence": "面向情景化分子设计的LLM智能体基准",
+      "llm_tldr_en": "Real molecular design demands LLM agents to handle implicit constraints and multi-step tools, which existing benchmarks miss; MolDesignBench offers 2K scenario-grounded generation and optimization instances for evaluation.",
+      "llm_tldr_cn": "真实分子设计需要LLM智能体理解设计语境、满足多重约束并推理多步工具输出，但现有基准只关注显式窄约束与可行问题。作者提出MolDesignBench情景化基准，包含2000个生成与优化实例，融合设计叙事中的隐含需求与显式性质约束。该基准更贴近真实分子设计，用于评测工具增强的LLM智能体，暴露其在复杂约束下的不足。",
+      "llm_tldr": "真实分子设计需要LLM智能体理解设计语境、满足多重约束并推理多步工具输出，但现有基准只关注显式窄约束与可行问题。作者提出MolDesignBench情景化基准，包含2000个生成与优化实例，融合设计叙事中的隐含需求与显式性质约束。该基准更贴近真实分子设计，用于评测工具增强的LLM智能体，暴露其在复杂约束下的不足。",
+      "llm_tags": [
+        "query:ai-materials"
+      ],
+      "matched_query_tag": "query:ai-materials",
+      "matched_query_text": "artificial intelligence methods for materials discovery and simulation",
+      "matched_requirement_id": "req-5",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    },
+    {
+      "id": "2609.29444v1",
+      "source": "arxiv",
+      "title": "IterSynth: Rethinking Deep Search Agents via Role-Decoupled Iterative Synthesis",
+      "abstract": "Deep search requires LLM agents to decompose complex queries, search for evidence, and synthesize grounded answers, yet existing ReAct-style agents suffer from two limitations: role coupling, where one policy must handle planning, evidence use, and synthesis; and context accumulation, where growing search histories introduce noise and obscure useful information. To address these issues, we propose IterSynth, a role-decoupled and summary-based paradigm that alternates between a Planner for identifying information needs and a Synthesizer for integrating evidence into an evolving summary state. This design separates planning from synthesis while using the summary as the persistent state of search, reducing both capability coupling and context noise. To train IterSynth effectively, we further introduce Role-Decoupled Policy Optimization (RDPO) for reinforcement learning, which combines terminal outcome rewards with turn-level rubric evaluations and computes role-specific advantages for more precise credit assignment. Experiments on five long-horizon deep-search benchmarks such as BrowseComp and Xbench-DS show that IterSynth-8B achieves an average score of 50.7, surpassing the strongest prior $\\leq$8B agent by +4.2\\%. Moreover, IterSynth serves as a model-agnostic prompting paradigm, delivering substantial zero-shot gains over ReAct and similar prompting paradigms on frontier proprietary models.",
+      "authors": [
+        "Xingyu Wu",
+        "Yuchen Yan",
+        "Zhengxi Lu",
+        "Siqi Chen",
+        "Xin ZHANG",
+        "Aiting Liu",
+        "Chao Deng",
+        "Jie Liu",
+        "Jin Ma",
+        "Jian Shao",
+        "Jun Xiao",
+        "Yongliang Shen"
+      ],
+      "primary_category": "cs.CL",
+      "categories": [
+        "cs.CL",
+        "cs.AI"
+      ],
+      "published": "2026-09-24T12:02:53+00:00",
+      "link": "https://arxiv.org/pdf/2609.29444v1",
+      "tags": [
+        "keyword:AI-Materials",
+        "keyword:ar",
+        "query:ar"
+      ],
+      "llm_score": 6.0,
+      "llm_evidence_en": "role-decoupled deep search LLM agent",
+      "llm_evidence_cn": "角色解耦的深度搜索LLM智能体",
+      "llm_evidence": "角色解耦的深度搜索LLM智能体",
+      "canonical_evidence": "角色解耦的深度搜索LLM智能体",
+      "llm_tldr_en": "Deep search agents suffer role coupling and context accumulation; IterSynth decouples a Planner and a Synthesizer with an evolving summary state, reducing capability coupling and context noise for grounded answers.",
+      "llm_tldr_cn": "深度搜索要求LLM智能体分解复杂查询、检索证据并合成有依据的答案，但ReAct式智能体存在角色耦合与上下文累积两大局限。作者提出IterSynth，将识别信息需求的规划器与整合证据的合成器解耦，并以演化摘要作为持久搜索状态。该范式分离规划与合成、降低上下文噪声，为研究型搜索智能体提供更稳健的架构。",
+      "llm_tldr": "深度搜索要求LLM智能体分解复杂查询、检索证据并合成有依据的答案，但ReAct式智能体存在角色耦合与上下文累积两大局限。作者提出IterSynth，将识别信息需求的规划器与整合证据的合成器解耦，并以演化摘要作为持久搜索状态。该范式分离规划与合成、降低上下文噪声，为研究型搜索智能体提供更稳健的架构。",
+      "llm_tags": [
+        "query:ar"
+      ],
+      "matched_query_tag": "query:ar",
+      "matched_query_text": "research agent",
+      "matched_requirement_id": "req-13",
+      "selection_source": "fresh_fetch",
+      "quick_tier": "6"
+    }
+  ]
+}
