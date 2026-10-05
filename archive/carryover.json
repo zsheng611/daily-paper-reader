@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-10-04T18:11:26.932096+00:00",
-  "updated_date": "20261004",
+  "generated_at": "2026-10-05T22:30:11.785500+00:00",
+  "updated_date": "20261005",
   "carryover_days": 9,
   "tag_states": {
     "AI-Materials": {
-      "updated_date": "20261004",
+      "updated_date": "20261005",
       "carryover_days": 9,
       "items": []
     },
     "ar": {
-      "updated_date": "20261004",
+      "updated_date": "20261005",
       "carryover_days": 9,
       "items": []
     }
